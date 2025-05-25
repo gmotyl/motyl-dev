@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Code, Zap, Sparkles, Building, Users, Bot } from "lucide-react"
+import { Code, Zap, Sparkles, Building, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import NewsletterForm from "@/components/newsletter-form"
 import Header from "@/components/header"
@@ -33,11 +33,11 @@ export default function Home() {
               <div className="flex flex-col justify-center space-y-4">
                 <div className="space-y-2">
                   <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none">
-                    Elevate Your Craft with <span className="text-primary">Agentic AI</span>
+                    Ready to level up your <span className="text-primary">frontend skills</span>?
                   </h1>
                   <p className="max-w-[600px] text-muted-foreground md:text-xl">
-                    Join my newsletter where I share insights on Agentic AI, Functional Programming, and Software
-                    Craftsmanship from my experience as a Principal Software Developer and Architect.
+                    You've found the right place. I make mastering modern frontend development practical, engaging, and
+                    straightforward. Learn from 20+ years of hands-on experience building scalable applications.
                   </p>
                 </div>
                 <div className="w-full max-w-sm space-y-2">
@@ -65,10 +65,8 @@ export default function Home() {
                         practicing it and helping others learn the craft."
                       </p>
                       <div className="flex gap-2 pt-2 flex-wrap">
-                        <div className="rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">Agentic AI</div>
-                        <div className="rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">
-                          Functional Programming
-                        </div>
+                        <div className="rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">Architecture</div>
+                        <div className="rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">Best Practices</div>
                         <div className="rounded-full bg-primary/10 px-3 py-1 text-xs text-primary">Craftsmanship</div>
                       </div>
                     </div>
@@ -84,33 +82,33 @@ export default function Home() {
               <div className="space-y-2">
                 <h2 className="text-3xl font-bold tracking-tighter md:text-4xl">About Me</h2>
                 <p className="max-w-[700px] text-muted-foreground md:text-xl">
-                  I'm Grzegorz Motyl, a Principal Software Developer and Architect focused on the permanent growth of
-                  both soft and technical skills with a business-oriented mindset.
+                  I'm Grzegorz Motyl, a Principal Software Developer and Architect with over 20 years of experience. I
+                  focus on continuous growth of both technical and soft skills with a business-oriented mindset.
                 </p>
               </div>
             </div>
             <div className="mx-auto grid max-w-5xl items-center gap-6 py-12 lg:grid-cols-3">
               <div className="grid gap-4 text-center">
                 <div className="flex h-20 w-20 items-center justify-center rounded-full bg-background mx-auto">
-                  <Bot className="h-10 w-10 text-primary" />
+                  <Building className="h-10 w-10 text-primary" />
                 </div>
-                <h3 className="text-xl font-bold">AI Enthusiast</h3>
+                <h3 className="text-xl font-bold">Architecture Expert</h3>
                 <p className="text-muted-foreground">
-                  I explore the new possibilities that agentic AI brings to software development and business solutions.
+                  I design scalable frontend architectures that grow with your business and stand the test of time.
                 </p>
               </div>
               <div className="grid gap-4 text-center">
                 <div className="flex h-20 w-20 items-center justify-center rounded-full bg-background mx-auto">
                   <Code className="h-10 w-10 text-primary" />
                 </div>
-                <h3 className="text-xl font-bold">Functional Programming Enthusiast</h3>
+                <h3 className="text-xl font-bold">Functional Programming Advocate</h3>
                 <p className="text-muted-foreground">
-                  I explore how functional paradigms lead to more maintainable, testable, and robust software systems.
+                  I explore how functional paradigms lead to more maintainable, testable, and robust frontend systems.
                 </p>
               </div>
               <div className="grid gap-4 text-center">
                 <div className="flex h-20 w-20 items-center justify-center rounded-full bg-background mx-auto">
-                  <Building className="h-10 w-10 text-primary" />
+                  <Users className="h-10 w-10 text-primary" />
                 </div>
                 <h3 className="text-xl font-bold">Software Craftsman</h3>
                 <p className="text-muted-foreground">
@@ -130,72 +128,73 @@ export default function Home() {
                 </div>
                 <h2 className="text-3xl font-bold tracking-tighter md:text-4xl">What You'll Learn From Me</h2>
                 <p className="max-w-[700px] text-muted-foreground md:text-xl">
-                  My newsletter delivers practical insights from years of experience as a Principal Developer and
-                  Architect.
+                  My newsletter delivers practical insights from over 20 years of building production applications as a
+                  Principal Developer and Architect.
                 </p>
               </div>
             </div>
             <div className="mx-auto grid max-w-5xl items-center gap-6 py-12 lg:grid-cols-3">
               <div className="rounded-lg border bg-background/50 backdrop-blur-sm p-6 h-full flex flex-col">
-                <Sparkles className="h-10 w-10 text-primary mb-4" />
-                <h3 className="text-xl font-bold">Agentic AI in Practice</h3>
+                <Building className="h-10 w-10 text-primary mb-4" />
+                <h3 className="text-xl font-bold">Frontend Architecture</h3>
                 <p className="mt-2 text-muted-foreground">
-                  Learn how to leverage agentic AI to build intelligent, autonomous software solutions.
+                  Learn how to design scalable, maintainable frontend architectures that evolve with your product.
                 </p>
                 <ul className="mt-4 space-y-2 text-sm flex-grow">
                   <li className="flex items-center">
                     <div className="mr-2 h-1.5 w-1.5 rounded-full bg-primary"></div>
-                    Autonomous agent architectures
+                    Component design patterns
                   </li>
                   <li className="flex items-center">
                     <div className="mr-2 h-1.5 w-1.5 rounded-full bg-primary"></div>
-                    AI-powered decision making
+                    State management strategies
                   </li>
                   <li className="flex items-center">
                     <div className="mr-2 h-1.5 w-1.5 rounded-full bg-primary"></div>
-                    Multi-agent systems
+                    Micro-frontend approaches
                   </li>
                 </ul>
               </div>
               <div className="rounded-lg border bg-background/50 backdrop-blur-sm p-6 h-full flex flex-col">
                 <Zap className="h-10 w-10 text-primary mb-4" />
-                <h3 className="text-xl font-bold">Functional Programming with AI</h3>
+                <h3 className="text-xl font-bold">Modern Development Practices</h3>
                 <p className="mt-2 text-muted-foreground">
-                  Discover how functional programming principles enhance AI system development.
+                  Discover battle-tested techniques that make your code more reliable and your team more productive.
                 </p>
                 <ul className="mt-4 space-y-2 text-sm flex-grow">
                   <li className="flex items-center">
                     <div className="mr-2 h-1.5 w-1.5 rounded-full bg-primary"></div>
-                    Immutable data in AI pipelines
+                    Testing strategies that work
                   </li>
                   <li className="flex items-center">
                     <div className="mr-2 h-1.5 w-1.5 rounded-full bg-primary"></div>
-                    Pure functions & AI predictability
+                    Performance optimization
                   </li>
                   <li className="flex items-center">
                     <div className="mr-2 h-1.5 w-1.5 rounded-full bg-primary"></div>
-                    Composition for complex AI workflows
+                    Code review best practices
                   </li>
                 </ul>
               </div>
               <div className="rounded-lg border bg-background/50 backdrop-blur-sm p-6 h-full flex flex-col">
-                <Users className="h-10 w-10 text-primary mb-4" />
-                <h3 className="text-xl font-bold">AI-Enhanced Software Craftsmanship</h3>
+                <Sparkles className="h-10 w-10 text-primary mb-4" />
+                <h3 className="text-xl font-bold">Professional Growth</h3>
                 <p className="mt-2 text-muted-foreground">
-                  Elevate your development practices with AI-powered techniques that improve code quality.
+                  Advance your career with insights on technical leadership and building software that delivers business
+                  value.
                 </p>
                 <ul className="mt-4 space-y-2 text-sm flex-grow">
                   <li className="flex items-center">
                     <div className="mr-2 h-1.5 w-1.5 rounded-full bg-primary"></div>
-                    AI-assisted code reviews
+                    Technical leadership skills
                   </li>
                   <li className="flex items-center">
                     <div className="mr-2 h-1.5 w-1.5 rounded-full bg-primary"></div>
-                    Intelligent refactoring strategies
+                    Business-oriented development
                   </li>
                   <li className="flex items-center">
                     <div className="mr-2 h-1.5 w-1.5 rounded-full bg-primary"></div>
-                    AI pair programming techniques
+                    Team collaboration strategies
                   </li>
                 </ul>
               </div>
@@ -210,7 +209,7 @@ export default function Home() {
                 <div className="space-y-2">
                   <h2 className="text-3xl font-bold tracking-tighter md:text-4xl">Latest Articles</h2>
                   <p className="max-w-[700px] text-muted-foreground md:text-xl">
-                    Explore my latest thoughts and tutorials on Agentic AI and software development.
+                    Explore my latest thoughts and tutorials on frontend development and software craftsmanship.
                   </p>
                 </div>
               </div>
@@ -256,13 +255,13 @@ export default function Home() {
                   </div>
                   <div>
                     <h3 className="font-bold">Marta Kowalska</h3>
-                    <p className="text-sm text-muted-foreground">Senior Developer at AI Solutions</p>
+                    <p className="text-sm text-muted-foreground">Senior Frontend Developer at TechCorp</p>
                   </div>
                 </div>
                 <p className="mt-4">
-                  "Grzegorz's insights on combining Agentic AI with Functional Programming transformed how our team
-                  approaches complex business problems. His newsletter provides practical wisdom that you can apply
-                  immediately."
+                  "Grzegorz's insights on frontend architecture transformed how our team approaches complex
+                  applications. His newsletter provides practical wisdom that you can apply immediately to real
+                  projects."
                 </p>
               </div>
               <div className="rounded-lg border bg-background/50 backdrop-blur-sm p-6">
@@ -276,7 +275,7 @@ export default function Home() {
                   </div>
                 </div>
                 <p className="mt-4">
-                  "As someone who values craftsmanship in software, I find Grzegorz's newsletter to be a goldmine of AI
+                  "As someone who values craftsmanship in software, I find Grzegorz's newsletter to be a goldmine of
                   architectural patterns and best practices. His business-oriented mindset helps bridge the gap between
                   technical excellence and delivering value."
                 </p>
@@ -285,12 +284,14 @@ export default function Home() {
             <div className="mx-auto max-w-md text-center bg-background/50 backdrop-blur-sm rounded-lg border p-6">
               <h3 className="text-xl font-bold">Join a community of craftsmen dedicated to professional growth</h3>
               <p className="mt-2 text-muted-foreground">
-                I share what I've learned from years as a Principal Developer and Architect to help you grow both
-                technically and professionally.
+                I share what I've learned from over 20 years as a Principal Developer and Architect to help you grow
+                both technically and professionally.
               </p>
               <div className="mt-4">
                 <a href="#top">
-                  <Button size="lg">Subscribe to My Newsletter</Button>
+                  <Button size="lg" variant="purple">
+                    Subscribe to My Newsletter
+                  </Button>
                 </a>
               </div>
             </div>
