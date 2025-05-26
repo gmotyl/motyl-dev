@@ -1,20 +1,5 @@
-// This is a mock database for demonstration purposes
-// In a real application, you would use a real database like Prisma with PostgreSQL
-
-// Use localStorage for persistence in the browser environment
-const getStoredArticles = () => {
-  if (typeof window !== "undefined") {
-    const stored = localStorage.getItem("articles")
-    return stored ? JSON.parse(stored) : []
-  }
-  return []
-}
-
-const saveArticles = (articles) => {
-  if (typeof window !== "undefined") {
-    localStorage.setItem("articles", JSON.stringify(articles))
-  }
-}
+// Simplified read-only database for demonstration purposes
+// Contains sample articles for the newsletter landing page
 
 type Article = {
   id: string
@@ -26,48 +11,132 @@ type Article = {
   updatedAt: string
 }
 
-type User = {
-  id: string
-  username: string
-  password: string // In a real app, this would be hashed
-}
-
-// Mock data
-let articles: Article[] = getStoredArticles()
-const users: User[] = [
+// Sample articles data
+const articles: Article[] = [
   {
     id: "1",
-    username: "admin",
-    password: "admin123", // In a real app, this would be hashed
+    title: "Building Scalable Frontend Architectures",
+    slug: "building-scalable-frontend-architectures",
+    content: `# Building Scalable Frontend Architectures
+
+As applications grow in complexity, having a solid frontend architecture becomes crucial for maintainability and team productivity.
+
+## Key Principles
+
+### 1. Component Composition
+Break down your UI into small, reusable components that follow the single responsibility principle.
+
+### 2. State Management
+Choose the right state management solution based on your application's complexity and team size.
+
+### 3. Code Organization
+Structure your codebase in a way that makes it easy for new team members to understand and contribute.
+
+## Best Practices
+
+- **Separation of Concerns**: Keep business logic separate from UI components
+- **Testing Strategy**: Implement comprehensive testing at all levels
+- **Performance Optimization**: Consider bundle size and runtime performance from the start
+
+Building scalable architectures is an investment in your team's future productivity.`,
+    excerpt: "Learn how to design frontend architectures that grow with your business and stand the test of time.",
+    createdAt: "2024-01-15T10:00:00Z",
+    updatedAt: "2024-01-15T10:00:00Z",
+  },
+  {
+    id: "2",
+    title: "Functional Programming in Modern JavaScript",
+    slug: "functional-programming-modern-javascript",
+    content: `# Functional Programming in Modern JavaScript
+
+Functional programming principles can make your JavaScript code more predictable, testable, and maintainable.
+
+## Core Concepts
+
+### Immutability
+Avoid mutating data structures. Instead, create new ones.
+
+\`\`\`javascript
+// Instead of this
+const user = { name: 'John', age: 30 };
+user.age = 31;
+
+// Do this
+const user = { name: 'John', age: 30 };
+const updatedUser = { ...user, age: 31 };
+\`\`\`
+
+### Pure Functions
+Functions that always return the same output for the same input and have no side effects.
+
+### Higher-Order Functions
+Functions that take other functions as arguments or return functions.
+
+## Benefits
+
+- **Predictability**: Pure functions are easier to reason about
+- **Testability**: No side effects make testing straightforward  
+- **Reusability**: Functional composition promotes code reuse
+
+Start small by applying these principles to utility functions and gradually expand to larger parts of your codebase.`,
+    excerpt: "Explore how functional paradigms lead to more maintainable, testable, and robust frontend systems.",
+    createdAt: "2024-01-10T14:30:00Z",
+    updatedAt: "2024-01-10T14:30:00Z",
+  },
+  {
+    id: "3",
+    title: "The Art of Code Reviews",
+    slug: "art-of-code-reviews",
+    content: `# The Art of Code Reviews
+
+Code reviews are one of the most effective ways to improve code quality and share knowledge within a team.
+
+## What to Look For
+
+### Code Quality
+- **Readability**: Is the code easy to understand?
+- **Maintainability**: Will this be easy to modify in the future?
+- **Performance**: Are there any obvious performance issues?
+
+### Architecture
+- **Design Patterns**: Are appropriate patterns being used?
+- **Separation of Concerns**: Is the code properly organized?
+- **Dependencies**: Are dependencies managed well?
+
+## Review Best Practices
+
+### For Reviewers
+- Be constructive and specific in feedback
+- Explain the "why" behind suggestions
+- Acknowledge good code when you see it
+
+### For Authors
+- Keep pull requests small and focused
+- Provide context in the description
+- Be open to feedback and discussion
+
+## Building a Review Culture
+
+Creating a positive code review culture takes time but pays dividends in code quality and team knowledge sharing.
+
+Remember: The goal is to improve the code and help each other grow as developers.`,
+    excerpt:
+      "Discover battle-tested techniques for conducting effective code reviews that improve quality and team collaboration.",
+    createdAt: "2024-01-05T09:15:00Z",
+    updatedAt: "2024-01-05T09:15:00Z",
   },
 ]
 
-// Mock database functions
+// Mock database functions (read-only)
 export const db = {
   article: {
-    create: async (data: { title: string; content: string; excerpt: string; slug: string }) => {
-      const newArticle: Article = {
-        id: Math.random().toString(36).substring(2, 9),
-        title: data.title,
-        slug: data.slug,
-        content: data.content,
-        excerpt: data.excerpt,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
-      articles.push(newArticle)
-      saveArticles(articles)
-      return newArticle
-    },
     findMany: async ({ take }: { take?: number } = {}) => {
-      articles = getStoredArticles()
       if (take) {
         return articles.slice(0, take)
       }
       return articles
     },
     findUnique: async ({ where }: { where: { slug?: string; id?: string } }) => {
-      articles = getStoredArticles()
       if (where.slug) {
         return articles.find((article) => article.slug === where.slug) || null
       }
@@ -76,40 +145,10 @@ export const db = {
       }
       return null
     },
-    delete: async ({ where }: { where: { id: string } }) => {
-      articles = getStoredArticles()
-      const index = articles.findIndex((article) => article.id === where.id)
-      if (index !== -1) {
-        const deleted = articles[index]
-        articles.splice(index, 1)
-        saveArticles(articles)
-        return deleted
-      }
-      return null
-    },
-    update: async ({ where, data }: { where: { id: string }; data: Partial<Article> }) => {
-      articles = getStoredArticles()
-      const index = articles.findIndex((article) => article.id === where.id)
-      if (index !== -1) {
-        articles[index] = {
-          ...articles[index],
-          ...data,
-          updatedAt: new Date().toISOString(),
-        }
-        saveArticles(articles)
-        return articles[index]
-      }
-      return null
-    },
-  },
-  user: {
-    findUnique: async ({ where }: { where: { username: string } }) => {
-      return users.find((user) => user.username === where.username) || null
-    },
   },
 }
 
-// Helper function to generate a slug from a title
+// Helper function to generate a slug from a title (kept for potential future use)
 export function generateSlug(title: string): string {
   return title
     .toLowerCase()

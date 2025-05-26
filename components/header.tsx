@@ -21,13 +21,8 @@ export default function Header() {
           Articles
         </Link>
       </nav>
-      <div className="ml-auto md:ml-4">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/login">Admin</Link>
-        </Button>
-      </div>
       <Sheet>
-        <SheetTrigger asChild className="md:hidden ml-2">
+        <SheetTrigger asChild className="md:hidden ml-4">
           <Button variant="ghost" size="icon">
             <Menu className="h-5 w-5" />
             <span className="sr-only">Toggle menu</span>
@@ -43,9 +38,6 @@ export default function Header() {
             </Link>
             <Link href="/articles" className="text-sm font-medium hover:text-primary transition-colors">
               Articles
-            </Link>
-            <Link href="/login" className="text-sm font-medium hover:text-primary transition-colors">
-              Admin
             </Link>
           </nav>
         </SheetContent>
