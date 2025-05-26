@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import NewsletterForm from "@/components/newsletter-form"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
-import { db } from "@/lib/db"
+import { getAllArticles } from "@/lib/articles"
 import Link from "next/link"
 
 export default function Home() {
@@ -15,7 +15,7 @@ export default function Home() {
 
   useEffect(() => {
     const fetchArticles = async () => {
-      const articles = await db.article.findMany({ take: 3 })
+      const articles = getAllArticles().slice(0, 3)
       setLatestArticles(articles)
       setIsLoading(false)
     }
@@ -241,13 +241,13 @@ export default function Home() {
                 {latestArticles.map((article) => (
                   <Link
                     key={article.id}
-                    href={`/${article.slug}`}
+                    href={`/articles/${article.slug}`}
                     className="rounded-lg border border-primary/20 bg-background/50 backdrop-blur-sm p-6 transition-all hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 hover:scale-105 duration-300"
                   >
                     <h3 className="text-xl font-bold mb-2 hover:text-primary transition-colors">{article.title}</h3>
                     <p className="text-muted-foreground line-clamp-3">{article.excerpt}</p>
                     <p className="text-xs text-primary/70 mt-4 font-medium">
-                      {new Date(article.createdAt).toLocaleDateString()}
+                      {new Date(article.publishedAt).toLocaleDateString()}
                     </p>
                   </Link>
                 ))}
