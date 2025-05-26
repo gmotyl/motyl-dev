@@ -1,55 +1,58 @@
+import type React from "react"
 import Link from "next/link"
-import { Code, Menu } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 
-export default function Header() {
+import { siteConfig } from "@/config/site"
+import { cn } from "@/lib/utils"
+import { Icons } from "@/components/icons"
+import { Button } from "@/components/ui/button"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+
+interface HeaderProps extends React.HTMLAttributes<HTMLElement> {}
+
+export function Header({ className, ...props }: HeaderProps) {
   return (
-    <header className="px-4 lg:px-6 h-16 flex items-center border-b border-border/40 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
-      <div className="flex items-center gap-2 font-bold text-xl">
-        <Code className="h-6 w-6 text-primary" />
-        <Link href="/">Grzegorz Motyl</Link>
+    <header className={cn("bg-background border-b", className)} {...props}>
+      <div className="container flex h-16 items-center">
+        <Link href="/" className="mr-4 flex items-center space-x-2">
+          <Icons.logo className="h-6 w-6" aria-hidden="true" />
+          <span className="hidden font-bold sm:inline-block">{siteConfig.name}</span>
+        </Link>
+        <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
+          <Link href="/docs" className="hover:text-primary transition-colors">
+            Documentation
+          </Link>
+          <Link href="/examples" className="hover:text-primary transition-colors">
+            Examples
+          </Link>
+          <Link href="/blog" className="hover:text-primary transition-colors">
+            Blog
+          </Link>
+        </nav>
+        <Sheet>
+          <SheetTrigger asChild className="ml-auto">
+            <Button variant="ghost" size="sm" className="md:hidden">
+              Menu
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="left" className="sm:max-w-sm">
+            <SheetHeader>
+              <SheetTitle>{siteConfig.name}</SheetTitle>
+              <SheetDescription>Explore our site and discover what we have to offer.</SheetDescription>
+            </SheetHeader>
+            <div className="grid gap-4 py-4">
+              <Link href="/docs" className="text-sm font-medium hover:text-primary transition-colors">
+                Documentation
+              </Link>
+              <Link href="/examples" className="text-sm font-medium hover:text-primary transition-colors">
+                Examples
+              </Link>
+              <Link href="/blog" className="text-sm font-medium hover:text-primary transition-colors">
+                Blog
+              </Link>
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
-      <nav className="ml-auto hidden md:flex gap-4 sm:gap-6">
-        <Link href="/#about" className="text-sm font-medium hover:text-primary transition-colors">
-          About Me
-        </Link>
-        <Link href="/#newsletter" className="text-sm font-medium hover:text-primary transition-colors">
-          Newsletter
-        </Link>
-        <Link href="/articles" className="text-sm font-medium hover:text-primary transition-colors">
-          Articles
-        </Link>
-      </nav>
-      <div className="ml-auto md:ml-4">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/login">Admin</Link>
-        </Button>
-      </div>
-      <Sheet>
-        <SheetTrigger asChild className="md:hidden ml-2">
-          <Button variant="ghost" size="icon">
-            <Menu className="h-5 w-5" />
-            <span className="sr-only">Toggle menu</span>
-          </Button>
-        </SheetTrigger>
-        <SheetContent side="right">
-          <nav className="flex flex-col gap-4 mt-8">
-            <Link href="/#about" className="text-sm font-medium hover:text-primary transition-colors">
-              About Me
-            </Link>
-            <Link href="/#newsletter" className="text-sm font-medium hover:text-primary transition-colors">
-              Newsletter
-            </Link>
-            <Link href="/articles" className="text-sm font-medium hover:text-primary transition-colors">
-              Articles
-            </Link>
-            <Link href="/login" className="text-sm font-medium hover:text-primary transition-colors">
-              Admin
-            </Link>
-          </nav>
-        </SheetContent>
-      </Sheet>
     </header>
   )
 }
