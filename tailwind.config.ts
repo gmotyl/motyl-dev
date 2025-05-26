@@ -1,4 +1,4 @@
-import type { Config } from "tailwindcss"
+import type { Config } from "tailwindcss";
 
 const config = {
   darkMode: ["class"],
@@ -100,11 +100,12 @@ const config = {
       backgroundImage: {
         "butterfly-pattern": "url('/images/butterfly-bg.png')",
         "gradient-purple": "linear-gradient(135deg, #8B5CF6 0%, #D946EF 100%)",
-        "gradient-purple-soft": "linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(217, 70, 239, 0.1) 100%)",
+        "gradient-purple-soft":
+          "linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(217, 70, 239, 0.1) 100%)",
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
-} satisfies Config
+  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
+} satisfies Config;
 
-export default config
+export default config;
