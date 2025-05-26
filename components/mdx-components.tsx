@@ -1,6 +1,4 @@
 import Image from "next/image"
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
-import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism"
 
 const components = {
   img: (props: any) => <Image {...props} width={800} height={400} alt={props.alt || ""} className="rounded-lg my-4" />,
@@ -10,9 +8,11 @@ const components = {
 
     if (language) {
       return (
-        <SyntaxHighlighter style={oneDark} language={language} PreTag="div" className="rounded-lg my-4" {...props}>
-          {String(children).replace(/\n$/, "")}
-        </SyntaxHighlighter>
+        <pre className="bg-gray-900 text-gray-100 p-4 rounded-lg my-4 overflow-x-auto">
+          <code className={`language-${language}`} {...props}>
+            {String(children).replace(/\n$/, "")}
+          </code>
+        </pre>
       )
     }
 
