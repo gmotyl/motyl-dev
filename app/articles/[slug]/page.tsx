@@ -1,23 +1,24 @@
-import { notFound } from "next/navigation";
-import { getArticleBySlug, getAllArticles } from "@/lib/articles";
-import Header from "@/components/header";
-import Footer from "@/components/footer";
-import { marked } from "marked";
-import * as emoji from "node-emoji";
+import { notFound } from "next/navigation"
+import { getArticleBySlug, getAllArticles } from "@/lib/articles"
+import Header from "@/components/header"
+import Footer from "@/components/footer"
+import { marked } from "marked"
+import * as emoji from "node-emoji"
+import { Badge } from "@/components/ui/badge"
 
 // Configure marked for better markdown rendering
 marked.setOptions({
   gfm: true,
   breaks: true,
-});
+})
 
 // Simple markdown content renderer with emoji support
 function MarkdownContent({ content }: { content: string }) {
   // First, process emoji shortcodes like :rocket: -> 🚀
-  const contentWithEmojis = emoji.emojify(content);
+  const contentWithEmojis = emoji.emojify(content)
 
   // Then process markdown
-  const htmlContent = marked.parse(contentWithEmojis);
+  const htmlContent = marked.parse(contentWithEmojis)
 
   // Handle both sync and async cases
   if (typeof htmlContent === "string") {
@@ -35,7 +36,7 @@ function MarkdownContent({ content }: { content: string }) {
                    prose-li:text-gray-300"
         dangerouslySetInnerHTML={{ __html: htmlContent }}
       />
-    );
+    )
   }
 
   // Fallback for async case
@@ -43,54 +44,54 @@ function MarkdownContent({ content }: { content: string }) {
     <div className="prose prose-lg prose-invert max-w-none">
       <p className="text-gray-300">Loading content...</p>
     </div>
-  );
+  )
 }
 
 export async function generateStaticParams() {
-  const articles = getAllArticles();
+  const articles = getAllArticles()
   return articles.map((article) => ({
     slug: article.slug,
-  }));
+  }))
 }
 
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ slug: string }>
 }) {
   try {
-    const { slug } = await params;
-    const article = getArticleBySlug(slug);
+    const { slug } = await params
+    const article = getArticleBySlug(slug)
 
     if (!article) {
       return {
         title: "Article Not Found",
-      };
+      }
     }
 
     return {
       title: article.title,
       description: article.excerpt,
-    };
+    }
   } catch (error) {
-    console.error("Error in generateMetadata:", error);
+    console.error("Error in generateMetadata:", error)
     return {
       title: "Error Loading Article",
-    };
+    }
   }
 }
 
 export default async function ArticlePage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ slug: string }>
 }) {
   try {
-    const { slug } = await params;
-    const article = getArticleBySlug(slug);
+    const { slug } = await params
+    const article = getArticleBySlug(slug)
 
     if (!article) {
-      notFound();
+      notFound()
     }
 
     return (
@@ -100,10 +101,16 @@ export default async function ArticlePage({
           <article className="max-w-3xl mx-auto">
             <header className="mb-8">
               <h1 className="text-4xl font-bold mb-4">{article.title}</h1>
-              <p className="text-muted-foreground">
-                Published on{" "}
-                {new Date(article.publishedAt).toLocaleDateString()}
-              </p>
+              <p className="text-muted-foreground">Published on {new Date(article.publishedAt).toLocaleDateString()}</p>
+              {article.hashtags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {article.hashtags.map((hashtag) => (
+                    <Badge key={hashtag} variant="secondary">
+                      #{hashtag}
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </header>
 
             <MarkdownContent content={article.content} />
@@ -111,9 +118,9 @@ export default async function ArticlePage({
         </main>
         <Footer />
       </div>
-    );
+    )
   } catch (error) {
-    console.error("Error in ArticlePage:", error);
-    throw error;
+    console.error("Error in ArticlePage:", error)
+    throw error
   }
 }
