@@ -5,6 +5,7 @@ import Footer from "@/components/footer"
 import { marked } from "marked"
 import * as emoji from "node-emoji"
 import { Badge } from "@/components/ui/badge"
+import Link from "next/link"
 
 // Configure marked for better markdown rendering
 marked.setOptions({
@@ -105,9 +106,11 @@ export default async function ArticlePage({
               {article.hashtags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {article.hashtags.map((hashtag) => (
-                    <Badge key={hashtag} variant="secondary">
-                      #{hashtag}
-                    </Badge>
+                    <Link href={`/articles?hashtag=${hashtag}`} key={hashtag}>
+                      <Badge variant="secondary" className="hover:bg-primary/20 cursor-pointer">
+                        #{hashtag}
+                      </Badge>
+                    </Link>
                   ))}
                 </div>
               )}

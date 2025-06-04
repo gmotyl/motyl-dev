@@ -11,7 +11,34 @@ export interface Article {
   hashtags: string[]
 }
 
+// Build-time hashtag index
+interface HashtagIndex {
+  [hashtag: string]: string[] // Maps hashtag -> array of article slugs
+}
+
 const articlesDirectory = path.join(process.cwd(), "articles")
+let hashtagIndexCache: HashtagIndex | null = null
+
+// Generate hashtag index at build time
+function buildHashtagIndex(): HashtagIndex {
+  if (hashtagIndexCache) return hashtagIndexCache
+
+  const articles = getAllArticles()
+  const index: HashtagIndex = {}
+
+  articles.forEach((article) => {
+    const hashtags = article.hashtags || []
+    hashtags.forEach((hashtag) => {
+      if (!index[hashtag]) {
+        index[hashtag] = []
+      }
+      index[hashtag].push(article.slug)
+    })
+  })
+
+  hashtagIndexCache = index
+  return index
+}
 
 export function getAllArticles(): Article[] {
   const fileNames = fs.readdirSync(articlesDirectory)
@@ -57,7 +84,19 @@ export function getArticleBySlug(slug: string): Article | null {
 }
 
 export function getAllHashtags(): string[] {
-  const articles = getAllArticles()
-  const allHashtags = articles.flatMap((article) => article.hashtags)
-  return [...new Set(allHashtags)].sort()
+  const index = buildHashtagIndex()
+  return Object.keys(index).sort()
 }
+
+export function getArticlesByHashtag(hashtag: string): Article[] {
+  const index = buildHashtagIndex()
+  const slugs = index[hashtag] || []
+
+  if (slugs.length === 0) return []
+
+  // Get full article data for the matching slugs
+  return slugs.map((slug) => getArticleBySlug(slug)).filter(Boolean) as Article[]
+}
+
+// Pre-build the index during module initialization
+buildHashtagIndex()
