@@ -19,6 +19,27 @@ interface HashtagIndex {
 const articlesDirectory = path.join(process.cwd(), "articles")
 let hashtagIndexCache: HashtagIndex | null = null
 
+// Parse hashtags from metadata (supports both array and #hashtag format)
+function parseHashtags(hashtagData: any): string[] {
+  if (!hashtagData) return []
+
+  if (Array.isArray(hashtagData)) {
+    // Handle array format: ["react", "nextjs"] or ["#react", "#nextjs"]
+    return hashtagData.map((tag) => tag.toString().replace(/^#/, ""))
+  }
+
+  if (typeof hashtagData === "string") {
+    // Handle string format: "#react #nextjs #tutorial"
+    return hashtagData
+      .split(/\s+/)
+      .filter((tag) => tag.startsWith("#"))
+      .map((tag) => tag.substring(1))
+      .filter((tag) => tag.length > 0)
+  }
+
+  return []
+}
+
 // Generate hashtag index at build time
 function buildHashtagIndex(): HashtagIndex {
   if (hashtagIndexCache) return hashtagIndexCache
@@ -56,7 +77,7 @@ export function getAllArticles(): Article[] {
         excerpt: data.excerpt,
         publishedAt: data.publishedAt,
         content,
-        hashtags: data.hashtags || [],
+        hashtags: parseHashtags(data.hashtags),
       }
     })
     .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
@@ -76,7 +97,7 @@ export function getArticleBySlug(slug: string): Article | null {
       excerpt: data.excerpt,
       publishedAt: data.publishedAt,
       content,
-      hashtags: data.hashtags || [],
+      hashtags: parseHashtags(data.hashtags),
     }
   } catch (error) {
     return null
