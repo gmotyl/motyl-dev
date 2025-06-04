@@ -107,7 +107,10 @@ export default async function ArticlePage({
                 <div className="flex flex-wrap gap-2 mt-2">
                   {article.hashtags.map((hashtag) => (
                     <Link href={`/articles?hashtag=${hashtag}`} key={hashtag}>
-                      <Badge variant="secondary" className="hover:bg-primary/20 cursor-pointer">
+                      <Badge
+                        variant="secondary"
+                        className="text-gray-900 font-medium bg-purple-200 hover:bg-purple-300 cursor-pointer transition-colors"
+                      >
                         #{hashtag}
                       </Badge>
                     </Link>

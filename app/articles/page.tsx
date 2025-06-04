@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { getAllArticles, getAllHashtags, getArticlesByHashtag } from "@/lib/articles"
@@ -9,7 +10,9 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
 export default function ArticlesPage() {
-  const [selectedHashtag, setSelectedHashtag] = useState<string | null>(null)
+  const searchParams = useSearchParams()
+  const hashtagFromUrl = searchParams.get("hashtag")
+  const [selectedHashtag, setSelectedHashtag] = useState<string | null>(hashtagFromUrl)
   const [articles, setArticles] = useState(getAllArticles())
   const allHashtags = getAllHashtags()
 
@@ -22,6 +25,27 @@ export default function ArticlesPage() {
     }
   }, [selectedHashtag])
 
+  // Update selected hashtag when URL changes
+  useEffect(() => {
+    setSelectedHashtag(hashtagFromUrl)
+  }, [hashtagFromUrl])
+
+  const handleHashtagClick = (hashtag: string) => {
+    setSelectedHashtag(hashtag)
+    // Update URL without page reload
+    const url = new URL(window.location.href)
+    url.searchParams.set("hashtag", hashtag)
+    window.history.pushState({}, "", url.toString())
+  }
+
+  const handleShowAll = () => {
+    setSelectedHashtag(null)
+    // Remove hashtag from URL
+    const url = new URL(window.location.href)
+    url.searchParams.delete("hashtag")
+    window.history.pushState({}, "", url.toString())
+  }
+
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
@@ -33,11 +57,7 @@ export default function ArticlesPage() {
           <div className="mb-8">
             <h2 className="text-lg font-semibold mb-4">Filter by hashtag:</h2>
             <div className="flex flex-wrap gap-2">
-              <Button
-                variant={selectedHashtag === null ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedHashtag(null)}
-              >
+              <Button variant={selectedHashtag === null ? "default" : "outline"} size="sm" onClick={handleShowAll}>
                 All ({getAllArticles().length})
               </Button>
               {allHashtags.map((hashtag) => {
@@ -47,7 +67,7 @@ export default function ArticlesPage() {
                     key={hashtag}
                     variant={selectedHashtag === hashtag ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setSelectedHashtag(hashtag)}
+                    onClick={() => handleHashtagClick(hashtag)}
                   >
                     #{hashtag} ({count})
                   </Button>
@@ -79,13 +99,22 @@ export default function ArticlesPage() {
                 {article.hashtags.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-3 mb-2">
                     {article.hashtags.map((hashtag) => (
-                      <Badge
+                      <button
                         key={hashtag}
-                        variant="secondary"
-                        className="text-xs text-gray-900 font-medium bg-gray-200 hover:bg-gray-300"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          handleHashtagClick(hashtag)
+                        }}
+                        className="inline-block"
                       >
-                        #{hashtag}
-                      </Badge>
+                        <Badge
+                          variant="secondary"
+                          className="text-xs text-gray-900 font-medium bg-purple-200 hover:bg-purple-300 cursor-pointer transition-colors"
+                        >
+                          #{hashtag}
+                        </Badge>
+                      </button>
                     ))}
                   </div>
                 )}
