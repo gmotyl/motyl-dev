@@ -79,7 +79,11 @@ export default function ArticlesPage() {
                 {article.hashtags.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-3 mb-2">
                     {article.hashtags.map((hashtag) => (
-                      <Badge key={hashtag} variant="secondary" className="text-xs">
+                      <Badge
+                        key={hashtag}
+                        variant="secondary"
+                        className="text-xs text-gray-900 font-medium bg-gray-200 hover:bg-gray-300"
+                      >
                         #{hashtag}
                       </Badge>
                     ))}
