@@ -1,9 +1,9 @@
 ---
-title: "What is Vibe Coding?"
-excerpt: "Discover the philosophy behind vibe coding and how it transforms the way we approach software development."
-publishedAt: "2025-05-26"
-slug: "what-is-vibe-coding"
-hashtags: "#vibe #coding #philosophy #developer-experience"
+title: 'What is Vibe Coding?'
+excerpt: 'Discover the philosophy behind vibe coding and how it transforms the way we approach software development.'
+publishedAt: '2025-05-26'
+slug: 'what-is-vibe-coding'
+hashtags: '#philosophy'
 ---
 
 # This project is example of vibe coding! :rocket:

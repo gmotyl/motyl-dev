@@ -1,28 +1,53 @@
-"use client"
+'use client'
 
-import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
-import Header from "@/components/header"
-import Footer from "@/components/footer"
-import { getAllArticles, getAllHashtags, getArticlesByHashtag } from "@/lib/articles"
-import Link from "next/link"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
+import Header from '@/components/header'
+import Footer from '@/components/footer'
+import Link from 'next/link'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+
+interface Article {
+  slug: string
+  title: string
+  excerpt: string
+  publishedAt: string
+  content: string
+  hashtags: string[]
+}
 
 export default function ArticlesPage() {
   const searchParams = useSearchParams()
-  const hashtagFromUrl = searchParams.get("hashtag")
+  const hashtagFromUrl = searchParams.get('hashtag')
   const [selectedHashtag, setSelectedHashtag] = useState<string | null>(hashtagFromUrl)
-  const [articles, setArticles] = useState(getAllArticles())
-  const allHashtags = getAllHashtags()
+  const [articles, setArticles] = useState<Article[]>([])
+  const [allHashtags, setAllHashtags] = useState<string[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
-  // Use the pre-built hashtag index for efficient filtering
+  // Fetch articles and hashtags
   useEffect(() => {
-    if (selectedHashtag) {
-      setArticles(getArticlesByHashtag(selectedHashtag))
-    } else {
-      setArticles(getAllArticles())
+    const fetchData = async () => {
+      setIsLoading(true)
+      try {
+        const url = selectedHashtag ? `/api/articles?hashtag=${selectedHashtag}` : '/api/articles'
+        const response = await fetch(url)
+        const data = await response.json()
+
+        if (selectedHashtag) {
+          setArticles(data.articles)
+        } else {
+          setArticles(data.articles)
+          setAllHashtags(data.hashtags)
+        }
+      } catch (error) {
+        console.error('Failed to fetch articles:', error)
+      } finally {
+        setIsLoading(false)
+      }
     }
+
+    fetchData()
   }, [selectedHashtag])
 
   // Update selected hashtag when URL changes
@@ -34,16 +59,16 @@ export default function ArticlesPage() {
     setSelectedHashtag(hashtag)
     // Update URL without page reload
     const url = new URL(window.location.href)
-    url.searchParams.set("hashtag", hashtag)
-    window.history.pushState({}, "", url.toString())
+    url.searchParams.set('hashtag', hashtag)
+    window.history.pushState({}, '', url.toString())
   }
 
   const handleShowAll = () => {
     setSelectedHashtag(null)
     // Remove hashtag from URL
     const url = new URL(window.location.href)
-    url.searchParams.delete("hashtag")
-    window.history.pushState({}, "", url.toString())
+    url.searchParams.delete('hashtag')
+    window.history.pushState({}, '', url.toString())
   }
 
   return (
@@ -57,31 +82,38 @@ export default function ArticlesPage() {
           <div className="mb-8">
             <h2 className="text-lg font-semibold mb-4">Filter by hashtag:</h2>
             <div className="flex flex-wrap gap-2">
-              <Button variant={selectedHashtag === null ? "default" : "outline"} size="sm" onClick={handleShowAll}>
-                All ({getAllArticles().length})
+              <Button
+                variant={selectedHashtag === null ? 'default' : 'outline'}
+                size="sm"
+                onClick={handleShowAll}
+              >
+                All ({articles.length})
               </Button>
-              {allHashtags.map((hashtag) => {
-                const count = getArticlesByHashtag(hashtag).length
-                return (
-                  <Button
-                    key={hashtag}
-                    variant={selectedHashtag === hashtag ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleHashtagClick(hashtag)}
-                  >
-                    #{hashtag} ({count})
-                  </Button>
-                )
-              })}
+              {allHashtags.map((hashtag) => (
+                <Button
+                  key={hashtag}
+                  variant={selectedHashtag === hashtag ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleHashtagClick(hashtag)}
+                >
+                  #{hashtag}
+                </Button>
+              ))}
             </div>
           </div>
         )}
 
         {/* Articles Grid */}
-        {articles.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Loading articles...</p>
+          </div>
+        ) : articles.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">
-              {selectedHashtag ? `No articles found with hashtag #${selectedHashtag}.` : "No articles published yet."}
+              {selectedHashtag
+                ? `No articles found with hashtag #${selectedHashtag}.`
+                : 'No articles published yet.'}
             </p>
           </div>
         ) : (
