@@ -1,9 +1,9 @@
 ---
-title: "Initial (vibe) commit"
-excerpt: "How motyl.dev was created in less than an hour."
-publishedAt: "2025-05-26"
-slug: "initial-vibe-commit"
-hashtags: "#vibe #v0 #ai #development"
+title: 'Initial (vibe) commit'
+excerpt: 'How motyl.dev was created in less than an hour.'
+publishedAt: '2025-05-26'
+slug: 'initial-vibe-commit'
+hashtags: '#vibe-coding #AI #development'
 ---
 
 ### TLDR:
@@ -56,6 +56,7 @@ I'll propose several color palette options that maintain the dark mode while add
 ## Palette Options
 
 ### 1. **Purple Butterfly** (Current Enhanced)... (and so on)
+
 \`\`\`
 
 And it worked :rocket: when I asked for "Purple Butterfly" palette.

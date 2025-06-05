@@ -1,11 +1,11 @@
-import { notFound } from "next/navigation"
-import { getArticleBySlug, getAllArticles } from "@/lib/articles"
-import Header from "@/components/header"
-import Footer from "@/components/footer"
-import { marked } from "marked"
-import * as emoji from "node-emoji"
-import { Badge } from "@/components/ui/badge"
-import Link from "next/link"
+import { notFound } from 'next/navigation'
+import { getArticleBySlug, getAllArticles } from '@/lib/articles'
+import Header from '@/components/header'
+import Footer from '@/components/footer'
+import { marked } from 'marked'
+import * as emoji from 'node-emoji'
+import { Badge } from '@/components/ui/badge'
+import Link from 'next/link'
 
 // Configure marked for better markdown rendering
 marked.setOptions({
@@ -22,7 +22,7 @@ function MarkdownContent({ content }: { content: string }) {
   const htmlContent = marked.parse(contentWithEmojis)
 
   // Handle both sync and async cases
-  if (typeof htmlContent === "string") {
+  if (typeof htmlContent === 'string') {
     return (
       <div
         className="prose prose-lg prose-invert max-w-none
@@ -49,24 +49,20 @@ function MarkdownContent({ content }: { content: string }) {
 }
 
 export async function generateStaticParams() {
-  const articles = getAllArticles()
+  const articles = await getAllArticles()
   return articles.map((article) => ({
     slug: article.slug,
   }))
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug: string }>
-}) {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await params
-    const article = getArticleBySlug(slug)
+    const article = await getArticleBySlug(slug)
 
     if (!article) {
       return {
-        title: "Article Not Found",
+        title: 'Article Not Found',
       }
     }
 
@@ -75,21 +71,17 @@ export async function generateMetadata({
       description: article.excerpt,
     }
   } catch (error) {
-    console.error("Error in generateMetadata:", error)
+    console.error('Error in generateMetadata:', error)
     return {
-      title: "Error Loading Article",
+      title: 'Error Loading Article',
     }
   }
 }
 
-export default async function ArticlePage({
-  params,
-}: {
-  params: Promise<{ slug: string }>
-}) {
+export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await params
-    const article = getArticleBySlug(slug)
+    const article = await getArticleBySlug(slug)
 
     if (!article) {
       notFound()
@@ -102,7 +94,9 @@ export default async function ArticlePage({
           <article className="max-w-3xl mx-auto">
             <header className="mb-8">
               <h1 className="text-4xl font-bold mb-4">{article.title}</h1>
-              <p className="text-muted-foreground">Published on {new Date(article.publishedAt).toLocaleDateString()}</p>
+              <p className="text-muted-foreground">
+                Published on {new Date(article.publishedAt).toLocaleDateString()}
+              </p>
               {article.hashtags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {article.hashtags.map((hashtag) => (
@@ -126,7 +120,7 @@ export default async function ArticlePage({
       </div>
     )
   } catch (error) {
-    console.error("Error in ArticlePage:", error)
+    console.error('Error in ArticlePage:', error)
     throw error
   }
 }
