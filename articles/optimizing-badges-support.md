@@ -8,7 +8,7 @@ hashtags: '#performance #AI #vibe-coding #UX'
 
 ### TLDR:
 
-Ever tried making a static site smart enough to filter articles by hashtags without breaking a sweat (or your server)? I did, and it was a hilarious, slightly frustrating, but ultimately successful (vibe) ride to **build-time hashtag indexing**. V0 generated some problems thoug and even it managed to bake the branch, but it saved me hours of hard work, so I guess vibe coding it was worth it :rocket:
+Ever tried making a static site smart enough to filter articles by hashtags without breaking a sweat (or your server)? I did, and it was a hilarious, slightly frustrating, but ultimately successful (vibe) ride to **build-time hashtag indexing**. V0 generated some problems though and even it managed to bake the branch, but it saved me hours of hard work, so I guess vibe coding it was worth it :rocket:
 
 ---
 
@@ -16,7 +16,7 @@ Ever tried making a static site smart enough to filter articles by hashtags with
 
 So, I had this grand vision: a beautiful collection of articles, all neatly tucked away as **MDX files** in a Git repository (there will be another article that describes my blogs architecture and why I chose this approach). But here's the kicker – I wanted to filter them by hashtags. Easy, right? Just slap some tags on 'em.
 
-Ah, but the devil's in the details :devil:, especially when you're talking **performance**. My articles are static, meaning no fancy database queries. How do you filter a bazillion MDX files efficiently without making your users wait for an eternity? Let's ask AI and see what it comes up with.
+Ah, but the devil's in the details 👹, especially when you're talking **performance**. My articles are static, meaning no fancy database queries. How do you filter a bazillion MDX files efficiently without making your users wait for an eternity? Let's ask AI and see what it comes up with.
 
 ---
 
@@ -24,13 +24,15 @@ Ah, but the devil's in the details :devil:, especially when you're talking **per
 
 My initial plea to the digital gods (okay, the AI) went something like this:
 
-> add hastags support in article metadata, on article list it should be possible to filter by hashtag, before you implement anything figure out what would be most efficient way in terms of performance, since articles are just mdx files in git repository, so maybe we should support hashtags in file name somehow to make it easy to filter
+> add hashtags support in article metadata, on article list it should be possible to filter by hashtag, before you implement anything figure out what would be most efficient way in terms of performance, since articles are just mdx files in git repository, so maybe we should support hashtags in file name somehow to make it easy to filter
 
 The V0 came back with options:
 
-1.  **Hashtags in frontmatter + runtime filtering:** "Clean metadata!" it chirped. "But we'll have to read _all the files_ every single time someone wants to filter!" (Me: _sweats nervously_)
-2.  **Hashtags in filename:** "Super fast filtering!" it boasted. "But your filenames will look like a toddler scribbled on them, and filesystems have feelings too!" (Me: _shudders at the thought of `my-article.react.nextjs.tutorial.mdx`_)
-3.  **Frontmatter + build-time hashtag index:** "Clean metadata _and_ fast filtering!" it declared. "Only... it's a bit more complex to set up." (Me: _eyes narrow, suspicion brewing_)
+1.  **Hashtags in frontmatter + runtime filtering:** "Clean metadata!" it chirped. "But we'll have to read _all the files_ every single time someone wants to filter!"
+2.  **Hashtags in filename:** "Super fast filtering!" but filenames are not very readable with this approach
+3.  **Frontmatter + build-time hashtag index:** "Clean metadata _and_ fast filtering! But it's a bit more complex to set up."
+
+I went with option 3, since it was the most performant and flexible solution.
 
 ### First problems
 
@@ -42,7 +44,7 @@ V0 reimplemented logic, but it ignored my request to not modify content of artic
 
 > where is content of my articles you lost the content, I prefer hashtags written as actual #hashtag in metadata,
 
-OK finally articles content was restored. Addtitionally more flexible hashtag format was added: `#tag1 #tag2` or `["tag1", "tag2"]`. The parser became smart enough to handle the `#` automatically. Crisis, mostly, averted :muscle:
+OK finally articles content was restored. Additionally more flexible hashtag format was added: `#tag1 #tag2` or `["tag1", "tag2"]`. The parser became smart enough to handle the `#` automatically. Crisis, mostly, averted :muscle:
 
 #### Styling issue
 
@@ -68,7 +70,7 @@ This is where the magic happens. Imagine your static site getting ready for prim
 
 - **It scans all my articles _once_.** Think of it as a super-efficient librarian reading all the book titles and their categories.
 - **It builds an index.** This index is basically a cheat sheet: "If you're looking for `#react`, check out `article-slug-1` and `article-slug-2`."
-- **Performance? <span class="math-inline">O\(1\)</span>!** That's right, folks! When you click a hashtag, it's not scanning every file; it's doing an instant lookup in that pre-built index. It's like having a direct line to the exact articles you need. Whether I have 10 articles or 10,000, filtering is **lightning fast**. This is what I expected from the beginning.
+- **Performance? <span class="math-inline">O\(1\)</span>!** When you click a hashtag, it's not scanning every file; it's doing an instant lookup in that pre-built index. It's like having a direct line to the exact articles you need. Whether I have 10 articles or 10,000, filtering is **lightning fast**. This is what I expected from the beginning.
 
 My articles' metadata now neatly holds the hashtags, easy to read and manage. I might refine this solution in the future, but is is good enough for now.
 
@@ -82,13 +84,13 @@ So, yeah, it was a bit of a journey, but totally worth it. Now, my static site i
 
 ### Time for pull request
 
-I learned V0 makes a lot of mistakes, so I push the changes to develop branch (it's easy worflow since I am only one working on this project). I create a [pull request](https://github.com/gmotyl/motyl-dev/pull/6) to merge my changes to main branch. Since project is open source, Github created code review for me, Yea another AI that verified V0's work. It found some issues, but I ignored them for now, since I plan to audit the codebase soon anyway. It will be right time to get back to this PR and address the issues.
+I learned V0 makes a lot of mistakes, so I push the changes to develop branch (it's easy workflow since I am only one working on this project). I create a [pull request](https://github.com/gmotyl/motyl-dev/pull/6) to merge my changes to main branch. Since project is open source, Github created code review for me, Yea another AI that verified V0's work. It found some issues, but I ignored them for now, since I plan to audit the codebase soon anyway. It will be right time to get back to this PR and address the issues.
 
 ### The Plot Thickens: Build Failures :warning:
 
 The PR merged but it did not deploy! Turned out it was working fine in V0 interface but it failed to build on Vercel. Time to roll up my sleeves and fix this mess! :muscle:
 
-Here are the problem I encountered was:
+Here is the problem I encountered:
 
 #### Build Error Due to fs Module Usage :file_folder:
 
@@ -98,7 +100,7 @@ Here are the problem I encountered was:
 #### Additional changes
 
 I refactored code from mdx to md files, as they have better support in IDE where I write the articles. If you are curious why I use static files form my blog articles and other architectural decisions, I will write about it in separate article (promise to link it here wen its published :wink: )
-Additionally I added prettier to the project, since it was annoing that V0 adds semicolons and removes them randomly :)
+Additionally I added prettier to the project, since it was annoying that V0 adds semicolons and removes them randomly :)
 
 [PR Link](https://github.com/gmotyl/motyl-dev/pull/6)
 
