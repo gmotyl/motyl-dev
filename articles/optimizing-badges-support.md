@@ -99,7 +99,7 @@ Here is the problem I encountered:
 
 #### Additional changes
 
-I refactored code from mdx to md files, as they have better support in IDE where I write the articles. If you are curious why I use static files form my blog articles and other architectural decisions, I will write about it in separate article (promise to link it here wen its published :wink: )
+I refactored code from mdx to md files, as they have better support in IDE where I write the articles. If you are curious why I use static files for my blog articles and other architectural decisions, I will write about it in separate article (promise to link it here when it's published :wink: )
 Additionally I added prettier to the project, since it was annoying that V0 adds semicolons and removes them randomly :)
 
 [PR Link](https://github.com/gmotyl/motyl-dev/pull/6)
