@@ -3,7 +3,7 @@ title: 'Read: Solve for Happy by Mo Gawdat'
 excerpt: 'My review of Solve for Happy by Mo Gawdat'
 publishedAt: '2025-06-17'
 slug: 'read-solve-for-happy'
-hashtags: '#philosophy, #book, #soft-skills'
+hashtags: '#philosophy #book #soft-skills'
 ---
 
 An interesting book that I recommend to anyone on a personal development journey.
