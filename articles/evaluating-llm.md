@@ -1,7 +1,7 @@
 ---
 title: 'Evals - testing AI agents'
 excerpt: 'Howto build Evaluation Systems for LLMs and Agents'
-publishedAt: '2025-0507-24'
+publishedAt: '2025-07-28'
 slug: 'evaluating-llm'
 hashtags: '#AI #agent #dev'
 ---
