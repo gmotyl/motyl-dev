@@ -12,22 +12,13 @@ Słuchajcie, to jest właśnie ten moment, kiedy ktoś faktycznie zrozumiał, ja
 
 Najciekawsze jest to, że nie próbowali reinventować koła - wzięli Postgres, który już wszyscy kochają, i zbudowali wokół niego inteligentną warstwę. Instant provisioning, auto-scaling, time-travel - brzmi jak science fiction, ale to działa. A że osiemdziesiąt procent ich baz to aplikacje AI? To pokazuje, że trafili w dziesiątkę z timingiem.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Separacja storage i compute to przyszłość baz danych
 - Branchowanie baz danych jak w systemach kontroli wersji
 - Architektura cloud-native od podstaw, nie wrapper
 - Dominacja w aplikacjach AI-native
 
-**Link:** https://neon.tech/blog/neon-and-databricks
-
-Kluczowe wnioski:
-- - Separacja storage i compute to przyszłość baz danych
-- Branchowanie baz danych jak w systemach kontroli wersji
-- Architektura cloud-native od podstaw, nie wrapper
-- Dominacja w aplikacjach AI-native
-- https://neon.tech/blog/neon-and-databricks
-
-Link: ** https://neon.tech/blog/neon-and-databricks
+**Link:** [link](https://neon.tech/blog/neon-and-databricks)
 
 ## TanStack DB - reaktywny store wchodzi w betę
 
@@ -35,22 +26,13 @@ Tanner Linsley znowu uderza! TanStack DB to nie jest kolejna baza danych - to re
 
 Najciekawsze jest podejście do normalizacji danych - zamiast każdy backend robił to po swojemu, mamy jeden spójny model. Plus transakcje z optimistic updates i lifecycle support. To może być game changer dla aplikacji, które potrzebują real-time synchronizacji.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Sub-milisekundowe live queries, joins i agregacje
 - Fine-grained reactivity minimalizuje re-rendering
 - Optimistic mutations z pełnym lifecycle support
 - Backend-agnostic - działa z każdym API
 
-**Link:** https://github.com/TanStack/db
-
-Kluczowe wnioski:
-- - Sub-milisekundowe live queries, joins i agregacje
-- Fine-grained reactivity minimalizuje re-rendering
-- Optimistic mutations z pełnym lifecycle support
-- Backend-agnostic - działa z każdym API
-- https://github.com/TanStack/db
-
-Link: ** https://github.com/TanStack/db
+**Link:** [link](https://github.com/TanStack/db)
 
 ## Relay 19.0.0 - kompatybilność z React 19 i breaking changes
 
@@ -58,22 +40,13 @@ Facebook wypuścił Relay 19 i jak zwykle - nie obeszło się bez breaking chang
 
 Najważniejsze - React 19 jest oficjalnie wspierany. Plus przeszli na ES modules jako default, co może niektórych zaskoczyć. Dokumentacja została też porządnie odświeżona - dodali Quick Start, Production Setup, całkiem przydatne rzeczy.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Wymagany alias na conditional fragments dla type safety
 - Kompatybilność z React 19
 - ES modules jako default (można wyłączyć)
 - Znacznie ulepszona dokumentacja
 
-**Link:** https://github.com/facebook/relay/releases/tag/v19.0.0
-
-Kluczowe wnioski:
-- - Wymagany alias na conditional fragments dla type safety
-- Kompatybilność z React 19
-- ES modules jako default (można wyłączyć)
-- Znacznie ulepszona dokumentacja
-- https://github.com/facebook/relay/releases/tag/v19.0.0
-
-Link: ** https://github.com/facebook/relay/releases/tag/v19.0.0
+**Link:** [link](https://github.com/facebook/relay/releases/tag/v19.0.0)
 
 ## Clerk Billing - subskrypcje bez bólu głowy
 
@@ -81,22 +54,13 @@ Clerk wprowadził Billing i to wygląda naprawdę czysto. Żadnego kodu integrac
 
 Cenowo to samo co Stripe - 3.6% plus trzydzieści centów, ale oszczędzasz kupę czasu na implementacji. Ma() helper do kontroli dostępu na podstawie planu brzmi bardzo użytecznie. Protect component też wygląda na przydatny.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Zero kodu integracji płatności i webhooków
 - Automatyczna synchronizacja danych użytkownika i subskrypcji
 - Billing-aware authorization z has() helper
 - Koszt identyczny jak Stripe, ale bez implementacji
 
-**Link:** https://go.clerk.com/yUCXXjY
-
-Kluczowe wnioski:
-- - Zero kodu integracji płatności i webhooków
-- Automatyczna synchronizacja danych użytkownika i subskrypcji
-- Billing-aware authorization z has() helper
-- Koszt identyczny jak Stripe, ale bez implementacji
-- https://go.clerk.com/yUCXXjY
-
-Link: ** https://go.clerk.com/yUCXXjY
+**Link:** [link](https://go.clerk.com/yUCXXjY)
 
 ## Motion+ Cursor - magnetyczne kursory i strefy
 
@@ -104,19 +68,10 @@ Motion dodał dwie fajne funkcje do swojego Cursor component - magnetic cursors 
 
 useMagneticPull hook to ciekawa rzecz - pozwala elementom "ciągnąć się" w stronę kursora jak wzajemne przyciąganie. A cursor zones z data-cursor-zone attribute i useCursorState hook dają pełną kontrolę nad tym, jak kursor reaguje na różne obszary.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Magnetyczne kursory z konfigurowalna siłą przyciągania
 - Cursor zones dla dynamicznego zachowania
 - useMagneticPull hook dla wzajemnego przyciągania
 - Pełna kontrola nad adaptacją kursora do treści
 
-**Link:** https://motion.dev/blog/introducing-magnetic-cursors-in-motion-cursor
-
-Kluczowe wnioski:
-- - Magnetyczne kursory z konfigurowalna siłą przyciągania
-- Cursor zones dla dynamicznego zachowania
-- useMagneticPull hook dla wzajemnego przyciągania
-- Pełna kontrola nad adaptacją kursora do treści
-- https://motion.dev/blog/introducing-magnetic-cursors-in-motion-cursor
-
-Link: ** https://motion.dev/blog/introducing-magnetic-cursors-in-motion-cursor
+**Link:** [link](https://motion.dev/blog/introducing-magnetic-cursors-in-motion-cursor)

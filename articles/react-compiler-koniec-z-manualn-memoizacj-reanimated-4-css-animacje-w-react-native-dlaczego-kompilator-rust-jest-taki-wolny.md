@@ -14,22 +14,13 @@ Cały problem z Reactem polega na tym, że domyślnie re-renderuje wszystko przy
 
 Zamiast pisać kod pełen hooków memoizujących, po prostu piszecie normalny kod, a kompilator robi całą robotę za was. To znacznie czystszy kod, ale musicie zaufać React magii bardziej niż kiedykolwiek. Dobra wiadomość jest taka, że kompilator już pokazał znaczące wzrosty wydajności w aplikacjach Meta.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Automatyczna memoizacja zamiast manualnej
 - Znacznie czystszy kod bez hooków memoizujących  
 - Trzeba zaufać kompilatorowi więcej niż wcześniej
 - Już testowane w produkcji w Meta
 
-**Link:** https://react.dev/learn/react-compiler
-
-Kluczowe wnioski:
-- - Automatyczna memoizacja zamiast manualnej
-- Znacznie czystszy kod bez hooków memoizujących
-- Trzeba zaufać kompilatorowi więcej niż wcześniej
-- Już testowane w produkcji w Meta
-- https://react.dev/learn/react-compiler
-
-Link: ** https://react.dev/learn/react-compiler
+**Link:** [link](https://react.dev/learn/react-compiler)
 
 ## Reanimated 4 - CSS Animacje w React Native
 
@@ -39,22 +30,13 @@ Zamiast tworzyć shared values i animated style worklets dla każdej prostej ani
 
 Worklety nadal są rekomendowane dla złożonych scenariuszy jak gesture-driven animacje czy screen transitions. Kod workletów został przeniesiony do osobnego pakietu react-native-worklets, żeby lepiej się nim zajmować.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - CSS animacje i transitions API jako główna nowość
 - Lepsze optymalizacje dla deklaratywnych animacji
 - Worklety nadal potrzebne do złożonych przypadków
 - Osobny pakiet dla workletów
 
-**Link:** https://blog.swmansion.com/reanimated-4-stable-release-the-future-of-react-native-animations-ba68210c3713
-
-Kluczowe wnioski:
-- - CSS animacje i transitions API jako główna nowość
-- Lepsze optymalizacje dla deklaratywnych animacji
-- Worklety nadal potrzebne do złożonych przypadków
-- Osobny pakiet dla workletów
-- https://blog.swmansion.com/reanimated-4-stable-release-the-future-of-react-native-animations-ba68210c3713
-
-Link: ** https://blog.swmansion.com/reanimated-4-stable-release-the-future-of-react-native-animations-ba68210c3713
+**Link:** [link](https://blog.swmansion.com/reanimated-4-stable-release-the-future-of-react-native-animations-ba68210c3713)
 
 ## Dlaczego kompilator Rust jest taki wolny?
 
@@ -64,22 +46,13 @@ Podstawowy problem to że Rust w Dockerze rebuilduje wszystko od zera przy każd
 
 Post szczegółowo opisuje różne techniki optymalizacji, od cargo-chef przez sccache po różne strategie cachowania. To pokazuje większy problem - mimo że mamy incremental compilation lokalnie, ekosystem konteneryzacji nadal ma problemy z Rust builds.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Rust builds w Dockerze są bolesnie wolne
 - Cargo-chef pomaga ale nie rozwiązuje wszystkiego
 - Potrzeba kombinacji technik cachowania
 - Incremental compilation nie transluje się dobrze na kontenery
 
-**Link:** https://sharnoff.io/blog/why-rust-compiler-slow
-
-Kluczowe wnioski:
-- - Rust builds w Dockerze są bolesnie wolne
-- Cargo-chef pomaga ale nie rozwiązuje wszystkiego
-- Potrzeba kombinacji technik cachowania
-- Incremental compilation nie transluje się dobrze na kontenery
-- https://sharnoff.io/blog/why-rust-compiler-slow
-
-Link: ** https://sharnoff.io/blog/why-rust-compiler-slow
+**Link:** [link](https://sharnoff.io/blog/why-rust-compiler-slow)
 
 ## Action Routes w React Router
 
@@ -89,19 +62,10 @@ Główna idea to że jeśli macie akcję, którą chcecie triggerować z różny
 
 Sergio pokazuje jak skonfigurować action routes w osobnym folderze, używając konwencji noun-verb dla nazewnictwa plików. Każda akcja może zawierać authentication, walidację formularzy, różne odpowiedzi i client-side effects.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Centralizacja logiki akcji w jednym miejscu
 - Reużywalność across multiple UI routes
 - Konwencja noun-verb dla organizacji plików
 - Wsparcie dla server i client actions
 
-**Link:** https://sergiodxa.com/tutorials/use-action-routes-in-react-router
-
-Kluczowe wnioski:
-- - Centralizacja logiki akcji w jednym miejscu
-- Reużywalność across multiple UI routes
-- Konwencja noun-verb dla organizacji plików
-- Wsparcie dla server i client actions
-- https://sergiodxa.com/tutorials/use-action-routes-in-react-router
-
-Link: ** https://sergiodxa.com/tutorials/use-action-routes-in-react-router
+**Link:** [link](https://sergiodxa.com/tutorials/use-action-routes-in-react-router)

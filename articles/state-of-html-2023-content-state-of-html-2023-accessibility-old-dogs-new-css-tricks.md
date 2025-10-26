@@ -12,7 +12,7 @@ hashtags: '#generated #pl #react #ai #performance #css'
 
 Badanie pokazuje też ciekawe rzeczy o innych elementach HTML. Element `time` używa tylko 23% deweloperów, a `data` jeszcze mniej. Ludzie w dalszym ciągu nie wiedzą, jak robić machine-readable data w HTML-u. A internacjonalizacja? Większość używa tylko atrybutu `lang`, ale o `dir` czy elementach `ruby` już zapomina.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 • SVG to największy pain point w HTML mimo powszechnego użycia
 • Elementy semantyczne jak `time` i `data` są niedoceniane
 • Internacjonalizacja ogranicza się głównie do atrybutu `lang`
@@ -20,11 +20,6 @@ Badanie pokazuje też ciekawe rzeczy o innych elementach HTML. Element `time` u�
 
 **Link**: https://2023.stateofhtml.com/en-US/features/content/
 
-Kluczowe wnioski:
-- • SVG to największy pain point w HTML mimo powszechnego użycia
-- Elementy semantyczne jak `time` i `data` są niedoceniane
-- Internacjonalizacja ogranicza się głównie do atrybutu `lang`
-- Zarządzanie obrazami i ich wymiarami to ciągły problem
 
 Link: 
 
@@ -36,7 +31,7 @@ Link:
 
 Największe problemy? Brak priorytetów, brak najlepszych praktyk i brak wiedzy. Czyli wszystko, co mogło pójść nie tak, poszło nie tak.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 • Deweloperzy chcą robić accessibility, ale nie wiedzą jak
 • Testowanie ogranicza się głównie do dev tools
 • Brak wsparcia organizacyjnego to główna bariera
@@ -44,11 +39,6 @@ Największe problemy? Brak priorytetów, brak najlepszych praktyk i brak wiedzy.
 
 **Link**: https://2023.stateofhtml.com/en-US/features/accessibility/
 
-Kluczowe wnioski:
-- • Deweloperzy chcą robić accessibility, ale nie wiedzą jak
-- Testowanie ogranicza się głównie do dev tools
-- Brak wsparcia organizacyjnego to główna bariera
-- Alt text i hierarchia informacji to podstawy, ale nie wszystkie są stosowane
 
 Link: 
 
@@ -60,7 +50,7 @@ Problem nie leży w support browserów - większość tych rzeczy już działa. 
 
 Kiedyś border-radius był rewolucją, bo zastąpił Photoshopa i 9-slice obrazy. Teraz nowe funkcje są "niewidzialne" - poprawiają architekturę kodu, ale efekt nie jest tak oczywisty.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 • Adopcja nowych funkcji CSS jest wolna mimo dobrego wsparcia
 • Problem leży w naszym myśleniu, nie w technologii
 • "Niewidzialne" ulepszenia są trudniejsze do zaakceptowania
@@ -68,11 +58,6 @@ Kiedyś border-radius był rewolucją, bo zastąpił Photoshopa i 9-slice obrazy
 
 **Link**: https://mxb.dev/blog/old-dogs-new-css-tricks/
 
-Kluczowe wnioski:
-- • Adopcja nowych funkcji CSS jest wolna mimo dobrego wsparcia
-- Problem leży w naszym myśleniu, nie w technologii
-- "Niewidzialne" ulepszenia są trudniejsze do zaakceptowania
-- Progressive enhancement nie zawsze jest możliwe
 
 Link: 
 
@@ -84,7 +69,7 @@ Integrują się z CI/CD, wysyłają alerty przez email lub webhook, i mają dash
 
 Testimoniale są świetne - Unsplash używa ich do łapania regresji po nowych featurach, Financial Times ma ustawione automatyczne alerty, Walmart łapał problemy z third-party skryptami.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 • Performance budgets mogą łamać buildy i blokować deploye
 • Integracja z CI/CD jest kluczowa dla utrzymania wydajności
 • Rate-of-change budgets łapią nagłe pogorszenia
@@ -92,11 +77,6 @@ Testimoniale są świetne - Unsplash używa ich do łapania regresji po nowych f
 
 **Link**: https://www.speedcurve.com/features/performance-budgets/
 
-Kluczowe wnioski:
-- • Performance budgets mogą łamać buildy i blokować deploye
-- Integracja z CI/CD jest kluczowa dla utrzymania wydajności
-- Rate-of-change budgets łapią nagłe pogorszenia
-- Automatyzacja jest lepsza niż manualne sprawdzanie
 
 Link: 
 
@@ -108,7 +88,7 @@ Dodali też wsparcie dla React 19 RC, co oznacza, że można używać nowych for
 
 Container API jest jeszcze eksperymentalne, ale pokazuje kierunek, w którym idzie Astro - lepsze developer experience, szczególnie w testowaniu. Mają nawet nowy template dla Vitest integration.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 • Container API umożliwia renderowanie komponentów poza aplikacją
 • Główny focus na integracji z narzędziami do testowania
 • React 19 support już gotowy
@@ -116,10 +96,5 @@ Container API jest jeszcze eksperymentalne, ale pokazuje kierunek, w którym idz
 
 **Link**: https://astro.build/blog/astro-490/
 
-Kluczowe wnioski:
-- • Container API umożliwia renderowanie komponentów poza aplikacją
-- Główny focus na integracji z narzędziami do testowania
-- React 19 support już gotowy
-- Astro dalej stawia na DX i tooling
 
 Link:

@@ -16,20 +16,12 @@ Kluczowa rzecz: cache nie jest źródłem prawdy. Jeśli serwer się wysypie, da
 
 Autor tłumaczy też dlaczego cache przeglądarki działa, mimo że dysk w laptopie nie jest szybszy niż serwer - chodzi o fizyczną odległość i przepustowość. 500 milisekund na połączenie z serwerem vs kilka milisekund z lokalnego dysku.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Cache to kopia danych dla wydajności, nie źródło prawdy
 - Może wykorzystywać szybszy sprzęt (RAM vs dysk) lub być bliżej użytkownika
 - Zawsze musi być możliwość odbudowy z autorytarnego źródła
 
-**Link:** https://stack.convex.dev/caching-in/
-
-Kluczowe wnioski:
-- - Cache to kopia danych dla wydajności, nie źródło prawdy
-- Może wykorzystywać szybszy sprzęt (RAM vs dysk) lub być bliżej użytkownika
-- Zawsze musi być możliwość odbudowy z autorytarnego źródła
-- https://stack.convex.dev/caching-in/
-
-Link: ** https://stack.convex.dev/caching-in/
+**Link:** [link](https://stack.convex.dev/caching-in/)
 
 ## Hugeicons React - Nowa Biblioteka Ikon
 
@@ -39,20 +31,12 @@ Biblioteka oferuje ponad 4000 darmowych ikon w formacie stroke, co jest całkiem
 
 API wygląda standardowo - importujesz ikonę, przekazujesz propsy jak size i color. Nic rewolucyjnego, ale czasem prostota jest tym, czego potrzebujemy.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Stara paczka deprecated, nowa architektura z oddzielnymi core packs
 - 4000+ darmowych ikon z konsystentnym designem
 - Standardowe API z customizacją rozmiaru i koloru
 
-**Link:** https://github.com/hugeicons/hugeicons-react
-
-Kluczowe wnioski:
-- - Stara paczka deprecated, nowa architektura z oddzielnymi core packs
-- 4000+ darmowych ikon z konsystentnym designem
-- Standardowe API z customizacją rozmiaru i koloru
-- https://github.com/hugeicons/hugeicons-react
-
-Link: ** https://github.com/hugeicons/hugeicons-react
+**Link:** [link](https://github.com/hugeicons/hugeicons-react)
 
 ## CSS Masonry i Problem z Tabbingiem
 
@@ -70,20 +54,12 @@ Autor używa prostego podejścia - grid z wyjątkiem dla masonry:
 
 Ale ostrzega: jeśli masz focusable elementy w masonry layout, tworzysz poważny problem z dostępnością. To jest sytuacja, gdzie jedna linijka CSS może zepsuć UX dla użytkowników korzystających z klawiatury.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - CSS masonry psuje kolejność tabbingu
 - Problem szczególnie widoczny z focusable elementami
 - Potrzebujemy rozwiązania na poziomie specyfikacji, nie tylko ostrzeżeń
 
-**Link:** https://piccalil.li/blog/masonry-and-tabbing/
-
-Kluczowe wnioski:
-- - CSS masonry psuje kolejność tabbingu
-- Problem szczególnie widoczny z focusable elementami
-- Potrzebujemy rozwiązania na poziomie specyfikacji, nie tylko ostrzeżeń
-- https://piccalil.li/blog/masonry-and-tabbing/
-
-Link: ** https://piccalil.li/blog/masonry-and-tabbing/
+**Link:** [link](https://piccalil.li/blog/masonry-and-tabbing/)
 
 ## Particle Shader Effect dla Vercel Ship
 
@@ -95,22 +71,13 @@ Czerwony kanał to tekstura logo i przycisku. Zielony określa, jak bardzo cząs
 
 Do grawitacji myszy używają flow shadera, który przechowuje informacje o ruchu myszy. Cząsteczki poruszają się w kierunku myszy i powoli wracają na miejsce.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Regl jako lekki framework WebGL
 - Kodowanie logiki w kanałach RGB tekstury
 - Flow shader dla smooth grawitacji myszy
 - Przemyślane UX - mosty między elementami
 
-**Link:** https://basement.studio/blog/shipping-ship-behind-the-particle-shader-effect-for-vercel-s-conf
-
-Kluczowe wnioski:
-- - Regl jako lekki framework WebGL
-- Kodowanie logiki w kanałach RGB tekstury
-- Flow shader dla smooth grawitacji myszy
-- Przemyślane UX - mosty między elementami
-- https://basement.studio/blog/shipping-ship-behind-the-particle-shader-effect-for-vercel-s-conf
-
-Link: ** https://basement.studio/blog/shipping-ship-behind-the-particle-shader-effect-for-vercel-s-conf
+**Link:** [link](https://basement.studio/blog/shipping-ship-behind-the-particle-shader-effect-for-vercel-s-conf)
 
 ## We Can Have a Different Web
 
@@ -122,19 +89,10 @@ Problem nie jest techniczny - to problem społeczny i ekonomiczny. Wielkie platf
 
 Autor nie podaje konkretnych rozwiązań, ale jego punkt widzenia jest ważny. Zamiast narzekać na to, jak web się zepsuł, możemy budować lepsze rzeczy. RSS wciąż działa. Statyczne strony wciąż są szybkie. Otwarte standardy wciąż istnieją.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Obecny web to zamknięte platformy i AI-generated spam
 - Technologie do budowy lepszego webu już istnieją
 - Problem jest społeczno-ekonomiczny, nie techniczny
 - Możemy budować alternatywy zamiast tylko narzekać
 
-**Link:** https://www.citationneeded.news/we-can-have-a-different-web/
-
-Kluczowe wnioski:
-- - Obecny web to zamknięte platformy i AI-generated spam
-- Technologie do budowy lepszego webu już istnieją
-- Problem jest społeczno-ekonomiczny, nie techniczny
-- Możemy budować alternatywy zamiast tylko narzekać
-- https://www.citationneeded.news/we-can-have-a-different-web/
-
-Link: ** https://www.citationneeded.news/we-can-have-a-different-web/
+**Link:** [link](https://www.citationneeded.news/we-can-have-a-different-web/)

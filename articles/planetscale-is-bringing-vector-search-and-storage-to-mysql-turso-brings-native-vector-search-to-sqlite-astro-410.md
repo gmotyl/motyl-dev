@@ -20,7 +20,7 @@ Wyobraźcie sobie - macie bazę dokumentów firmowych, każdy przetransformowany
 - Eliminuje potrzebę osobnej bazy wektorowej
 - Embedding jako sposób na transformację dowolnych danych do wektorów
 
-**Link:** https://planetscale.com/blog/planetscale-is-bringing-vector-search-and-storage-to-mysql
+**Link:** [link](https://planetscale.com/blog/planetscale-is-bringing-vector-search-and-storage-to-mysql)
 
 ## Turso brings Native Vector Search to SQLite
 
@@ -36,7 +36,7 @@ Co jest naprawdę fajne, to że działa to wszędzie gdzie działa SQLite - na m
 - Funkcje vector_distance_cos dla similarity search
 - Działa offline i na urządzeniach mobilnych
 
-**Link:** https://turso.tech/blog/turso-brings-native-vector-search-to-sqlite
+**Link:** [link](https://turso.tech/blog/turso-brings-native-vector-search-to-sqlite)
 
 ## Astro 4.10
 
@@ -52,7 +52,7 @@ To jest właśnie ten typ developer experience który sprawia, że Astro jest ta
 - Automatyczne rozróżnienie server/client context
 - Wsparcie dla różnych runtime'ów
 
-**Link:** https://astro.build/blog/astro-4100/
+**Link:** [link](https://astro.build/blog/astro-4100/)
 
 ## Morphing Arbitrary Paths in SVG
 
@@ -68,7 +68,7 @@ To jest świetne podejście - zamiast ładować ciężkie biblioteki w runtime, 
 - Eliminuje potrzebę ciężkich bibliotek JS
 - Interaktywne demo do testowania własnych ścieżek
 
-**Link:** https://minus-ze.ro/posts/morphing-arbitrary-paths-in-svg/
+**Link:** [link](https://minus-ze.ro/posts/morphing-arbitrary-paths-in-svg/)
 
 ## Replit Desktop App
 
@@ -84,4 +84,4 @@ Plus wsparcie dla deeplinków z protokołem replit:// - możecie otworzyć konkr
 - Wsparcie dla deeplinków
 - Dobra developer experience w developmencie
 
-**Link:** https://github.com/replit/desktop
+**Link:** [link](https://github.com/replit/desktop)

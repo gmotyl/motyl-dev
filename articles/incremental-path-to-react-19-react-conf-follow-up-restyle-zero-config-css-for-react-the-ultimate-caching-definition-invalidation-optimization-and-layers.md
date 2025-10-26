@@ -20,16 +20,7 @@ Najważniejsze zmiany: React Router v7 będzie non-breaking upgrade z v6, dostan
 - Nowy Remix "Reverb" będzie można uruchomić równolegle
 - RSC zmienia wszystko - routing, bundling, data loading
 
-**Link:** https://remix.run/blog/incremental-path-to-react-19
-
-Kluczowe wnioski:
-- - React Router v7 = Remix v3 z non-breaking upgrade
-- Vite plugin z Remix przechodzi do React Router
-- Nowy Remix "Reverb" będzie można uruchomić równolegle
-- RSC zmienia wszystko - routing, bundling, data loading
-- https://remix.run/blog/incremental-path-to-react-19
-
-Link: ** https://remix.run/blog/incremental-path-to-react-19
+**Link:** [link](https://remix.run/blog/incremental-path-to-react-19)
 
 ## Restyle - Zero Config CSS for React
 
@@ -45,16 +36,7 @@ Mają też pragma dla css prop - musisz ustawić jsxImportSource na "restyle" w 
 - Pragma support dla css prop
 - Pełny zestaw features: theming, variants, media queries
 
-**Link:** https://reactstyle.vercel.app/
-
-Kluczowe wnioski:
-- - Zero config CSS-in-JS dla React
-- Proxy system do separacji style props
-- Pragma support dla css prop
-- Pełny zestaw features: theming, variants, media queries
-- https://reactstyle.vercel.app/
-
-Link: ** https://reactstyle.vercel.app/
+**Link:** [link](https://reactstyle.vercel.app/)
 
 ## The Ultimate Caching Definition: Invalidation, Optimization, and Layers
 
@@ -72,16 +54,7 @@ Performance może pochodzić z różnych źródeł: szybszy hardware (RAM vs dis
 - Zawsze istnieje single source of truth
 - Cache może być w innym formacie niż oryginał
 
-**Link:** https://stack.convex.dev/caching-in
-
-Kluczowe wnioski:
-- - Cache = nieautorytatywna reprezentacja dla performance
-- Różne źródła performance: hardware, lokalizacja, format
-- Zawsze istnieje single source of truth
-- Cache może być w innym formacie niż oryginał
-- https://stack.convex.dev/caching-in
-
-Link: ** https://stack.convex.dev/caching-in
+**Link:** [link](https://stack.convex.dev/caching-in)
 
 ## Open sourcing graphql-query: 8.7x faster GraphQL query parser written in Rust
 
@@ -99,16 +72,7 @@ Nie chcieli walczyć z lifetimes w Rust - chcieli elegant API. Po dwóch latach 
 - Dwa lata w production u Stellate
 - Focus na GraphQL execution language, nie schema
 
-**Link:** https://stellate.co/blog/graphql-query-parsing-8x-faster-with-rust
-
-Kluczowe wnioski:
-- - 8.7x szybszy niż konkurencja dzięki Rust + Logos
-- Umożliwia manipulację GraphQL documents w runtime
-- Dwa lata w production u Stellate
-- Focus na GraphQL execution language, nie schema
-- https://stellate.co/blog/graphql-query-parsing-8x-faster-with-rust
-
-Link: ** https://stellate.co/blog/graphql-query-parsing-8x-faster-with-rust
+**Link:** [link](https://stellate.co/blog/graphql-query-parsing-8x-faster-with-rust)
 
 ## Introducing the Fabric UX System
 
@@ -126,13 +90,4 @@ Web Components to dobry wybór dla design systems - single source of truth, work
 - Pełny zestaw design tokens i guidelines
 - Focus na consistency w Fabric extensions
 
-**Link:** https://blog.fabric.microsoft.com/en-us/blog/introducing-the-fabric-ux-system-our-primary-resource-for-extending-fabric-experiences
-
-Kluczowe wnioski:
-- - Design system bazowany na Fluent 2
-- Web Components dla framework agnostic approach
-- Pełny zestaw design tokens i guidelines
-- Focus na consistency w Fabric extensions
-- https://blog.fabric.microsoft.com/en-us/blog/introducing-the-fabric-ux-system-our-primary-resource-for-extending-fabric-experiences
-
-Link: ** https://blog.fabric.microsoft.com/en-us/blog/introducing-the-fabric-ux-system-our-primary-resource-for-extending-fabric-experiences
+**Link:** [link](https://blog.fabric.microsoft.com/en-us/blog/introducing-the-fabric-ux-system-our-primary-resource-for-extending-fabric-experiences)

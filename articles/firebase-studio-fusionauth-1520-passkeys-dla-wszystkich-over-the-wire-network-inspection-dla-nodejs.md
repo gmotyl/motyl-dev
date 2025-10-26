@@ -24,11 +24,6 @@ Co mnie najbardziej kręci to fakt, że mają wbudowane Android emulatory i web 
 
 [Firebase Studio](https://idx.google.com/)
 
-Kluczowe wnioski:
-- - AI-powered workspace z Gemini do wszystkich zadań developmentu
-- Import z popularnych platform git plus App Prototyping agent
-- Wbudowane testowanie i preview na różnych platformach
-- One-click deployment z monitoringiem
 
 Link: 
 
@@ -52,11 +47,6 @@ Szczerze mówiąc, to jest genialny ruch marketingowy. Dają high-value feature 
 
 [FusionAuth 1.52.0](https://fusionauth.io/blog/announcing-fusionauth-1-52)
 
-Kluczowe wnioski:
-- - Passkeys teraz dostępne w darmowym Community plan
-- 24 miliardy skompromitowanych haseł rocznie - czas na zmianę
-- Darmowa licencja ważna na zawsze
-- Prosta aktywacja przez toggle w UI
 
 Link: 
 
@@ -78,11 +68,6 @@ Przykład pokazuje jak odkryć active default gateway, craftować i wysyłać IC
 
 [Over-the-Wire GitHub](https://github.com/vaguue/over-the-wire)
 
-Kluczowe wnioski:
-- - Packet manipulation library dla Node.js
-- Wymaga libpcap/WinPcap/Npcap (Wireshark wystarczy)
-- Obsługuje crafting, parsing, capturing i custom sockets
-- Przykład implementacji traceroute w czystym Node.js
 
 Link: 
 
@@ -106,11 +91,6 @@ Jego przykłady są spot-on. Gmail pokazuje toast gdy archivujecie email, ale em
 
 [Toasts are Bad UX](https://maxschmitt.me/posts/toasts-bad-ux)
 
-Kluczowe wnioski:
-- - Toasts pojawiają się daleko od user attention
-- Często są redundantne - akcja już daje feedback
-- Lepsze rozwiązania: inline feedback, loading indicators, smart UI states
-- Toast lepszy niż brak feedbacku, ale to nie usprawiedliwienie
 
 Link: 
 
@@ -134,10 +114,5 @@ Plus support dla React 19 RC i deprecation renderAsync. Przygotowują się na pr
 
 [React Email 3.0](https://resend.com/blog/react-email-3)
 
-Kluczowe wnioski:
-- - 54 nowe komponenty inspirowane Tailwind UI/shadcn/ui
-- 11x performance improvement (11331ms → 975ms P99)
-- Support dla React 19 RC
-- 270k tygodniowych downloadów, wzrost o 136%
 
 Link:

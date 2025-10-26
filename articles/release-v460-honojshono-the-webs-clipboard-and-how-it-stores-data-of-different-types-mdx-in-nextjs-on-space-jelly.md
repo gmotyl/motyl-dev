@@ -20,7 +20,7 @@ Dodatkowo dodali wsparcie dla Permissions-Policy header w secure headers middlew
 - Nowe headery bezpieczeństwa i ulepszenia WebSocket
 - Lepsze wsparcie dla Cloudflare Workers i Pages
 
-**Link:** https://github.com/honojs/hono/releases/tag/v4.6.0
+**Link:** [link](https://github.com/honojs/hono/releases/tag/v4.6.0)
 
 ## The web's clipboard, and how it stores data of different types
 
@@ -38,7 +38,7 @@ Artykuł omawia też ograniczenia - tylko trzy typy MIME są wymagane przez spec
 - ClipboardItem używa key-value store dla różnych typów danych
 - Web Custom Formats może rozszerzyć możliwości w przyszłości
 
-**Link:** https://alexharri.com/blog/clipboard
+**Link:** [link](https://alexharri.com/blog/clipboard)
 
 ## MDX in Next.js on Space Jelly
 
@@ -56,7 +56,7 @@ Haczyk jest taki, że z oficjalnym packagem Next.js, wasze MDX pliki muszą być
 - Pliki MDX muszą być w app directory z oficjalnym rozwiązaniem
 - mdx-components.tsx pozwala na custom komponenty
 
-**Link:** https://spacejelly.dev/posts/mdx-in-nextjs
+**Link:** [link](https://spacejelly.dev/posts/mdx-in-nextjs)
 
 ## CSS display contents
 
@@ -76,7 +76,7 @@ Display contents ma swoje ograniczenia - usuwa wszystkie style z elementu (backg
 - Przydatne do reorganizacji flexbox/grid layoutów
 - Usuwa wszystkie style z elementu (background, border, padding)
 
-**Link:** https://ishadeed.com/article/display-contents/
+**Link:** [link](https://ishadeed.com/article/display-contents/)
 
 ## Learning to reason with LLMs
 
@@ -96,4 +96,4 @@ Dla nas jako developerów to ważne bo pokazuje jak możemy lepiej promptować m
 - Ważność dawania modelom przestrzeni na "myślenie"
 - Lepsze promptowanie przez prośbę o krok po kroku analizę
 
-**Link:** https://openai.com/index/learning-to-reason-with-llms/
+**Link:** [link](https://openai.com/index/learning-to-reason-with-llms/)

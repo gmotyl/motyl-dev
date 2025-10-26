@@ -14,22 +14,13 @@ Wszystkie pakiety lądują w folderze `.pnpm` gdzie każdy plik to hard link do 
 
 Najlepsze w tym jest to, że niezależnie od tego jak głęboki jest twój dependency graph, struktura folderów pozostaje płaska. Masz foo który zależy od bar, który zależy od qar? Nie problem - wszystko siedzi na tym samym poziomie w `.pnpm`, tylko symlinki robią magię żeby Node.js mógł wszystko znaleźć.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Hard linki oszczędzają miejsce na dysku poprzez współdzielenie plików między projektami
 - Symlinki tworzą logiczną strukturę zależności bez duplikowania
 - Płaska struktura w `.pnpm` niezależnie od głębokości dependency graph
 - Pakiety mogą importować same siebie dzięki specjalnej strukturze folderów
 
-**Link:** https://pnpm.io/symlinked-node-modules-structure
-
-Kluczowe wnioski:
-- - Hard linki oszczędzają miejsce na dysku poprzez współdzielenie plików między projektami
-- Symlinki tworzą logiczną strukturę zależności bez duplikowania
-- Płaska struktura w `.pnpm` niezależnie od głębokości dependency graph
-- Pakiety mogą importować same siebie dzięki specjalnej strukturze folderów
-- https://pnpm.io/symlinked-node-modules-structure
-
-Link: ** https://pnpm.io/symlinked-node-modules-structure
+**Link:** [link](https://pnpm.io/symlinked-node-modules-structure)
 
 ## Building an interactive 3D event badge with React Three Fiber - Vercel
 
@@ -39,22 +30,13 @@ Stack jest przepiękny: Blender do przygotowania modeli, React Three Fiber jako 
 
 Najciekawsze jest jak oni połączyli fizykę z interakcją - używają rope joints żeby połączyć segmenty sznurka i spherical joint żeby przymocować plakietkę. Kiedy przeciągasz myszką, kod konwertuje pozycję kursora na współrzędne 3D i budzi wszystkie rigid bodies w fizyce. To jest właśnie ta magia React Three Fiber - skomplikowane rzeczy robisz deklaratywnie.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - React Three Fiber pozwala na tworzenie zaawansowanych 3D doświadczeń z minimalnym kodem
 - Kombinacja physics engine z interakcją myszki daje realistyczne zachowanie
 - Deklaratywne podejście do 3D jest o wiele prostsze niż imperatywne Three.js
 - 80 linijek kodu wystarczy do stworzenia imponującego efektu wizualnego
 
-**Link:** https://vercel.com/blog/building-an-interactive-3d-event-badge-with-react-three-fiber
-
-Kluczowe wnioski:
-- - React Three Fiber pozwala na tworzenie zaawansowanych 3D doświadczeń z minimalnym kodem
-- Kombinacja physics engine z interakcją myszki daje realistyczne zachowanie
-- Deklaratywne podejście do 3D jest o wiele prostsze niż imperatywne Three.js
-- 80 linijek kodu wystarczy do stworzenia imponującego efektu wizualnego
-- https://vercel.com/blog/building-an-interactive-3d-event-badge-with-react-three-fiber
-
-Link: ** https://vercel.com/blog/building-an-interactive-3d-event-badge-with-react-three-fiber
+**Link:** [link](https://vercel.com/blog/building-an-interactive-3d-event-badge-with-react-three-fiber)
 
 ## Coherence — Conversational Surveys
 
@@ -64,22 +46,13 @@ Fajne jest to, że AI dostosowuje pytania dynamicznie - jak prawdziwy interviewe
 
 Najlepsze jest to, że AI analizuje odpowiedzi w czasie rzeczywistym, wyciąga kluczowe cytaty, tematy i sentiment. Potem możesz zapytać "jakie były główne tematy?" i dostajesz natychmiastowe insights. To jest właśnie przyszłość research - zamiast męczyć ludzi sztywnym formularzem, dajesz im możliwość normalnej rozmowy.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - AI-driven conversations dają głębsze odpowiedzi niż tradycyjne ankiety
 - Dynamiczne follow-up questions odkrywają insights niedostępne w sztywnych formularzach
 - Real-time analiza i ekstraktowanie tematów oszczędza godziny pracy
 - Customizable personality AI dopasowuje się do brandu i stylu badania
 
-**Link:** https://www.withcoherence.com/
-
-Kluczowe wnioski:
-- - AI-driven conversations dają głębsze odpowiedzi niż tradycyjne ankiety
-- Dynamiczne follow-up questions odkrywają insights niedostępne w sztywnych formularzach
-- Real-time analiza i ekstraktowanie tematów oszczędza godziny pracy
-- Customizable personality AI dopasowuje się do brandu i stylu badania
-- https://www.withcoherence.com/
-
-Link: ** https://www.withcoherence.com/
+**Link:** [link](https://www.withcoherence.com/)
 
 ## CarbonQA - Contextual QA for dev teams
 
@@ -89,19 +62,10 @@ Model biznesowy jest przemyślany - płacisz miesięczną subskrypcję która za
 
 Testują web, desktop, mobile - głównie manual testing przeciwko user stories, acceptance criteria, albo po prostu common sense. Jeśli nie masz test planu, zbudują ci go. Komunikują się przez Slack bezpośrednio z devami, co skraca feedback loop i pomaga szybko znaleźć problemy.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Dedicated team model vs crowdsourcing daje lepszą jakość i kontekst
 - Subscription + per-day billing model optymalizuje koszty
 - Direct communication z devami przez Slack przyspiesza rozwiązywanie problemów
 - Focus na manual testing uzupełnia automated testing teams
 
-**Link:** https://carbonqa.com/
-
-Kluczowe wnioski:
-- - Dedicated team model vs crowdsourcing daje lepszą jakość i kontekst
-- Subscription + per-day billing model optymalizuje koszty
-- Direct communication z devami przez Slack przyspiesza rozwiązywanie problemów
-- Focus na manual testing uzupełnia automated testing teams
-- https://carbonqa.com/
-
-Link: ** https://carbonqa.com/
+**Link:** [link](https://carbonqa.com/)

@@ -16,7 +16,7 @@ Expo już od SDK 53 w pełni wspiera nową architekturę, włącznie z bridgeles
 
 Najlepsze w tym wszystkim? Od SDK 52 wszystkie nowe projekty mają nową architekturę włączoną domyślnie. Nie ma już wymówek typu "ale to beta". To jest production ready i Meta pokazuje, że traktuje to serio.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Nowa architektura rozwiązuje fundamentalne problemy starego podejścia
 - Expo SDK w pełni wspiera nową architekturę od wersji 53
 - Narzędzie expo-doctor pomaga sprawdzić kompatybilność bibliotek
@@ -24,11 +24,6 @@ Najlepsze w tym wszystkim? Od SDK 52 wszystkie nowe projekty mają nową archite
 
 https://docs.expo.dev/guides/new-architecture/
 
-Kluczowe wnioski:
-- - Nowa architektura rozwiązuje fundamentalne problemy starego podejścia
-- Expo SDK w pełni wspiera nową architekturę od wersji 53
-- Narzędzie expo-doctor pomaga sprawdzić kompatybilność bibliotek
-- Nowe projekty mają nową architekturę włączoną domyślnie
 
 Link: 
 
@@ -42,7 +37,7 @@ Drata, jedna z najszybciej rosnących firm tech, miała problem - ich regression
 
 Najlepsze w tym podejściu? To nie jest kolejne no-code rozwiązanie, które obiecuje złote góry, a potem się okazuje, że nie radzi sobie z prawdziwymi, złożonymi aplikacjami. QA Wolf używa code-based framework, który radzi sobie z setkami integracji third-party i skomplikowanymi workflow.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - AI investiguje failed testy w sekundach, ludzie robią review
 - 86% szybsze cykle QA w przypadku Drata
 - Code-based framework, nie kolejne no-code rozwiązanie
@@ -50,11 +45,6 @@ Najlepsze w tym podejściu? To nie jest kolejne no-code rozwiązanie, które obi
 
 https://www.qawolf.com/
 
-Kluczowe wnioski:
-- - AI investiguje failed testy w sekundach, ludzie robią review
-- 86% szybsze cykle QA w przypadku Drata
-- Code-based framework, nie kolejne no-code rozwiązanie
-- Obsługuje złożone aplikacje z setkami integracji
 
 Link: 
 
@@ -68,7 +58,7 @@ Najlepsze? To jest UI agnostic. Nie zmusza cię do używania ich komponentów, m
 
 Integruje się z dowolną biblioteką do formów albo może działać standalone. Ma persistent state, step management, form integration - wszystko co potrzebujesz, nic więcej.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Zero dependencies i mały bundle size
 - TypeScript support z prawdziwego zdarzenia
 - UI agnostic - używasz swoich komponentów
@@ -76,11 +66,6 @@ Integruje się z dowolną biblioteką do formów albo może działać standalone
 
 https://stepperize.vercel.app/
 
-Kluczowe wnioski:
-- - Zero dependencies i mały bundle size
-- TypeScript support z prawdziwego zdarzenia
-- UI agnostic - używasz swoich komponentów
-- Proste API, ale pełna kontrola nad flow
 
 Link: 
 
@@ -94,7 +79,7 @@ Ich filozofia jest prosta - im prostsze jest setup, tym więcej ludzi będzie u�
 
 Sprawdzili ecosystem Vite przed stworzeniem własnego rozwiązania i nic im nie pasowało. Dlaczego? Bo prerendering jest najlepszy gdy jest maksymalnie drop-in. Nie chcą, żebyś przepisywał pół aplikacji, żeby dodać prerendering.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Prerendering był zawsze priorytetem w toolingu Preact
 - Filozofia: im prostszy setup, tym więcej adopcji
 - Drop-in rozwiązanie - minimalne zmiany w kodzie
@@ -102,10 +87,5 @@ Sprawdzili ecosystem Vite przed stworzeniem własnego rozwiązania i nic im nie 
 
 https://preactjs.com/blog/prerendering-preset-vite/
 
-Kluczowe wnioski:
-- - Prerendering był zawsze priorytetem w toolingu Preact
-- Filozofia: im prostszy setup, tym więcej adopcji
-- Drop-in rozwiązanie - minimalne zmiany w kodzie
-- Własna implementacja bo ecosystem Vite nie miał odpowiedniego rozwiązania
 
 Link:

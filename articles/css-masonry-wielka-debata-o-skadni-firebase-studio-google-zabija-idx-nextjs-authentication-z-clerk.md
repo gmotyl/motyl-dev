@@ -14,22 +14,13 @@ WebKit twierdzi że powinniśmy wykorzystać pełną moc CSS Grid - wszystkie te
 
 Rachel Andrew, która uczy CSS od 25 lat, ma bardzo mocną opinię - masonry jako część grid to błąd. Jej argument? Dobre defaulty są kluczowe dla nauczania. Gdy robisz `display: flex`, od razu dostajesz sensowne zachowanie. Z gridem też. Ale żeby zrobić masonry przez grid, musisz pisać `display: grid`, potem `grid-template-columns` z jakąś liczbą kolumn, a potem `grid-template-rows: masonry`. To nie jest intuicyjne.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Performance concerns zostały rozwiązane - masonry z CSS Grid jest możliwe
 - Debata sprowadza się do składni i filozofii designu
 - Rachel Andrew mocno forsuje `display: masonry` z powodu lepszych defaultów
 - Responsive design będzie łatwiejszy z osobną składnią
 
-**Link:** https://webkit.org/blog/16026/css-masonry-syntax/
-
-Kluczowe wnioski:
-- - Performance concerns zostały rozwiązane - masonry z CSS Grid jest możliwe
-- Debata sprowadza się do składni i filozofii designu
-- Rachel Andrew mocno forsuje `display: masonry` z powodu lepszych defaultów
-- Responsive design będzie łatwiejszy z osobną składnią
-- https://webkit.org/blog/16026/css-masonry-syntax/
-
-Link: ** https://webkit.org/blog/16026/css-masonry-syntax/
+**Link:** [link](https://webkit.org/blog/16026/css-masonry-syntax/)
 
 ## Firebase Studio - Google Zabija IDX
 
@@ -39,22 +30,13 @@ Brzmi znajomo? Tak, to kolejna próba Google'a na stworzenie cloud IDE. Tym raze
 
 Najlepsze w tym wszystkim? "3 workspaces za darmo w preview". Google Developer Program members dostają 30. Klasyczny Google - dają za darmo, wszyscy się przyzwyczajają, potem płacisz.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Project IDX oficjalnie martwy, długo żył Firebase Studio
 - AI agents mają pomagać w całym development lifecycle
 - Integracja z Firebase ekosystemem
 - Znów Google próbuje konkurować z VS Code w chmurze
 
-**Link:** https://idx.dev/
-
-Kluczowe wnioski:
-- - Project IDX oficjalnie martwy, długo żył Firebase Studio
-- AI agents mają pomagać w całym development lifecycle
-- Integracja z Firebase ekosystemem
-- Znów Google próbuje konkurować z VS Code w chmurze
-- https://idx.dev/
-
-Link: ** https://idx.dev/
+**Link:** [link](https://idx.dev/)
 
 ## Next.js Authentication z Clerk
 
@@ -64,22 +46,13 @@ Najciekawsze to "keyless mode" - możesz zacząć bez tworzenia konta i API keys
 
 Mają też unlimited SSO connections na wyższych planach, support dla wszystkich major protokołów - SAML, OAuth, OpenID Connect. Plus social logins - Google, GitHub, Discord, LinkedIn, TikTok i inne.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Keyless mode to dobry developer experience
 - Full Next.js integration z middleware
 - Unlimited SSO na paid plans
 - Prebuilt UI components dla szybkiego developmentu
 
-**Link:** https://go.clerk.com/JMuEojS
-
-Kluczowe wnioski:
-- - Keyless mode to dobry developer experience
-- Full Next.js integration z middleware
-- Unlimited SSO na paid plans
-- Prebuilt UI components dla szybkiego developmentu
-- https://go.clerk.com/JMuEojS
-
-Link: ** https://go.clerk.com/JMuEojS
+**Link:** [link](https://go.clerk.com/JMuEojS)
 
 ## Pinia Colada - Data Fetching dla Vue
 
@@ -89,22 +62,13 @@ Vue ecosystem dostaje nowy data fetching layer. Pinia Colada to odpowiedź Vue n
 
 Honestly, Vue ecosystem potrzebował czegoś takiego. React ma React Query, SWR, Apollo. Vue miał... co? Teraz mają Pinia Colada.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Vue wreszcie ma porządny data fetching layer
 - Mały bundle size i zero dependencies
 - Plugin system dla extensibility
 - SSR support od początku
 
-**Link:** https://pinia-colada.esm.dev/
-
-Kluczowe wnioski:
-- - Vue wreszcie ma porządny data fetching layer
-- Mały bundle size i zero dependencies
-- Plugin system dla extensibility
-- SSR support od początku
-- https://pinia-colada.esm.dev/
-
-Link: ** https://pinia-colada.esm.dev/
+**Link:** [link](https://pinia-colada.esm.dev/)
 
 ## Advanced Search Params w Next.js App Router
 
@@ -114,19 +78,10 @@ Rozwiązanie: URL jako single source of truth. Lifting state up, classic React p
 
 Artykuł pokazuje jak wykorzystać `useOptimistic()` z React 19 dla instant user feedback, i w końcu przechodzi na bibliotekę `nuqs` która robi to wszystko za ciebie.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - URL jako single source of truth dla search params
 - `useOptimistic()` dla instant feedback
 - `nuqs` library rozwiązuje większość problemów
 - React Server Components komplikują state management
 
-**Link:** https://aurorascharff.no/posts/managing-advanced-search-param-filtering-next-app-router/
-
-Kluczowe wnioski:
-- - URL jako single source of truth dla search params
-- `useOptimistic()` dla instant feedback
-- `nuqs` library rozwiązuje większość problemów
-- React Server Components komplikują state management
-- https://aurorascharff.no/posts/managing-advanced-search-param-filtering-next-app-router/
-
-Link: ** https://aurorascharff.no/posts/managing-advanced-search-param-filtering-next-app-router/
+**Link:** [link](https://aurorascharff.no/posts/managing-advanced-search-param-filtering-next-app-router/)

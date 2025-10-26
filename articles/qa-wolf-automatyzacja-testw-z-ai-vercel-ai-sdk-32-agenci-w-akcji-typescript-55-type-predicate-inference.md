@@ -12,22 +12,13 @@ Słuchajcie, kolejne narzędzie AI obiecuje nam złote góry - tym razem QA Wolf
 
 Najciekawsze jest to, że nie próbują zastąpić ludzi - AI robi robotę, ludzie myślą. Uruchamiają tysiące testów równolegle w kontenerach w chmurze, wyniki dostajecie w trzy minuty w GitHub, Slack i CI pipeline. Każdy bug jest reprodukowany z nagraniem wideo i Playwright trace logami.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - AI + człowiek = lepsza jakość niż samo AI
 - Testy równoległe w kontenerach chmurowych
 - Automatyczne naprawianie flaky testów
 - Integracja z istniejącymi narzędziami
 
-**Link:** https://www.qawolf.com/
-
-Kluczowe wnioski:
-- - AI + człowiek = lepsza jakość niż samo AI
-- Testy równoległe w kontenerach chmurowych
-- Automatyczne naprawianie flaky testów
-- Integracja z istniejącymi narzędziami
-- https://www.qawolf.com/
-
-Link: ** https://www.qawolf.com/
+**Link:** [link](https://www.qawolf.com/)
 
 ## Vercel AI SDK 3.2 - Agenci w akcji
 
@@ -37,22 +28,13 @@ Przykład jest prosty - analizujecie feedback użytkowników. Agent najpierw czy
 
 Dodali też nowych providerów, embeddings dla RAG-a i poprawili observability. To dopiero początek - prawdziwe autonomous agenty będą wymagały więcej pracy.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Multi-step workflows w AI SDK
 - Tools system dla agentów
 - Nowi providerzy i embeddings
 - Lepsza observability
 
-**Link:** https://vercel.com/blog/introducing-vercel-ai-sdk-3-2
-
-Kluczowe wnioski:
-- - Multi-step workflows w AI SDK
-- Tools system dla agentów
-- Nowi providerzy i embeddings
-- Lepsza observability
-- https://vercel.com/blog/introducing-vercel-ai-sdk-3-2
-
-Link: ** https://vercel.com/blog/introducing-vercel-ai-sdk-3-2
+**Link:** [link](https://vercel.com/blog/introducing-vercel-ai-sdk-3-2)
 
 ## TypeScript 5.5 - Type Predicate Inference
 
@@ -62,22 +44,13 @@ Funkcja polega na tym, że jeśli napiszecie funkcję jak `isNumber(data: unknow
 
 Dan opisuje cały proces - od znalezienia pierwszego issue, przez implementację, po walkę z edge case'ami. Najciekawsze są szczegóły techniczne - jak TypeScript analizuje control flow i inference.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Automatyczne type predicate inference
 - Lepsza ergonomia z array.filter
 - Proces contributing do TypeScript
 - Control flow analysis improvements
 
-**Link:** https://effectivetypescript.com/2024/04/16/inferring-a-type-predicate/
-
-Kluczowe wnioski:
-- - Automatyczne type predicate inference
-- Lepsza ergonomia z array.filter
-- Proces contributing do TypeScript
-- Control flow analysis improvements
-- https://effectivetypescript.com/2024/04/16/inferring-a-type-predicate/
-
-Link: ** https://effectivetypescript.com/2024/04/16/inferring-a-type-predicate/
+**Link:** [link](https://effectivetypescript.com/2024/04/16/inferring-a-type-predicate/)
 
 ## CSS Conditionals - Hacki które działają
 
@@ -87,22 +60,13 @@ Okazuje się, że istnieją "brilliant, horrible hacks" które pozwalają na con
 
 Kluczowa zasada: "Put the pain on those who can bear it". Lepiej mieć wewnętrzną kompleksowość niż zewnętrzną. Internal complexity można zarządzać toolingiem i komentarzami, a gdy platforma się rozwinie, trzeba zmienić tylko jeden codebase.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - CSS if() function za dwa lata
 - Można używać hacków dla user benefit
 - Priority of Constituencies principle
 - Internal vs external complexity
 
-**Link:** https://lea.verou.me/blog/2024/css-conditionals-now/
-
-Kluczowe wnioski:
-- - CSS if() function za dwa lata
-- Można używać hacków dla user benefit
-- Priority of Constituencies principle
-- Internal vs external complexity
-- https://lea.verou.me/blog/2024/css-conditionals-now/
-
-Link: ** https://lea.verou.me/blog/2024/css-conditionals-now/
+**Link:** [link](https://lea.verou.me/blog/2024/css-conditionals-now/)
 
 ## MobX vs React Compiler
 
@@ -112,22 +76,13 @@ MobX to reactive state management - automatycznie trackuje dependencies i updatu
 
 Mike pokazuje przykład gdzie standardowy React re-renderuje wszystko przy każdym keystroke w input field. Z MobX komponenty są prostsze, bo logika jest wyciągnięta do stores. Komponenty powinny się zajmować tylko prezentacją, nie logiką.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - MobX już robi auto-memoization
 - Komponenty powinny być tylko o prezentacji
 - Logika w stores, nie w komponentach
 - Łatwiejsze unit testing
 
-**Link:** https://www.mikejohnson.dev/posts/2024/06/mobx-react-compiler
-
-Kluczowe wnioski:
-- - MobX już robi auto-memoization
-- Komponenty powinny być tylko o prezentacji
-- Logika w stores, nie w komponentach
-- Łatwiejsze unit testing
-- https://www.mikejohnson.dev/posts/2024/06/mobx-react-compiler
-
-Link: ** https://www.mikejohnson.dev/posts/2024/06/mobx-react-compiler
+**Link:** [link](https://www.mikejohnson.dev/posts/2024/06/mobx-react-compiler)
 
 ## Backend Experts Roundtable
 
@@ -135,19 +90,10 @@ Sentry zorganizował dyskusję z ekspertami od Laravel, Node.js, Prisma i Supaba
 
 To typowa konferencja content - pewnie ciekawe insights, ale bez konkretów trudno ocenić wartość. Jeśli macie czas, może warto obejrzeć dla perspektywy od maintainerów popularnych narzędzi.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Przyszłość backend frameworks
 - Wpływ AI na backend dev
 - Scalable databases best practices
 - Insights od maintainerów
 
-**Link:** https://sentry.io/resources/behind-the-code-a-discussion-with-backend-experts/
-
-Kluczowe wnioski:
-- - Przyszłość backend frameworks
-- Wpływ AI na backend dev
-- Scalable databases best practices
-- Insights od maintainerów
-- https://sentry.io/resources/behind-the-code-a-discussion-with-backend-experts/
-
-Link: ** https://sentry.io/resources/behind-the-code-a-discussion-with-backend-experts/
+**Link:** [link](https://sentry.io/resources/behind-the-code-a-discussion-with-backend-experts/)

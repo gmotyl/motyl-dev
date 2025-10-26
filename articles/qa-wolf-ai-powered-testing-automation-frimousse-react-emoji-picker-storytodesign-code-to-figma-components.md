@@ -14,7 +14,7 @@ Ich proces jest całkiem przemyślany - zaczynają od mapowania aplikacji, tworz
 
 Mają też trójstopniowy system naprawy testów - od prostych zmian UI, przez większe zmiany UX, aż po kompletną rekonstrukcję po refaktoringu frontendu. I podobno robią to bez dodatkowych opłat.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - AI analizuje niepowodzenia testów w sekundach
 - Testy działają w pełni równolegle w oddzielnych kontenerach
 - Automatyczna naprawa testów przy zmianach UI
@@ -22,11 +22,6 @@ Mają też trójstopniowy system naprawy testów - od prostych zmian UI, przez w
 
 [QA Wolf](https://www.qawolf.com/)
 
-Kluczowe wnioski:
-- - AI analizuje niepowodzenia testów w sekundach
-- Testy działają w pełni równolegle w oddzielnych kontenerach
-- Automatyczna naprawa testów przy zmianach UI
-- Pokrycie 80% w 4 miesiące brzmi ambitnie ale wykonalnie
 
 Link: 
 
@@ -38,7 +33,7 @@ Najciekawsze jest to, że jest całkowicie unstyled out of the box. Możesz uży
 
 Biblioteka jest zwirtualizowana, co oznacza że radzi sobie z dużymi listami emoji bez problemów z performance. Mają też fajne rzeczy jak kolorowe tła dla buttonów - albo losowe kolory jak Slack, albo wyciągnięte główne kolory z emoji jak Linear.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Zero dependencies, zero bundle size
 - Całkowicie kompozytowalna i unstyled
 - Zwirtualizowana lista dla lepszej wydajności  
@@ -46,11 +41,6 @@ Biblioteka jest zwirtualizowana, co oznacza że radzi sobie z dużymi listami em
 
 [Frimousse](https://frimousse.liveblocks.io/)
 
-Kluczowe wnioski:
-- - Zero dependencies, zero bundle size
-- Całkowicie kompozytowalna i unstyled
-- Zwirtualizowana lista dla lepszej wydajności
-- Integracja z shadcn/ui out of the box
 
 Link: 
 
@@ -62,7 +52,7 @@ Ludzie są zachwyceni tym narzędziem. Head of Design z Neo.Tax mówi że to per
 
 Podejście "kod jako source of truth" ma sens, szczególnie w dzisiejszych czasach gdzie komponenty są podstawą wszystkiego.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Generuje komponenty Figma bezpośrednio z kodu
 - Kod staje się source of truth dla designu
 - Szczególnie przydatne dla zespołów bez designerów
@@ -70,11 +60,6 @@ Podejście "kod jako source of truth" ma sens, szczególnie w dzisiejszych czasa
 
 [Story.to.design](https://story.to.design/)
 
-Kluczowe wnioski:
-- - Generuje komponenty Figma bezpośrednio z kodu
-- Kod staje się source of truth dla designu
-- Szczególnie przydatne dla zespołów bez designerów
-- Rozwiązuje problem synchronizacji design-development
 
 Link: 
 
@@ -86,7 +71,7 @@ MCP to protokół który pozwala LLM-om na więcej niż tylko inference i RAG - 
 
 To jest jak przejście z desktop software na web-based software. Lokalne MCP jest świetne dla developerów, ale zdalne połączenia MCP to brakujący element żeby dotrzeć do wszystkich w internecie.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - MCP przechodzi z lokalnego na zdalne połączenia
 - Cloudflare obsługuje autentykację i autoryzację
 - Otwiera MCP dla szerszej publiczności
@@ -94,11 +79,6 @@ To jest jak przejście z desktop software na web-based software. Lokalne MCP jes
 
 [Cloudflare MCP](https://blog.cloudflare.com/remote-model-context-protocol-servers-mcp/)
 
-Kluczowe wnioski:
-- - MCP przechodzi z lokalnego na zdalne połączenia
-- Cloudflare obsługuje autentykację i autoryzację
-- Otwiera MCP dla szerszej publiczności
-- Może być przełomem dla consumer AI applications
 
 Link: 
 
@@ -110,7 +90,7 @@ Gemini 2.5 Pro Experimental prowadzi na LMArena leaderboard znaczącą przewagą
 
 Bez żadnych test-time techniques które zwiększają koszt, 2.5 Pro prowadzi w GPQA i AIME 2025. Osiąga też 18.8% na Humanity's Last Exam - dataset stworzony przez setki ekspertów żeby uchwycić ludzką granicę wiedzy i rozumowania.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - "Thinking model" - rozumuje przed odpowiedzią
 - Numer jeden na LMArena znaczącą przewagą
 - Silne capabilities w kodowaniu i matematyce
@@ -118,11 +98,6 @@ Bez żadnych test-time techniques które zwiększają koszt, 2.5 Pro prowadzi w 
 
 [Gemini 2.5](https://blog.google/technology/google-deepmind/gemini-model-thinking-updates-march-2025/)
 
-Kluczowe wnioski:
-- - "Thinking model" - rozumuje przed odpowiedzią
-- Numer jeden na LMArena znaczącą przewagą
-- Silne capabilities w kodowaniu i matematyce
-- Dostępne w Google AI Studio i Gemini app
 
 Link: 
 
@@ -134,7 +109,7 @@ Autor dzieli podejścia na trzy kategorie używając przykładu customer support
 
 Scale-out approach generuje multiple responses równolegle, uruchamia kilka ścieżek rozumowania jednocześnie, i wybiera najlepsze wyniki. Każda interakcja może spawować dziesiątki AI calls eksplorujących różne podejścia. Kosztowne obliczeniowo, ale działa zaskakująco dobrze.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Surowa moc obliczeniowa wygrywa nad clever engineering
 - Scale-out approach > sophisticated rules
 - Parallel reasoning paths dają lepsze wyniki
@@ -142,11 +117,6 @@ Scale-out approach generuje multiple responses równolegle, uruchamia kilka ści
 
 [The Bitter Lesson](https://ankitmaloo.com/bitter-lesson/)
 
-Kluczowe wnioski:
-- - Surowa moc obliczeniowa wygrywa nad clever engineering
-- Scale-out approach > sophisticated rules
-- Parallel reasoning paths dają lepsze wyniki
-- Koszt compute vs jakość to trade-off wart rozważenia
 
 Link: 
 
@@ -158,7 +128,7 @@ Obecne rozwiązania mają ograniczenia: border zmienia rozmiar elementów, wymag
 
 Gap decorations pozwalają na rysowanie separatorów bezpośrednio w gaps między elementami w Flexbox i Grid layouts. To jest szczególnie przydatne w responsive grid layouts gdzie elementy nie zawsze zajmują tę samą pozycję.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Nowa propozycja CSS do rysowania separatorów
 - Rozwiązuje problemy z border i pseudo-elements
 - Szczególnie przydatne w Flexbox i Grid layouts
@@ -166,10 +136,5 @@ Gap decorations pozwalają na rysowanie separatorów bezpośrednio w gaps międz
 
 [CSS Gap Decorations](https://blogs.windows.com/msedgedev/2025/03/19/minding-the-gaps-a-new-way-to-draw-separators-in-css/)
 
-Kluczowe wnioski:
-- - Nowa propozycja CSS do rysowania separatorów
-- Rozwiązuje problemy z border i pseudo-elements
-- Szczególnie przydatne w Flexbox i Grid layouts
-- Microsoft szuka feedback od community
 
 Link:

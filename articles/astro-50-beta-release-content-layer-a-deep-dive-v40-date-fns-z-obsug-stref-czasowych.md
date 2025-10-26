@@ -22,7 +22,7 @@ Dodatkowo scalili static i hybrid output modes i ustabilizowali astro:env. Cało
 - Scalenie trybów output i stabilne astro:env
 - Zachowana kompatybilność wsteczna
 
-**Link:** https://astro.build/blog/astro-5-beta/
+**Link:** [link](https://astro.build/blog/astro-5-beta/)
 
 ## Content Layer: A Deep Dive
 
@@ -38,7 +38,7 @@ Najlepsze w tym wszystkim jest to, że jeśli już używałeś content collectio
 - Zachowana kompatybilność z istniejącym API
 - Type-safety dla wszystkich źródeł danych
 
-**Link:** https://astro.build/blog/content-layer-deep-dive/
+**Link:** [link](https://astro.build/blog/content-layer-deep-dive/)
 
 ## v4.0 date-fns z obsługą stref czasowych
 
@@ -56,7 +56,7 @@ Sasha miał rację co do statystyk - tylko około 15% użytkowników potrzebuje 
 - Normalizacja argumentów zapobiega błędom w kalkulacjach
 - Brak breaking changes w core library
 
-**Link:** https://blog.date-fns.org/v4.0-with-time-zone-support/
+**Link:** [link](https://blog.date-fns.org/v4.0-with-time-zone-support/)
 
 ## HTTP QUERY Method
 
@@ -74,7 +74,7 @@ To jest wciąż draft, ale jeśli przejdzie, to może zmienić sposób, w jaki p
 - Accept-Query header dla deklaracji wsparcia
 - Wciąż w fazie draft w IETF
 
-**Link:** https://www.ietf.org/archive/id/draft-ietf-httpbis-safe-method-w-body-05.html
+**Link:** [link](https://www.ietf.org/archive/id/draft-ietf-httpbis-safe-method-w-body-05.html)
 
 ## TanStack Router TypeScript Performance
 
@@ -92,4 +92,4 @@ To pokazuje, jak ważna jest TypeScript performance w nowoczesnych bibliotekach.
 - Znaczące poprawy w editor experience
 - Ważność TypeScript performance w DX
 
-**Link:** https://tanstack.com/blog/tanstack-router-typescript-performance
+**Link:** [link](https://tanstack.com/blog/tanstack-router-typescript-performance)

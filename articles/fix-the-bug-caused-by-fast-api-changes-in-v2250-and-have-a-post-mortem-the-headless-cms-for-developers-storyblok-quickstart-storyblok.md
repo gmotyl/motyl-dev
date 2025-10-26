@@ -26,11 +26,6 @@ Najgorsze w tym wszystkim? Node.js ma projekt CITGM - Canary in the Gold Mine - 
 
 **Link**: https://github.com/nodejs/node/pull/53934
 
-Kluczowe wnioski:
-- - V8 Fast API może dramatycznie poprawić performance, ale wymaga ekstremalnie ostrożnego testowania
-- Destrukturyzacja internal bindingów może prowadzić do problemów z creation context
-- Systemy CI muszą być regularnie audytowane - nawet najlepsze narzędzia mogą cichaczem przestać działać
-- Jedna optymalizacja na niskim poziomie może złamać miliony aplikacji
 
 Link: 
 
@@ -55,12 +50,6 @@ Najbardziej imponuje mi ich podejście do customization. API calls, frontend fra
 
 **Link**: https://www.storyblok.com/lp/developers/
 
-Kluczowe wnioski:
-- - API-first architecture daje prawdziwą swobodę w wyborze tech stacka
-- Visual Editor pozwala na collaboration bez ryzyka zniszczenia architektury
-- Atomic design approach umożliwia reużywanie komponentów across projektów
-- Performance optimization przez CDN i Image Service out of the box
-- Granular permissions system chroni przed przypadkowymi zmianami w schema
 
 Link: 
 
@@ -80,10 +69,5 @@ Starter plan jest zawsze free, bez karty kredytowej. To pokazuje, że są pewni 
 
 **Link**: https://www.storyblok.com/technologies/
 
-Kluczowe wnioski:
-- - Blueprints eliminują boilerplate setup time
-- Auto-generated GitHub repos z deployment configuration
-- Framework-agnostic approach dla Core Blueprint
-- Free tier bez hidden costs czy credit card requirements
 
 Link:

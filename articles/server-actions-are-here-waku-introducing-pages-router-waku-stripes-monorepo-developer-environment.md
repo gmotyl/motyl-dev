@@ -14,22 +14,13 @@ Zapomnijcie o ręcznym setupie API endpoints, POST requestach z fetch czy zarzą
 
 Co ciekawe, możecie tworzyć inline server actions w server componentach albo wynosić je do osobnych plików. Ale uwaga - każda funkcja z 'use server' na topie pliku staje się API endpointem, więc nie róbcie tego bezmyślnie. To nie jest 'use client' - to coś zupełnie innego.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Pełne wsparcie dla React 19 Server Actions API
 - Automatyczne tworzenie API endpoints bez ręcznego setupu
 - Możliwość inline actions w server componentach
 - Bezpieczeństwo wymaga własnej logiki auth/authorization
 
-**Link:** https://waku.gg/blog/server-actions-are-here
-
-Kluczowe wnioski:
-- - Pełne wsparcie dla React 19 Server Actions API
-- Automatyczne tworzenie API endpoints bez ręcznego setupu
-- Możliwość inline actions w server componentach
-- Bezpieczeństwo wymaga własnej logiki auth/authorization
-- https://waku.gg/blog/server-actions-are-here
-
-Link: ** https://waku.gg/blog/server-actions-are-here
+**Link:** [link](https://waku.gg/blog/server-actions-are-here)
 
 ## Introducing "pages router" — Waku
 
@@ -39,22 +30,13 @@ Tworzenie strony to teraz kwestia stworzenia pliku w katalogu ./src/pages. Chcec
 
 Każda strona eksportuje default komponent i funkcję getConfig, która określa metodę renderowania - 'static' dla SSG albo 'dynamic' dla SSR. Możecie mieć statyczny header i footer, ale dynamiczną zawartość dla personalizacji. To elastyczność, której potrzebujecie.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - File-based routing podobny do Next.js
 - Wsparcie dla SSG i SSR w jednej aplikacji
 - Segment routes z nawiasami kwadratowymi
 - Minimalne API dla szybkiego developmentu
 
-**Link:** https://waku.gg/blog/introducing-pages-router
-
-Kluczowe wnioski:
-- - File-based routing podobny do Next.js
-- Wsparcie dla SSG i SSR w jednej aplikacji
-- Segment routes z nawiasami kwadratowymi
-- Minimalne API dla szybkiego developmentu
-- https://waku.gg/blog/introducing-pages-router
-
-Link: ** https://waku.gg/blog/introducing-pages-router
+**Link:** [link](https://waku.gg/blog/introducing-pages-router)
 
 ## Stripe's monorepo developer environment
 
@@ -64,22 +46,13 @@ Najważniejsza lekcja? Stripe wcześnie zainwestowało w dedykowany team do deve
 
 Mieli wspólny codebase dla wielu serwisów, które dzieliły kod ekstensywnie. Stripe API było prawie w całości jednym Ruby serwisem w monorepo. To pokazuje, że monorepo może działać nawet w skali Stripe, jeśli macie odpowiednie narzędzia i ludzi do ich utrzymania.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Inwestycja w developer productivity team była kluczowa
 - Ruby monorepo z ekstensywnym code sharing
 - Narzędzia były budowane przez doświadczonych inżynierów
 - Tooling może być competitive advantage
 
-**Link:** https://blog.nelhage.com/post/stripe-dev-environment/
-
-Kluczowe wnioski:
-- - Inwestycja w developer productivity team była kluczowa
-- Ruby monorepo z ekstensywnym code sharing
-- Narzędzia były budowane przez doświadczonych inżynierów
-- Tooling może być competitive advantage
-- https://blog.nelhage.com/post/stripe-dev-environment/
-
-Link: ** https://blog.nelhage.com/post/stripe-dev-environment/
+**Link:** [link](https://blog.nelhage.com/post/stripe-dev-environment/)
 
 ## spatial compute
 
@@ -89,22 +62,13 @@ Wyobraźcie sobie serwer, gdzie część kodu wykonuje się blisko użytkownika 
 
 To buduje na Cloudflare Durable Objects, które pozwalają na przypisanie obiektu per session per user. To alternatywa między centralizowanym key-value store a kodowaniem wszystkiego w cookies. Brzmi jak science fiction, ale technologia już istnieje.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Kod w jednym pliku, wykonanie w wielu lokalizacjach
 - Optymalizacja based on latency, cost, reliability
 - Wykorzystanie Cloudflare Durable Objects
 - Przyszłość może być bardziej rozproszona niż myślimy
 
-**Link:** https://sunilpai.dev/posts/spatial-compute/
-
-Kluczowe wnioski:
-- - Kod w jednym pliku, wykonanie w wielu lokalizacjach
-- Optymalizacja based on latency, cost, reliability
-- Wykorzystanie Cloudflare Durable Objects
-- Przyszłość może być bardziej rozproszona niż myślimy
-- https://sunilpai.dev/posts/spatial-compute/
-
-Link: ** https://sunilpai.dev/posts/spatial-compute/
+**Link:** [link](https://sunilpai.dev/posts/spatial-compute/)
 
 ## pkg.pr.new - Continuous Preview Releases
 
@@ -114,22 +78,13 @@ To rozwiązuje prawdziwy problem - czekanie na release cycles żeby przetestowa�
 
 Cloudflare wspiera infrastructure, więc to nie jest kolejny side project, który zniknie za rok. GitHub App instalujecie raz, potem npx pkg-pr-new publish w workflow i macie continuous releases.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Preview releases bez publikowania do NPM
 - Instant builds z każdego commita
 - Wsparcie dla monorepos i workspaces
 - Backed by Cloudflare infrastructure
 
-**Link:** https://github.com/stackblitz-labs/pkg.pr.new
-
-Kluczowe wnioski:
-- - Preview releases bez publikowania do NPM
-- Instant builds z każdego commita
-- Wsparcie dla monorepos i workspaces
-- Backed by Cloudflare infrastructure
-- https://github.com/stackblitz-labs/pkg.pr.new
-
-Link: ** https://github.com/stackblitz-labs/pkg.pr.new
+**Link:** [link](https://github.com/stackblitz-labs/pkg.pr.new)
 
 ## Nuxt Scripts - Better Third-Party Script Management
 
@@ -139,19 +94,10 @@ Nuxt team z Google Chrome Aurora wypuścił public beta Nuxt Scripts. To próba 
 
 Developer experience jest obecnie nightmare - wszystko musi być wrapped dla SSR safety, flaky checks czy skrypt się załadował, augmentowanie window object dla types. Nuxt Scripts ma to wszystko uprościć.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Collaboration między Nuxt team a Google Chrome Aurora
 - 94% stron używa third-party scripts
 - Focus na performance, privacy, security, DX
 - Public beta już dostępna
 
-**Link:** https://nuxt.com/blog/nuxt-scripts
-
-Kluczowe wnioski:
-- - Collaboration między Nuxt team a Google Chrome Aurora
-- 94% stron używa third-party scripts
-- Focus na performance, privacy, security, DX
-- Public beta już dostępna
-- https://nuxt.com/blog/nuxt-scripts
-
-Link: ** https://nuxt.com/blog/nuxt-scripts
+**Link:** [link](https://nuxt.com/blog/nuxt-scripts)

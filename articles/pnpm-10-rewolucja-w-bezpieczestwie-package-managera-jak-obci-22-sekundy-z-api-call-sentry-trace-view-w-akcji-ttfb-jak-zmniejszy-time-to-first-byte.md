@@ -15,12 +15,13 @@ No i mamy to! PNPM 10 właśnie wylądowało i chłopaki nie żartowali - to jes
 Kolejna duża zmiana - pnpm link teraz dodaje overrides do root package.json. SHA256 zastąpił MD5 wszędzie gdzie się dało - długie ścieżki, peer dependency hashe, checksums. Wszystko dla bezpieczeństwa.
 
 **Kluczowe punkty:**
+
 - Skrypty lifecycle dependencji wyłączone domyślnie
 - SHA256 zastępuje starsze algorytmy hashowania
 - Nowe zachowanie pnpm link z overrides
 - Store version został podniesiony do v10
 
-**Link:** https://github.com/pnpm/pnpm/releases/tag/v10.0.0
+**Link:** [link](https://github.com/pnpm/pnpm/releases/tag/v10.0.0)
 
 ## Jak Obciąć 22 Sekundy z API Call - Sentry Trace View w Akcji
 
@@ -31,12 +32,13 @@ Trace View to narzędzie, które pokazuje waterfall visualization transakcji i s
 W przypadku Dana problem był z endpointem, który generował cały codebase, repo, content i deployował na Vercel. Nie jest to zwykły CRUD endpoint. Dzięki distributed tracing mógł śledzić request od klienta przez serwer i zidentyfikować bottlenecki.
 
 **Kluczowe punkty:**
+
 - Trace View pokazuje dokładnie co dzieje się na serwerze
 - Distributed tracing łączy client i server w jednej timeline
 - Flame Graph visualization ułatwia identyfikację problemów
 - Sentry integruje się bezpośrednio z Next.js
 
-**Link:** https://blog.sentry.io/how-i-cut-22-3-seconds-off-an-api-call-using-trace-view/
+**Link:** [link](https://blog.sentry.io/how-i-cut-22-3-seconds-off-an-api-call-using-trace-view/)
 
 ## TTFB - Jak Zmniejszyć Time to First Byte
 
@@ -47,12 +49,13 @@ Chrome DevTools pokaże wam tylko, że browser czekał 2 sekundy na serwer, ale 
 Sentry tworzy automatycznie spany dla Next.js aplikacji, które pozwalają zidentyfikować co spowalnia wasz TTFB. Możecie zobaczyć które database queries, API calle czy inne operacje zajmują najwięcej czasu i je zoptymalizować.
 
 **Kluczowe punkty:**
+
 - TTFB wpływa na wszystkie inne web vitals
 - Browser tools nie pokazują co dzieje się na serwerze
 - Tracing jest kluczowy do debugowania TTFB
 - Sentry automatycznie tworzy spany dla Next.js
 
-**Link:** https://blog.sentry.io/how-to-reduce-ttfb/
+**Link:** [link](https://blog.sentry.io/how-to-reduce-ttfb/)
 
 ## React Dostaje Pierwsze API do Animacji - ViewTransition
 
@@ -65,12 +68,13 @@ Problem z integracją view transitions z Reactem to asynchroniczność - musicie
 React team rozwiązał te problemy w swoim ViewTransition komponencie. Możecie teraz robić płynne animacje między różnymi stanami aplikacji bez third-party bibliotek jak Motion czy inne.
 
 **Kluczowe punkty:**
+
 - Pierwszy oficjalny animations API w Reakcie
 - Bazuje na browser's View Transition API
 - Rozwiązuje problemy z asynchronicznością i performance
 - Dostępny w pre-release channels
 
-**Link:** https://motion.dev/blog/reacts-experimental-view-transition-api
+**Link:** [link](https://motion.dev/blog/reacts-experimental-view-transition-api)
 
 ## Flexoki - Inky Color Scheme dla Kodu i Tekstu
 
@@ -81,9 +85,10 @@ Dostępny jest dla praktycznie wszystkiego - od VS Code, przez Neovim, Sublime T
 Paleta kolorów jest bardzo przemyślana - od paper (#FFFCF0) przez różne odcienie base (50-950) po accent colors jak red, orange, yellow, green, cyan, blue, purple i magenta. Każdy kolor ma swoje light i dark wersje.
 
 **Kluczowe punkty:**
+
 - Inspirowany analogowymi tuszami drukarskimi
 - Dostępny dla wszystkich popularnych edytorów i terminali
 - Przemyślana paleta kolorów z full range 50-950
 - MIT licensed z możliwością portowania
 
-**Link:** https://github.com/kepano/flexoki
+**Link:** [link](https://github.com/kepano/flexoki)

@@ -12,24 +12,14 @@ Słuchajcie, to jest to czego potrzebujemy w naszej branży! QA Wolf robi coś n
 
 Co mnie najbardziej kręci, to że oni uruchamiają tysiące testów równolegle w swoich kontenerach w chmurze. Wyniki dostajecie w 3 minuty do GitHub, Slack i CI pipeline. AutoTrader zaoszczędził 620 tysięcy dolarów rocznie przechodzi z manualnego testowania na automatyzację. Wcześniej testowanie zajmowało im 2-3 dni, a większe projekty nawet tydzień!
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - AI + ludzie = idealna kombinacja do testów
 - Testy równoległe w kontenerach chmurowych
 - Wyniki w 3 minuty
 - Automatyczna naprawa testów przy zmianach UI
 - ROI 620k$ rocznie dla AutoTrader
 
-**Link:** https://www.qawolf.com/
-
-Kluczowe wnioski:
-- - AI + ludzie = idealna kombinacja do testów
-- Testy równoległe w kontenerach chmurowych
-- Wyniki w 3 minuty
-- Automatyczna naprawa testów przy zmianach UI
-- ROI 620k$ rocznie dla AutoTrader
-- https://www.qawolf.com/
-
-Link: ** https://www.qawolf.com/
+**Link:** [link](https://www.qawolf.com/)
 
 ## Medusa 2.0 - Kompletne przepisanie architektury
 
@@ -39,24 +29,14 @@ Mają teraz trzy główne paczki: medusa core, framework do customizacji i admin
 
 Najważniejsza zmiana to modularna architektura. Każdy moduł może działać niezależnie, co oznacza, że możecie wybrać tylko te części, których potrzebujecie. To jest przyszłość - nie monolity, ale też nie mikroserwisy, tylko modularity done right.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Kompletne przepisanie architektury
 - Modularna struktura z niezależnymi modułami  
 - Nowy framework package dla customizacji
 - Przepisana dokumentacja z learning path
 - Breaking changes ale z dobrym powodem
 
-**Link:** https://medusajs.com/blog/v2-release/
-
-Kluczowe wnioski:
-- - Kompletne przepisanie architektury
-- Modularna struktura z niezależnymi modułami
-- Nowy framework package dla customizacji
-- Przepisana dokumentacja z learning path
-- Breaking changes ale z dobrym powodem
-- https://medusajs.com/blog/v2-release/
-
-Link: ** https://medusajs.com/blog/v2-release/
+**Link:** [link](https://medusajs.com/blog/v2-release/)
 
 ## Nowy Svelte CLI - sv
 
@@ -66,24 +46,14 @@ Najlepsze w tym wszystkim? Możecie teraz setupować Tailwind, auth, bazy danych
 
 Co więcej, możecie dodawać rzeczy do istniejących projektów przez "npx sv add". A migracja do Svelte 5? "sv migrate svelte-5" i już! To jest właśnie ta prostota, której potrzebujemy.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Jeden CLI dla wszystkich operacji Svelte
 - Interaktywny setup z add-onami
 - Wsparcie dla Tailwind, auth, DB out of the box
 - Łatwa migracja między wersjami
 - Community add-ons w przyszłości
 
-**Link:** https://svelte.dev/blog/sv-the-svelte-cli
-
-Kluczowe wnioski:
-- - Jeden CLI dla wszystkich operacji Svelte
-- Interaktywny setup z add-onami
-- Wsparcie dla Tailwind, auth, DB out of the box
-- Łatwa migracja między wersjami
-- Community add-ons w przyszłości
-- https://svelte.dev/blog/sv-the-svelte-cli
-
-Link: ** https://svelte.dev/blog/sv-the-svelte-cli
+**Link:** [link](https://svelte.dev/blog/sv-the-svelte-cli)
 
 ## TinyBench 3.0 - Breaking Changes ale warto
 
@@ -93,21 +63,11 @@ Ale dodali naprawdę fajne rzeczy - medianę i median absolute deviation, zaawan
 
 API jest teraz prostsze - concurrency kontrolujecie tylko przez property, warmup dzieje się automatycznie przy run(). Mniej opcji, mniej confusion, więcej focus na tym co ważne.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Uproszczone API z mniejszą ilością opcji
 - Nowe statystyki: mediana, MAD, latencja, throughput  
 - Automatyczny warmup przy uruchomieniu
 - Lepsze wsparcie dla funkcji asynchronicznych
 - Drop Node 16 support
 
-**Link:** https://github.com/tinylibs/tinybench/releases/tag/v3.0.0
-
-Kluczowe wnioski:
-- - Uproszczone API z mniejszą ilością opcji
-- Nowe statystyki: mediana, MAD, latencja, throughput
-- Automatyczny warmup przy uruchomieniu
-- Lepsze wsparcie dla funkcji asynchronicznych
-- Drop Node 16 support
-- https://github.com/tinylibs/tinybench/releases/tag/v3.0.0
-
-Link: ** https://github.com/tinylibs/tinybench/releases/tag/v3.0.0
+**Link:** [link](https://github.com/tinylibs/tinybench/releases/tag/v3.0.0)

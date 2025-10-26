@@ -16,22 +16,13 @@ Problem jest zarówno w UI jak i w architekturze. Większość narzędzi przecho
 
 Najważniejsze jest to, że każde zadanie to first-class data, nie tylko tekst. To umożliwia przyszłym sub-agentom weryfikację pracy i współpracę między agentami. Ponieważ attention w large language modelach słabnie po kilku tysiącach tokenów, Tasklist niesie długoterminowy plan, podczas gdy każde zadanie pozostaje w zarządzalnym oknie kontekstu.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Markdown-based planning prowadzi do rozpraszania agentów i niepełnej pracy
 - Structured task progression działa jak state machines w software engineering
 - Każde zadanie jako first-class object umożliwia lepszą współpracę i debugging
 - System automatycznie tworzy Tasklist przy złożonych, wieloetapowych problemach
 
-**Link:** https://www.augmentcode.com/blog/how-we-built-tasklist
-
-Kluczowe wnioski:
-- - Markdown-based planning prowadzi do rozpraszania agentów i niepełnej pracy
-- Structured task progression działa jak state machines w software engineering
-- Każde zadanie jako first-class object umożliwia lepszą współpracę i debugging
-- System automatycznie tworzy Tasklist przy złożonych, wieloetapowych problemach
-- https://www.augmentcode.com/blog/how-we-built-tasklist
-
-Link: ** https://www.augmentcode.com/blog/how-we-built-tasklist
+**Link:** [link](https://www.augmentcode.com/blog/how-we-built-tasklist)
 
 ## What You Actually Need to Monitor AI Systems in Production
 
@@ -45,22 +36,13 @@ W produkcji debugujesz wszystko wokół modelu. Frontend może mieć laggy input
 
 Potrzebujesz prawdziwego tracingu - nie "co wysłaliśmy do modelu", ale "co się stało od kliknięcia użytkownika do płonącego outputu". Każdy layer może się zepsuć na swój sposób.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Prompt in/response out to nie observability, to vibes
 - W prototypie loguj wszystko, w produkcji monitoruj każdy layer osobno
 - Tracing musi pokazywać całą ścieżkę od user input do final output
 - Token usage monitoring może uratować cię przed spaleniem budżetu na pustych completions
 
-**Link:** https://blog.sentry.io/what-you-actually-need-to-monitor-ai-systems-in-production/
-
-Kluczowe wnioski:
-- - Prompt in/response out to nie observability, to vibes
-- W prototypie loguj wszystko, w produkcji monitoruj każdy layer osobno
-- Tracing musi pokazywać całą ścieżkę od user input do final output
-- Token usage monitoring może uratować cię przed spaleniem budżetu na pustych completions
-- https://blog.sentry.io/what-you-actually-need-to-monitor-ai-systems-in-production/
-
-Link: ** https://blog.sentry.io/what-you-actually-need-to-monitor-ai-systems-in-production/
+**Link:** [link](https://blog.sentry.io/what-you-actually-need-to-monitor-ai-systems-in-production/)
 
 ## The Useless useCallback
 
@@ -76,22 +58,13 @@ Trzeci: gdy funkcja jest używana tylko lokalnie w komponencie. Jeśli funkcja n
 
 Autor pokazuje, że większość useCallback w dzisiejszych aplikacjach to cargo cult programming. Ludzie dodają je "na wszelki wypadek" nie rozumiejąc, że bez odpowiedniego kontekstu to tylko dodatkowa praca dla Reacta.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - useCallback bez React.memo to bezużyteczny overhead
 - Zmieniające się dependencies unicestwiają całą memoizację
 - Lokalne funkcje rzadko potrzebują memoizacji
 - Większość useCallback to cargo cult programming
 
-**Link:** https://tkdodo.eu/blog/the-useless-use-callback
-
-Kluczowe wnioski:
-- - useCallback bez React.memo to bezużyteczny overhead
-- Zmieniające się dependencies unicestwiają całą memoizację
-- Lokalne funkcje rzadko potrzebują memoizacji
-- Większość useCallback to cargo cult programming
-- https://tkdodo.eu/blog/the-useless-use-callback
-
-Link: ** https://tkdodo.eu/blog/the-useless-use-callback
+**Link:** [link](https://tkdodo.eu/blog/the-useless-use-callback)
 
 ## 90-Day AI Readiness Playbook
 
@@ -103,22 +76,13 @@ Kluczowe jest zrozumienie, że AI agents potrzebują innej jakości dokumentacji
 
 Playbook podkreśla, że podczas gdy konkurencja walczy z fragmentarycznymi systemami, ty możesz zbudować fundament pod intelligent automation w 90 dni. To nie jest o tym, żeby mieć AI - to o tym, żeby mieć infrastrukturę, która AI może faktycznie używać.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - AI agents fail silently przy słabej dokumentacji
 - API documentation musi być AI-consumable, nie tylko human-readable
 - 90-day transformation: discoverable APIs → intelligent infrastructure → autonomous workflows
 - Infrastructure readiness to competitive advantage w erze AI
 
-**Link:** https://www.postman.com/ai/90-day-ai-readiness-playbook/
-
-Kluczowe wnioski:
-- - AI agents fail silently przy słabej dokumentacji
-- API documentation musi być AI-consumable, nie tylko human-readable
-- 90-day transformation: discoverable APIs → intelligent infrastructure → autonomous workflows
-- Infrastructure readiness to competitive advantage w erze AI
-- https://www.postman.com/ai/90-day-ai-readiness-playbook/
-
-Link: ** https://www.postman.com/ai/90-day-ai-readiness-playbook/
+**Link:** [link](https://www.postman.com/ai/90-day-ai-readiness-playbook/)
 
 ## Celebrating 20 years of MDN
 
@@ -132,19 +96,10 @@ MDN dociera do milionów developerów miesięcznie i ponad 100,000 contributoró
 
 Dwadzieścia lat dokumentowania web platform to ogromne osiągnięcie. W świecie, gdzie technologie zmieniają się co kilka miesięcy, MDN pozostaje stałym punktem odniesienia.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - 20 lat community-driven dokumentacji web standards
 - Prawie 14,000 stron dokumentacji i 33,000 zlokalizowanych artykułów
 - Tradycja tortów między browser makers pokazuje ducha współpracy
 - Ponad 100,000 contributorów przez GitHub organization
 
-**Link:** https://developer.mozilla.org/en-US/blog/mdn-turns-20/
-
-Kluczowe wnioski:
-- - 20 lat community-driven dokumentacji web standards
-- Prawie 14,000 stron dokumentacji i 33,000 zlokalizowanych artykułów
-- Tradycja tortów między browser makers pokazuje ducha współpracy
-- Ponad 100,000 contributorów przez GitHub organization
-- https://developer.mozilla.org/en-US/blog/mdn-turns-20/
-
-Link: ** https://developer.mozilla.org/en-US/blog/mdn-turns-20/
+**Link:** [link](https://developer.mozilla.org/en-US/blog/mdn-turns-20/)

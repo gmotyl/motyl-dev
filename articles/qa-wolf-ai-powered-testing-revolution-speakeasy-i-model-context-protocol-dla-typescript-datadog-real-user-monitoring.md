@@ -23,17 +23,7 @@ Ale czekaj, to nie wszystko! Oni mają system trzech poziomów maintenance'u: dr
 - Trzypoziomowy system maintenance'u testów
 - 80% pokrycia testowego w 4 miesiące
 
-**Link:** https://www.qawolf.com/
-
-Kluczowe wnioski:
-- - AI automatycznie odróżnia bugi od flaky testów w sekundach
-- System Triple-A zapewnia niezależne, równoległe testy
-- Wyniki testów w 3 minuty dzięki containeryzacji
-- Trzypoziomowy system maintenance'u testów
-- 80% pokrycia testowego w 4 miesiące
-- https://www.qawolf.com/
-
-Link: ** https://www.qawolf.com/
+**Link:** [link](https://www.qawolf.com/)
 
 ## Speakeasy i Model Context Protocol dla TypeScript
 
@@ -52,17 +42,7 @@ Dodali też świetną funkcję scope'ów - możecie tagować operacje jako "read
 - System scope'ów dla kontroli bezpieczeństwa
 - Customizacja przez OpenAPI extensions
 
-**Link:** https://www.speakeasy.com/post/release-model-context-protocol/
-
-Kluczowe wnioski:
-- - Każdy TypeScript SDK od Speakeasy ma wbudowany MCP server
-- MCP to protokół łączący AI agenty z zewnętrznymi systemami
-- Type-safe dzięki wykorzystaniu schematów Zod
-- System scope'ów dla kontroli bezpieczeństwa
-- Customizacja przez OpenAPI extensions
-- https://www.speakeasy.com/post/release-model-context-protocol/
-
-Link: ** https://www.speakeasy.com/post/release-model-context-protocol/
+**Link:** [link](https://www.speakeasy.com/post/release-model-context-protocol/)
 
 ## Datadog Real User Monitoring
 
@@ -79,14 +59,4 @@ Datadog RUM idzie krok dalej - daje kompletny, full-stack widok na journey użyt
 - Wpływ na SEO i performance metrics
 - Dedykowane dla frontend developerów
 
-**Link:** https://www.datadoghq.com/resources/rum-browser-product-brief/
-
-Kluczowe wnioski:
-- - Real-time monitoring user experience
-- Full-stack view na user journey
-- Szybka identyfikacja i reprodukcja problemów
-- Wpływ na SEO i performance metrics
-- Dedykowane dla frontend developerów
-- https://www.datadoghq.com/resources/rum-browser-product-brief/
-
-Link: ** https://www.datadoghq.com/resources/rum-browser-product-brief/
+**Link:** [link](https://www.datadoghq.com/resources/rum-browser-product-brief/)

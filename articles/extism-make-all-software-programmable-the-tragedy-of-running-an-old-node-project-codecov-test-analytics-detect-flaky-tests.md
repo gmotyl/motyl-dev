@@ -14,22 +14,13 @@ Co mnie tutaj kręci, to że wykorzystują WebAssembly do sandboxingu. To znaczy
 
 Najbardziej imponujące jest to, że mają SDK dla praktycznie wszystkiego - Python, Node, Ruby, Rust, Go, PHP, C/C++, OCaml. To pokazuje, że naprawdę myśleli o tym jako o uniwersalnym rozwiązaniu.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - WebAssembly jako fundament bezpiecznych pluginów
 - Gotowe SDK dla większości popularnych języków
 - Sandboxing jako domyślna funkcja bezpieczeństwa
 - Szybkie wdrożenie - dni zamiast miesięcy
 
-**Link:** https://extism.org/
-
-Kluczowe wnioski:
-- - WebAssembly jako fundament bezpiecznych pluginów
-- Gotowe SDK dla większości popularnych języków
-- Sandboxing jako domyślna funkcja bezpieczeństwa
-- Szybkie wdrożenie - dni zamiast miesięcy
-- https://extism.org/
-
-Link: ** https://extism.org/
+**Link:** [link](https://extism.org/)
 
 ## The Tragedy of Running an Old Node Project
 
@@ -41,22 +32,13 @@ Szczególnie bolesne jest to, że projekt miał ponad 41 zależności, a kto wie
 
 Najgorsze w tym wszystkim jest to, że rozwiązanie było banalne - po prostu użyć Node v12 zamiast v16. Ale żeby do tego dojść, facet stracił dwie godziny życia.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Dependency hell to prawdziwy problem w ekosystemie Node.js
 - Brak wersjonowania Node.js w package.json to błąd
 - Natywne zależności to bomba zegarowa
 - Lock files to nie wszystko - wersja runtime też ma znaczenie
 
-**Link:** https://abdisalan.com/posts/tragedy-running-old-node-project
-
-Kluczowe wnioski:
-- - Dependency hell to prawdziwy problem w ekosystemie Node.js
-- Brak wersjonowania Node.js w package.json to błąd
-- Natywne zależności to bomba zegarowa
-- Lock files to nie wszystko - wersja runtime też ma znaczenie
-- https://abdisalan.com/posts/tragedy-running-old-node-project
-
-Link: ** https://abdisalan.com/posts/tragedy-running-old-node-project
+**Link:** [link](https://abdisalan.com/posts/tragedy-running-old-node-project)
 
 ## Codecov Test Analytics - Detect flaky tests
 
@@ -68,22 +50,13 @@ Dodatkowo mają funkcję, która pokazuje stack trace bezpośrednio w komentarzu
 
 Długoterminowo śledzą też statystyki - które testy są najwolniejsze, które najczęściej flakują, jaki jest ogólny czas wykonania test suite. To pozwala priorytetyzować, które problemy rozwiązać najpierw.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Automatyczne wykrywanie flaky testów
 - Stack trace bezpośrednio w PR
 - Długoterminowe statystyki wydajności testów
 - Priorytetyzacja problemów w test suite
 
-**Link:** https://about.codecov.io/product/feature/test-analytics/
-
-Kluczowe wnioski:
-- - Automatyczne wykrywanie flaky testów
-- Stack trace bezpośrednio w PR
-- Długoterminowe statystyki wydajności testów
-- Priorytetyzacja problemów w test suite
-- https://about.codecov.io/product/feature/test-analytics/
-
-Link: ** https://about.codecov.io/product/feature/test-analytics/
+**Link:** [link](https://about.codecov.io/product/feature/test-analytics/)
 
 ## CarbonQA - Contextual QA for dev teams
 
@@ -95,22 +68,13 @@ Model biznesowy jest ciekawy - płacisz miesięczną subskrypcję, która zapewn
 
 Skupiają się na manual testingu web, desktop i mobile apps. Testują przeciwko user stories, acceptance criteria, istniejącym test planom. Mogą też zbudować test plan jeśli go nie masz.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Dedykowane zespoły QA zamiast crowdsourcingu
 - Relationship-based approach z kontekstem produktu
 - Model subskrypcji plus pay-per-use
 - Focus na manual testing wszystkich platform
 
-**Link:** https://carbonqa.com/
-
-Kluczowe wnioski:
-- - Dedykowane zespoły QA zamiast crowdsourcingu
-- Relationship-based approach z kontekstem produktu
-- Model subskrypcji plus pay-per-use
-- Focus na manual testing wszystkich platform
-- https://carbonqa.com/
-
-Link: ** https://carbonqa.com/
+**Link:** [link](https://carbonqa.com/)
 
 ## Beautiful focus outlines
 
@@ -124,19 +88,10 @@ Poleca custom outlines zamiast browser defaults, bo te są niekonsystentne i cz�
 
 Ciekawy trick z currentColor - ustawia kolor outline na aktualny kolor tekstu, więc zawsze będzie pasować do designu.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Focus outlines to design element, nie tylko tech requirement
 - Browser defaults są niekonsystentne i za subtelne
 - :focus-visible pokazuje outline tylko dla keyboard users
 - currentColor automatycznie dopasowuje kolory
 
-**Link:** https://medienbaecker.com/articles/focus-outlines
-
-Kluczowe wnioski:
-- - Focus outlines to design element, nie tylko tech requirement
-- Browser defaults są niekonsystentne i za subtelne
-- :focus-visible pokazuje outline tylko dla keyboard users
-- currentColor automatycznie dopasowuje kolory
-- https://medienbaecker.com/articles/focus-outlines
-
-Link: ** https://medienbaecker.com/articles/focus-outlines
+**Link:** [link](https://medienbaecker.com/articles/focus-outlines)

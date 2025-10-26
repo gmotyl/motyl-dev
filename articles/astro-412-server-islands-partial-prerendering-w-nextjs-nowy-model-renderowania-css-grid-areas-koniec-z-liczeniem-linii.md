@@ -20,7 +20,7 @@ Server Islands pozwalają wam agresywnie cachować główną część strony na 
 - Lepsze performance dzięki agresywnemu cachowaniu
 - Fallback content widoczny podczas ładowania dynamicznych części
 
-**Link:** https://astro.build/blog/astro-4120/
+**Link:** [link](https://astro.build/blog/astro-4120/)
 
 ## Partial Prerendering w Next.js - Nowy Model Renderowania
 
@@ -36,7 +36,7 @@ Ciekawostka - porównali swoje demo z tym co zrobił Astro i wyszło im lepiej p
 - Statyczna optymalizacja domyślnie włączona
 - Lepsze metryki performance niż konkurencja
 
-**Link:** https://vercel.com/blog/partial-prerendering-with-next-js-creating-a-new-default-rendering-model
+**Link:** [link](https://vercel.com/blog/partial-prerendering-with-next-js-creating-a-new-default-rendering-model)
 
 ## CSS Grid Areas - Koniec z Liczeniem Linii
 
@@ -52,7 +52,7 @@ To jest jeden z tych CSS features, które wydają się skomplikowane, ale jak ju
 - Łatwiejsze pozycjonowanie elementów
 - Mniej błędów w layoutach
 
-**Link:** https://ishadeed.com/article/css-grid-area/
+**Link:** [link](https://ishadeed.com/article/css-grid-area/)
 
 ## Node.js 22.5.0 - SQLite w Core'ze
 
@@ -68,7 +68,7 @@ SQLite w core'ze to game changer dla prostych aplikacji i prototypowania. Nie mu
 - Nowa metoda matchesGlob dla pattern matching
 - Lepsze wsparcie dla ESM w require()
 
-**Link:** https://nodejs.org/en/blog/release/v22.5.0
+**Link:** [link](https://nodejs.org/en/blog/release/v22.5.0)
 
 ## Clerk Organizations - Multi-tenant Task Manager
 
@@ -84,4 +84,4 @@ Multi-tenancy to jeden z tych problemów, które wydają się proste, ale diabe�
 - Granularne uprawnienia oparte na rolach
 - Integracja z Next.js i Neon PostgreSQL
 
-**Link:** https://clerk.com/blog/build-a-team-based-task-manager-with-organizations
+**Link:** [link](https://clerk.com/blog/build-a-team-based-task-manager-with-organizations)

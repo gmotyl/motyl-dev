@@ -20,7 +20,7 @@ To pokazuje, jak Vercel buduje swój ekosystem - nie tylko Next.js, ale wspieraj
 - Nitro dalej będzie vendor-neutral
 - Bezpłatne narzędzia w najbliższych miesiącach
 
-**Link:** https://vercel.com/blog/nuxtlabs-joins-vercel
+**Link:** [link](https://vercel.com/blog/nuxtlabs-joins-vercel)
 
 ## xmcp - TypeScript framework dla MCP serverów
 
@@ -36,7 +36,7 @@ To pokazuje jak szybko rozwija się ekosystem AI tooling. MCP to relatywnie nowy
 - Integracje z auth i płatnościami
 - Łatwa integracja z istniejącymi projektami
 
-**Link:** https://xmcp.dev/
+**Link:** [link](https://xmcp.dev/)
 
 ## Basedash - AI-native Business Intelligence
 
@@ -52,7 +52,7 @@ Chat with your data to nie nowa koncepcja, ale Basedash wygląda na dojrzałe ro
 - Managed warehouse z Fivetran integration
 - Self-hosting dla enterprise
 
-**Link:** https://www.basedash.com/
+**Link:** [link](https://www.basedash.com/)
 
 ## Sentry wprowadza AI Agent Monitoring
 
@@ -68,7 +68,7 @@ Najciekawsze jest to, że łączy AI-specific data z całym application stack. W
 - Error grouping i tagging
 - Integration z full-stack monitoring
 
-**Link:** https://blog.sentry.io/sentrys-updated-agent-monitoring/
+**Link:** [link](https://blog.sentry.io/sentrys-updated-agent-monitoring/)
 
 ## Warp AI Agent osiąga #1 na Terminal-Bench
 
@@ -84,7 +84,7 @@ Ich agent używa Claude Sonnet 4 jako primary model i Claude Opus 4 do planowani
 - Model fallback chain i todo list maintenance
 - 20% ahead of competition
 
-**Link:** https://www.warp.dev/blog/terminal-bench
+**Link:** [link](https://www.warp.dev/blog/terminal-bench)
 
 ## Electron 37.0.0 z Smooth Corners
 
@@ -100,7 +100,7 @@ To może wydawać się małą rzeczą, ale takie detale robią różnicę w user
 - Squircle shapes zamiast quarter-circles
 - System-native styling support
 
-**Link:** https://www.electronjs.org/blog/electron-37-0
+**Link:** [link](https://www.electronjs.org/blog/electron-37-0)
 
 ## llm CLI Tool dla AI w terminalu
 
@@ -116,4 +116,4 @@ Tool ma interactive chat mode, conversation management, i extensive plugin syste
 - 70+ plugins ecosystem
 - Pipe-friendly Unix design
 
-**Link:** https://kash1n.com/blog/llm-cli/
+**Link:** [link](https://kash1n.com/blog/llm-cli/)

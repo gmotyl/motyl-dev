@@ -22,16 +22,7 @@ Struktura wygląda trochę dziwnie na początku, ale ma sens. Wszystko jest w fo
 - Oszczędność miejsca i szybsza instalacja
 - Pakiety mogą importować same siebie bez problemów
 
-**Link:** https://pnpm.io/symlinked-node-modules-structure
-
-Kluczowe wnioski:
-- - pnpm używa hard linków zamiast kopiowania plików
-- Wszystkie pakiety są w centralnym store, symbolic linki budują strukturę
-- Oszczędność miejsca i szybsza instalacja
-- Pakiety mogą importować same siebie bez problemów
-- https://pnpm.io/symlinked-node-modules-structure
-
-Link: ** https://pnpm.io/symlinked-node-modules-structure
+**Link:** [link](https://pnpm.io/symlinked-node-modules-structure)
 
 ## Building an interactive 3D event badge with React Three Fiber - Vercel
 
@@ -49,16 +40,7 @@ Fizyka działa w sześćdziesiąt klatek na sekundę, grawitacja jest ustawiona 
 - Całość to tylko 80 linii kodu
 - Świetny przykład jak zrobić engaging user experience
 
-**Link:** https://vercel.com/blog/building-an-interactive-3d-event-badge-with-react-three-fiber
-
-Kluczowe wnioski:
-- - React Three Fiber pozwala na deklaratywne 3D w Reakcie
-- Rapier physics engine daje realistyczną fizykę w browserze
-- Całość to tylko 80 linii kodu
-- Świetny przykład jak zrobić engaging user experience
-- https://vercel.com/blog/building-an-interactive-3d-event-badge-with-react-three-fiber
-
-Link: ** https://vercel.com/blog/building-an-interactive-3d-event-badge-with-react-three-fiber
+**Link:** [link](https://vercel.com/blog/building-an-interactive-3d-event-badge-with-react-three-fiber)
 
 ## Coherence — Conversational Surveys
 
@@ -76,16 +58,7 @@ Integruje się ze Slackiem, Notion, możesz eksportować do research docs automa
 - Real-time analiza odpowiedzi i wyciąganie insights
 - Integracja z popularnymi narzędziami jak Slack i Notion
 
-**Link:** https://www.withcoherence.com/
-
-Kluczowe wnioski:
-- - Conversational surveys dają głębsze odpowiedzi niż checkboxy
-- AI zadaje dynamiczne follow-up questions
-- Real-time analiza odpowiedzi i wyciąganie insights
-- Integracja z popularnymi narzędziami jak Slack i Notion
-- https://www.withcoherence.com/
-
-Link: ** https://www.withcoherence.com/
+**Link:** [link](https://www.withcoherence.com/)
 
 ## CarbonQA — Contextual QA for dev teams
 
@@ -103,13 +76,4 @@ Najlepsze jest to, że testerzy komunikują się bezpośrednio ze developerami p
 - Bezpośrednia komunikacja z developerami przez Slack
 - Pokrywają web, desktop i mobile testing
 
-**Link:** https://carbonqa.com/
-
-Kluczowe wnioski:
-- - Dedicated US-based testing team, nie crowdsourcing
-- Model subscription plus pay-per-day usage
-- Bezpośrednia komunikacja z developerami przez Slack
-- Pokrywają web, desktop i mobile testing
-- https://carbonqa.com/
-
-Link: ** https://carbonqa.com/
+**Link:** [link](https://carbonqa.com/)

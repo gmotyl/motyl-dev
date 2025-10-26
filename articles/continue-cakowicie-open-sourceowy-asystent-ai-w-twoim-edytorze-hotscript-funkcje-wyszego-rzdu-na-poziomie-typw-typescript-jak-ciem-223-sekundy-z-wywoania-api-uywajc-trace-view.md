@@ -21,7 +21,7 @@ Mają też fajną funkcję "at codebase" - możecie zadawać pytania o całą wa
 - Funkcja przeszukiwania całej bazy kodu
 - Brak kosztów subskrypcji
 
-**Link:** https://marketplace.visualstudio.com/items?itemName=Continue.continue
+**Link:** [link](https://marketplace.visualstudio.com/items?itemName=Continue.continue)
 
 ## HotScript - funkcje wyższego rzędu na poziomie typów TypeScript
 
@@ -38,7 +38,7 @@ Mają też pattern matching z Match, operacje matematyczne na typach, i możliwo
 - Własne funkcje lambda na poziomie typów
 - Transformacje obiektów i list typów
 
-**Link:** https://github.com/gvergnaud/hotscript
+**Link:** [link](https://github.com/gvergnaud/hotscript)
 
 ## Jak ściąłem 22.3 sekundy z wywołania API używając Trace View
 
@@ -57,7 +57,7 @@ Rezultat? 22.3 sekundy mniej. To jest różnica między użytkownikiem który cz
 - Znacząca poprawa user experience
 - Integracja z Sentry dla error monitoring
 
-**Link:** https://blog.sentry.io/how-i-cut-22-3-seconds-off-an-api-call-using-trace-view/
+**Link:** [link](https://blog.sentry.io/how-i-cut-22-3-seconds-off-an-api-call-using-trace-view/)
 
 ## Code Hike 1.0 - od Markdown do interaktywnych doświadczeń
 
@@ -74,7 +74,7 @@ Headless codeblocks to jeszcze lepsze - możecie budować własne komponenty dla
 - Type-safe markdown z Zod
 - Idealne do dokumentacji i tutoriali
 
-**Link:** https://codehike.org/blog/v1
+**Link:** [link](https://codehike.org/blog/v1)
 
 ## Tumblr przenosi pół miliarda blogów na WordPress
 
@@ -93,7 +93,7 @@ Czy to się uda? Historia pokazuje różne wyniki takich migracji. Twitter przep
 - Jedna z największych migracji w historii
 - Brak timeframe dla projektu
 
-**Link:** https://techcrunch.com/2024/08/28/tumblr-to-move-its-half-a-billion-blogs-to-wordpress/
+**Link:** [link](https://techcrunch.com/2024/08/28/tumblr-to-move-its-half-a-billion-blogs-to-wordpress/)
 
 ## Material UI v6 oficjalnie dostępne
 
@@ -107,4 +107,4 @@ Material UI to praktycznie standard w wielu projektach React, więc każdy major
 - Ważne dla ekosystemu React
 - Sprawdźcie migration guide przed upgradem
 
-**Link:** https://mui.com/blog/material-ui-v6-is-out/
+**Link:** [link](https://mui.com/blog/material-ui-v6-is-out/)

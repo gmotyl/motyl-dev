@@ -18,22 +18,13 @@ Trzecia nowość to w pełni typowane routy. Nieprawidłowe Link komponenty będ
 
 Oczywiście, jak to bywa z przejściowymi wersjami, coś musi odejść. Deprecjonują `next lint`, wsparcie dla AMP i `legacyBehavior` dla `next/link`.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Turbopack w beta - 2-5x szybsze buildy niż Webpack
 - Middleware może używać Node.js API bez ograniczeń Edge Runtime
 - Typowane routy łapią błędy na etapie kompilacji
 - Przygotowanie do Next.js 16
 
-**Link:** https://bytes.dev/archives/418
-
-Kluczowe wnioski:
-- - Turbopack w beta - 2-5x szybsze buildy niż Webpack
-- Middleware może używać Node.js API bez ograniczeń Edge Runtime
-- Typowane routy łapią błędy na etapie kompilacji
-- Przygotowanie do Next.js 16
-- https://bytes.dev/archives/418
-
-Link: ** https://bytes.dev/archives/418
+**Link:** [link](https://bytes.dev/archives/418)
 
 ## Scoped Releases: New version, pack, and publish commands
 
@@ -45,22 +36,13 @@ Najfajniejsze jest to, że VLT ewaluuje selektor względem grafu zależności tw
 
 Albo możesz wydać prerelease tylko dla aplikacji: `vlt version prerelease --scope=':path("apps/*")'`. To jest graph-aware, więc nie musisz się martwić o kolejność czy zależności.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Graph-aware release operations bez custom skryptów
 - Pełne wsparcie dla Dependency Selector Syntax
 - Możliwość targetowania konkretnych workspace'ów
 - Bezpieczniejszy flow: version → pack → publish
 
-**Link:** https://blog.vlt.sh/blog/pack-publish-version
-
-Kluczowe wnioski:
-- - Graph-aware release operations bez custom skryptów
-- Pełne wsparcie dla Dependency Selector Syntax
-- Możliwość targetowania konkretnych workspace'ów
-- Bezpieczniejszy flow: version → pack → publish
-- https://blog.vlt.sh/blog/pack-publish-version
-
-Link: ** https://blog.vlt.sh/blog/pack-publish-version
+**Link:** [link](https://blog.vlt.sh/blog/pack-publish-version)
 
 ## Svedit - A tiny library for building editable websites in Svelte
 
@@ -74,21 +56,11 @@ Architekturalnie to jest bardzo smart - annotations są nodami, nie marks. To zn
 
 Najważniejsze: DOM i model selections się matchują. To eliminuje te flaky mapping layers, które znajdziesz w innych editorach i które są źródłem niekończących się bugów.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Graph-first content model zamiast linear character-based
 - Visual in-place editing bez third-party API
 - Tylko 2000 linii kodu w referencyjnej implementacji
 - Annotations jako nodes, nie marks
 - DOM-model selection synchronization
 
-**Link:** https://svedit.vercel.app/
-
-Kluczowe wnioski:
-- - Graph-first content model zamiast linear character-based
-- Visual in-place editing bez third-party API
-- Tylko 2000 linii kodu w referencyjnej implementacji
-- Annotations jako nodes, nie marks
-- DOM-model selection synchronization
-- https://svedit.vercel.app/
-
-Link: ** https://svedit.vercel.app/
+**Link:** [link](https://svedit.vercel.app/)

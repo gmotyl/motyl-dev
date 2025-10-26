@@ -14,20 +14,12 @@ Co mnie fascynuje, to że ich agent osiąga około 65% powodzenia w ogólnych pr
 
 Kluczowe elementy ich sukcesu: optymalny łańcuch fallback modeli, kontrola nad długotrwałymi komendami i wymuszenie na agencie prowadzenia listy todo przez cały czas trwania zadania. Terminal-Bench to nie zabawa - to prawdziwy test tego, czy AI może radzić sobie w chaotycznym środowisku shell'a.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Kombinacja różnych modeli AI może być bardziej efektywna niż pojedynczy model
 - Strukturalne podejście z listami todo poprawia wydajność agentów
 - Terminal-based AI agents stają się realną alternatywą dla tradycyjnego developmentu
 
-**Link:** https://www.warp.dev/blog/terminal-bench
-
-Kluczowe wnioski:
-- - Kombinacja różnych modeli AI może być bardziej efektywna niż pojedynczy model
-- Strukturalne podejście z listami todo poprawia wydajność agentów
-- Terminal-based AI agents stają się realną alternatywą dla tradycyjnego developmentu
-- https://www.warp.dev/blog/terminal-bench
-
-Link: ** https://www.warp.dev/blog/terminal-bench
+**Link:** [link](https://www.warp.dev/blog/terminal-bench)
 
 ## Angular - Develop with AI
 
@@ -39,20 +31,12 @@ Najbardziej mi się podoba, że mówią "NIE używaj `ngClass`, używaj `class` 
 
 Ale prawdziwy game changer to instrukcje dla services - `inject()` function zamiast constructor injection. To jest przyszłość Angular, i w końcu LLM będą generować nowoczesny kod.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Framework-specific prompts dla LLM stają się standardem
 - Angular promuje standalone components jako domyślne podejście
 - Nowe API Angular (signals, inject()) wymagają zaktualizowanych instrukcji dla AI
 
-**Link:** https://angular.dev/ai/develop-with-ai
-
-Kluczowe wnioski:
-- - Framework-specific prompts dla LLM stają się standardem
-- Angular promuje standalone components jako domyślne podejście
-- Nowe API Angular (signals, inject()) wymagają zaktualizowanych instrukcji dla AI
-- https://angular.dev/ai/develop-with-ai
-
-Link: ** https://angular.dev/ai/develop-with-ai
+**Link:** [link](https://angular.dev/ai/develop-with-ai)
 
 ## Prefer Gaps To Margins
 
@@ -66,17 +50,9 @@ Kyle trafia w sedno - to jest kwestia odpowiedzialności. Czy dziecko powinno wi
 
 Flexbox i Grid z gap to nie tylko czytelniejszy kod, to też bardziej maintainable code. Mniej kodu, mniej błędów, więcej semantyki.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - CSS Gap eliminuje potrzebę ręcznego zarządzania marginami między elementami
 - Layout powinien być odpowiedzialnością rodzica, nie dzieci
 - Flexbox/Grid z gap są bardziej maintainable niż margin-based layouts
 
-**Link:** https://kyleshevlin.com/prefer-gaps-to-margins/
-
-Kluczowe wnioski:
-- - CSS Gap eliminuje potrzebę ręcznego zarządzania marginami między elementami
-- Layout powinien być odpowiedzialnością rodzica, nie dzieci
-- Flexbox/Grid z gap są bardziej maintainable niż margin-based layouts
-- https://kyleshevlin.com/prefer-gaps-to-margins/
-
-Link: ** https://kyleshevlin.com/prefer-gaps-to-margins/
+**Link:** [link](https://kyleshevlin.com/prefer-gaps-to-margins/)

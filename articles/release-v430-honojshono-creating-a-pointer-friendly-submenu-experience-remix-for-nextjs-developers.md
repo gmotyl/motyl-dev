@@ -18,16 +18,7 @@ Kolejna rzecz - pełne wsparcie dla JSON primitives. Teraz możecie zwracać str
 - Status codes są teraz częścią systemu typów
 - Znacznie lepsza developer experience przy budowaniu API
 
-**Link:** https://github.com/honojs/hono/releases/tag/v4.3.0
-
-Kluczowe wnioski:
-- - RPC mode z pełnym typowaniem dla c.text() i c.json()
-- Wsparcie dla wszystkich JSON primitives z poprawnym typowaniem
-- Status codes są teraz częścią systemu typów
-- Znacznie lepsza developer experience przy budowaniu API
-- https://github.com/honojs/hono/releases/tag/v4.3.0
-
-Link: ** https://github.com/honojs/hono/releases/tag/v4.3.0
+**Link:** [link](https://github.com/honojs/hono/releases/tag/v4.3.0)
 
 ## Creating a pointer-friendly submenu experience
 
@@ -43,16 +34,7 @@ Plus trackują prędkość - users zazwyczaj przyspieszają idąc do submenu, po
 - Użycie atan2 do obliczenia kąta ruchu
 - Definicja "strefy intencji" dla lepszego UX
 
-**Link:** https://react-spectrum.adobe.com/blog/creating-a-pointer-friendly-submenu-experience.html
-
-Kluczowe wnioski:
-- - Problem z zamykającymi się submenu podczas nawigacji kursorem
-- Rozwiązanie przez tracking kierunku i prędkości kursora
-- Użycie atan2 do obliczenia kąta ruchu
-- Definicja "strefy intencji" dla lepszego UX
-- https://react-spectrum.adobe.com/blog/creating-a-pointer-friendly-submenu-experience.html
-
-Link: ** https://react-spectrum.adobe.com/blog/creating-a-pointer-friendly-submenu-experience.html
+**Link:** [link](https://react-spectrum.adobe.com/blog/creating-a-pointer-friendly-submenu-experience.html)
 
 ## Remix for Next.js Developers
 
@@ -70,16 +52,7 @@ Layout system też jest prostszy - zamiast _app.tsx masz root.tsx, a nested layo
 - Prostszy data loading z loader/action functions
 - Cleaner layout system z Outlet component
 
-**Link:** https://remixfornextdevs.com/
-
-Kluczowe wnioski:
-- - Routing syntax różni się ale jest logiczny (kropki zamiast slashów)
-- Dynamic routes używają $ zamiast []
-- Prostszy data loading z loader/action functions
-- Cleaner layout system z Outlet component
-- https://remixfornextdevs.com/
-
-Link: ** https://remixfornextdevs.com/
+**Link:** [link](https://remixfornextdevs.com/)
 
 ## GitHub - mhkeller/layercake
 
@@ -95,16 +68,7 @@ Wspiera Svelte 5 z Rune syntax, ale starsze wersje też działają. Documentatio
 - Dobra integracja z Svelte ecosystem
 - Flexible i nie narzuca konkretnych chart types
 
-**Link:** https://github.com/mhkeller/layercake
-
-Kluczowe wnioski:
-- - Headless approach - ty budujesz komponenty, framework daje tools
-- Możliwość mieszania SVG, HTML i Canvas
-- Dobra integracja z Svelte ecosystem
-- Flexible i nie narzuca konkretnych chart types
-- https://github.com/mhkeller/layercake
-
-Link: ** https://github.com/mhkeller/layercake
+**Link:** [link](https://github.com/mhkeller/layercake)
 
 ## Text Manipulation Kung Fu for the Aspiring Black Belt
 
@@ -120,13 +84,4 @@ Najważniejsze to command palette (cmd-shift-p) - fuzzy search po wszystkich dos
 - Command palette jako primary way of discovery
 - Kombinowanie basic movements dla complex operations
 
-**Link:** https://zed.dev/blog/text-manipulation
-
-Kluczowe wnioski:
-- - Learning building blocks zamiast memorizing wszystkich komend
-- Modifiers system: cmd (boundaries), alt (words), shift (selection)
-- Command palette jako primary way of discovery
-- Kombinowanie basic movements dla complex operations
-- https://zed.dev/blog/text-manipulation
-
-Link: ** https://zed.dev/blog/text-manipulation
+**Link:** [link](https://zed.dev/blog/text-manipulation)

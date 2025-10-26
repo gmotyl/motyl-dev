@@ -16,24 +16,14 @@ Druga wielka rzecz to nowy API "use" - możesz teraz czytać wartości z promis�
 
 I wreszcie - ref as prop! Koniec z tym forwardRef nonsense. Teraz możesz po prostu przekazać ref jako zwykły prop do function componentów.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Actions automatyzują obsługę formularzy i asynchronicznych operacji
 - useOptimistic hook dla natychmiastowego feedback
 - Nowy API "use" dla promisów i kontekstu
 - ref jako prop - koniec z forwardRef
 - Wszystkie RSC features z Canary są teraz w beta
 
-**Link:** https://react.dev/blog/2024/04/25/react-19
-
-Kluczowe wnioski:
-- - Actions automatyzują obsługę formularzy i asynchronicznych operacji
-- useOptimistic hook dla natychmiastowego feedback
-- Nowy API "use" dla promisów i kontekstu
-- ref jako prop - koniec z forwardRef
-- Wszystkie RSC features z Canary są teraz w beta
-- https://react.dev/blog/2024/04/25/react-19
-
-Link: ** https://react.dev/blog/2024/04/25/react-19
+**Link:** [link](https://react.dev/blog/2024/04/25/react-19)
 
 ## GitHub Copilot Workspace - Developer Environment z przyszłości
 
@@ -43,24 +33,14 @@ Cały proces zaczyna się od GitHub Issue lub Repository. Copilot Workspace anal
 
 Najlepsze w tym wszystkim jest to, że nie próbują zastąpić developera - oni próbują go wzmocnić. Doświadczeni developerzy mogą działać jako systems thinkers, a bariera wejścia dla nowych ludzi drastycznie spada. To brzmi jak marketing speak, ale jeśli faktycznie działa jak pokazują, to może być przełom.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Kompletne środowisko programistyczne oparte na AI
 - Od pomysłu do kodu w naturalnym języku
 - Pełna kontrola nad każdym krokiem procesu
 - Integracja z GitHub Issues i Repositories
 - Fokus na wzmocnienie, nie zastąpienie developera
 
-**Link:** https://github.blog/2024-04-29-github-copilot-workspace/
-
-Kluczowe wnioski:
-- - Kompletne środowisko programistyczne oparte na AI
-- Od pomysłu do kodu w naturalnym języku
-- Pełna kontrola nad każdym krokiem procesu
-- Integracja z GitHub Issues i Repositories
-- Fokus na wzmocnienie, nie zastąpienie developera
-- https://github.blog/2024-04-29-github-copilot-workspace/
-
-Link: ** https://github.blog/2024-04-29-github-copilot-workspace/
+**Link:** [link](https://github.blog/2024-04-29-github-copilot-workspace/)
 
 ## SonarSource - strategia walki z długiem technicznym
 
@@ -70,24 +50,14 @@ Tradycyjne podejścia jak dedykowane sprinty czy task forces to tylko plastry na
 
 Ich rozwiązanie obejmuje SonarQube Server, Cloud i IDE integration z ponad 5000 reguł dla 30+ języków. Automated code reviews dają real-time feedback na każdym Pull Requeście. To brzmi jak kolejne narzędzie do static analysis, ale jeśli faktycznie potrafi zapobiegać akumulacji długu technicznego, a nie tylko go wykrywać, to może być warte uwagi.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Developerzy tracą 33% czasu na naprawianie problemów w kodzie
 - Tradycyjne podejścia to tylko temporary bandaids
 - "Clean as You Code" metodologia dla prewencji
 - Automated code reviews z real-time feedback
 - Integracja od IDE do CI/CD pipeline
 
-**Link:** https://www.sonarsource.com/solutions/reduce-technical-debt/
-
-Kluczowe wnioski:
-- - Developerzy tracą 33% czasu na naprawianie problemów w kodzie
-- Tradycyjne podejścia to tylko temporary bandaids
-- "Clean as You Code" metodologia dla prewencji
-- Automated code reviews z real-time feedback
-- Integracja od IDE do CI/CD pipeline
-- https://www.sonarsource.com/solutions/reduce-technical-debt/
-
-Link: ** https://www.sonarsource.com/solutions/reduce-technical-debt/
+**Link:** [link](https://www.sonarsource.com/solutions/reduce-technical-debt/)
 
 ## Knock - infrastruktura do notyfikacji
 
@@ -97,21 +67,11 @@ Mają workflow engine, drop-in React komponenty, batching, throttling i preferen
 
 Szczególnie interesujące są ich React komponenty dla in-app features jak inboxes i feeds. Jeśli faktycznie działają jak obiecują i są production-ready, to może być sposobem na uniknięcie tygodni pracy nad czymś, co nie jest core business.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Unified API dla wszystkich typów notyfikacji
 - Drop-in React komponenty dla in-app features
 - Workflow engine z batching i throttling
 - CLI i Management API dla developer workflow
 - Focus na szybkie wdrożenie zamiast budowania od zera
 
-**Link:** https://knock.app/
-
-Kluczowe wnioski:
-- - Unified API dla wszystkich typów notyfikacji
-- Drop-in React komponenty dla in-app features
-- Workflow engine z batching i throttling
-- CLI i Management API dla developer workflow
-- Focus na szybkie wdrożenie zamiast budowania od zera
-- https://knock.app/
-
-Link: ** https://knock.app/
+**Link:** [link](https://knock.app/)

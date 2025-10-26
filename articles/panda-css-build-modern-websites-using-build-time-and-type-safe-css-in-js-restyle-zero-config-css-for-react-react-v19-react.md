@@ -21,7 +21,7 @@ Co mnie szczególnie przekonuje, to podejście do design tokenów - używają sp
 - Nowoczesny CSS output z cascade layers
 - System design tokenów zgodny ze standardami W3C
 
-**Link:** https://panda-css.com/
+**Link:** [link](https://panda-css.com/)
 
 ## Restyle - Zero Config CSS for React
 
@@ -38,7 +38,7 @@ Biblioteka ma też wsparcie dla media queries, keyframes, global styles i themin
 - CSS prop z JSX pragma
 - Integracja z TypeScript
 
-**Link:** https://www.restyle.dev/
+**Link:** [link](https://www.restyle.dev/)
 
 ## React v19 – React
 
@@ -57,7 +57,7 @@ Ale uwaga - są też breaking changes, szczególnie związane z Suspense behavio
 - Improved hydration error messages
 - Breaking changes w Suspense behavior
 
-**Link:** https://react.dev/blog/2024/04/25/react-19
+**Link:** [link](https://react.dev/blog/2024/04/25/react-19)
 
 ## React 19 and Suspense - A Drama in 3 Acts
 
@@ -76,7 +76,7 @@ React team w końcu się wycofał i przywrócił stare zachowanie, ale pokazuje 
 - React team przywrócił stare zachowanie po community feedback
 - Pokazuje wagę performance testingu przy aktualizacjach
 
-**Link:** https://tkdodo.eu/blog/react-19-and-suspense-a-drama-in-3-acts
+**Link:** [link](https://tkdodo.eu/blog/react-19-and-suspense-a-drama-in-3-acts)
 
 ## SpeedCurve Performance Budgets
 
@@ -95,7 +95,7 @@ Mają też RUM attribution dla INP z subparts, więc możecie dokładnie zobaczy
 - Detailed diagnostics z INP subparts
 - Status dashboard do quick overview wszystkich metryk
 
-**Link:** https://www.speedcurve.com/features/performance-budgets/
+**Link:** [link](https://www.speedcurve.com/features/performance-budgets/)
 
 ## WebContainers - In-browser code execution for AI
 
@@ -114,7 +114,7 @@ Dla AI development to jest game changer - możecie provide better developer expe
 - Production-ready technology używana w real products
 - WebContainer API dla easy integration
 
-**Link:** https://webcontainers.io/ai
+**Link:** [link](https://webcontainers.io/ai)
 
 ## Enforcing Accessibility Best Practices with Automatically-Generated IDs
 
@@ -133,4 +133,4 @@ To jest perfect przykład tego, jak design systems mogą enforce best practices.
 - Design systems enforcing best practices automatically
 - Better developer experience z built-in accessibility
 
-**Link:** https://bradfrost.com/blog/post/enforcing-accessibility-best-practices-with-automatically-generated-ids/
+**Link:** [link](https://bradfrost.com/blog/post/enforcing-accessibility-best-practices-with-automatically-generated-ids/)

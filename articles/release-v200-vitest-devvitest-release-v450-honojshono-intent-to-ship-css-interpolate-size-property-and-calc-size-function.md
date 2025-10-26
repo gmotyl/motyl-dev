@@ -23,17 +23,7 @@ Ciekawa rzecz z promise-based assertions - Vitest już nie będzie automatycznie
 - Nowe API dla promise assertions
 - Wsparcie dla concurrent suites
 
-**Link:** https://github.com/vitest-dev/vitest/releases/tag/v2.0.0
-
-Kluczowe wnioski:
-- - Domyślnie używa forks pool zamiast threads (może być wolniej, ale stabilniej)
-- Chai 5.0 - sprawdźcie swoje testy
-- Bardziej precyzyjne coverage reporting
-- Nowe API dla promise assertions
-- Wsparcie dla concurrent suites
-- https://github.com/vitest-dev/vitest/releases/tag/v2.0.0
-
-Link: ** https://github.com/vitest-dev/vitest/releases/tag/v2.0.0
+**Link:** [link](https://github.com/vitest-dev/vitest/releases/tag/v2.0.0)
 
 ## Release v4.5.0 · honojs/hono
 
@@ -52,17 +42,7 @@ Cloudflare Pages też dostało upgrade - teraz możecie używać Hono middleware
 - Lepsze wsparcie dla Cloudflare Pages
 - React 19 compatibility
 
-**Link:** https://github.com/honojs/hono/releases/tag/v4.5.0
-
-Kluczowe wnioski:
-- - 20 built-in middleware w jednym frameworku
-- IP Restriction dla kontroli dostępu
-- Service Worker adapter - Hono w przeglądarce
-- Lepsze wsparcie dla Cloudflare Pages
-- React 19 compatibility
-- https://github.com/honojs/hono/releases/tag/v4.5.0
-
-Link: ** https://github.com/honojs/hono/releases/tag/v4.5.0
+**Link:** [link](https://github.com/honojs/hono/releases/tag/v4.5.0)
 
 ## Intent to Ship: CSS interpolate-size property and calc-size() function
 
@@ -80,16 +60,7 @@ TAG review miało kilka zastrzeżeń, głównie że woleli by to było części�
 - Koniec z hackami dla height: auto transitions
 - Wkrótce w Chrome
 
-**Link:** https://groups.google.com/a/chromium.org/g/blink-dev/c/FjyMSSaSPEg/m/yzlLscFKBQAJ
-
-Kluczowe wnioski:
-- - Animacje dla auto, min-content, fit-content i innych
-- Dwie nowe właściwości: interpolate-size i calc-size()
-- Koniec z hackami dla height: auto transitions
-- Wkrótce w Chrome
-- https://groups.google.com/a/chromium.org/g/blink-dev/c/FjyMSSaSPEg/m/yzlLscFKBQAJ
-
-Link: ** https://groups.google.com/a/chromium.org/g/blink-dev/c/FjyMSSaSPEg/m/yzlLscFKBQAJ
+**Link:** [link](https://groups.google.com/a/chromium.org/g/blink-dev/c/FjyMSSaSPEg/m/yzlLscFKBQAJ)
 
 ## Eldora UI
 
@@ -108,17 +79,7 @@ Ale szczerze mówiąc, rynek bibliotek UI jest już bardzo zatłoczony. Eldora U
 - Fokus na landing pages i animacje
 - Darmowe i open-source
 
-**Link:** https://www.eldoraui.site/
-
-Kluczowe wnioski:
-- - 150+ animowanych komponentów
-- Zbudowane na React, TypeScript, Tailwind
-- Kompatybilne z shadcn/ui
-- Fokus na landing pages i animacje
-- Darmowe i open-source
-- https://www.eldoraui.site/
-
-Link: ** https://www.eldoraui.site/
+**Link:** [link](https://www.eldoraui.site/)
 
 ## Configure Cron Jobs at Runtime
 
@@ -137,17 +98,7 @@ To świetny przykład filozofii Convex - jeśli feature nie istnieje, możecie g
 - Pokazuje siłę platform approach
 - Darmowa alternatywa dla EasyCron
 
-**Link:** https://stack.convex.dev/cron-jobs?ref=bytes
-
-Kluczowe wnioski:
-- - User space crony w Convex
-- Runtime registration zamiast statycznej konfiguracji
-- Cronvex jako working demo
-- Pokazuje siłę platform approach
-- Darmowa alternatywa dla EasyCron
-- https://stack.convex.dev/cron-jobs?ref=bytes
-
-Link: ** https://stack.convex.dev/cron-jobs?ref=bytes
+**Link:** [link](https://stack.convex.dev/cron-jobs?ref=bytes)
 
 ## Fine-grained Markdown
 
@@ -166,14 +117,4 @@ To rozwiązuje prawdziwy problem - Markdown jest świetny do pisania, ale czasam
 - Scrollycoding i spotlight examples
 - Zachowuje prostotę pisania w Markdown
 
-**Link:** https://v1.codehike.org/blog/fine-grained-markdown
-
-Kluczowe wnioski:
-- - Fine-grained parsing Markdown w React
-- Type-safe dostęp do poszczególnych elementów
-- Możliwość tworzenia custom layoutów
-- Scrollycoding i spotlight examples
-- Zachowuje prostotę pisania w Markdown
-- https://v1.codehike.org/blog/fine-grained-markdown
-
-Link: ** https://v1.codehike.org/blog/fine-grained-markdown
+**Link:** [link](https://v1.codehike.org/blog/fine-grained-markdown)

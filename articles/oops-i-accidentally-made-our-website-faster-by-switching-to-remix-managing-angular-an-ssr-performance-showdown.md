@@ -20,16 +20,7 @@ Kolejnym wyzwaniem był komponent Image z Next.js, ale tutaj CMS z wbudowanym re
 - Czasem zmiana frameworka może przypadkowo poprawić performance
 - CMS z resizingiem obrazów może zastąpić optymalizacje Next.js Image
 
-**Link:** https://echobind.com/post/oops-i-accidentally-made-our-website-faster-by-switching-to-remix
-
-Kluczowe wnioski:
-- - Migracja z Next.js na Remix może być prostsza niż się wydaje
-- Self-hosting Next.js wymaga więcej konfiguracji niż Vercel
-- Czasem zmiana frameworka może przypadkowo poprawić performance
-- CMS z resizingiem obrazów może zastąpić optymalizacje Next.js Image
-- https://echobind.com/post/oops-i-accidentally-made-our-website-faster-by-switching-to-remix
-
-Link: ** https://echobind.com/post/oops-i-accidentally-made-our-website-faster-by-switching-to-remix
+**Link:** [link](https://echobind.com/post/oops-i-accidentally-made-our-website-faster-by-switching-to-remix)
 
 ## Managing Angular
 
@@ -47,16 +38,7 @@ Ciekawe jest to, że traktują długoterminową wizję jako abstrakcyjną reprez
 - Stała feedback loop z community jest kluczowa
 - North Star jako abstrakcyjna reprezentacja idealnego frameworka
 
-**Link:** https://blog.mgechev.com/2024/08/25/managing-angular/
-
-Kluczowe wnioski:
-- - Podejście iteracyjne przeważa nad próbą stworzenia idealnego produktu za jednym razem
-- Trzy poziomy planowania: długoterminowy, roczny, kwartalny
-- Stała feedback loop z community jest kluczowa
-- North Star jako abstrakcyjna reprezentacja idealnego frameworka
-- https://blog.mgechev.com/2024/08/25/managing-angular/
-
-Link: ** https://blog.mgechev.com/2024/08/25/managing-angular/
+**Link:** [link](https://blog.mgechev.com/2024/08/25/managing-angular/)
 
 ## An SSR Performance Showdown
 
@@ -74,13 +56,4 @@ Wszystkie testy były uruchamiane na production buildach po vite build. To pokaz
 - Production buildy są kluczowe dla wiarygodnych testów
 - Izolowane metody renderowania dają lepszy obraz wydajności bibliotek
 
-**Link:** https://blog.platformatic.dev/ssr-performance-showdown
-
-Kluczowe wnioski:
-- - SSR może być główną przyczyną problemów z wydajnością Node.js
-- Testowanie na ciężkich dokumentach pokazuje prawdziwe różnice
-- Production buildy są kluczowe dla wiarygodnych testów
-- Izolowane metody renderowania dają lepszy obraz wydajności bibliotek
-- https://blog.platformatic.dev/ssr-performance-showdown
-
-Link: ** https://blog.platformatic.dev/ssr-performance-showdown
+**Link:** [link](https://blog.platformatic.dev/ssr-performance-showdown)

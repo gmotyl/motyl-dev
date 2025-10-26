@@ -12,22 +12,13 @@ Bloomberg właśnie wypuścił nowy framework do budowania interfejsów wiersza 
 
 To jest dokładnie to, czego potrzebowaliśmy. Bloomberg, firma która wie co to znaczy skalować systemy, postanowiła podzielić się swoim rozwiązaniem. Framework powstał po ocenie dostępnych alternatyw i opracowaniu zestawu przewodnich zasad. Instalacja jest prosta - jeden npm install i możesz zacząć budować swoje CLI z type safety od pierwszego dnia.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Zero zależności zewnętrznych - to jest to co lubię!
 - Pełne wsparcie TypeScript z type safety
 - Dokumentacja dostępna na bloomberg.github.io/stricli
 - Rozwiązanie od Bloomberg - sprawdzone w produkcji na dużą skalę
 
-**Link:** https://github.com/bloomberg/stricli
-
-Kluczowe wnioski:
-- - Zero zależności zewnętrznych - to jest to co lubię!
-- Pełne wsparcie TypeScript z type safety
-- Dokumentacja dostępna na bloomberg.github.io/stricli
-- Rozwiązanie od Bloomberg - sprawdzone w produkcji na dużą skalę
-- https://github.com/bloomberg/stricli
-
-Link: ** https://github.com/bloomberg/stricli
+**Link:** [link](https://github.com/bloomberg/stricli)
 
 ## Arcjet Next.js example app
 
@@ -35,22 +26,13 @@ Arcjet to nowe podejście do bezpieczeństwa aplikacji, które pozwala chronić 
 
 Framework oferuje detekcję botów, rate limiting, walidację emaili, ochronę przed atakami i redakcję danych. Wszystko w jednym pakiecie. Mają gotowy przykład aplikacji Next.js, którą możesz od razu wdrożyć i zobaczyć jak to działa w praktyce.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Developer-first approach do bezpieczeństwa
 - Integracja w kilku liniach kodu
 - Kompletne rozwiązanie: boty, rate limiting, walidacja
 - Gotowy przykład do wdrożenia
 
-**Link:** https://example.arcjet.com
-
-Kluczowe wnioski:
-- - Developer-first approach do bezpieczeństwa
-- Integracja w kilku liniach kodu
-- Kompletne rozwiązanie: boty, rate limiting, walidacja
-- Gotowy przykład do wdrożenia
-- https://example.arcjet.com
-
-Link: ** https://example.arcjet.com
+**Link:** [link](https://example.arcjet.com)
 
 ## Testing Arcjet
 
@@ -60,22 +42,13 @@ Możesz automatyzować testy swoich zabezpieczonych endpointów używając stand
 
 Framework pozwala testować różne scenariusze - od rate limiting przez detekcję botów po walidację emaili. Możesz nawet użyć specjalnego header'a żeby sztucznie wywołać reguły shield'a.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Identyczne zachowanie lokalnie i w produkcji
 - Automatyzacja testów z Newman i Postman
 - Możliwość testowania wszystkich reguł bezpieczeństwa
 - Dokumentacja z konkretnymi przykładami
 
-**Link:** https://docs.arcjet.com/testing/
-
-Kluczowe wnioski:
-- - Identyczne zachowanie lokalnie i w produkcji
-- Automatyzacja testów z Newman i Postman
-- Możliwość testowania wszystkich reguł bezpieczeństwa
-- Dokumentacja z konkretnymi przykładami
-- https://docs.arcjet.com/testing/
-
-Link: ** https://docs.arcjet.com/testing/
+**Link:** [link](https://docs.arcjet.com/testing/)
 
 ## Bridging the hard and the soft
 
@@ -87,22 +60,13 @@ Autor używa analogii z naturą - jak komórki łączą miękkie membrany z twar
 
 Problem z czymś takim jak ChatGPT jest taki, że może być zbyt miękkie. Bez jasnych wskazówek łatwo się zagubić. Potrzebujemy mostów między twardością a miękkością.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - LLM-y zmieniają sposób projektowania interfejsów
 - Potrzebujemy równowagi między sztywnością a elastycznością
 - Natura pokazuje jak łączyć różne materiały na różnych skalach
 - Zbyt miękkie interfejsy mogą być problematyczne
 
-**Link:** https://wattenberger.com/thoughts/hard-and-soft
-
-Kluczowe wnioski:
-- - LLM-y zmieniają sposób projektowania interfejsów
-- Potrzebujemy równowagi między sztywnością a elastycznością
-- Natura pokazuje jak łączyć różne materiały na różnych skalach
-- Zbyt miękkie interfejsy mogą być problematyczne
-- https://wattenberger.com/thoughts/hard-and-soft
-
-Link: ** https://wattenberger.com/thoughts/hard-and-soft
+**Link:** [link](https://wattenberger.com/thoughts/hard-and-soft)
 
 ## QA Wolf | 80% automated test coverage in 4 months
 
@@ -110,22 +74,13 @@ QA Wolf to rozwiązanie, które obiecuje osiągnięcie 80% pokrycia testami auto
 
 To jest smart approach - AI robi robotę, ludzie myślą. To gwarantuje szybkość, dokładność i odpowiedzialność. Problem z oddzielaniem bugów od flake'ów spowalnia cykle QA, opóźnia nowe funkcje i zjada czas developmentu.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - AI + ludzie = najlepsze z dwóch światów
 - 80% pokrycia w 4 miesiące brzmi ambitnie
 - Automatyczne badanie failed testów
 - Rozwiązuje problem flaky testów
 
-**Link:** https://www.qawolf.com
-
-Kluczowe wnioski:
-- - AI + ludzie = najlepsze z dwóch światów
-- 80% pokrycia w 4 miesiące brzmi ambitnie
-- Automatyczne badanie failed testów
-- Rozwiązuje problem flaky testów
-- https://www.qawolf.com
-
-Link: ** https://www.qawolf.com
+**Link:** [link](https://www.qawolf.com)
 
 ## Cloud scale monitoring with AWS | Datadog
 
@@ -133,19 +88,10 @@ Datadog i AWS przygotowali e-book o monitorowaniu na skalę chmury. Uczą jak mi
 
 E-book pokrywa planowanie i śledzenie każdego etapu migracji do AWS, monitorowanie całej architektury serverless w jednym miejscu i zapewnienie efektywnego działania kontenerowych workloadów AWS.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Kompleksowy przewodnik po migracjach AWS
 - Focus na serverless i kontenery
 - Monitoring w jednym miejscu
 - Praktyczne wskazówki od Datadog
 
-**Link:** https://datadoghq.com/bytes
-
-Kluczowe wnioski:
-- - Kompleksowy przewodnik po migracjach AWS
-- Focus na serverless i kontenery
-- Monitoring w jednym miejscu
-- Praktyczne wskazówki od Datadog
-- https://datadoghq.com/bytes
-
-Link: ** https://datadoghq.com/bytes
+**Link:** [link](https://datadoghq.com/bytes)

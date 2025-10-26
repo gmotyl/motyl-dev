@@ -23,7 +23,7 @@ Poprawili też data fetching - useAsyncData i useFetch teraz dzielą dane międz
 - Ulepszone wsparcie TypeScript
 - Szybsze CLI
 
-**Link:** https://nuxt.com/blog/v4
+**Link:** [link](https://nuxt.com/blog/v4)
 
 ## React Compiler
 
@@ -39,7 +39,7 @@ Możesz go adoptować stopniowo - nie musisz włączać go od razu w całym proj
 - Kompletna dokumentacja i debugging guide
 - Wsparcie dla bibliotek
 
-**Link:** https://react.dev/learn/react-compiler
+**Link:** [link](https://react.dev/learn/react-compiler)
 
 ## QA Wolf - Testowanie AI
 
@@ -55,7 +55,7 @@ Co ważne - kontrolują koszty tokenów poprzez selektywne wykonywanie testów i
 - Kontrola kosztów tokenów
 - Mix AI i strict determinism
 
-**Link:** https://www.qawolf.com/solutions/gen-ai-testing
+**Link:** [link](https://www.qawolf.com/solutions/gen-ai-testing)
 
 ## Astro 5.12
 
@@ -69,7 +69,7 @@ Większą nowością jest nowe Netlify dev experience. Adapter Netlify teraz uż
 - Local Image CDN i Blobs server
 - Zero konfiguracji dla TOML
 
-**Link:** https://astro.build/blog/astro-5120/
+**Link:** [link](https://astro.build/blog/astro-5120/)
 
 ## Warp Terminal Bench - 52% Success Rate
 
@@ -85,7 +85,7 @@ To pokazuje, że sukces AI agentów to nie tylko model, ale cała architektura i
 - Kontrola nad długo działającymi komendami
 - Wymuszone todo listy dla agentów
 
-**Link:** https://www.warp.dev/blog/terminal-bench
+**Link:** [link](https://www.warp.dev/blog/terminal-bench)
 
 ## daisyUI 5
 
@@ -101,4 +101,4 @@ Z Tailwind CSS 4 możesz teraz importować daisyUI jako plugin w CSS file zamias
 - Mniejszy rozmiar package i CSS
 - Import jako plugin w CSS file
 
-**Link:** https://daisyui.com/docs/v5/
+**Link:** [link](https://daisyui.com/docs/v5/)

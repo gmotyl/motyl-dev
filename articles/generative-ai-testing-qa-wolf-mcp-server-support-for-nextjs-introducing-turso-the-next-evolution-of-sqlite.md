@@ -22,11 +22,6 @@ The really smart part is how they're controlling costs. These companies are burn
 
 **Link**: https://www.qawolf.com/solutions/gen-ai-testing
 
-Kluczowe wnioski:
-- - AI testing requires fundamentally different approaches than traditional software testing
-- Deductive assertions and golden master comparisons solve the non-deterministic output problem
-- Smart token usage and cost control are essential for sustainable AI testing
-- Structured data conversion helps make AI outputs testable
 
 Link: 
 
@@ -46,11 +41,6 @@ The protocol lets AI tools request access to things like emails, private reposit
 
 **Link**: https://go.clerk.com/Ae3a2CN
 
-Kluczowe wnioski:
-- - MCP enables secure AI access to private user data
-- Clerk's implementation eliminates the need for separate MCP servers
-- Integration is as simple as adding a single API endpoint to existing Next.js apps
-- Users maintain control over data access permissions
 
 Link: 
 
@@ -72,11 +62,6 @@ They're so confident in their testing methodology that they're offering a thousa
 
 **Link**: https://turso.tech/blog/turso-the-next-evolution-of-sqlite
 
-Kluczowe wnioski:
-- - Turso addresses SQLite's limitations for modern applications
-- Open source development model enables faster evolution than SQLite's closed community
-- Focus on concurrent writes, real-time capabilities, and AI-era data types
-- Advanced testing methodology with financial backing for reliability claims
 
 Link: 
 
@@ -98,11 +83,6 @@ Cloudflare is positioning this as a fundamental shift in how the web works. They
 
 **Link**: https://blog.cloudflare.com/content-independence-day-no-ai-crawl-without-compensation/
 
-Kluczowe wnioski:
-- - AI systems are breaking the traditional web traffic model
-- Content creators are getting exponentially less value from their work
-- The shift from search to AI answers eliminates traffic generation
-- A new compensation model is needed for the AI-driven web
 
 Link: 
 
@@ -122,10 +102,5 @@ What's interesting is they're really focusing on consistency across their API. T
 
 **Link**: https://base-ui.com/react/overview/releases
 
-Kluczowe wnioski:
-- - Breaking changes focus on API consistency and better naming conventions
-- Accordion component requires explicit values instead of DOM index inference
-- Autocomplete grid system is now more intuitive with automatic column detection
-- Event handling patterns are being standardized across components
 
 Link:

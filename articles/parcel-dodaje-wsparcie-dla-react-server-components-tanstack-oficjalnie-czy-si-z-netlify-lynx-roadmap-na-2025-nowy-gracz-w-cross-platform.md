@@ -14,7 +14,7 @@ To jest game changer, bo możesz teraz używać RSC bez całego Next.js bagażu.
 
 Najlepsze w tym jest to, że Parcel integruje server i client code w jeden module graph, więc masz dynamic imports, environment-aware code splitting i te magiczne "use client" i "use server" dyrektywy działają out of the box.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Pierwszy non-framework tool z wsparciem dla RSC
 - Pełna kontrola nad implementacją bez Next.js vendor lock-in
 - Incremental adoption możliwa
@@ -22,11 +22,6 @@ Najlepsze w tym jest to, że Parcel integruje server i client code w jeden modul
 
 **Link**: https://bytes.dev/archives/377
 
-Kluczowe wnioski:
-- - Pierwszy non-framework tool z wsparciem dla RSC
-- Pełna kontrola nad implementacją bez Next.js vendor lock-in
-- Incremental adoption możliwa
-- Rozwiązuje network waterfall problemy
 
 Link: 
 
@@ -38,7 +33,7 @@ Co ciekawe, Netlify wypuścił full-stack AI chatbot starter template, który po
 
 Planują też special TanStack Start episode na Netlify Remote Desk series 31 marca, więc będzie live demo i Q&A session.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Oficjalne partnerstwo deployment dla TanStack Start
 - Gotowy AI chatbot starter template
 - Zero-config deployment experience
@@ -46,11 +41,6 @@ Planują też special TanStack Start episode na Netlify Remote Desk series 31 ma
 
 **Link**: https://tanstack.com/blog/netlify-partnership
 
-Kluczowe wnioski:
-- - Oficjalne partnerstwo deployment dla TanStack Start
-- Gotowy AI chatbot starter template
-- Zero-config deployment experience
-- Live session 31 marca
 
 Link: 
 
@@ -62,7 +52,7 @@ Co interesujące, już mają wsparcie dla Android, iOS i Web open source, a plan
 
 Planują też więcej UI elements jak input, view pagers, swiper, SVG support, Canvas i advanced animations włączając Lottie. Brzmi jak próbują konkurować z React Native i Flutter.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - 5 stable releases w 2025
 - Expanding platform support (OpenHarmony, desktop)
 - Focus na performance i cross-platform consistency
@@ -70,11 +60,6 @@ Planują też więcej UI elements jak input, view pagers, swiper, SVG support, C
 
 **Link**: https://lynxjs.org/blog/lynx-open-source-roadmap-2025.html
 
-Kluczowe wnioski:
-- - 5 stable releases w 2025
-- Expanding platform support (OpenHarmony, desktop)
-- Focus na performance i cross-platform consistency
-- Growing ecosystem z dodatkowymi UI components
 
 Link: 
 
@@ -86,7 +71,7 @@ Smart product teams get off the treadmill. Zamiast ciągle przepisywać na nowy 
 
 Autor sugeruje powrót do fundamentals - working closer to web platform z mniej complex abstractions. To intentional business tradeoff który może być less costly w długim terminie. Jeśli trzymasz się core web technologies, łatwiej ci będzie hire capable engineers w przyszłości.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Framework choice is least interesting technical decision
 - Whatever you choose will be obsolete in 5 years
 - Invest in deep knowledge of current tools
@@ -95,12 +80,6 @@ Autor sugeruje powrót do fundamentals - working closer to web platform z mniej 
 
 **Link**: https://polotek.net/posts/the-frontend-treadmill/
 
-Kluczowe wnioski:
-- - Framework choice is least interesting technical decision
-- Whatever you choose will be obsolete in 5 years
-- Invest in deep knowledge of current tools
-- Return to web platform fundamentals
-- Core web technologies = better career longevity
 
 Link: 
 
@@ -112,7 +91,7 @@ Kluczowa część to użycie PostHog identify function z Clerk user data. PostHo
 
 Implementation używa useAuth i useUser hooks z Clerk w PostHogPageView component, który robi capture pageview events i identify users. Component jest dodany do root layout w PostHogProvider tags.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - PostHog identify function enriches events with user data
 - Clerk hooks provide easy user information access
 - Retroactive event enrichment dla historical data
@@ -120,10 +99,5 @@ Implementation używa useAuth i useUser hooks z Clerk w PostHogPageView componen
 
 **Link**: https://go.clerk.com/DAkyQ1k
 
-Kluczowe wnioski:
-- - PostHog identify function enriches events with user data
-- Clerk hooks provide easy user information access
-- Retroactive event enrichment dla historical data
-- Client-side component w root layout dla tracking
 
 Link:

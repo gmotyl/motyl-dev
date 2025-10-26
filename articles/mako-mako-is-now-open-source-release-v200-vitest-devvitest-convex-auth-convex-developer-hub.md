@@ -14,22 +14,13 @@ Co sprawia, że Mako jest wyjątkowe? Po pierwsze, zespół nie próbował tylko
 
 Dlaczego nie użyli istniejących rozwiązań jak Vite czy Turbopack? Powody są złożone - potrzebowali pełnej kontroli nad narzędziem, kompatybilności z wewnętrznymi potrzebami Ant Group, oraz wsparcia dla nowoczesnych meta-frameworków, szczególnie w scenariuszach SSR i RSC, gdzie potrzebne są nawet cztery różne buildy.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Napisane w Ruście dla maksymalnej wydajności
 - Przetestowane w produkcji na tysiącach projektów
 - Wsparcie dla React, React Native, mini-programów
 - Pełna kontrola nad procesem buildowania
 
-**Link:** https://makojs.dev/blog/mako-open-sourced
-
-Kluczowe wnioski:
-- - Napisane w Ruście dla maksymalnej wydajności
-- Przetestowane w produkcji na tysiącach projektów
-- Wsparcie dla React, React Native, mini-programów
-- Pełna kontrola nad procesem buildowania
-- https://makojs.dev/blog/mako-open-sourced
-
-Link: ** https://makojs.dev/blog/mako-open-sourced
+**Link:** [link](https://makojs.dev/blog/mako-open-sourced)
 
 ## Release v2.0.0 · vitest-dev/vitest
 
@@ -41,24 +32,14 @@ Coverage reporting został znacznie poprawiony - domyślnie włączyli coverage.
 
 Dodali też nowy API "vitest list" do wypisywania zebranych testów bez ich uruchamiania, oraz wsparcie dla concurrent suites, co może znacznie przyspieszyć wykonywanie testów.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Domyślny pool zmieniony na 'forks' dla lepszej stabilności
 - Aktualizacja Chai do v5 może wymagać zmian w testach
 - Lepsze raportowanie coverage
 - Nowe API do listowania testów
 - Wsparcie dla concurrent suites
 
-**Link:** https://github.com/vitest-dev/vitest/releases/tag/v2.0.0
-
-Kluczowe wnioski:
-- - Domyślny pool zmieniony na 'forks' dla lepszej stabilności
-- Aktualizacja Chai do v5 może wymagać zmian w testach
-- Lepsze raportowanie coverage
-- Nowe API do listowania testów
-- Wsparcie dla concurrent suites
-- https://github.com/vitest-dev/vitest/releases/tag/v2.0.0
-
-Link: ** https://github.com/vitest-dev/vitest/releases/tag/v2.0.0
+**Link:** [link](https://github.com/vitest-dev/vitest/releases/tag/v2.0.0)
 
 ## Convex Auth | Convex Developer Hub
 
@@ -70,22 +51,13 @@ Wsparcie dla Next.js server components, API routes, middleware i SSR jest w akty
 
 Żeby zacząć nowy projekt, wystarczy uruchomić "npm create convex@latest" i wybrać React z Vite i Convex Auth. Dla istniejących projektów jest pełny setup guide.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Autentykacja bezpośrednio w backendzie Convex
 - Nie potrzeba zewnętrznych serwisów ani serwerów
 - Wsparcie dla Magic Links, OAuth, haseł
 - Eksperymentalne wsparcie dla Next.js w developmencie
 
-**Link:** https://docs.convex.dev/auth/convex-auth
-
-Kluczowe wnioski:
-- - Autentykacja bezpośrednio w backendzie Convex
-- Nie potrzeba zewnętrznych serwisów ani serwerów
-- Wsparcie dla Magic Links, OAuth, haseł
-- Eksperymentalne wsparcie dla Next.js w developmencie
-- https://docs.convex.dev/auth/convex-auth
-
-Link: ** https://docs.convex.dev/auth/convex-auth
+**Link:** [link](https://docs.convex.dev/auth/convex-auth)
 
 ## Reverse Engineering TicketMaster's Rotating Barcodes (SafeTix)
 
@@ -97,22 +69,13 @@ TicketMaster marketuje SafeTix jako rozwiązanie na scammerów i scalperów, twi
 
 Artykuł szczegółowo opisuje proces reverse engineeringu - jak działają te rotating barcodes, jak są generowane, i czy rzeczywiście są tak bezpieczne, jak twierdzi TicketMaster. To świetny przykład tego, jak technologia, która ma rozwiązać jeden problem, tworzy całą masę nowych problemów dla użytkowników końcowych.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - SafeTix wymaga stałego połączenia internetowego
 - System może zawieść w zatłoczonych miejscach
 - Reverse engineering pokazuje rzeczywiste mechanizmy bezpieczeństwa
 - Tradycyjne PDF bilety były często bardziej niezawodne
 
-**Link:** https://conduition.io/coding/ticketmaster/
-
-Kluczowe wnioski:
-- - SafeTix wymaga stałego połączenia internetowego
-- System może zawieść w zatłoczonych miejscach
-- Reverse engineering pokazuje rzeczywiste mechanizmy bezpieczeństwa
-- Tradycyjne PDF bilety były często bardziej niezawodne
-- https://conduition.io/coding/ticketmaster/
-
-Link: ** https://conduition.io/coding/ticketmaster/
+**Link:** [link](https://conduition.io/coding/ticketmaster/)
 
 ## Fog of War
 
@@ -124,19 +87,10 @@ Tradycyjnie Remix wysyłał Route Manifest do klienta zawierający wszystkie def
 
 Fog of War to następny poziom - zamiast wysyłać cały manifest, Remix może teraz dynamicznie odkrywać route'y w miarę potrzeb. To oznacza, że nawet ogromne aplikacje z setkami route'ów mogą mieć szybki initial load, bo klient nie musi znać wszystkich możliwych ścieżek od razu.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Eliminuje potrzebę wysyłania pełnego route manifestu
 - Pozwala aplikacjom skalować się bez wpływu na initial load
 - Dynamiczne odkrywanie route'ów w miarę potrzeb
 - Kolejny krok w eliminowaniu network waterfalls
 
-**Link:** https://remix.run/blog/fog-of-war
-
-Kluczowe wnioski:
-- - Eliminuje potrzebę wysyłania pełnego route manifestu
-- Pozwala aplikacjom skalować się bez wpływu na initial load
-- Dynamiczne odkrywanie route'ów w miarę potrzeb
-- Kolejny krok w eliminowaniu network waterfalls
-- https://remix.run/blog/fog-of-war
-
-Link: ** https://remix.run/blog/fog-of-war
+**Link:** [link](https://remix.run/blog/fog-of-war)

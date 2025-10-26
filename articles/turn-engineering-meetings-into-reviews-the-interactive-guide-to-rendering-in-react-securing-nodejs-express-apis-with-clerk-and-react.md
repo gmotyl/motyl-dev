@@ -16,22 +16,13 @@ Ale jest nadzieja. Dobre spotkanie powinno angażować odpowiednich ludzi we wł
 
 Żeby przekształcić spotkania w efektywne reviews, musisz najpierw zidentyfikować jakie dane potrzebujesz. Jeśli robisz sprint review, potrzebujesz danych o pull requestach. Jeśli sprawdzasz cały engineering, interesują cię alokacje zasobów i alignment z celami biznesowymi. To są dwa różne zestawy danych.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Spotkania powinny być data-driven, nie status updates
 - Potrzebne są odpowiednie dane na odpowiednim poziomie
 - Pre-work i interpretacja danych są kluczowe
 - Struktura podobna do code review zwiększa efektywność
 
-**Link:** https://www.sleuth.io/post/meetings-vs-reviews/
-
-Kluczowe wnioski:
-- - Spotkania powinny być data-driven, nie status updates
-- Potrzebne są odpowiednie dane na odpowiednim poziomie
-- Pre-work i interpretacja danych są kluczowe
-- Struktura podobna do code review zwiększa efektywność
-- https://www.sleuth.io/post/meetings-vs-reviews/
-
-Link: ** https://www.sleuth.io/post/meetings-vs-reviews/
+**Link:** [link](https://www.sleuth.io/post/meetings-vs-reviews/)
 
 ## The Interactive Guide to Rendering in React
 
@@ -43,22 +34,13 @@ Rendering to po prostu fancy sposób na powiedzenie, że React wywołuje twój f
 
 React re-renderuje komponent kiedy state się zmienia. To ma sens - nie chcielibyśmy przeliczać widoku jeśli state się nie zmienił. I to jest tak proste jak to brzmi.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Rendering to wywołanie function component przez React
 - React tworzy snapshot komponentu z props, state i opisem UI
 - Re-render następuje gdy state się zmienia
 - Initial render zaczyna się od root aplikacji
 
-**Link:** https://ui.dev/why-react-renders
-
-Kluczowe wnioski:
-- - Rendering to wywołanie function component przez React
-- React tworzy snapshot komponentu z props, state i opisem UI
-- Re-render następuje gdy state się zmienia
-- Initial render zaczyna się od root aplikacji
-- https://ui.dev/why-react-renders
-
-Link: ** https://ui.dev/why-react-renders
+**Link:** [link](https://ui.dev/why-react-renders)
 
 ## Securing Node.js Express APIs with Clerk and React
 
@@ -68,22 +50,13 @@ Clerk oferuje dwa middleware dla aplikacji Express. ClerkExpressWithAuth dołąc
 
 Tutorial pokazuje jak stworzyć API z Express, zainstalować potrzebne paczki jak express, cors, dotenv i Clerk SDK, oraz jak używać obu middleware na różnych routach żeby przetestować zachowanie każdego z nich.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Clerk oferuje dwa middleware: WithAuth i RequireAuth
 - WithAuth dołącza sesję do request, RequireAuth blokuje nieuwierzytelnionych
 - Potrzebujesz CLERK_SECRET_KEY w zmiennych środowiskowych
 - Różne middleware dla różnych poziomów zabezpieczeń
 
-**Link:** https://go.clerk.com/9VDxMYe
-
-Kluczowe wnioski:
-- - Clerk oferuje dwa middleware: WithAuth i RequireAuth
-- WithAuth dołącza sesję do request, RequireAuth blokuje nieuwierzytelnionych
-- Potrzebujesz CLERK_SECRET_KEY w zmiennych środowiskowych
-- Różne middleware dla różnych poziomów zabezpieczeń
-- https://go.clerk.com/9VDxMYe
-
-Link: ** https://go.clerk.com/9VDxMYe
+**Link:** [link](https://go.clerk.com/9VDxMYe)
 
 ## Introduction to Causal Logs
 
@@ -95,22 +68,13 @@ Tradycyjny log rozwiązuje dwa problemy - ordering changes i distributing data. 
 
 Zawsze był tylko jeden sposób na zrobienie tego - przepuszczenie wszystkiego przez jeden thread na jednym procesie na jednej maszynie. To prawda nawet w distributed databases z klastrami replik. Paxos, Raft itp. tylko koordynują żeby wybrać leadera odpowiedzialnego za przetwarzanie eventów.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Causal logs wspierają wielu concurrent writers
 - Umożliwiają self-certifying aplikacje bez blockchainów
 - Tradycyjne logi wymagają single point dla ordering
 - Causal logs to ewolucja od single-writer limitations
 
-**Link:** https://joelgustafson.com/posts/2024-09-30/introduction-to-causal-logs
-
-Kluczowe wnioski:
-- - Causal logs wspierają wielu concurrent writers
-- Umożliwiają self-certifying aplikacje bez blockchainów
-- Tradycyjne logi wymagają single point dla ordering
-- Causal logs to ewolucja od single-writer limitations
-- https://joelgustafson.com/posts/2024-09-30/introduction-to-causal-logs
-
-Link: ** https://joelgustafson.com/posts/2024-09-30/introduction-to-causal-logs
+**Link:** [link](https://joelgustafson.com/posts/2024-09-30/introduction-to-causal-logs)
 
 ## GitHub - brisa-build/brisa: The Web Platform Framework
 
@@ -122,19 +86,10 @@ Ma wbudowane wsparcie dla i18n z tłumaczeniem tekstów i routingiem, niosąc ty
 
 Możesz zmienić output - przekształcić swoją webową aplikację z serwera na statyczną, na desktopową, androidową czy iOS aplikację jedną komendą konfiguracyjną.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Eksperymentalny framework z najlepszymi features z innych
 - Bardzo mały bundle size - od 0B do 3kB
 - Pełne wsparcie dla modern web technologies
 - Możliwość zmiany outputu na różne platformy
 
-**Link:** https://github.com/brisa-build/brisa
-
-Kluczowe wnioski:
-- - Eksperymentalny framework z najlepszymi features z innych
-- Bardzo mały bundle size - od 0B do 3kB
-- Pełne wsparcie dla modern web technologies
-- Możliwość zmiany outputu na różne platformy
-- https://github.com/brisa-build/brisa
-
-Link: ** https://github.com/brisa-build/brisa
+**Link:** [link](https://github.com/brisa-build/brisa)

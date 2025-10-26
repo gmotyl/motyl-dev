@@ -14,22 +14,13 @@ Mozilla nazywa to "Taskbar Tabs" i ma to być inne podejście niż w innych prze
 
 Web apki w Firefoksie będą mogły pokazywać własne ikony w menu aplikacji i taskbarze, pozostaną otwarte do momentu zamknięcia, a także będą mogły obsługiwać linki do swoich stron. Interesującą funkcją ma być możliwość przejścia dowolnej karty w tryb web apki, nawet tymczasowo, bez potrzeby ponownego logowania.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Firefox wprowadza wsparcie PWA jako "Taskbar Tabs"
 - Inne podejście niż konkurencja - zachowanie paska narzędzi
 - Możliwość tymczasowego przejścia karty w tryb web apki
 - Funkcja dostępna w Firefox Nightly z flagą browser.taskbarTabs.enabled
 
-**Link:** https://www.omgubuntu.co.uk/2025/03/firefox-nightly-supports-web-apps-taskbar-tabs
-
-Kluczowe wnioski:
-- - Firefox wprowadza wsparcie PWA jako "Taskbar Tabs"
-- Inne podejście niż konkurencja - zachowanie paska narzędzi
-- Możliwość tymczasowego przejścia karty w tryb web apki
-- Funkcja dostępna w Firefox Nightly z flagą browser.taskbarTabs.enabled
-- https://www.omgubuntu.co.uk/2025/03/firefox-nightly-supports-web-apps-taskbar-tabs
-
-Link: ** https://www.omgubuntu.co.uk/2025/03/firefox-nightly-supports-web-apps-taskbar-tabs
+**Link:** [link](https://www.omgubuntu.co.uk/2025/03/firefox-nightly-supports-web-apps-taskbar-tabs)
 
 ## React 19.1 wprowadza Owner Stack
 
@@ -41,22 +32,13 @@ React 19.1 wprowadza też ulepszone wsparcie dla Suspense boundaries, które mog
 
 Ciekawą zmianą jest też format useId - zamiast dwukropków używa teraz znaków guillemet, więc zamiast ":r123:" mamy "«r123»", co tworzy poprawne selektory CSS.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Owner Stack dla lepszego debugowania komponentów
 - Ulepszone wsparcie dla Suspense boundaries
 - Nowy format useId z poprawnymi selektorami CSS
 - React.act nie jest już dostępne w production builds
 
-**Link:** https://github.com/facebook/react/releases/tag/v19.1.0
-
-Kluczowe wnioski:
-- - Owner Stack dla lepszego debugowania komponentów
-- Ulepszone wsparcie dla Suspense boundaries
-- Nowy format useId z poprawnymi selektorami CSS
-- React.act nie jest już dostępne w production builds
-- https://github.com/facebook/react/releases/tag/v19.1.0
-
-Link: ** https://github.com/facebook/react/releases/tag/v19.1.0
+**Link:** [link](https://github.com/facebook/react/releases/tag/v19.1.0)
 
 ## Babylon.js 8.0 z IBL Shadows i Area Lights
 
@@ -68,22 +50,13 @@ Drugą wielką nowością są Area Lights - często żądana funkcja, która poz
 
 Największą zmianą jest jednak Node Render Graph - system, który daje pełną kontrolę nad pipeline'em renderowania. Do tej pory renderowanie w Babylon było czarną skrzynką, ale teraz można customizować każdą część procesu renderowania na GPU. Jest nawet wizualny edytor do tworzenia własnych pipeline'ów renderowania.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - IBL Shadows - cienie oparte na Image-Based Lighting
 - Area Lights dla bardziej realistycznego oświetlenia
 - Node Render Graph dla pełnej kontroli nad renderowaniem
 - Nowy lightweight viewer dla lepszej wydajności
 
-**Link:** https://blogs.windows.com/windowsdeveloper/2025/03/27/announcing-babylon-js-8-0/
-
-Kluczowe wnioski:
-- - IBL Shadows - cienie oparte na Image-Based Lighting
-- Area Lights dla bardziej realistycznego oświetlenia
-- Node Render Graph dla pełnej kontroli nad renderowaniem
-- Nowy lightweight viewer dla lepszej wydajności
-- https://blogs.windows.com/windowsdeveloper/2025/03/27/announcing-babylon-js-8-0/
-
-Link: ** https://blogs.windows.com/windowsdeveloper/2025/03/27/announcing-babylon-js-8-0/
+**Link:** [link](https://blogs.windows.com/windowsdeveloper/2025/03/27/announcing-babylon-js-8-0/)
 
 ## Problemy z deploymentem Next.js na różnych platformach
 
@@ -95,19 +68,10 @@ Netlify musi utrzymywać własny runtime adapter dla Next.js, który ma ponad 15
 
 Problem pogłębia fakt, że wiele funkcji Next.js jest dokumentowanych tylko wewnętrznie w Vercel, a publiczna dokumentacja często nie opisuje wszystkich detali implementacyjnych. To sprawia, że inne platformy muszą reverse-engineerować funkcjonalność na podstawie kodu źródłowego.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Next.js nie wspiera systemu adapterów jak inne frameworki
 - Platformy muszą utrzymywać własne, skomplikowane adaptery
 - Brak przejrzystości w dokumentacji funkcji Next.js
 - Potrzeba lepszej współpracy open source w ekosystemie Next.js
 
-**Link:** https://www.netlify.com/blog/how-we-run-nextjs/
-
-Kluczowe wnioski:
-- - Next.js nie wspiera systemu adapterów jak inne frameworki
-- Platformy muszą utrzymywać własne, skomplikowane adaptery
-- Brak przejrzystości w dokumentacji funkcji Next.js
-- Potrzeba lepszej współpracy open source w ekosystemie Next.js
-- https://www.netlify.com/blog/how-we-run-nextjs/
-
-Link: ** https://www.netlify.com/blog/how-we-run-nextjs/
+**Link:** [link](https://www.netlify.com/blog/how-we-run-nextjs/)

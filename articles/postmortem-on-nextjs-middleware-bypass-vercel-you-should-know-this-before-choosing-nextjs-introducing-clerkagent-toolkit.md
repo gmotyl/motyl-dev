@@ -16,7 +16,7 @@ Najciekawsze w tym wszystkim jest to, że sama Vercel była nienaruszona przez t
 
 Luka polegała na możliwości przekazania specjalnego nagłówka x-middleware-subrequest, który pozwalał ominąć middleware. Naprawiono to przez dodanie walidacji tego nagłówka. Proste rozwiązanie, ale szkoda została już wyrządzona.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Krytyczna luka pozwalała na ominięcie Next.js middleware
 - Vercel był odporny na własną lukę przez architekturę
 - Patch dostępny dla wersji 14.2.25 i 15.2.3
@@ -24,11 +24,6 @@ Luka polegała na możliwości przekazania specjalnego nagłówka x-middleware-s
 
 **Link**: https://vercel.com/blog/postmortem-on-next-js-middleware-bypass
 
-Kluczowe wnioski:
-- - Krytyczna luka pozwalała na ominięcie Next.js middleware
-- Vercel był odporny na własną lukę przez architekturę
-- Patch dostępny dla wersji 14.2.25 i 15.2.3
-- Pokazuje problemy z priorytetyzacją zgłoszeń bezpieczeństwa
 
 Link: 
 
@@ -42,7 +37,7 @@ Problem polega na tym, że wiele funkcji Next.js jest optymalizowanych specjalni
 
 Eduardo nie mówi "nie używajcie Next.js", ale apeluje o świadomość tego, na co się decydujecie. Jeśli planujesz hostować gdzie indziej niż na Vercelu, możesz mieć problemy z niektórymi funkcjami.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Brak jasnych granic między Next.js a Vercel
 - Niektóre funkcje mogą nie działać poza Vercel
 - Potencjalny vendor lock-in
@@ -50,11 +45,6 @@ Eduardo nie mówi "nie używajcie Next.js", ale apeluje o świadomość tego, na
 
 **Link**: https://eduardoboucas.com/posts/2025-03-25-you-should-know-this-before-choosing-nextjs/
 
-Kluczowe wnioski:
-- - Brak jasnych granic między Next.js a Vercel
-- Niektóre funkcje mogą nie działać poza Vercel
-- Potencjalny vendor lock-in
-- Ważne jest świadome podejmowanie decyzji o stacku
 
 Link: 
 
@@ -68,7 +58,7 @@ Najciekawszą funkcją jest session context injection - możesz automatycznie ws
 
 Mają też wsparcie dla MCP (Model Context Protocol) server, co pozwala na integrację z klientami takimi jak Claude Desktop. To pokazuje, że myślą o ekosystemie, nie tylko o własnych narzędziach.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Integracja Clerk z AI Agents
 - Wsparcie dla Vercel AI SDK i LangChain
 - Automatyczne wstrzykiwanie kontekstu sesji
@@ -77,12 +67,6 @@ Mają też wsparcie dla MCP (Model Context Protocol) server, co pozwala na integ
 
 **Link**: https://go.clerk.com/JOhWPyl
 
-Kluczowe wnioski:
-- - Integracja Clerk z AI Agents
-- Wsparcie dla Vercel AI SDK i LangChain
-- Automatyczne wstrzykiwanie kontekstu sesji
-- Wsparcie dla MCP server
-- Scoped helpers dla bezpieczeństwa
 
 Link: 
 
@@ -98,7 +82,7 @@ To jest naprawdę potężne narzędzie, które pozwoli na lepszą organizację C
 
 Adam Argyle wspomina też o funkcjach CSS, które również są w fazie eksperymentów. To może być przełomowy rok dla CSS - mixiny, funkcje, nowe selektory. Web platform naprawdę przyspiesza.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - CSS Mixins dostępne w Chrome Canary z flagą
 - Składnia podobna do Sass mixinów
 - Możliwość definiowania reużywalnych chunków CSS
@@ -107,12 +91,6 @@ Adam Argyle wspomina też o funkcjach CSS, które również są w fazie eksperym
 
 **Link**: https://nerdy.dev/css-mixins-ready-for-experimentation
 
-Kluczowe wnioski:
-- - CSS Mixins dostępne w Chrome Canary z flagą
-- Składnia podobna do Sass mixinów
-- Możliwość definiowania reużywalnych chunków CSS
-- Część większego trendu nowych funkcji CSS
-- Wciąż w fazie eksperymentalnej
 
 Link: 
 
@@ -128,7 +106,7 @@ Najciekawsze jest to, że ten produkt rozprzestrzenił się w branży tylko dzi�
 
 Broadcast to biznes, gdzie masz tylko jedną szansę - niezawodność jest królem. Elixir dał im best-in-class networking, odporność na błędy i ekosystem pozwalający na szybką iterację.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Trzech programistów zbudowało system używany na Super Bowl
 - Elixir idealny do koordynacji setek urządzeń
 - Sukces oparty na funkcjonalności, nie marketingu
@@ -137,12 +115,6 @@ Broadcast to biznes, gdzie masz tylko jedną szansę - niezawodność jest król
 
 **Link**: https://elixir-lang.org/blog/2025/03/25/cyanview-elixir-case/
 
-Kluczowe wnioski:
-- - Trzech programistów zbudowało system używany na Super Bowl
-- Elixir idealny do koordynacji setek urządzeń
-- Sukces oparty na funkcjonalności, nie marketingu
-- Niezawodność krytyczna w branży broadcast
-- IP-based approach zamiast proprietary protocols
 
 Link: 
 
@@ -156,7 +128,7 @@ Jego API jest bardzo czytelne - przekazujesz funkcję do wykonania i funkcję do
 
 To jest świetny przykład tego, jak przemyślenie API może znacznie uprościć implementację i zmniejszyć liczbę błędów. Czasami najlepsze rozwiązanie to unikanie problemu, a nie jego rozwiązywanie.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Unikanie wskaźników do tablic w undo stack
 - Czyste API z funkcjami do/undo
 - Mniej błędów przez lepszy design
@@ -164,10 +136,5 @@ To jest świetny przykład tego, jak przemyślenie API może znacznie uprościć
 
 **Link**: https://blog.julik.nl/2025/03/a-tiny-undo-stack
 
-Kluczowe wnioski:
-- - Unikanie wskaźników do tablic w undo stack
-- Czyste API z funkcjami do/undo
-- Mniej błędów przez lepszy design
-- Praktyczne rozwiązanie częstego problemu UI
 
 Link:

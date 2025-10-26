@@ -14,22 +14,13 @@ Teraz mówią wprost - albo używasz frameworka, albo budujesz własny framework
 
 Expo zostało oficjalnie uznane za jedyny rekomendowany community framework. To pokazuje jak daleko zaszło Expo - od narzędzia dla początkujących do enterprise-ready platformy. Framework Expo pozostaje darmowy i open source, płacisz tylko za EAS jeśli chcesz.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - React Native oficjalnie poleca używanie frameworków
 - Expo jest jedynym rekomendowanym community frameworkiem
 - Zmiana na stronie Getting Started odzwierciedla nowe podejście
 - Framework vs własne rozwiązania - większość powinna wybrać framework
 
-**Link:** https://reactnative.dev/blog/2024/06/25/use-a-framework-to-build-react-native-apps
-
-Kluczowe wnioski:
-- - React Native oficjalnie poleca używanie frameworków
-- Expo jest jedynym rekomendowanym community frameworkiem
-- Zmiana na stronie Getting Started odzwierciedla nowe podejście
-- Framework vs własne rozwiązania - większość powinna wybrać framework
-- https://reactnative.dev/blog/2024/06/25/use-a-framework-to-build-react-native-apps
-
-Link: ** https://reactnative.dev/blog/2024/06/25/use-a-framework-to-build-react-native-apps
+**Link:** [link](https://reactnative.dev/blog/2024/06/25/use-a-framework-to-build-react-native-apps)
 
 ## Zero - nowy secrets manager dla ery API
 
@@ -41,24 +32,14 @@ Najciekawsze jest to bezpieczne sharowanie secretów - generujesz unikatowy link
 
 Na razie jest za darmo, więc warto sprawdzić zanim wprowadzą płatne plany.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Focus na użyteczność zamiast tylko na bezpieczeństwo
 - Templates dla popularnych vendorów
 - CLI w Rust, SDK dla głównych języków
 - Bezpieczne sharowanie przez unikalne linki
 - Obecnie darmowy
 
-**Link:** https://tryzero.com/
-
-Kluczowe wnioski:
-- - Focus na użyteczność zamiast tylko na bezpieczeństwo
-- Templates dla popularnych vendorów
-- CLI w Rust, SDK dla głównych języków
-- Bezpieczne sharowanie przez unikalne linki
-- Obecnie darmowy
-- https://tryzero.com/
-
-Link: ** https://tryzero.com/
+**Link:** [link](https://tryzero.com/)
 
 ## Snyk - live hack AI-generated code
 
@@ -68,22 +49,13 @@ Będą budować demo app używając AI tools, a potem aktywnie hackować minimum
 
 Potrzebujesz ChatGPT account, GitHub Copilot i darmowe konto Snyk. Czyli standardowy stack 2024 roku.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - Live demo hackowania AI-generated code
 - Praktyczne podejście, nie teoria
 - Minimum 3 vulnerabilities do zhackowania i naprawienia
 - Best practices dla bezpiecznego używania AI coding tools
 
-**Link:** https://go.snyk.io/240725_ai-live-hack.html
-
-Kluczowe wnioski:
-- - Live demo hackowania AI-generated code
-- Praktyczne podejście, nie teoria
-- Minimum 3 vulnerabilities do zhackowania i naprawienia
-- Best practices dla bezpiecznego używania AI coding tools
-- https://go.snyk.io/240725_ai-live-hack.html
-
-Link: ** https://go.snyk.io/240725_ai-live-hack.html
+**Link:** [link](https://go.snyk.io/240725_ai-live-hack.html)
 
 ## Effect 3.5 - sporo nowych ficzerów
 
@@ -95,24 +67,14 @@ PubSub dostał replay option - buffer który replay-uje ostatnie n wiadomości d
 
 Dużo małych ulepszeń które razem robią solidny release.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - RcRef i RcMap dla reference counted resource management
 - Logger.pretty będzie domyślny w Effect 4.0
 - PubSub replay buffer dla nowych subscriberów
 - Stream.raceAll dla competing streams
 - Lepsze error handling z cause forwarding
 
-**Link:** https://effect.website/blog/effect-3.5
-
-Kluczowe wnioski:
-- - RcRef i RcMap dla reference counted resource management
-- Logger.pretty będzie domyślny w Effect 4.0
-- PubSub replay buffer dla nowych subscriberów
-- Stream.raceAll dla competing streams
-- Lepsze error handling z cause forwarding
-- https://effect.website/blog/effect-3.5
-
-Link: ** https://effect.website/blog/effect-3.5
+**Link:** [link](https://effect.website/blog/effect-3.5)
 
 ## CarbonQA - dedykowany US-based testing team
 
@@ -122,21 +84,11 @@ Ich model to monthly subscription za "project-ready" testerów - ludzi którzy j
 
 Testują web, desktop i mobile apps, mają device lab, komunikują przez Slack z developerami. Brzmi jak coś dla teamów które chcą outsource'ować QA ale zachować jakość.
 
-**Kluczowe wnioski:**
+**Key takeaways:**
 - US-based, full-time testers, nie crowdsourcing
 - Relationship-based approach z kontekstem projektu
 - Monthly subscription + per-day billing model
 - Direct Slack communication z developerami
 - Web, desktop, mobile testing z device lab
 
-**Link:** https://carbonqa.com/
-
-Kluczowe wnioski:
-- - US-based, full-time testers, nie crowdsourcing
-- Relationship-based approach z kontekstem projektu
-- Monthly subscription + per-day billing model
-- Direct Slack communication z developerami
-- Web, desktop, mobile testing z device lab
-- https://carbonqa.com/
-
-Link: ** https://carbonqa.com/
+**Link:** [link](https://carbonqa.com/)
