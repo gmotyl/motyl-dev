@@ -1,31 +1,10 @@
 ---
-title: "Rewolucja w narzędziach frontendowych: od pnpm przez Biome po zaawansowane bezpieczeństwo kodu"
-excerpt: "Przegląd najnowszych trendów w ekosystemie JavaScript: eksplozywny wzrost pnpm, narzędzia do migracji z ESLint i Prettier, oraz zaawansowane techniki wykrywania podatności w kodzie."
-publishedAt: "2024-12-19"
-slug: "rewolucja-narzedzia-frontendowe-pnpm-biome-bezpieczenstwo-kodu"
-hashtags: "#generated #pl #frontend #react #typescript #pnpm #biome #eslint #prettier #sonarqube #sast #react-query #css #security #performance #migration"
+title: 'Rewolucja w narzędziach frontendowych: od pnpm przez Biome po zaawansowane bezpieczeństwo kodu'
+excerpt: 'Przegląd najnowszych trendów w ekosystemie JavaScript: eksplozywny wzrost pnpm, narzędzia do migracji z ESLint i Prettier, oraz zaawansowane techniki wykrywania podatności w kodzie.'
+publishedAt: '2024-12-19'
+slug: 'rewolucja-narzedzia-frontendowe-pnpm-biome-bezpieczenstwo-kodu'
+hashtags: '#generated #pl #frontend #react #typescript #pnpm #biome #eslint #prettier #sonarqube #sast  #css #security #performance #migration'
 ---
-
-## React Query Course - Oficjalny kurs query.gg
-
-**TLDR:** Oficjalny kurs React Query od ui.dev otrzymuje entuzjastyczne recenzje od deweloperów wszystkich poziomów. Kurs łączy teoretyczną wiedzę z praktycznymi umiejętnościami, wyjaśniając nie tylko "jak", ale także "dlaczego".
-
-**Summary:**
-
-Kurs query.gg to prawdziwy przełom w edukacji dotyczącej React Query. Co mnie szczególnie fascynuje w tym projekcie, to sposób, w jaki łączy on głęboką wiedzę techniczną z doskonałym storytellingiem. Recenzje mówią same za siebie - deweloperzy z wieloletnim doświadczeniem w React Query odkrywają nowe perspektywy i kwestionują swoje dotychczasowe założenia.
-
-Kurs nie ogranicza się tylko do mechanicznego nauczania API. Zamiast tego skupia się na fundamentalnym zrozumieniu asynchronicznego zarządzania danymi. To podejście jest kluczowe, bo React Query to nie tylko biblioteka - to sposób myślenia o stanie aplikacji. Kurs pomaga zrozumieć, dlaczego React Query działa tak, a nie inaczej, co jest nieocenione przy debugowaniu i optymalizacji.
-
-Szczególnie interesujące są fragmenty o wzorcach antypatternach i migracji między wersjami. Jeden z użytkowników wspomina o migracji z wersji 3 do 5 - to pokazuje, jak kurs radzi sobie z praktycznymi wyzwaniami rzeczywistych projektów. Nie ma nic gorszego niż teoretyczna wiedza, która nie przekłada się na codzienną pracę.
-
-Wartość produkcyjna kursu również zasługuje na uznanie. W dzisiejszych czasach, gdy mamy dostęp do tysięcy tutoriali na YouTube, jakość prezentacji i przemyślana struktura kursu robią ogromną różnicę w efektywności nauki.
-
-**Key takeaways:**
-- Kurs łączy teorię z praktyką, wyjaśniając "dlaczego", nie tylko "jak"
-- Pomaga w migracji między wersjami React Query i eliminowaniu antypatternów
-- Otrzymuje pozytywne recenzje od deweloperów wszystkich poziomów doświadczenia
-
-**Link:** [The Official React Query Course - query.gg](https://click.convertkit-mail4.com/zlu9n6l276bnh4vr3q8bxi2k9d500/g3hnhwu3xqv4w2ur/aHR0cHM6Ly9xdWVyeS5nZy8=)
 
 ## Pnpm 9.0 - Stawiając "p" w npm
 
@@ -42,6 +21,7 @@ Struktura node_modules w pnpm to kolejny element układanki. Zamiast płaskiej s
 Wersja 9.0 to ewolucja, nie rewolucja. Ulepszona struktura lockfile i lepsze peer dependencies to dokładnie to, czego oczekujemy od dojrzałego narzędzia. Nie ma dramatycznych zmian, które zepsuą istniejące projekty, ale są konkretne ulepszenia, które poprawią codzienną pracę.
 
 **Key takeaways:**
+
 - Wzrost popularności o 1500% w ciągu dwóch lat dzięki lepszej wydajności
 - Content-addressable store eliminuje duplikację zależności na dysku
 - Wersja 9.0 przynosi stabilne ulepszenia bez breaking changes
@@ -65,6 +45,7 @@ Migracja z Prettier to równie przemyślane rozwiązanie. Prettier ma swoje quir
 Co mnie najbardziej cieszy w tym podejściu, to że Biome nie próbuje być rewolucyjny za wszelką cenę. Zamiast tego oferuje ewolucyjną ścieżkę migracji, która szanuje istniejące inwestycje w konfigurację narzędzi.
 
 **Key takeaways:**
+
 - Automatyczna migracja z ESLint obsługuje legacy i flat config oraz popularne pluginy
 - Wsparcie dla Prettier overrides i inteligentna konwersja ignore patterns
 - Pragmatyczne podejście do adopcji - ewolucja zamiast rewolucji
@@ -88,6 +69,7 @@ Szczególnie interesujący jest aspekt taint analysis w kontekście bibliotek ze
 To podejście ma szczególne znaczenie w kontekście takich incydentów jak Log4Shell. Podatność nie leżała w samym Log4j, ale w sposobie, w jaki aplikacje go używały. Deeper SAST mogłoby wykryć takie wzorce znacznie wcześniej.
 
 **Key takeaways:**
+
 - Analizuje interakcje między kodem aplikacji a bibliotekami zewnętrznymi
 - Wykrywa podatności niewidoczne dla tradycyjnych narzędzi SAST
 - Szczególnie ważne w kontekście nowoczesnych aplikacji z wieloma zależnościami
@@ -111,6 +93,7 @@ Techniczny stack jest przemyślany. React Three Fiber jako deklaratywna warstwa 
 Projekt ma też wymiar biznesowy - tworzy "shareable moment" dla uczestników eventu. To nie jest tylko tech demo, ale przemyślane narzędzie marketingowe, które wykorzystuje najnowsze technologie do budowania engagement.
 
 **Key takeaways:**
+
 - React Three Fiber umożliwia tworzenie złożonych scen 3D w deklaratywny sposób
 - Kombinacja z bibliotekami fizyki pozwala na realistyczne symulacje w przeglądarce
 - Nowoczesne narzędzia webowe zacierają granicę między web a native apps
@@ -134,6 +117,7 @@ CSS :has() to selektor, na który czekaliśmy dekady. Wreszcie możemy stylować
 View Transitions to kolejny dowód na to, że przeglądarka staje się platformą aplikacyjną. Płynne przejścia między stanami bez zewnętrznych bibliotek? To zmienia sposób myślenia o UX w aplikacjach webowych.
 
 **Key takeaways:**
+
 - oklch() oferuje lepszą ergonomię i dostęp do szerszych przestrzeni kolorowych
 - Nowoczesne selektory CSS eliminują potrzebę wielu rozwiązań JavaScript
 - #nobuild approach staje się realistyczny dzięki wsparciu przeglądarek
@@ -159,6 +143,7 @@ Wsparcie dla async actions w transitions to kolejny krok w ewolucji React. Może
 Co mnie szczególnie cieszy, to że useTransition nie wymaga przepisywania całej aplikacji. To additive API - możemy go wprowadzać stopniowo tam, gdzie przynosi największe korzyści.
 
 **Key takeaways:**
+
 - Rozróżnia urgent i non-urgent updates dla lepszej responsywności
 - isPending automatycznie zarządza stanem ładowania transitions
 - Wsparcie dla async actions upraszcza obsługę operacji asynchronicznych
