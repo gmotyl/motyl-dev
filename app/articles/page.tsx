@@ -8,6 +8,38 @@ import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 
+// Hook to track visited articles
+function useVisitedArticles() {
+  const [visitedArticles, setVisitedArticles] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    // Load visited articles from localStorage
+    const stored = localStorage.getItem('visitedArticles')
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored)
+        setVisitedArticles(new Set(parsed))
+      } catch (error) {
+        console.error('Failed to parse visited articles:', error)
+      }
+    }
+  }, [])
+
+  const markAsVisited = (slug: string) => {
+    setVisitedArticles((prev) => {
+      const updated = new Set(prev)
+      updated.add(slug)
+      // Save to localStorage
+      localStorage.setItem('visitedArticles', JSON.stringify([...updated]))
+      return updated
+    })
+  }
+
+  const isVisited = (slug: string) => visitedArticles.has(slug)
+
+  return { markAsVisited, isVisited }
+}
+
 interface Article {
   slug: string
   title: string
@@ -24,6 +56,7 @@ export default function ArticlesPage() {
   const [articles, setArticles] = useState<Article[]>([])
   const [allHashtags, setAllHashtags] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const { markAsVisited, isVisited } = useVisitedArticles()
 
   // Fetch articles and hashtags
   useEffect(() => {
@@ -122,10 +155,13 @@ export default function ArticlesPage() {
               <Link
                 key={article.slug}
                 href={`/articles/${article.slug}`}
-                className="rounded-lg border bg-background/50 backdrop-blur-sm p-6 transition-all hover:border-primary/50 hover:shadow-md flex flex-col"
+                onClick={() => markAsVisited(article.slug)}
+                className={`rounded-lg border backdrop-blur-sm p-6 transition-all hover:shadow-md hover:border-primary/50 flex flex-col ${
+                  isVisited(article.slug) ? 'visited-article' : 'unvisited-article'
+                }`}
               >
-                <h2 className="text-xl font-bold mb-2">{article.title}</h2>
-                <p className="text-muted-foreground flex-grow line-clamp-3">{article.excerpt}</p>
+                <h2 className="article-title text-xl font-bold mb-2">{article.title}</h2>
+                <p className="article-excerpt flex-grow line-clamp-3">{article.excerpt}</p>
 
                 {/* Hashtags */}
                 {article.hashtags.length > 0 && (

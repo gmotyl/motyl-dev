@@ -92,3 +92,30 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Custom styles for visited article links */
+.visited-article {
+  background-color: rgb(255 255 255 / 0.05) !important;
+  border-color: rgb(255 255 255 / 0.1) !important;
+}
+
+.visited-article .article-title {
+  color: hsl(var(--primary)) !important;
+}
+
+.visited-article .article-excerpt {
+  color: rgb(255 255 255 / 0.7) !important;
+}
+
+.unvisited-article {
+  background-color: hsl(var(--primary) / 0.2) !important;
+  border-color: hsl(var(--primary) / 0.4) !important;
+}
+
+.unvisited-article .article-title {
+  color: rgb(255 255 255 / 0.95) !important;
+}
+
+.unvisited-article .article-excerpt {
+  color: rgb(255 255 255 / 0.7) !important;
+}
