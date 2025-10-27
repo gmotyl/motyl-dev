@@ -17,6 +17,7 @@ Co ciekawe - jeśli nie chcesz migrować, to nie musisz. Nuxt wykryje starą str
 Poprawili też data fetching - useAsyncData i useFetch teraz dzielą dane między komponentami z tym samym kluczem. Plus automatyczne czyszczenie przy unmount komponenta. TypeScript też dostał upgrade z lepszym rozdzieleniem kontekstów między kodem aplikacji, serwerem i konfiguracją.
 
 **Kluczowe punkty:**
+
 - Nowa struktura z katalogiem app/ (opcjonalna migracja)
 - Szybsze file watchery
 - Lepszy data fetching z automatycznym dzieleniem danych
@@ -34,6 +35,7 @@ Compiler analizuje twój kod i automatycznie dodaje optymalizacje tam, gdzie są
 Możesz go adoptować stopniowo - nie musisz włączać go od razu w całym projekcie. Jest też kompletny guide do debugowania, bo wiemy, że kompilatory czasem robią rzeczy, których się nie spodziewamy.
 
 **Kluczowe punkty:**
+
 - Automatyczna memoizacja bez manualnego useMemo/useCallback
 - Stopniowa adopcja w istniejących projektach
 - Kompletna dokumentacja i debugging guide
@@ -50,6 +52,7 @@ Ich rozwiązanie to mix AI i determinizmu. Używają "deductive assertions" - pr
 Co ważne - kontrolują koszty tokenów poprzez selektywne wykonywanie testów i smart sampling. Bo nikt nie chce spalić budżetu na testowanie.
 
 **Kluczowe punkty:**
+
 - Deterministyczne asercje dla niedeterministycznych aplikacji
 - Golden master approach z fuzzy matching
 - Kontrola kosztów tokenów
@@ -64,6 +67,7 @@ Astro 5.12 przynosi wsparcie dla TOML w content loaders. Teraz file() i glob() l
 Większą nowością jest nowe Netlify dev experience. Adapter Netlify teraz używa oficjalnego Vite plugin od Netlify, co oznacza, że masz całą platformę Netlify na localhost. Local Image CDN, Blobs server, redirects, rewrites - wszystko działa lokalnie.
 
 **Kluczowe punkty:**
+
 - Natywne wsparcie TOML w content loaders
 - Netlify platform na localhost przez Vite plugin
 - Local Image CDN i Blobs server
@@ -80,6 +84,7 @@ Ich sekret? Model fallback chain, kontrola nad długo działającymi komendami i
 To pokazuje, że sukces AI agentów to nie tylko model, ale cała architektura i strategia.
 
 **Kluczowe punkty:**
+
 - 52% success rate na Terminal-Bench (najlepszy wynik)
 - Model fallback chain z Claude Sonnet 4 i Opus 4
 - Kontrola nad długo działającymi komendami
@@ -96,6 +101,7 @@ Z Tailwind CSS 4 możesz teraz importować daisyUI jako plugin w CSS file zamias
 360,000 projektów open source używa daisyUI z 19 milionami instalacji npm. To pokazuje, jak ważna jest ta biblioteka w ekosystemie Tailwind.
 
 **Kluczowe punkty:**
+
 - Zero dependencies (z ~100 do 0)
 - Kompatybilność z Tailwind CSS 4
 - Mniejszy rozmiar package i CSS
