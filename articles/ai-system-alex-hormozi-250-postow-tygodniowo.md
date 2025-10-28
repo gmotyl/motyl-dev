@@ -3,7 +3,7 @@ title: "Jak AI zmienia tworzenie treści - system Alexa Hormoziego do publikowan
 excerpt: "Analiza systemów AI do multiplikacji treści na podstawie strategii najlepszych twórców internetowych"
 publishedAt: "2025-01-03"
 slug: "ai-system-alex-hormozi-250-postow-tygodniowo"
-hashtags: "#generated #pl #ai #content-marketing #automation #social-media #personal-branding #llm #claude
+hashtags: "#generated #pl #ai #content-marketing #automation #social-media #personal-branding #llm #claude"
 ---
 
 ## Jak Alex Hormozi publikuje 250+ postów tygodniowo (i jak ty też możesz)
