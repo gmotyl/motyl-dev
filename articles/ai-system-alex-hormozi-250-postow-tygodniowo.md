@@ -57,3 +57,32 @@ Dla zespołów technicznych i architektów oznacza to możliwość zbudowania in
 - System może być stopniowo rozbudowywany od prostej automatyzacji do kompleksowego marketing pipeline
 
 **Link:** [How I Use AI System to Automate Entire Marketing Workflow to Grow My Newsletter](https://aimaker.substack.com/p/how-i-use-ai-system-to-automate-entire)
+
+## Claude dostał Skills! Jak użyłem tej funkcji do automatyzacji całego workflow SEO
+
+**TLDR:** Nowa funkcja Skills w Claude pozwala na tworzenie wyspecjalizowanych, wielokrotnego użytku systemów zadaniowych, które zastępują żmudne ręczne procesy - autor pokazuje jak zautomatyzował dwugodzinny workflow optymalizacji SEO.
+
+Przez miesiące autor ręcznie optymalizował treści newslettera pod SEO. Każdy post wymagał tego samego żmudnego procesu: sprawdzenie URL slugów, research słów kluczowych, optymalizacja nagłówków, przepisanie meta tytułów i opisów, dodanie alt textów, budowanie linków wewnętrznych. Minimum dwie godziny za każdym razem.
+
+Claude Projects świetnie sprawdzał się jako partner do myślenia - znał styl pisania autora, jego zasady SEO, framework optymalizacji treści. Ale gdy przychodziło do wykonania optymalizacji, nadal wymagało to prowadzenia Claude przez każdy krok. Projects nie zostały zaprojektowane do wysoce wyspecjalizowanych, powtarzalnych zadań.
+
+Tu wkracza nowa funkcja Skills. W ciągu dnia autor zbudował SEO Content Optimizer Skill, który wykonuje całą dwugodzinną procedurę automatycznie. Wystarczy wkleić treść, powiedzieć "zoptymalizuj to pod SEO", a Claude wykonuje kompletny workflow.
+
+Skills reprezentuje konwergencję wszystkiego, co Claude budował do tej pory. To ewolucja od ręcznego promptowania, przez Projects jako współpracowników, po wyspecjalizowanych specjalistów do konkretnych zadań. Gdy potrzebujesz zoptymalizować treść pod SEO, nie potrzebujesz partnera do burzy mózgów - potrzebujesz specjalisty, który zna dokładny workflow i go wykonuje.
+
+Skills zastępuje playbook promptowania systemami na poziomie zadań, które można wielokrotnie wykorzystywać. To fundamentalna zmiana w sposobie, w jaki myślimy o automatyzacji przy użyciu AI - od konwersacyjnych asystentów do wyspecjalizowanych narzędzi wykonawczych.
+
+Dla zespołów technicznych oznacza to możliwość kodyfikowania najlepszych praktyk w postaci Skills, które mogą być używane przez całą organizację. Zamiast każdorazowego tłumaczenia złożonych procesów, można stworzyć wyspecjalizowane narzędzia, które konsekwentnie wykonują zadania zgodnie ze standardami firmy.
+
+**Kluczowe wnioski:**
+
+- Skills w Claude przekształcają AI z konwersacyjnego asystenta w wyspecjalizowanego wykonawcę zadań
+- Automatyzacja złożonych, powtarzalnych procesów oszczędza godziny pracy przy zachowaniu jakości
+- Możliwość kodyfikowania najlepszych praktyk w postaci wielokrotnego użytku systemów
+
+**Tradeoffs:**
+
+- Zyskujesz automatyzację specjalistycznych zadań, ale tracisz elastyczność konwersacyjnego współpracownika
+- Skills zapewniają konsekwentne wykonanie, ale mogą ograniczać kreatywne eksplorowanie nowych podejść
+
+**Link:** [Claude Got Skills! Here's How I Used It to Automate My Entire SEO Workflow (And More)](https://aimaker.substack.com/p/claude-got-skills-heres-how-i-used)
