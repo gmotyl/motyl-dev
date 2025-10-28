@@ -3,7 +3,7 @@ title: "TypeScript 5.5, if() w CSS, migracje testów i szybkie narzędzia — pr
 excerpt: "Przegląd najciekawszych artykułów z wydania ui.dev: TypeScript 5.5, wewnętrzne spojrzenie na inferencję predykatów, warunki w CSS, automatyczna konwersja testów w Slacku oraz szybkie narzędzia buildowe i eksperymenty z interoperacyjnością."
 publishedAt: "2025-10-27"
 slug: "typescript-5-5-css-if-enzyme-rtl-farm-node-swift-react-luau"
-hashtags: "#generated #pl #frontend #react #typescript #ai #css #testing #rust #build-tools #node #swift #lua #luau #react-testing-library #enzyme #architecture"
+hashtags: "#generated #pl #frontend #react #typescript #ai #css #testing #rust #build-tools #nodejs #swift #lua #luau #react-testing-library #enzyme #architecture"
 ---
 
 ## Bytes #300 - The TypeScript of your dreams

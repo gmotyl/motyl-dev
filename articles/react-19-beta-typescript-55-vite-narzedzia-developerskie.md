@@ -3,7 +3,7 @@ title: "React 19 Beta, TypeScript 5.5, Vite i nowe narzędzia developerskie - pr
 excerpt: "Omówienie najważniejszych nowości z świata frontend developmentu: React 19 Beta z Actions i nowym API, TypeScript 5.5 Beta z inferred type predicates, oraz inne ciekawe narzędzia i koncepty."
 publishedAt: "2024-12-05"
 slug: "react-19-beta-typescript-55-vite-narzedzia-developerskie"
-hashtags: "#generated #pl #react #typescript #frontend #react19 #actions #vite #bun #github-copilot #effect #rspack #webpack #tree-shaking #sonarqube #technical-debt #databases #convex"
+hashtags: "#generated #pl #react #typescript #frontend #react-19 #actions #vite #bun #github-copilot #effect #rspack #webpack #tree-shaking #sonarqube #technical-debt #databases #convex"
 ---
 
 ## React 19 Beta - Długo wyczekiwana rewolucja

@@ -3,7 +3,7 @@ title: 'Announcing Nuxt 40 React Compiler Qa Wolf Testowanie Ai'
 excerpt: 'Przegląd 6 artykułów z ui.dev'
 publishedAt: '2025-07-23'
 slug: 'announcing-nuxt-40-react-compiler-qa-wolf-testowanie-ai'
-hashtags: '#generated #pl #react #typescript #nodejs #ai #testing'
+hashtags: "#generated #pl #react #typescript #nodejs #ai #testing"
 ---
 
 ## Announcing Nuxt 4.0

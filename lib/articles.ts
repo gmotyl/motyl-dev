@@ -114,6 +114,17 @@ export async function getAllHashtags(): Promise<string[]> {
   return Object.keys(index).sort()
 }
 
+export async function getHashtagCounts(): Promise<Record<string, number>> {
+  const index = await buildHashtagIndex()
+  const counts: Record<string, number> = {}
+
+  Object.entries(index).forEach(([hashtag, slugs]) => {
+    counts[hashtag] = slugs.length
+  })
+
+  return counts
+}
+
 export async function getArticlesByHashtag(hashtag: string): Promise<Article[]> {
   const index = await buildHashtagIndex()
   const slugs = index[hashtag] || []

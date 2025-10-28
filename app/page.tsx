@@ -1,42 +1,42 @@
-"use client";
+'use client'
 
-import { useEffect, useState } from "react";
-import { Code, Zap, Sparkles, Building, Users } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import NewsletterForm from "@/components/newsletter-form";
-import Header from "@/components/header";
-import Footer from "@/components/footer";
-import Link from "next/link";
+import { useEffect, useState } from 'react'
+import { Code, Zap, Sparkles, Building, Users } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import NewsletterForm from '@/components/newsletter-form'
+import Header from '@/components/header'
+import Footer from '@/components/footer'
+import Link from 'next/link'
 
 interface Article {
-  slug: string;
-  title: string;
-  excerpt: string;
-  publishedAt: string;
-  content: string;
+  slug: string
+  title: string
+  excerpt: string
+  publishedAt: string
+  content: string
 }
 
 export default function Home() {
-  const [latestArticles, setLatestArticles] = useState<Article[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [latestArticles, setLatestArticles] = useState<Article[]>([])
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const fetchArticles = async () => {
       try {
-        const response = await fetch("/api/articles");
+        const response = await fetch('/api/articles')
         if (response.ok) {
-          const articles = await response.json();
-          setLatestArticles(articles.slice(0, 3));
+          const articles = await response.json()
+          setLatestArticles(articles.slice(0, 3))
         }
       } catch (error) {
-        console.error("Error fetching articles:", error);
+        console.error('Error fetching articles:', error)
       } finally {
-        setIsLoading(false);
+        setIsLoading(false)
       }
-    };
+    }
 
-    fetchArticles();
-  }, []);
+    fetchArticles()
+  }, [])
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -50,25 +50,24 @@ export default function Home() {
               <div className="flex flex-col justify-center space-y-4">
                 <div className="space-y-2">
                   <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none">
-                    Ready to level up your{" "}
+                    Ready to level up your{' '}
                     <span className="text-primary bg-gradient-purple bg-clip-text text-transparent">
                       frontend skills
                     </span>
                     ?
                   </h1>
                   <p className="max-w-[600px] text-muted-foreground md:text-xl">
-                    You've found the right place. I make mastering modern
-                    frontend development practical, engaging, and
-                    straightforward. Learn from 20+ years of hands-on experience
-                    building scalable applications.
+                    You've found the right place. I make mastering modern frontend development
+                    practical, engaging, and straightforward. Learn from 20+ years of hands-on
+                    experience building scalable applications.
                   </p>
                 </div>
                 <div className="w-full max-w-sm space-y-2">
                   <NewsletterForm />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  No spam. Unsubscribe anytime. I respect your inbox as much as
-                  I respect clean code.
+                  No spam. Unsubscribe anytime. I respect your inbox as much as I respect clean
+                  code.
                 </p>
               </div>
               <div className="flex items-center justify-center">
@@ -87,9 +86,8 @@ export default function Home() {
                     </div>
                     <div className="space-y-2 pt-2">
                       <p className="text-sm">
-                        "As aspiring Software Craftsmen, we must raise the bar
-                        of professional software development by practicing it
-                        and helping others learn the craft."
+                        "As aspiring Software Craftsmen, we must raise the bar of professional
+                        software development by practicing it and helping others learn the craft."
                       </p>
                       <div className="flex gap-2 pt-2 flex-wrap">
                         <div className="rounded-full bg-primary/20 border border-primary/30 px-3 py-1 text-xs text-primary font-medium">
@@ -110,22 +108,16 @@ export default function Home() {
           </div>
         </section>
 
-        <section
-          id="about"
-          className="w-full py-12 md:py-24 lg:py-32 bg-muted relative"
-        >
+        <section id="about" className="w-full py-12 md:py-24 lg:py-32 bg-muted relative">
           <div className="absolute inset-0 bg-gradient-purple-soft opacity-10"></div>
           <div className="container px-4 md:px-6 relative z-10">
             <div className="flex flex-col items-center justify-center space-y-4 text-center">
               <div className="space-y-2">
-                <h2 className="text-3xl font-bold tracking-tighter md:text-4xl">
-                  About Me
-                </h2>
+                <h2 className="text-3xl font-bold tracking-tighter md:text-4xl">About Me</h2>
                 <p className="max-w-[700px] text-muted-foreground md:text-xl">
-                  I'm Grzegorz Motyl, a Principal Software Developer and
-                  Architect with over 20 years of experience. I focus on
-                  continuous growth of both technical and soft skills with a
-                  business-oriented mindset.
+                  I'm Grzegorz Motyl, a Senior Software Developer and Solution Architect with over
+                  20 years of experience. I focus on continuous growth of both technical and soft
+                  skills with a business-oriented mindset.
                 </p>
               </div>
             </div>
@@ -138,8 +130,8 @@ export default function Home() {
                   Architecture Expert
                 </h3>
                 <p className="text-muted-foreground">
-                  I design scalable frontend architectures that grow with your
-                  business and stand the test of time.
+                  I design scalable frontend architectures that grow with your business and stand
+                  the test of time.
                 </p>
               </div>
               <div className="grid gap-4 text-center group">
@@ -150,8 +142,8 @@ export default function Home() {
                   Functional Programming Advocate
                 </h3>
                 <p className="text-muted-foreground">
-                  I explore how functional paradigms lead to more maintainable,
-                  testable, and robust frontend systems.
+                  I explore how functional paradigms lead to more maintainable, testable, and robust
+                  frontend systems.
                 </p>
               </div>
               <div className="grid gap-4 text-center group">
@@ -162,8 +154,8 @@ export default function Home() {
                   Software Craftsman
                 </h3>
                 <p className="text-muted-foreground">
-                  I'm dedicated to raising the bar of professional software
-                  development through disciplined practice and mentorship.
+                  I'm dedicated to raising the bar of professional software development through
+                  disciplined practice and mentorship.
                 </p>
               </div>
             </div>
@@ -181,9 +173,8 @@ export default function Home() {
                   What You'll Learn From Me
                 </h2>
                 <p className="max-w-[700px] text-muted-foreground md:text-xl">
-                  My newsletter delivers practical insights from over 20 years
-                  of building production applications as a Principal Developer
-                  and Architect.
+                  My newsletter delivers practical insights from over 20 years of building
+                  production applications as a Principal Developer and Architect.
                 </p>
               </div>
             </div>
@@ -192,12 +183,10 @@ export default function Home() {
                 <div className="h-12 w-12 rounded-lg bg-gradient-purple flex items-center justify-center mb-4 group-hover:animate-glow">
                   <Building className="h-6 w-6 text-white" />
                 </div>
-                <h3 className="text-xl font-bold text-primary">
-                  Frontend Architecture
-                </h3>
+                <h3 className="text-xl font-bold text-primary">Frontend Architecture</h3>
                 <p className="mt-2 text-muted-foreground">
-                  Learn how to design scalable, maintainable frontend
-                  architectures that evolve with your product.
+                  Learn how to design scalable, maintainable frontend architectures that evolve with
+                  your product.
                 </p>
                 <ul className="mt-4 space-y-2 text-sm flex-grow">
                   <li className="flex items-center">
@@ -218,12 +207,10 @@ export default function Home() {
                 <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-accent to-primary flex items-center justify-center mb-4 group-hover:animate-glow">
                   <Zap className="h-6 w-6 text-white" />
                 </div>
-                <h3 className="text-xl font-bold text-accent">
-                  Modern Development Practices
-                </h3>
+                <h3 className="text-xl font-bold text-accent">Modern Development Practices</h3>
                 <p className="mt-2 text-muted-foreground">
-                  Discover battle-tested techniques that make your code more
-                  reliable and your team more productive.
+                  Discover battle-tested techniques that make your code more reliable and your team
+                  more productive.
                 </p>
                 <ul className="mt-4 space-y-2 text-sm flex-grow">
                   <li className="flex items-center">
@@ -244,12 +231,10 @@ export default function Home() {
                 <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-highlight to-accent flex items-center justify-center mb-4 group-hover:animate-glow">
                   <Sparkles className="h-6 w-6 text-white" />
                 </div>
-                <h3 className="text-xl font-bold text-highlight">
-                  Professional Growth
-                </h3>
+                <h3 className="text-xl font-bold text-highlight">Professional Growth</h3>
                 <p className="mt-2 text-muted-foreground">
-                  Advance your career with insights on technical leadership and
-                  building software that delivers business value.
+                  Advance your career with insights on technical leadership and building software
+                  that delivers business value.
                 </p>
                 <ul className="mt-4 space-y-2 text-sm flex-grow">
                   <li className="flex items-center">
@@ -271,10 +256,7 @@ export default function Home() {
         </section>
 
         {!isLoading && latestArticles.length > 0 && (
-          <section
-            id="articles"
-            className="w-full py-12 md:py-24 lg:py-32 bg-muted relative"
-          >
+          <section id="articles" className="w-full py-12 md:py-24 lg:py-32 bg-muted relative">
             <div className="absolute inset-0 bg-gradient-purple-soft opacity-10"></div>
             <div className="container px-4 md:px-6 relative z-10">
               <div className="flex flex-col items-center justify-center space-y-4 text-center">
@@ -283,8 +265,8 @@ export default function Home() {
                     Latest Articles
                   </h2>
                   <p className="max-w-[700px] text-muted-foreground md:text-xl">
-                    Explore my latest thoughts and tutorials on frontend
-                    development and software craftsmanship.
+                    Explore my latest thoughts and tutorials on frontend development and software
+                    craftsmanship.
                   </p>
                 </div>
               </div>
@@ -298,9 +280,7 @@ export default function Home() {
                     <h3 className="text-xl font-bold mb-2 hover:text-primary transition-colors">
                       {article.title}
                     </h3>
-                    <p className="text-muted-foreground line-clamp-3">
-                      {article.excerpt}
-                    </p>
+                    <p className="text-muted-foreground line-clamp-3">{article.excerpt}</p>
                     <p className="text-xs text-primary/70 mt-4 font-medium">
                       {new Date(article.publishedAt).toLocaleDateString()}
                     </p>
@@ -328,8 +308,7 @@ export default function Home() {
                   From Fellow Developers
                 </h2>
                 <p className="max-w-[700px] text-muted-foreground md:text-xl">
-                  Here's what other professionals say about my insights and
-                  mentorship.
+                  Here's what other professionals say about my insights and mentorship.
                 </p>
               </div>
             </div>
@@ -340,17 +319,19 @@ export default function Home() {
                     <Users className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-bold">Marta Kowalska</h3>
+                    <h3 className="font-bold">Krzysztof Sobieraj</h3>
                     <p className="text-sm text-muted-foreground">
-                      Senior Frontend Developer at TechCorp
+                      Tech Lead, worked with Grzegorz at Stepstone & Sportradar
                     </p>
                   </div>
                 </div>
                 <p className="mt-4">
-                  "Grzegorz's insights on frontend architecture transformed how
-                  our team approaches complex applications. His newsletter
-                  provides practical wisdom that you can apply immediately to
-                  real projects."
+                  "Working with Grzegorz is excellent because he knows his tasks very well and has
+                  tremendous knowledge and experience. He quickly notices what might go wrong, which
+                  direction to take, and how to prevent problems. As a principal developer managing
+                  multiple project teams, Grzegorz provided invaluable support in system design and
+                  problem-solving. He explains complex concepts in a very accessible and practical
+                  way."
                 </p>
               </div>
               <div className="rounded-lg border border-highlight/20 bg-background/50 backdrop-blur-sm p-6 hover:border-highlight/40 hover:shadow-lg hover:shadow-highlight/10 transition-all duration-300">
@@ -359,18 +340,18 @@ export default function Home() {
                     <Users className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="font-bold">Jan Nowak</h3>
+                    <h3 className="font-bold">Robert Podwika</h3>
                     <p className="text-sm text-muted-foreground">
-                      Tech Lead at Enterprise Systems
+                      Technical Team Lead at Sportradar
                     </p>
                   </div>
                 </div>
                 <p className="mt-4">
-                  "As someone who values craftsmanship in software, I find
-                  Grzegorz's newsletter to be a goldmine of architectural
-                  patterns and best practices. His business-oriented mindset
-                  helps bridge the gap between technical excellence and
-                  delivering value."
+                  "Working with Grzegorz is a great pleasure. Greg has an outstanding ability to
+                  work on difficult issues and find solutions. He is very open-minded to innovation
+                  and various solutions. His 'can do' attitude helps with solving problems that are
+                  not obvious. I can sincerely recommend him as in my opinion he would be a great
+                  additional value to any team."
                 </p>
               </div>
             </div>
@@ -379,9 +360,8 @@ export default function Home() {
                 Join a community of craftsmen dedicated to professional growth
               </h3>
               <p className="mt-2 text-muted-foreground">
-                I share what I've learned from over 20 years as a Principal
-                Developer and Architect to help you grow both technically and
-                professionally.
+                I share what I've learned from over 20 years as a Principal Developer and Solution
+                Architect to help you grow both technically and professionally.
               </p>
               <div className="mt-4">
                 <a href="#top">
@@ -399,5 +379,5 @@ export default function Home() {
       </main>
       <Footer />
     </div>
-  );
+  )
 }

@@ -3,7 +3,7 @@ title: 'Optimizing Build-Time Hashtag Indexing'
 excerpt: 'How critical thinking led to a performant and user-friendly hashtag system for my blog.'
 publishedAt: '2025-06-04'
 slug: 'optimizing-badges-support'
-hashtags: '#performance #AI #vibe-coding #UX'
+hashtags: "#performance #ai #vibe-coding #ux"
 ---
 
 ### TLDR:

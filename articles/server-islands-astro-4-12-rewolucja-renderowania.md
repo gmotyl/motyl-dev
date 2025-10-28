@@ -3,7 +3,7 @@ title: "Server Islands i nowe podejście do renderowania: Astro 4.12 wprowadza r
 excerpt: "Astro wprowadza Server Islands jako eksperymentalną funkcję łączącą najlepsze aspekty statycznego HTML-a i dynamicznego renderowania serwera."
 publishedAt: "2024-12-19"
 slug: "server-islands-astro-4-12-rewolucja-renderowania"
-hashtags: "#generated #pl #frontend #astro #server-islands #architecture #ssr #performance #next-js #partial-prerendering #css-grid #node-js #npm #security #typescript #zig"
+hashtags: "#generated #pl #frontend #astro #server-islands #architecture #ssr #performance #nextjs #partial-prerendering #css-grid #nodejs #npm #security #typescript #zig"
 ---
 
 ## Server Islands - nowa era renderowania w Astro 4.12

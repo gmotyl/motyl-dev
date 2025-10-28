@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getAllArticles, getAllHashtags, getArticlesByHashtag } from '@/lib/articles'
+import { getAllArticles, getAllHashtags, getArticlesByHashtag, getHashtagCounts } from '@/lib/articles'
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -12,7 +12,8 @@ export async function GET(request: Request) {
     } else {
       const articles = await getAllArticles()
       const hashtags = await getAllHashtags()
-      return NextResponse.json({ articles, hashtags })
+      const hashtagCounts = await getHashtagCounts()
+      return NextResponse.json({ articles, hashtags, hashtagCounts })
     }
   } catch (error) {
     console.error('Error fetching articles:', error)

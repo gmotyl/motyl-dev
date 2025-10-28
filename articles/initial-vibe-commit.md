@@ -3,7 +3,7 @@ title: 'Initial (vibe) commit'
 excerpt: 'How motyl.dev was created in less than an hour.'
 publishedAt: '2025-05-26'
 slug: 'initial-vibe-commit'
-hashtags: '#vibe-coding #AI #development'
+hashtags: "#vibe-coding #ai #development"
 ---
 
 ### TLDR:

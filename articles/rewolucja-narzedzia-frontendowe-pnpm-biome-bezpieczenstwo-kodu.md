@@ -3,7 +3,7 @@ title: 'Rewolucja w narzędziach frontendowych: od pnpm przez Biome po zaawansow
 excerpt: 'Przegląd najnowszych trendów w ekosystemie JavaScript: eksplozywny wzrost pnpm, narzędzia do migracji z ESLint i Prettier, oraz zaawansowane techniki wykrywania podatności w kodzie.'
 publishedAt: '2024-12-19'
 slug: 'rewolucja-narzedzia-frontendowe-pnpm-biome-bezpieczenstwo-kodu'
-hashtags: '#generated #pl #frontend #react #typescript #pnpm #biome #eslint #prettier #sonarqube #sast  #css #security #performance #migration'
+hashtags: "#generated #pl #frontend #react #typescript #pnpm #biome #eslint #prettier #sonarqube #sast #css #security #performance #migration"
 ---
 
 ## Pnpm 9.0 - Stawiając "p" w npm

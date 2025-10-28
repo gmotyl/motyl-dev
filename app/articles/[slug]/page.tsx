@@ -100,7 +100,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               {article.hashtags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {article.hashtags.map((hashtag) => (
-                    <Link href={`/articles?hashtag=${hashtag}`} key={hashtag}>
+                    <Link href={`/articles?hashtags=${hashtag}&mode=AND`} key={hashtag}>
                       <Badge
                         variant="secondary"
                         className="text-gray-900 font-medium bg-purple-200 hover:bg-purple-300 cursor-pointer transition-colors"
