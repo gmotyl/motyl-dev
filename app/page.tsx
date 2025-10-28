@@ -80,7 +80,7 @@ export default function Home() {
                       <div>
                         <h3 className="font-bold text-xl">Grzegorz Motyl</h3>
                         <p className="text-sm text-muted-foreground">
-                          Principal Software Developer & Architect
+                          Senior Software Developer and Solution Architect
                         </p>
                       </div>
                     </div>
@@ -174,7 +174,7 @@ export default function Home() {
                 </h2>
                 <p className="max-w-[700px] text-muted-foreground md:text-xl">
                   My newsletter delivers practical insights from over 20 years of building
-                  production applications as a Principal Developer and Architect.
+                  production applications as a Principal Developer and Solution Architect.
                 </p>
               </div>
             </div>
