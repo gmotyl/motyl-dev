@@ -7,6 +7,7 @@ import Footer from '@/components/footer'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { useHashtagFilter } from './useHashtagFilter'
 
 // Hook to track visited articles
 function useVisitedArticles() {
@@ -37,7 +38,7 @@ function useVisitedArticles() {
 
   const isVisited = (slug: string) => visitedArticles.has(slug)
 
-  return { markAsVisited, isVisited }
+  return { markAsVisited, isVisited, visitedArticles }
 }
 
 interface Article {
@@ -53,6 +54,7 @@ export default function ArticlesPage() {
   const searchParams = useSearchParams()
   const hashtagsFromUrl = searchParams.get('hashtags')
   const modeFromUrl = searchParams.get('mode') as 'AND' | 'OR' | 'EXCLUDE' | null
+  const unseenFromUrl = searchParams.get('unseen') === 'true'
 
   // Parse hashtags from URL
   const initialHashtags = useMemo(() => {
@@ -60,11 +62,9 @@ export default function ArticlesPage() {
     return new Set(hashtagsFromUrl.split(',').filter(Boolean))
   }, [hashtagsFromUrl])
 
-  const [selectedHashtags, setSelectedHashtags] = useState<Set<string>>(initialHashtags)
-  const [filterMode, setFilterMode] = useState<'AND' | 'OR' | 'EXCLUDE'>(modeFromUrl || 'AND')
   const [articles, setArticles] = useState<Article[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const { markAsVisited, isVisited } = useVisitedArticles()
+  const { markAsVisited, isVisited, visitedArticles } = useVisitedArticles()
 
   // Fetch all articles once
   useEffect(() => {
@@ -84,116 +84,26 @@ export default function ArticlesPage() {
     fetchData()
   }, [])
 
-  // Update selected hashtags when URL changes
-  useEffect(() => {
-    setSelectedHashtags(initialHashtags)
-  }, [initialHashtags])
-
-  // Update filter mode when URL changes
-  useEffect(() => {
-    if (modeFromUrl) {
-      setFilterMode(modeFromUrl)
-    }
-  }, [modeFromUrl])
-
-  // Update URL when filters change
-  const updateURL = (hashtags: string[], mode: 'AND' | 'OR' | 'EXCLUDE') => {
-    const url = new URL(window.location.href)
-
-    if (hashtags.length > 0) {
-      url.searchParams.set('hashtags', hashtags.join(','))
-      url.searchParams.set('mode', mode)
-    } else {
-      url.searchParams.delete('hashtags')
-      url.searchParams.delete('mode')
-    }
-
-    window.history.pushState({}, '', url.toString())
-  }
-
-  // Toggle hashtag selection
-  const handleHashtagToggle = (hashtag: string) => {
-    setSelectedHashtags((prev) => {
-      const next = new Set(prev)
-      if (next.has(hashtag)) {
-        next.delete(hashtag)
-      } else {
-        next.add(hashtag)
-      }
-      const hashtagArray = Array.from(next)
-      updateURL(hashtagArray, filterMode)
-      return next
-    })
-  }
-
-  // Clear all filters
-  const handleClearFilters = () => {
-    setSelectedHashtags(new Set())
-    updateURL([], filterMode)
-  }
-
-  // Handle filter mode change
-  const handleFilterModeChange = (mode: 'AND' | 'OR' | 'EXCLUDE') => {
-    setFilterMode(mode)
-    updateURL(Array.from(selectedHashtags), mode)
-  }
-
-  // Filter articles based on selected hashtags and mode
-  const filteredArticles = useMemo(() => {
-    if (selectedHashtags.size === 0) {
-      return articles
-    }
-
-    if (filterMode === 'AND') {
-      // Must have ALL selected hashtags
-      return articles.filter((article) =>
-        Array.from(selectedHashtags).every((tag) => article.hashtags.includes(tag))
-      )
-    } else if (filterMode === 'OR') {
-      // Must have ANY selected hashtag
-      return articles.filter((article) =>
-        Array.from(selectedHashtags).some((tag) => article.hashtags.includes(tag))
-      )
-    } else {
-      // EXCLUDE: Must NOT have ANY of the selected hashtags
-      return articles.filter((article) =>
-        !Array.from(selectedHashtags).some((tag) => article.hashtags.includes(tag))
-      )
-    }
-  }, [articles, selectedHashtags, filterMode])
-
-  // Calculate dynamic hashtag counts based on filtered articles
-  const dynamicHashtagCounts = useMemo(() => {
-    const counts: Record<string, number> = {}
-
-    filteredArticles.forEach((article) => {
-      article.hashtags.forEach((hashtag) => {
-        counts[hashtag] = (counts[hashtag] || 0) + 1
-      })
-    })
-
-    return counts
-  }, [filteredArticles])
-
-  // Get all unique hashtags from all articles
-  const allHashtags = useMemo(() => {
-    const hashtagSet = new Set<string>()
-    articles.forEach((article) => {
-      article.hashtags.forEach((hashtag) => {
-        hashtagSet.add(hashtag)
-      })
-    })
-    return Array.from(hashtagSet)
-  }, [articles])
-
-  // Sort hashtags by count (descending)
-  const sortedHashtags = useMemo(() => {
-    return [...allHashtags].sort((a, b) => {
-      const countA = dynamicHashtagCounts[a] || 0
-      const countB = dynamicHashtagCounts[b] || 0
-      return countB - countA // Descending order
-    })
-  }, [allHashtags, dynamicHashtagCounts])
+  // Use the hashtag filter hook
+  const {
+    selectedHashtags,
+    filterMode,
+    showUnseenOnly,
+    filteredArticles,
+    allHashtags,
+    sortedHashtags,
+    dynamicHashtagCounts,
+    handleHashtagToggle,
+    handleClearFilters,
+    handleFilterModeChange,
+    handleToggleUnseen,
+  } = useHashtagFilter({
+    articles,
+    initialHashtags,
+    initialMode: modeFromUrl || 'AND',
+    initialShowUnseen: unseenFromUrl,
+    visitedSlugs: visitedArticles,
+  })
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -208,6 +118,16 @@ export default function ArticlesPage() {
               <h2 className="text-lg font-semibold">Filter by hashtags:</h2>
 
               <div className="flex items-center gap-4 flex-wrap">
+                {/* UNSEEN Filter */}
+                <Button
+                  onClick={handleToggleUnseen}
+                  variant={showUnseenOnly ? 'default' : 'outline'}
+                  size="sm"
+                  className="font-semibold"
+                >
+                  {showUnseenOnly ? '✓ ' : ''}UNSEEN
+                </Button>
+
                 {/* Mode Selector */}
                 {selectedHashtags.size > 0 && (
                   <div className="flex items-center gap-2">
@@ -221,7 +141,7 @@ export default function ArticlesPage() {
                             : 'bg-background hover:bg-muted'
                         }`}
                       >
-                        ALL
+                        HAS
                       </button>
                       <button
                         onClick={() => handleFilterModeChange('OR')}
@@ -248,12 +168,8 @@ export default function ArticlesPage() {
                 )}
 
                 {/* Clear Filters */}
-                {selectedHashtags.size > 0 && (
-                  <Button
-                    onClick={handleClearFilters}
-                    variant="destructive"
-                    size="sm"
-                  >
+                {(selectedHashtags.size > 0 || showUnseenOnly) && (
+                  <Button onClick={handleClearFilters} variant="destructive" size="sm">
                     Clear filters
                   </Button>
                 )}
