@@ -108,3 +108,7 @@ Z Tailwind CSS 4 możesz teraz importować daisyUI jako plugin w CSS file zamias
 - Import jako plugin w CSS file
 
 **Link:** [link](https://daisyui.com/docs/v5/)
+
+---
+
+**Disclaimer:** This article was generated using [newsletter-ai](https://github.com/gmotyl/newsletter-ai) powered by claude-sonnet-4-20250514 LLM. While we strive for accuracy, please verify critical information independently.

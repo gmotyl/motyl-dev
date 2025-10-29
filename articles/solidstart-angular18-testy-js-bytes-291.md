@@ -81,3 +81,6 @@ Dla zespołu praktyczne zalecenie jest jasne: dobieraj narzędzie do workflowu, 
 - Dobrą praktyką jest połączenie szybkich unit testów (lokalnie) i e2e testów (w pipeline) z użyciem narzędzi takich jak Playwright lub Cypress.
 
 **Link:** [JavaScript unit testing frameworks in 2024: A comparison](https://raygun.com/blog/javascript-unit-testing-frameworks/)
+---
+
+**Disclaimer:** This article was generated using [newsletter-ai](https://github.com/gmotyl/newsletter-ai) powered by claude-sonnet-4-20250514 LLM. While we strive for accuracy, please verify critical information independently.

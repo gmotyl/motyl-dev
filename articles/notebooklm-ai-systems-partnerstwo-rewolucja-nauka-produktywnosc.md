@@ -80,3 +80,6 @@ Dla architektów i zespołów oznacza to możliwość wykorzystania AI jako part
 - Partnerstwo rozwija kreatywność, ale może prowadzić do nadmiernego polegania na AI w procesie decyzyjnym
 
 **Link:** [Forget Prompting Techniques: How to Make AI Your Thinking Partner](https://email.mg2.substack.com/c/eJx0kbvOnTAMgJ-GbEGQyw8MGbrwGigXA9Yhlwan1Xn7itMO7dDZ-qzvs70lOHJ9m5Z2THifEPjd3O0rFsKcWDAqjLOeGZhx-hq_xDzpiUG0eG0HJKiWIGyW_pqqZWSnEcukpPBqmPUEUgYttdbOL0HPSmm1MzRiEHocxDzocRmnXvbC7W7YXQA7BgAp-yjLVCPsnRriIfrHjKx_9T5Hhve2V_iYGKoN2GVOonJ38lsn1k6sFqN9Qf2H6sRaOrHuuR5AvNQcC2E6OIE_E35vcPMz_-SU-cNyWwl39GgvjonguvCA5IHTien1cMVWSlBZaW7zOcaWkN4bJOsuCL-1SnMXevtcc8NglFJSToJVc8RM76tTw_E0fJru5kKOFpP5I8_ov59pN9TPwkUIPS-S_TDiVwAAAP__tQKd2Q)
+---
+
+**Disclaimer:** This article was generated using [newsletter-ai](https://github.com/gmotyl/newsletter-ai) powered by claude-sonnet-4-20250514 LLM. While we strive for accuracy, please verify critical information independently.

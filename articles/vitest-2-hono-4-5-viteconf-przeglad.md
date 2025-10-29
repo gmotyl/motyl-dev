@@ -140,3 +140,6 @@ Z punktu widzenia architektury treści, fine‑grained markdown jest wart rozwa�
 - Trzeba rozważyć koszty utrzymania i przenośność treści przed wdrożeniem.
 
 **Link:** [Fine‑grained Markdown — Code Hike](https://v1.codehike.org/blog/fine-grained-markdown)
+---
+
+**Disclaimer:** This article was generated using [newsletter-ai](https://github.com/gmotyl/newsletter-ai) powered by claude-sonnet-4-20250514 LLM. While we strive for accuracy, please verify critical information independently.

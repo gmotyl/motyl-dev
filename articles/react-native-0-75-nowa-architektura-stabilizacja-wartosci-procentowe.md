@@ -87,3 +87,6 @@ To rozwiązanie ma szczególne znaczenie dla architektów informacji i zespołó
 - Większy rozmiar pliku czcionki z powodu dodatkowych glifów
 
 **Link:** [Font with Built-In Syntax Highlighting](https://blog.glyphdrawing.club/font-with-built-in-syntax-highlighting/)
+---
+
+**Disclaimer:** This article was generated using [newsletter-ai](https://github.com/gmotyl/newsletter-ai) powered by claude-sonnet-4-20250514 LLM. While we strive for accuracy, please verify critical information independently.

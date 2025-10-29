@@ -108,3 +108,6 @@ W szerszym kontekście WasmGC jest impulsem do ponownego przemyślenia granicy m
 - Architekci powinni rozważyć WasmGC jako opcję dla ciężkich zadań klienta, ale pamiętać o nowych wyzwaniach związanych z debugowaniem i bezpieczeństwem.
 
 **Link:** [Why Google Sheets ported its calculation worker from JavaScript to WasmGC  |  web.dev](https://web.dev/case-studies/google-sheets-wasmgc)
+---
+
+**Disclaimer:** This article was generated using [newsletter-ai](https://github.com/gmotyl/newsletter-ai) powered by claude-sonnet-4-20250514 LLM. While we strive for accuracy, please verify critical information independently.

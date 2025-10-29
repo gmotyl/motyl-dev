@@ -212,3 +212,6 @@ Dla zespołów devops i inżynierów buildów to zaproszenie do migracji: szybsz
 - Przed aktualizacją sprawdź breaking changes i przetestuj skrypty CI.
 
 **Link:** [Release 8.0.0 · google/zx](https://github.com/google/zx/releases/tag/8.0.0)
+---
+
+**Disclaimer:** This article was generated using [newsletter-ai](https://github.com/gmotyl/newsletter-ai) powered by claude-sonnet-4-20250514 LLM. While we strive for accuracy, please verify critical information independently.

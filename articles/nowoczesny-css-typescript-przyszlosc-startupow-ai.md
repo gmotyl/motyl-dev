@@ -114,3 +114,6 @@ Praktyczne implikacje są ogromne - zamiast utrzymywać dziesiątki różnych in
 - Jedna baza kodu może obsługiwać setki różnych klientów z izolowanymi danymi
 
 **Link:** [Powering multi-tenant applications with Nuxt](https://app.daily.dev/posts/OwBdsVLzb?utm_source=notification&utm_medium=email&utm_campaign=digest)
+---
+
+**Disclaimer:** This article was generated using [newsletter-ai](https://github.com/gmotyl/newsletter-ai) powered by claude-sonnet-4-20250514 LLM. While we strive for accuracy, please verify critical information independently.

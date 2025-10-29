@@ -171,3 +171,6 @@ Materiał bardziej strategiczny niż dogłębnie techniczny, ale użyteczny do o
 - Wybory między managed services a własnymi rozwiązaniami to nadal balans pomiędzy szybkością budowy a kontrolą.
 
 **Link:** [Behind the Code: A Discussion with Backend Experts](https://sentry.io/resources/behind-the-code-a-discussion-with-backend-experts/)
+---
+
+**Disclaimer:** This article was generated using [newsletter-ai](https://github.com/gmotyl/newsletter-ai) powered by claude-sonnet-4-20250514 LLM. While we strive for accuracy, please verify critical information independently.

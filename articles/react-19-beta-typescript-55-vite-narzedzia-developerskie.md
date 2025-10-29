@@ -119,3 +119,6 @@ To pokazuje, jak można myśleć kreatywnie o ograniczeniach. Zamiast akceptowa�
 - Relative offsets rozwiązują problem Address Space Layout Randomization
 
 **Link:** [bun.report is Bun's new crash reporter](https://bun.sh/blog/bun-report-is-buns-new-crash-reporter/)
+---
+
+**Disclaimer:** This article was generated using [newsletter-ai](https://github.com/gmotyl/newsletter-ai) powered by claude-sonnet-4-20250514 LLM. While we strive for accuracy, please verify critical information independently.

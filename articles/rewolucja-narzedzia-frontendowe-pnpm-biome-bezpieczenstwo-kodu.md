@@ -149,3 +149,7 @@ Co mnie szczególnie cieszy, to że useTransition nie wymaga przepisywania całe
 - Wsparcie dla async actions upraszcza obsługę operacji asynchronicznych
 
 **Link:** [useTransition – React](https://click.convertkit-mail4.com/zlu9n6l276bnh4vr3q8bxi2k9d500/3ohphdu7vpwe56fr/aHR0cHM6Ly9yZWFjdC5kZXYvcmVmZXJlbmNlL3JlYWN0L3VzZVRyYW5zaXRpb24=)
+
+---
+
+**Disclaimer:** This article was generated using [newsletter-ai](https://github.com/gmotyl/newsletter-ai) powered by claude-sonnet-4-20250514 LLM. While we strive for accuracy, please verify critical information independently.

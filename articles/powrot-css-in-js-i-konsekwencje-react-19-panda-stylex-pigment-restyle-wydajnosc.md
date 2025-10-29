@@ -176,3 +176,6 @@ Z perspektywy architektury RUM i observability to krok w stronę bardziej dział
 **Link:** [RUM attribution and subparts for Interaction to Next Paint](https://www.speedcurve.com/blog/rum-attribution-subparts-interaction-to-next-paint/)
 
 ---
+---
+
+**Disclaimer:** This article was generated using [newsletter-ai](https://github.com/gmotyl/newsletter-ai) powered by claude-sonnet-4-20250514 LLM. While we strive for accuracy, please verify critical information independently.

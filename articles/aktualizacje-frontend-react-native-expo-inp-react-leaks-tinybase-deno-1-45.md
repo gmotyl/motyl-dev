@@ -138,3 +138,6 @@ To ma praktyczne znaczenie: jeśli budujesz aplikację z offline-first, potrzebu
 - Ulepszony Inspector poprawia DX, ułatwiając debugowanie i ręczne modyfikacje store'u w czasie developmentu.
 
 **Link:** [Releases | TinyBase](https://tinybase.org/guides/releases/)
+---
+
+**Disclaimer:** This article was generated using [newsletter-ai](https://github.com/gmotyl/newsletter-ai) powered by claude-sonnet-4-20250514 LLM. While we strive for accuracy, please verify critical information independently.

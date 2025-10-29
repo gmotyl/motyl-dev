@@ -167,3 +167,7 @@ Gleam pokazuje, jak można budować język z myślą o developer experience od s
 - Gleam pokazuje, jak można projektować język z myślą o developer experience od podstaw
 
 **Link:** [Fault tolerant Gleam | Gleam programming language](https://click.convertkit-mail4.com/4zunmg0drgbeh5dm32whqu30rvv77t5/3ohphdu704dzg9hr/aHR0cHM6Ly9nbGVhbS5ydW4vbmV3cy9mYXVsdC10b2xlcmFudC1nbGVhbS8=)
+
+---
+
+**Disclaimer:** This article was generated using [newsletter-ai](https://github.com/gmotyl/newsletter-ai) powered by claude-sonnet-4-20250514 LLM. While we strive for accuracy, please verify critical information independently.

@@ -143,3 +143,7 @@ Dla architektów systemów to podejście może oznaczać fundamentalną zmianę 
 - Wymaga nowych platform i sposobów myślenia o architekturze
 
 **Link:** [spatial compute](https://sunilpai.dev/posts/spatial-compute/)
+
+---
+
+**Disclaimer:** This article was generated using [newsletter-ai](https://github.com/gmotyl/newsletter-ai) powered by claude-sonnet-4-20250514 LLM. While we strive for accuracy, please verify critical information independently.

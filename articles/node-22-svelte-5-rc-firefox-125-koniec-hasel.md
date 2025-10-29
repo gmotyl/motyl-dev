@@ -98,3 +98,6 @@ Dla architektów frontendowych i zespołów: Svelte 5 może przynieść realne k
 - Migracja jest możliwa stopniowo; testuj RC w mniejszych modułach przed pełnym przebudowaniem aplikacji.
 
 **Link:** [Svelte 5 Release Candidate — svelte.dev](https://svelte.dev/blog/svelte-5-release-candidate)
+---
+
+**Disclaimer:** This article was generated using [newsletter-ai](https://github.com/gmotyl/newsletter-ai) powered by claude-sonnet-4-20250514 LLM. While we strive for accuracy, please verify critical information independently.

@@ -114,3 +114,6 @@ Bardzo praktyczne są też przykłady różnych warstw cache - od CPU cache prze
 - Invalidation strategies to kluczowy element effective caching
 
 **Link:** [The Ultimate Caching Definition: Invalidation, Optimization, and Layers](https://stack.convex.dev/caching-in?ref=bytes)
+---
+
+**Disclaimer:** This article was generated using [newsletter-ai](https://github.com/gmotyl/newsletter-ai) powered by claude-sonnet-4-20250514 LLM. While we strive for accuracy, please verify critical information independently.

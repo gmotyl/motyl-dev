@@ -60,3 +60,6 @@ HTMX to jedna z tych technologii, które przypominają nam, że nie zawsze potrz
 - Promuje progressive enhancement zamiast full rewrite
 
 **Link:** [What is htmx and why is it relevant?](https://app.daily.dev/posts/VH04ApzLv?utm_source=notification&utm_medium=email&utm_campaign=digest)
+---
+
+**Disclaimer:** This article was generated using [newsletter-ai](https://github.com/gmotyl/newsletter-ai) powered by claude-sonnet-4-20250514 LLM. While we strive for accuracy, please verify critical information independently.

@@ -124,3 +124,6 @@ Dla zespołów pracujących z React i SSR to praktyczne przypomnienie: optymaliz
 - Optymalizacje na poziomie routera mogą dawać większe korzyści UX niż mikrooptymalizacje komponentów.
 
 **Link:** [Fog of War — Remix](https://remix.run/blog/fog-of-war)
+---
+
+**Disclaimer:** This article was generated using [newsletter-ai](https://github.com/gmotyl/newsletter-ai) powered by claude-sonnet-4-20250514 LLM. While we strive for accuracy, please verify critical information independently.

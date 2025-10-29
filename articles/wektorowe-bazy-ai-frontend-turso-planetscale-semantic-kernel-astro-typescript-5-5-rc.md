@@ -211,3 +211,7 @@ Przy wprowadzaniu RC warto testować projekt pod kątem potencjalnych breaking c
 - Nowe API i poprawki ESM upraszczają integrację narzędzi i workflowów buildowych.
 
 **Link:** [Announcing TypeScript 5.5 RC](https://devblogs.microsoft.com/typescript/announcing-typescript-5-5-rc/)
+
+---
+
+**Disclaimer:** This article was generated using [newsletter-ai](https://github.com/gmotyl/newsletter-ai) powered by claude-sonnet-4-20250514 LLM. While we strive for accuracy, please verify critical information independently.

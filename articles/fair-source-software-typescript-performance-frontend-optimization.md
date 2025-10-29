@@ -143,3 +143,6 @@ Dla zespołów i architektów, ten workflow reprezentuje potrzebę ścisłej wsp
 - Balans między wiernością wizualną a performance jest istotny w animowanych SVG
 
 **Link:** [Animating Figma's SVG Exports](https://courses.nan.fyi/blog/svg/animating-figma-exports)
+---
+
+**Disclaimer:** This article was generated using [newsletter-ai](https://github.com/gmotyl/newsletter-ai) powered by claude-sonnet-4-20250514 LLM. While we strive for accuracy, please verify critical information independently.

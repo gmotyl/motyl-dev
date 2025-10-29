@@ -82,3 +82,6 @@ Projekt osiągnął 650 milionów interakcji od 500,000 użytkowników w ciągu 
 - Prosta koncepcja może generować complex emergent behaviors przy odpowiedniej skali
 
 **Link:** [The Secret Inside One Million Checkboxes](https://eieio.games/essays/the-secret-in-one-million-checkboxes/)
+---
+
+**Disclaimer:** This article was generated using [newsletter-ai](https://github.com/gmotyl/newsletter-ai) powered by claude-sonnet-4-20250514 LLM. While we strive for accuracy, please verify critical information independently.

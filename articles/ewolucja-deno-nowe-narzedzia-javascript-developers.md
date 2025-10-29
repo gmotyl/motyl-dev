@@ -141,3 +141,6 @@ Szczególnie wartościowe jest podejście copy-paste do komponentów - nie wymag
 - Copy-paste approach daje pełną kontrolę bez vendor lock-in
 
 **Link:** [React Email 3.0](https://resend.com/blog/react-email-3)
+---
+
+**Disclaimer:** This article was generated using [newsletter-ai](https://github.com/gmotyl/newsletter-ai) powered by claude-sonnet-4-20250514 LLM. While we strive for accuracy, please verify critical information independently.

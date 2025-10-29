@@ -137,3 +137,7 @@ Myślę, że kluczem jest stopniowe wprowadzanie nowych funkcji w miejscach, gdz
 - Feature fatigue utrudnia nadążanie za tempem rozwoju CSS
 
 **Link:** [Old Dogs, new CSS Tricks](https://mxb.dev/blog/old-dogs-new-css-tricks/)
+
+---
+
+**Disclaimer:** This article was generated using [newsletter-ai](https://github.com/gmotyl/newsletter-ai) powered by claude-sonnet-4-20250514 LLM. While we strive for accuracy, please verify critical information independently.
