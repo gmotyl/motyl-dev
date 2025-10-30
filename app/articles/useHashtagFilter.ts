@@ -158,12 +158,19 @@ export function useHashtagFilter({
     return Array.from(hashtagSet)
   }, [articles])
 
-  // Sort hashtags by count (descending)
+  // Sort hashtags by count (descending), then alphabetically
   const sortedHashtags = useMemo(() => {
     return [...allHashtags].sort((a, b) => {
       const countA = dynamicHashtagCounts[a] || 0
       const countB = dynamicHashtagCounts[b] || 0
-      return countB - countA // Descending order
+
+      // First, sort by count (descending)
+      if (countB !== countA) {
+        return countB - countA
+      }
+
+      // If counts are equal, sort alphabetically (ascending)
+      return a.localeCompare(b)
     })
   }, [allHashtags, dynamicHashtagCounts])
 
