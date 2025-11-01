@@ -66,9 +66,49 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       }
     }
 
+    const baseUrl = 'https://motyl.dev'
+    const articleUrl = `${baseUrl}/articles/${article.slug}`
+    const keywords = article.hashtags.join(', ')
+
     return {
       title: article.title,
       description: article.excerpt,
+      keywords: keywords,
+      authors: [{ name: 'Motyl.dev' }],
+      creator: 'Motyl.dev',
+      publisher: 'Motyl.dev',
+      alternates: {
+        canonical: articleUrl,
+      },
+      openGraph: {
+        type: 'article',
+        title: article.title,
+        description: article.excerpt,
+        url: articleUrl,
+        siteName: 'Motyl.dev',
+        publishedTime: article.publishedAt,
+        authors: ['Motyl.dev'],
+        tags: article.hashtags,
+        locale: 'en_US',
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: article.title,
+        description: article.excerpt,
+        creator: '@motyldev',
+        site: '@motyldev',
+      },
+      robots: {
+        index: true,
+        follow: true,
+        googleBot: {
+          index: true,
+          follow: true,
+          'max-video-preview': -1,
+          'max-image-preview': 'large',
+          'max-snippet': -1,
+        },
+      },
     }
   } catch (error) {
     console.error('Error in generateMetadata:', error)

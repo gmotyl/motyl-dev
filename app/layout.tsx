@@ -22,5 +22,48 @@ export default function RootLayout({
 }
 
 export const metadata = {
-      generator: 'v0.dev'
-    };
+  title: {
+    default: 'Motyl.dev - Tech News & Insights',
+    template: '%s | Motyl.dev',
+  },
+  description: 'Stay up to date with the latest tech news, development insights, and industry trends. Covering JavaScript, AI, web development, and more.',
+  keywords: ['tech news', 'web development', 'JavaScript', 'TypeScript', 'React', 'Next.js', 'AI', 'programming', 'software engineering'],
+  authors: [{ name: 'Motyl.dev' }],
+  creator: 'Motyl.dev',
+  publisher: 'Motyl.dev',
+  metadataBase: new URL('https://motyl.dev'),
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://motyl.dev',
+    siteName: 'Motyl.dev',
+    title: 'Motyl.dev - Tech News & Insights',
+    description: 'Stay up to date with the latest tech news, development insights, and industry trends.',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Motyl.dev - Tech News & Insights',
+    description: 'Stay up to date with the latest tech news, development insights, and industry trends.',
+    creator: '@motyldev',
+    site: '@motyldev',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  verification: {
+    // Add your verification tokens here when ready
+    // google: 'your-google-verification-token',
+    // yandex: 'your-yandex-verification-token',
+  },
+};
