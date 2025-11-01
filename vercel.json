@@ -1,0 +1,15 @@
+{
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.motyl.dev"
+        }
+      ],
+      "destination": "https://motyl.dev/:path*",
+      "permanent": true
+    }
+  ]
+}
