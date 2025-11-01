@@ -62,8 +62,7 @@ export const metadata = {
     },
   },
   verification: {
-    // Add your verification tokens here when ready
-    // google: 'your-google-verification-token',
+    google: 'Kqg71gyKXIEQobhFAvea9Ewnuvt9so3gDuK_70QOmak',
     // yandex: 'your-yandex-verification-token',
   },
 };
