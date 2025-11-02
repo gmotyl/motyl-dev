@@ -25,7 +25,7 @@ export function ArticleNavigation({ currentSlug, allArticles }: ArticleNavigatio
   }, [currentSlug, markAsVisited])
 
   // Find current article index
-  const currentIndex = allArticles.findIndex(article => article.slug === currentSlug)
+  const currentIndex = allArticles.findIndex((article) => article.slug === currentSlug)
 
   // Find previous article (chronologically older)
   const prevArticle = currentIndex < allArticles.length - 1 ? allArticles[currentIndex + 1] : null
@@ -33,13 +33,7 @@ export function ArticleNavigation({ currentSlug, allArticles }: ArticleNavigatio
   // Find next article - prioritize unseen articles
   let nextArticle = null
 
-  // First, try to find the next unseen article in chronological order (newer articles)
-  for (let i = currentIndex - 1; i >= 0; i--) {
-    if (!visitedArticles.has(allArticles[i].slug)) {
-      nextArticle = allArticles[i]
-      break
-    }
-  }
+  nextArticle = allArticles.find((article) => !visitedArticles.has(article.slug))
 
   // If no unseen articles found going forward, just use the next article in the list
   if (!nextArticle && currentIndex > 0) {
@@ -52,7 +46,7 @@ export function ArticleNavigation({ currentSlug, allArticles }: ArticleNavigatio
         {prevArticle && (
           <Link
             href={`/articles/${prevArticle.slug}`}
-            className="flex items-center gap-2 px-4 py-2 rounded-md hover:bg-purple-900/20 transition-colors w-full"
+            className="flex items-center gap-2 px-4 py-2 rounded-md bg-purple-900/20 hover:bg-purple-900/40  transition-colors w-full"
           >
             <ChevronLeft className="h-4 w-4 flex-shrink-0" />
             <div className="text-left min-w-0 overflow-hidden">
@@ -67,7 +61,7 @@ export function ArticleNavigation({ currentSlug, allArticles }: ArticleNavigatio
         {nextArticle && (
           <Link
             href={`/articles/${nextArticle.slug}`}
-            className="flex items-center gap-2 px-4 py-2 rounded-md hover:bg-purple-900/20 transition-colors w-full justify-end"
+            className="flex items-center gap-2 px-4 py-2 rounded-md bg-purple-900/20 hover:bg-purple-900/40 transition-colors w-full justify-end"
             onClick={() => markAsVisited(nextArticle.slug)}
           >
             <div className="text-right min-w-0 overflow-hidden">
