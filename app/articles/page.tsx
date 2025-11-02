@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useHashtagFilter } from './useHashtagFilter'
+import { useVisitedArticles } from '@/hooks/use-visited-articles'
 import {
   Pagination,
   PaginationContent,
@@ -17,38 +18,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination'
-
-// Hook to track visited articles
-function useVisitedArticles() {
-  const [visitedArticles, setVisitedArticles] = useState<Set<string>>(new Set())
-
-  useEffect(() => {
-    // Load visited articles from localStorage
-    const stored = localStorage.getItem('visitedArticles')
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored)
-        setVisitedArticles(new Set(parsed))
-      } catch (error) {
-        console.error('Failed to parse visited articles:', error)
-      }
-    }
-  }, [])
-
-  const markAsVisited = (slug: string) => {
-    setVisitedArticles((prev) => {
-      const updated = new Set(prev)
-      updated.add(slug)
-      // Save to localStorage
-      localStorage.setItem('visitedArticles', JSON.stringify([...updated]))
-      return updated
-    })
-  }
-
-  const isVisited = (slug: string) => visitedArticles.has(slug)
-
-  return { markAsVisited, isVisited, visitedArticles }
-}
 
 interface Article {
   slug: string

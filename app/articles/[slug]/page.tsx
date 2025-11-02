@@ -6,6 +6,8 @@ import { marked } from 'marked'
 import * as emoji from 'node-emoji'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
+import { ReadAloudButton } from '@/components/read-aloud-button'
+import { ArticleNavigation } from '@/components/article-navigation'
 
 // Configure marked for better markdown rendering
 marked.setOptions({
@@ -127,16 +129,24 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
       notFound()
     }
 
+    // Get all articles for navigation
+    const allArticles = await getAllArticles()
+
     return (
       <div className="flex min-h-screen flex-col">
         <Header />
         <main className="flex-1 container py-10">
           <article className="max-w-3xl mx-auto">
             <header className="mb-8">
-              <h1 className="text-4xl font-bold mb-4">{article.title}</h1>
-              <p className="text-muted-foreground">
-                Published on {new Date(article.publishedAt).toLocaleDateString()}
-              </p>
+              <div className="flex justify-between items-start mb-4">
+                <h1 className="text-4xl font-bold flex-1">{article.title}</h1>
+              </div>
+              <div className="flex justify-between items-center mb-2">
+                <p className="text-muted-foreground">
+                  Published on {new Date(article.publishedAt).toLocaleDateString()}
+                </p>
+                <ReadAloudButton />
+              </div>
               {article.hashtags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {article.hashtags.map((hashtag) => (
@@ -154,6 +164,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             </header>
 
             <MarkdownContent content={article.content} />
+
+            <ArticleNavigation currentSlug={slug} allArticles={allArticles} />
           </article>
         </main>
         <Footer />
