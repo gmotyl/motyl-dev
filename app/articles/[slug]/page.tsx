@@ -145,15 +145,16 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                 <p className="text-muted-foreground">
                   Published on {new Date(article.publishedAt).toLocaleDateString()}
                 </p>
-                <ReadAloudButton />
+                <ReadAloudButton hashtags={article.hashtags} />
               </div>
               {article.hashtags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2">
+                <div className="flex flex-wrap gap-2 mt-2" data-hashtags-container>
                   {article.hashtags.map((hashtag) => (
                     <Link href={`/articles?hashtags=${hashtag}&mode=AND`} key={hashtag}>
                       <Badge
                         variant="secondary"
                         className="text-gray-900 font-medium bg-purple-200 hover:bg-purple-300 cursor-pointer transition-colors"
+                        data-hashtag={hashtag}
                       >
                         #{hashtag}
                       </Badge>
