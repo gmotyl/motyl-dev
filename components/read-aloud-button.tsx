@@ -152,7 +152,7 @@ export function ReadAloudButton({ hashtags = [] }: ReadAloudButtonProps) {
   }
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="hidden md:flex items-center gap-4">
       <Button
         onClick={handleReadAloud}
         variant={isReading && !isPaused ? 'default' : 'outline'}
