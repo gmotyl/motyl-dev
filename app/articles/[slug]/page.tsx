@@ -7,6 +7,7 @@ import * as emoji from 'node-emoji'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import { ReadAloudButton } from '@/components/read-aloud-button'
+import { ShareToAIButton } from '@/components/share-to-ai-button'
 import { ArticleNavigation } from '@/components/article-navigation'
 
 // Configure marked for better markdown rendering
@@ -145,7 +146,10 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                 <p className="text-muted-foreground">
                   Published on {new Date(article.publishedAt).toLocaleDateString()}
                 </p>
-                <ReadAloudButton hashtags={article.hashtags} />
+                <div className="flex gap-2">
+                  <ReadAloudButton hashtags={article.hashtags} />
+                  <ShareToAIButton content={article.content} />
+                </div>
               </div>
               {article.hashtags.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2" data-hashtags-container>
