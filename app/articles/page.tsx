@@ -8,6 +8,15 @@ import Link from 'next/link'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useHashtagFilter } from './useHashtagFilter'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination'
 
 // Hook to track visited articles
 function useVisitedArticles() {
@@ -50,17 +59,26 @@ interface Article {
   hashtags: string[]
 }
 
+const ARTICLES_PER_PAGE = 20
+
 export default function ArticlesPage() {
   const searchParams = useSearchParams()
   const hashtagsFromUrl = searchParams.get('hashtags')
   const modeFromUrl = searchParams.get('mode') as 'AND' | 'OR' | 'EXCLUDE' | null
   const unseenFromUrl = searchParams.get('unseen') === 'true'
+  const pageFromUrl = searchParams.get('page')
 
   // Parse hashtags from URL
   const initialHashtags = useMemo(() => {
     if (!hashtagsFromUrl) return new Set<string>()
     return new Set(hashtagsFromUrl.split(',').filter(Boolean))
   }, [hashtagsFromUrl])
+
+  // Parse page from URL (default to 1)
+  const initialPage = useMemo(() => {
+    const page = parseInt(pageFromUrl || '1', 10)
+    return page > 0 ? page : 1
+  }, [pageFromUrl])
 
   const [articles, setArticles] = useState<Article[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -93,17 +111,62 @@ export default function ArticlesPage() {
     allHashtags,
     sortedHashtags,
     dynamicHashtagCounts,
+    currentPage,
     handleHashtagToggle,
     handleClearFilters,
     handleFilterModeChange,
     handleToggleUnseen,
+    handlePageChange,
   } = useHashtagFilter({
     articles,
     initialHashtags,
     initialMode: modeFromUrl || 'AND',
     initialShowUnseen: unseenFromUrl,
     visitedSlugs: visitedArticles,
+    initialPage,
   })
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredArticles.length / ARTICLES_PER_PAGE)
+  const startIndex = (currentPage - 1) * ARTICLES_PER_PAGE
+  const endIndex = startIndex + ARTICLES_PER_PAGE
+  const paginatedArticles = filteredArticles.slice(startIndex, endIndex)
+
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    const pages: (number | 'ellipsis')[] = []
+
+    if (totalPages <= 7) {
+      // Show all pages if 7 or fewer
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i)
+      }
+    } else {
+      // Always show first page
+      pages.push(1)
+
+      if (currentPage > 3) {
+        pages.push('ellipsis')
+      }
+
+      // Show pages around current page
+      const start = Math.max(2, currentPage - 1)
+      const end = Math.min(totalPages - 1, currentPage + 1)
+
+      for (let i = start; i <= end; i++) {
+        pages.push(i)
+      }
+
+      if (currentPage < totalPages - 2) {
+        pages.push('ellipsis')
+      }
+
+      // Always show last page
+      pages.push(totalPages)
+    }
+
+    return pages
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -220,8 +283,14 @@ export default function ArticlesPage() {
             </p>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {filteredArticles.map((article) => (
+          <>
+            {/* Articles count and pagination info */}
+            <div className="mb-4 text-sm text-muted-foreground">
+              Showing {startIndex + 1}-{Math.min(endIndex, filteredArticles.length)} of {filteredArticles.length} articles
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {paginatedArticles.map((article) => (
               <Link
                 key={article.slug}
                 href={`/articles/${article.slug}`}
@@ -263,6 +332,58 @@ export default function ArticlesPage() {
               </Link>
             ))}
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-8">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        if (currentPage > 1) handlePageChange(currentPage - 1)
+                      }}
+                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+
+                  {getPageNumbers().map((page, index) => (
+                    <PaginationItem key={index}>
+                      {page === 'ellipsis' ? (
+                        <PaginationEllipsis />
+                      ) : (
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            handlePageChange(page as number)
+                          }}
+                          isActive={currentPage === page}
+                          className="cursor-pointer"
+                        >
+                          {page}
+                        </PaginationLink>
+                      )}
+                    </PaginationItem>
+                  ))}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        if (currentPage < totalPages) handlePageChange(currentPage + 1)
+                      }}
+                      className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
+        </>
         )}
       </main>
       <Footer />

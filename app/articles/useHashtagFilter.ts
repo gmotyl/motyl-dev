@@ -15,6 +15,7 @@ interface UseHashtagFilterProps {
   initialMode?: 'AND' | 'OR' | 'EXCLUDE'
   initialShowUnseen?: boolean
   visitedSlugs?: Set<string>
+  initialPage?: number
 }
 
 export function useHashtagFilter({
@@ -23,10 +24,12 @@ export function useHashtagFilter({
   initialMode = 'AND',
   initialShowUnseen = false,
   visitedSlugs = new Set(),
+  initialPage = 1,
 }: UseHashtagFilterProps) {
   const [selectedHashtags, setSelectedHashtags] = useState<Set<string>>(initialHashtags)
   const [filterMode, setFilterMode] = useState<'AND' | 'OR' | 'EXCLUDE'>(initialMode)
   const [showUnseenOnly, setShowUnseenOnly] = useState<boolean>(initialShowUnseen)
+  const [currentPage, setCurrentPage] = useState<number>(initialPage)
 
   // Update selected hashtags when initial hashtags change
   useEffect(() => {
@@ -43,8 +46,13 @@ export function useHashtagFilter({
     setShowUnseenOnly(initialShowUnseen)
   }, [initialShowUnseen])
 
+  // Update current page when initial page changes
+  useEffect(() => {
+    setCurrentPage(initialPage)
+  }, [initialPage])
+
   // Update URL when filters change
-  const updateURL = (hashtags: string[], mode: 'AND' | 'OR' | 'EXCLUDE', unseen: boolean) => {
+  const updateURL = (hashtags: string[], mode: 'AND' | 'OR' | 'EXCLUDE', unseen: boolean, page: number) => {
     const url = new URL(window.location.href)
 
     if (hashtags.length > 0) {
@@ -61,6 +69,12 @@ export function useHashtagFilter({
       url.searchParams.delete('unseen')
     }
 
+    if (page > 1) {
+      url.searchParams.set('page', page.toString())
+    } else {
+      url.searchParams.delete('page')
+    }
+
     window.history.pushState({}, '', url.toString())
   }
 
@@ -74,7 +88,8 @@ export function useHashtagFilter({
         next.add(hashtag)
       }
       const hashtagArray = Array.from(next)
-      updateURL(hashtagArray, filterMode, showUnseenOnly)
+      setCurrentPage(1) // Reset to page 1 when changing filters
+      updateURL(hashtagArray, filterMode, showUnseenOnly, 1)
       return next
     })
   }
@@ -84,22 +99,33 @@ export function useHashtagFilter({
     setSelectedHashtags(new Set())
     setFilterMode('AND')
     setShowUnseenOnly(false)
-    updateURL([], 'AND', false)
+    setCurrentPage(1)
+    updateURL([], 'AND', false, 1)
   }
 
   // Handle filter mode change
   const handleFilterModeChange = (mode: 'AND' | 'OR' | 'EXCLUDE') => {
     setFilterMode(mode)
-    updateURL(Array.from(selectedHashtags), mode, showUnseenOnly)
+    setCurrentPage(1) // Reset to page 1 when changing mode
+    updateURL(Array.from(selectedHashtags), mode, showUnseenOnly, 1)
   }
 
   // Toggle unseen filter
   const handleToggleUnseen = () => {
     setShowUnseenOnly((prev) => {
       const next = !prev
-      updateURL(Array.from(selectedHashtags), filterMode, next)
+      setCurrentPage(1) // Reset to page 1 when changing unseen filter
+      updateURL(Array.from(selectedHashtags), filterMode, next, 1)
       return next
     })
+  }
+
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+    updateURL(Array.from(selectedHashtags), filterMode, showUnseenOnly, page)
+    // Scroll to top when changing pages
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   // Filter articles based on selected hashtags and mode
@@ -182,9 +208,11 @@ export function useHashtagFilter({
     allHashtags,
     sortedHashtags,
     dynamicHashtagCounts,
+    currentPage,
     handleHashtagToggle,
     handleClearFilters,
     handleFilterModeChange,
     handleToggleUnseen,
+    handlePageChange,
   }
 }

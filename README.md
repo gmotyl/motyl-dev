@@ -13,6 +13,7 @@ A personal tech blog and newsletter platform focused on helping developers stay 
 ### Mission
 
 This blog serves as a curated source for developers who want to:
+
 - **Stay informed** about recent trends in software engineering
 - **Master frontend architecture** and modern development patterns
 - **Grow professionally** through actionable insights and battle-tested practices
@@ -21,24 +22,28 @@ This blog serves as a curated source for developers who want to:
 ### Focus Areas
 
 #### 🏗️ **Architecture & System Design**
+
 - Frontend architecture patterns and best practices
 - Scalable system design approaches
 - Micro-frontend strategies
 - Cloud architecture and infrastructure
 
 #### ⚛️ **Frontend Engineering**
+
 - React, Next.js, and modern JavaScript frameworks
 - State management and component design
 - Performance optimization techniques
 - Developer experience (DX) improvements
 
 #### 📈 **Professional Growth**
+
 - Technical leadership and mentorship
 - Software craftsmanship principles
 - Business-oriented development
 - Team collaboration strategies
 
 #### 🤖 **AI & Modern Tools**
+
 - AI-powered development workflows
 - Integration of AI tools in daily development
 - Emerging technologies and their practical applications
@@ -49,14 +54,14 @@ This blog serves as a curated source for developers who want to:
 - **Framework**: Next.js 15 with App Router
 - **UI**: React 19, TypeScript, Tailwind CSS
 - **Components**: Radix UI primitives
-- **Content**: Markdown-based articles (100+ articles)
+- **Content**: Markdown-based articles
 - **Deployment**: Vercel
 - **Email**: Resend for newsletter notifications
 
 ## Features
 
 - **📰 Newsletter Landing Page**: Subscribe to weekly insights on frontend development and software craftsmanship
-- **📚 Article System**: Browse 100+ curated tech articles with intelligent hashtag filtering
+- **📚 Article System**: Browse curated tech articles with intelligent hashtag filtering
 - **🏷️ Smart Filtering**: Advanced filtering with AND/OR/EXCLUDE modes and "unseen" tracking
 - **🎨 Modern Design**: Purple-branded design system with glassmorphism and smooth animations
 - **🌙 Dark Theme**: Eye-friendly dark mode by default
@@ -123,11 +128,11 @@ Create a markdown file in the `articles/` directory:
 
 ```markdown
 ---
-title: "Your Article Title"
-excerpt: "A brief description of the article"
-publishedAt: "2025-11-02"
-slug: "your-article-slug"
-hashtags: "#react #nextjs #architecture"
+title: 'Your Article Title'
+excerpt: 'A brief description of the article'
+publishedAt: '2025-11-02'
+slug: 'your-article-slug'
+hashtags: '#react #nextjs #architecture'
 ---
 
 # Your Article Content
@@ -194,6 +199,7 @@ This is a personal blog project, but suggestions and bug reports are welcome! Fe
 > "As aspiring Software Craftsmen, we must raise the bar of professional software development by practicing it and helping others learn the craft."
 
 This blog embodies the principles of software craftsmanship:
+
 - Continuous learning and improvement
 - Sharing knowledge generously
 - Writing clean, maintainable code
