@@ -84,6 +84,10 @@ export default function ArticlesPage() {
   const [isLoading, setIsLoading] = useState(true)
   const { markAsVisited, isVisited, visitedArticles } = useVisitedArticles()
 
+  // State for hashtag visibility
+  const [showAllHashtags, setShowAllHashtags] = useState(false)
+  const [showZeroCountHashtags, setShowZeroCountHashtags] = useState(false)
+
   // Fetch all articles once
   useEffect(() => {
     const fetchData = async () => {
@@ -131,6 +135,55 @@ export default function ArticlesPage() {
   const startIndex = (currentPage - 1) * ARTICLES_PER_PAGE
   const endIndex = startIndex + ARTICLES_PER_PAGE
   const paginatedArticles = filteredArticles.slice(startIndex, endIndex)
+
+  // Calculate visible hashtags based on collapse state
+  const { visibleHashtags, hiddenHashtagsWithCounts, hiddenHashtagsWithoutCounts } = useMemo(() => {
+    // Always include selected hashtags
+    const selectedHashtagsArray = Array.from(selectedHashtags)
+    const selectedHashtagsSet = new Set(selectedHashtagsArray)
+
+    // Separate hashtags with and without counts, but keep selected ones separate
+    const hashtagsWithCounts = sortedHashtags.filter(hashtag =>
+      (dynamicHashtagCounts[hashtag] || 0) > 0 || selectedHashtagsSet.has(hashtag)
+    )
+    const hashtagsWithoutCounts = sortedHashtags.filter(hashtag =>
+      (dynamicHashtagCounts[hashtag] || 0) === 0 && !selectedHashtagsSet.has(hashtag)
+    )
+
+    if (showAllHashtags) {
+      // When expanded, show all hashtags with counts (including selected with zero counts)
+      // Show zero-count hashtags only if toggle is on
+      const hiddenZeroCounts = showZeroCountHashtags ? [] : hashtagsWithoutCounts
+
+      return {
+        visibleHashtags: showZeroCountHashtags ? sortedHashtags : hashtagsWithCounts,
+        hiddenHashtagsWithCounts: [],
+        hiddenHashtagsWithoutCounts: hiddenZeroCounts
+      }
+    }
+
+    // Calculate two rows worth of hashtags (approximately)
+    // We'll estimate based on average button width: ~100px per button, ~8 buttons per row on desktop
+    const VISIBLE_COUNT = 16 // Approximately 2 rows
+
+    // Build visible list: selected + top hashtags (with counts) up to VISIBLE_COUNT
+    const visible: string[] = []
+    const hidden: string[] = []
+
+    hashtagsWithCounts.forEach(hashtag => {
+      if (selectedHashtagsSet.has(hashtag) || visible.length < VISIBLE_COUNT) {
+        visible.push(hashtag)
+      } else {
+        hidden.push(hashtag)
+      }
+    })
+
+    return {
+      visibleHashtags: visible,
+      hiddenHashtagsWithCounts: hidden,
+      hiddenHashtagsWithoutCounts: hashtagsWithoutCounts
+    }
+  }, [sortedHashtags, dynamicHashtagCounts, selectedHashtags, showAllHashtags, showZeroCountHashtags])
 
   // Generate page numbers for pagination
   const getPageNumbers = () => {
@@ -248,7 +301,9 @@ export default function ArticlesPage() {
               >
                 All ({filteredArticles.length})
               </Button>
-              {sortedHashtags.map((hashtag) => {
+
+              {/* Visible hashtags */}
+              {visibleHashtags.map((hashtag) => {
                 const count = dynamicHashtagCounts[hashtag] || 0
                 const isSelected = selectedHashtags.has(hashtag)
 
@@ -265,6 +320,46 @@ export default function ArticlesPage() {
                   </Button>
                 )
               })}
+
+              {/* Show more/less button - only one visible at a time */}
+              {/* Show first "more..." when collapsed */}
+              {!showAllHashtags && (hiddenHashtagsWithCounts.length > 0 || hiddenHashtagsWithoutCounts.length > 0) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAllHashtags(true)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  more...
+                </Button>
+              )}
+
+              {/* Show second "more..." when expanded but zero-count hashtags still hidden */}
+              {showAllHashtags && !showZeroCountHashtags && hiddenHashtagsWithoutCounts.length > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowZeroCountHashtags(true)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  more...
+                </Button>
+              )}
+
+              {/* Show "less..." only when fully expanded OR when expanded without zero-count option */}
+              {showAllHashtags && (showZeroCountHashtags || hiddenHashtagsWithoutCounts.length === 0) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowAllHashtags(false)
+                    setShowZeroCountHashtags(false)
+                  }}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  less...
+                </Button>
+              )}
             </div>
           </div>
         )}
