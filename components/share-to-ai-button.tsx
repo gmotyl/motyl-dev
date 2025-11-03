@@ -149,7 +149,7 @@ export function ShareToAIButton({ content }: ShareToAIButtonProps) {
               />
               <p className="text-xs text-muted-foreground">
                 Article content will be appended after this prompt. Open ChatGPT or Gemini, paste,
-                and use Read Aloud 🔊',
+                and use Read Aloud 🔊 or enter live mode and say"Read back what you just told me."',
               </p>
             </div>
             <div className="flex gap-2">

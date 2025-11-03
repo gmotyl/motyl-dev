@@ -1,46 +1,36 @@
-You are {NARRATOR_PERSONA}. Read the links from the newsletter below and create an audio summary. Summarize the content of the articles in a way that can be read aloud. It should be like a podcast.
+# Task Overview
 
-## Guidelines:
+Perform the following task step-by-step:
 
-- Read article and prepare a content overview in a form that can be read aloud
-- No code examples (code doesn't read well)
-- If there are interesting code-related fragments, discuss them in a way that makes the essence understandable
-- Provide longer, more detailed summaries with practical insights and real-world implications
-- Add TLDR section immediately after article title (2-3 sentences max)
-- Add key takeaways and link under each article summary
-- Generate in {OUTPUT_LANGUAGE} language
-- Don't make an introduction, start directly with the first article
-- Important: Use the style and tone characteristic of {NARRATOR_PERSONA} but don't reveal identity directly (be incognito)
-- Challenge every assumption in article and point out when reasoning is weak
-- Tell me what Author is avoiding thinking about, what is missing
-- **IMPORTANT: Use clean, direct URLs in links** - If you encounter tracking/redirect URLs (like ConvertKit click.convertkit-mail4.com links with base64 encoded paths), decode them and use the actual destination URL instead
+1. Access and read all textual content from {ARTICLE_URL}
+2. Your final output must be entirely in **{OUTPUT_LANGUAGE}**
+3. You will rewrite all the text content from the URL back to me
 
-## Response Format:
+## Important Note
 
-1. ## Article Title
-2. **TLDR:** Short summary (2-3 sentences max, highlighting the main point)
-3. **Summary:** Detailed summary paragraphs (3-5 paragraphs):
-   - Provide context and background
-   - Explain the main concepts in depth
-   - Add practical insights and real-world implications
-   - Share interesting details or examples from the article
-   - Connect to broader trends or related topics
-   - add paragraph for architects and/or teams, how it can be applied in their work
-   - Make it audio-friendly, no code
-4. **Key takeaways:**
+This is a rewrite, not a summary. Your goal is to faithfully recreate the full content, sentence by sentence, translated into {OUTPUT_LANGUAGE}. Do not change the original meaning or structure.
 
-   - Bullet point 1
-   - Bullet point 2
-   - Bullet point 3
+## Crucial Rules for the Output:
 
-5. **Tradeoffs:** Optional bullet points - ONLY include if there are clear architectural tradeoffs (what you gain vs. what you sacrifice)
-   - Format: "Gain [benefit] but sacrifice [cost]" or "[Decision] means [benefit] at the cost of [drawback]"
-   - Examples of valid tradeoffs:
-     - "Microservices increase scalability but sacrifice operational simplicity"
-     - "Server-side rendering improves SEO but increases server load and complexity"
-     - "Strong typing catches errors early but slows down initial development"
-   - DO NOT include general observations, concerns, or potential issues
-   - ONLY include items that show a clear exchange/compromise between two aspects
+### Content to Skip
+
+- **No Code**: You must skip all code blocks and code snippets
+- **No Diagrams**: You must skip all diagrams, charts, and visual schematics
+
+### Handling Skipped Content
+
+When you skip a code block or a diagram, you must insert a brief, one-sentence explanation in {OUTPUT_LANGUAGE} and inside brackets. This explanation should state what the code or diagram was demonstrating.
+
+When you skip a diagram, you must insert a brief, one-sentence explanation in {OUTPUT_LANGUAGE} and inside brackets. This explanation should state what the code or diagram was demonstrating.
+
+**Examples:**
+
+- If you skip code: [skiped code: code snippet showing React useEffect hook running once on component mount to perform two initialization tasks: it detects whether the user is on a mobile device by checking the browser's user agent string, and it retrieves a previously saved custom prompt from localStorage to populate the component's state. The empty dependency array [] ensures this initialization logic executes only once when the component first renders.] remember thatoutput must be entirely in **{OUTPUT_LANGUAGE}**
+- If you skip a diagram: [diagram ilustrating the flow of data in a React component] remeber that output must be entirely in **{OUTPUT_LANGUAGE}**
+
+## Execution
+
+Begin the {OUTPUT_LANGUAGE} content reproduction immediately.
 
 ---
 

@@ -14,16 +14,12 @@ interface ShareLinkButtonProps {
   summaryPrompt: string
 }
 
-const DEFAULT_NARRATOR_PERSONA = 'Martin Fowler'
 const DEFAULT_OUTPUT_LANGUAGE = 'Polish'
-const STORAGE_KEY_PERSONA = 'share-link-narrator-persona'
 const STORAGE_KEY_LANGUAGE = 'share-link-output-language'
 
 export function ShareLinkButton({ url, title, summaryPrompt }: ShareLinkButtonProps) {
   const [isMobile, setIsMobile] = useState(false)
-  const [narratorPersona, setNarratorPersona] = useState(DEFAULT_NARRATOR_PERSONA)
   const [outputLanguage, setOutputLanguage] = useState(DEFAULT_OUTPUT_LANGUAGE)
-  const [editPersona, setEditPersona] = useState(DEFAULT_NARRATOR_PERSONA)
   const [editLanguage, setEditLanguage] = useState(DEFAULT_OUTPUT_LANGUAGE)
   const [isOpen, setIsOpen] = useState(false)
 
@@ -33,13 +29,8 @@ export function ShareLinkButton({ url, title, summaryPrompt }: ShareLinkButtonPr
     setIsMobile(mobile)
 
     // Load custom settings from localStorage
-    const savedPersona = localStorage.getItem(STORAGE_KEY_PERSONA)
     const savedLanguage = localStorage.getItem(STORAGE_KEY_LANGUAGE)
 
-    if (savedPersona) {
-      setNarratorPersona(savedPersona)
-      setEditPersona(savedPersona)
-    }
     if (savedLanguage) {
       setOutputLanguage(savedLanguage)
       setEditLanguage(savedLanguage)
@@ -50,7 +41,6 @@ export function ShareLinkButton({ url, title, summaryPrompt }: ShareLinkButtonPr
   const formatPrompt = (): string => {
     // Replace placeholders in the summary prompt template
     const filledPrompt = summaryPrompt
-      .replace(/{NARRATOR_PERSONA}/g, narratorPersona)
       .replace(/{OUTPUT_LANGUAGE}/g, outputLanguage)
       .replace('{ARTICLE_URL}', url)
 
@@ -58,20 +48,15 @@ export function ShareLinkButton({ url, title, summaryPrompt }: ShareLinkButtonPr
   }
 
   const handleSaveSettings = () => {
-    localStorage.setItem(STORAGE_KEY_PERSONA, editPersona)
     localStorage.setItem(STORAGE_KEY_LANGUAGE, editLanguage)
-    setNarratorPersona(editPersona)
     setOutputLanguage(editLanguage)
     setIsOpen(false)
     toast.success('Settings saved!')
   }
 
   const handleResetSettings = () => {
-    setEditPersona(DEFAULT_NARRATOR_PERSONA)
     setEditLanguage(DEFAULT_OUTPUT_LANGUAGE)
-    localStorage.removeItem(STORAGE_KEY_PERSONA)
     localStorage.removeItem(STORAGE_KEY_LANGUAGE)
-    setNarratorPersona(DEFAULT_NARRATOR_PERSONA)
     setOutputLanguage(DEFAULT_OUTPUT_LANGUAGE)
     toast.success('Settings reset to default')
   }
@@ -129,36 +114,24 @@ export function ShareLinkButton({ url, title, summaryPrompt }: ShareLinkButtonPr
         {isMobile ? (
           <>
             <Share2 className="h-4 w-4" />
-            Summarize with AI
+            Read with AI
           </>
         ) : (
           <>
             <Copy className="h-4 w-4" />
-            Copy for AI Summary
+            Copy for AI
           </>
         )}
       </Button>
 
       <Popover open={isOpen} onOpenChange={setIsOpen}>
         <PopoverTrigger asChild>
-          <Button variant="ghost" size="sm" className="px-2" title="Customize AI summary settings">
+          <Button variant="ghost" size="sm" className="px-2" title="Customize output language">
             <Settings className="h-4 w-4" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-80" align="start" side="top">
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="persona">Narrator Persona</Label>
-              <Input
-                id="persona"
-                value={editPersona}
-                onChange={(e) => setEditPersona(e.target.value)}
-                placeholder={DEFAULT_NARRATOR_PERSONA}
-              />
-              <p className="text-xs text-muted-foreground">
-                The persona style for the AI summary (e.g., Martin Fowler, Kent Beck)
-              </p>
-            </div>
             <div className="space-y-2">
               <Label htmlFor="language">Output Language</Label>
               <Input
@@ -167,9 +140,7 @@ export function ShareLinkButton({ url, title, summaryPrompt }: ShareLinkButtonPr
                 onChange={(e) => setEditLanguage(e.target.value)}
                 placeholder={DEFAULT_OUTPUT_LANGUAGE}
               />
-              <p className="text-xs text-muted-foreground">
-                Language for the AI summary translation
-              </p>
+              <p className="text-xs text-muted-foreground">Language for the AI content rewrite</p>
             </div>
             <div className="flex gap-2">
               <Button onClick={handleSaveSettings} size="sm" className="flex-1">
