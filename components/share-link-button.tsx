@@ -42,7 +42,7 @@ export function ShareLinkButton({ url, title, summaryPrompt }: ShareLinkButtonPr
     // Replace placeholders in the summary prompt template
     const filledPrompt = summaryPrompt
       .replace(/{OUTPUT_LANGUAGE}/g, outputLanguage)
-      .replace('{ARTICLE_URL}', url)
+      .replace(/{ARTICLE_URL}/g, url)
 
     return filledPrompt
   }
