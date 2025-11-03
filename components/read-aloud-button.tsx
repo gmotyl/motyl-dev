@@ -111,14 +111,8 @@ export function ReadAloudButton({ hashtags = [] }: ReadAloudButtonProps) {
       utterance.rate = 1.0
       utterance.pitch = 1.0
 
-      // Try to select appropriate voice for the detected language
-      const voices = window.speechSynthesis.getVoices()
-      const matchingVoice = voices.find(voice => voice.lang === language) ||
-                           voices.find(voice => voice.lang.startsWith(language.split('-')[0]))
-
-      if (matchingVoice) {
-        utterance.voice = matchingVoice
-      }
+      // Use system default voice for the language
+      // Don't set a specific voice - let the browser choose the default for the language
 
       utterance.onend = () => {
         setIsReading(false)
