@@ -8,6 +8,7 @@ import { ReadAloudButton } from '@/components/read-aloud-button'
 import { ShareToAIButton } from '@/components/share-to-ai-button'
 import { ArticleNavigation } from '@/components/article-navigation'
 import { MarkdownContent } from '@/components/markdown-content'
+import { WakeLockProvider } from '@/components/wake-lock-provider'
 
 export async function generateStaticParams() {
   const articles = await getAllArticles()
@@ -93,6 +94,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
     return (
       <div className="flex min-h-screen flex-col">
+        <WakeLockProvider />
         <Header />
         <main className="flex-1 container py-10">
           <article className="max-w-3xl mx-auto">
