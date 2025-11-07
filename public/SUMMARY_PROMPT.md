@@ -4,11 +4,12 @@ From the text below:
 2. Ask which numbers to translate
 3. FOR THE SELECTED ARTICLE NUMBERS: Translate the following sections to {{ LANGUAGE }}: description, summary, key takeaways, and tradeoffs.
    - Translate sentence by sentence
-   - Keep section headers in {{ LANGUAGE }} (e.g., "Opis" not "Description")
+   - Keep section headers in {{ LANGUAGE }}
    - Do not omit, modify, or add anything except translating
    - Output translated content immediately with no introduction
    - ALL text in your response must be in {{ LANGUAGE }}
 4. Ask about the next numbers in {{ LANGUAGE }} and repeat from step 3
+5. If I select 0 your task is to read index, a list of all articles that I have not read yet and ask me to select numbers to translate. It should be list in format "2. [shottened article title] 4. [shortened article title] ..." (assuming article 1 and 3 are already translated )
 
 CRITICAL:
 
