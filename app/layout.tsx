@@ -9,7 +9,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" suppressHydrationWarning>
       <body className="min-h-screen bg-background font-sans antialiased relative">
         <div className="absolute inset-0 bg-butterfly-pattern opacity-5 pointer-events-none z-0"></div>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>

@@ -8,25 +8,35 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
-interface ShareLinkButtonProps {
-  url: string
+interface ShareAIButtonProps {
+  prompt: string
+  content?: string
+  url?: string
   title?: string
-  summaryPrompt: string
+  buttonLabel?: string
+  shareTitle?: string
+  successMessage?: string
+  desktopSuccessMessage?: string
 }
 
 const DEFAULT_OUTPUT_LANGUAGE = 'Polish'
-const STORAGE_KEY_LANGUAGE = 'share-link-output-language'
+const STORAGE_KEY_LANGUAGE = 'share-ai-output-language'
 
-export function ShareLinkButton({ url, title, summaryPrompt }: ShareLinkButtonProps) {
-  const [isMobile, setIsMobile] = useState(false)
+export function ShareAIButton({
+  prompt,
+  content,
+  url,
+  title,
+  successMessage = 'Copied! Paste in ChatGPT/Gemini 🔊',
+}: ShareAIButtonProps) {
   const [outputLanguage, setOutputLanguage] = useState(DEFAULT_OUTPUT_LANGUAGE)
   const [editLanguage, setEditLanguage] = useState(DEFAULT_OUTPUT_LANGUAGE)
   const [isOpen, setIsOpen] = useState(false)
+  const [isHydrated, setIsHydrated] = useState(false)
 
   useEffect(() => {
-    // Detect mobile device
-    const mobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
-    setIsMobile(mobile)
+    // Mark as hydrated first
+    setIsHydrated(true)
 
     // Load custom settings from localStorage
     const savedLanguage = localStorage.getItem(STORAGE_KEY_LANGUAGE)
@@ -37,12 +47,35 @@ export function ShareLinkButton({ url, title, summaryPrompt }: ShareLinkButtonPr
     }
   }, [])
 
-  // Format the prompt using SUMMARY_PROMPT.md template
+  // Clean content: remove markdown, excessive whitespace
+  const cleanContent = (text: string): string => {
+    return text
+      .replace(/#{1,6}\s/g, '') // Remove markdown headers
+      .replace(/\*\*/g, '') // Remove bold
+      .replace(/\*/g, '') // Remove italic
+      .replace(/`{1,3}/g, '') // Remove code blocks
+      .replace(/\n{3,}/g, '\n\n') // Normalize line breaks
+      .trim()
+  }
+
+  // Format the prompt based on the provided template and parameters
   const formatPrompt = (): string => {
-    // Replace placeholders in the summary prompt template
-    const filledPrompt = summaryPrompt
-      .replace(/{OUTPUT_LANGUAGE}/g, outputLanguage)
-      .replace(/{ARTICLE_URL}/g, url)
+    let filledPrompt = prompt
+
+    // Replace language placeholder
+    filledPrompt = filledPrompt.replace(/\{\{?\s*LANGUAGE\s*\}?\}/gi, outputLanguage)
+    filledPrompt = filledPrompt.replace(/\{OUTPUT_LANGUAGE\}/g, outputLanguage)
+
+    // Replace URL placeholder if url is provided
+    if (url) {
+      filledPrompt = filledPrompt.replace(/\{ARTICLE_URL\}/g, url)
+    }
+
+    // Append content if provided (for content-based sharing)
+    if (content) {
+      const cleaned = cleanContent(content)
+      filledPrompt = `${filledPrompt}\n\n${cleaned}`
+    }
 
     return filledPrompt
   }
@@ -62,34 +95,34 @@ export function ShareLinkButton({ url, title, summaryPrompt }: ShareLinkButtonPr
   }
 
   const handleShare = async () => {
-    const prompt = formatPrompt()
+    const formattedPrompt = formatPrompt()
 
     // Try Web Share API first (mobile)
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Summarize linked article with AI',
-          text: prompt,
+          title,
+          text: formattedPrompt,
         })
-        toast.success('Shared successfully! Send the message to AI for summary 🔊')
+        toast.success(successMessage)
       } catch (err) {
         // User cancelled or error occurred
         if (err instanceof Error && err.name !== 'AbortError') {
           console.error('Share failed:', err)
           // Fallback to clipboard
-          await handleCopy(prompt)
+          await handleCopy(formattedPrompt)
         }
       }
     } else {
       // Fallback to clipboard for desktop
-      await handleCopy(prompt)
+      await handleCopy(formattedPrompt)
     }
   }
 
-  const handleCopy = async (prompt: string) => {
+  const handleCopy = async (formattedPrompt: string) => {
     try {
-      await navigator.clipboard.writeText(prompt)
-      toast.success('Copied! Paste in ChatGPT/Gemini to fetch and summarize this link 🔊', {
+      await navigator.clipboard.writeText(formattedPrompt)
+      toast.success(successMessage, {
         duration: 6000,
       })
     } catch (err) {
@@ -98,30 +131,28 @@ export function ShareLinkButton({ url, title, summaryPrompt }: ShareLinkButtonPr
     }
   }
 
+  // Prevent hydration mismatch by not rendering until client-side hydration is complete
+  if (!isHydrated) {
+    return (
+      <div className="flex gap-1 my-1">
+        <Button variant="outline" size="sm" className="gap-2" disabled>
+          <Share2 className="h-4 w-4" />
+          Read with AI
+        </Button>
+        <Button variant="ghost" size="sm" className="px-2" disabled>
+          <Settings className="h-4 w-4" />
+        </Button>
+      </div>
+    )
+  }
+
   return (
     <div className="flex gap-1 my-1">
-      <Button
-        onClick={handleShare}
-        variant="outline"
-        size="sm"
-        className="gap-2"
-        title={
-          isMobile
-            ? 'Share this link to ChatGPT/Gemini for AI summary'
-            : 'Copy this link for ChatGPT/Gemini to fetch and summarize'
-        }
-      >
-        {isMobile ? (
-          <>
-            <Share2 className="h-4 w-4" />
-            Read with AI
-          </>
-        ) : (
-          <>
-            <Copy className="h-4 w-4" />
-            Copy for AI
-          </>
-        )}
+      <Button onClick={handleShare} variant="outline" size="sm" className="gap-2" title={title}>
+        <>
+          <Share2 className="h-4 w-4" />
+          Read with AI
+        </>
       </Button>
 
       <Popover open={isOpen} onOpenChange={setIsOpen}>

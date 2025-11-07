@@ -12,8 +12,8 @@ export function useWakeLock() {
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
 
   useEffect(() => {
-    // Check if Wake Lock API is supported
-    setIsSupported('wakeLock' in navigator)
+    // Check if Wake Lock API is supported (client-side only)
+    setIsSupported(typeof navigator !== 'undefined' && 'wakeLock' in navigator)
   }, [])
 
   const requestWakeLock = async () => {

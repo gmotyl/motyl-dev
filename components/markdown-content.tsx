@@ -2,7 +2,7 @@
 
 import { marked } from 'marked'
 import * as emoji from 'node-emoji'
-import { ShareLinkButton } from '@/components/share-link-button'
+import { ShareAIButton } from '@/components/share-ai-button'
 import { useEffect, useRef, useState } from 'react'
 
 interface MarkdownContentProps {
@@ -19,12 +19,12 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [summaryPrompt, setSummaryPrompt] = useState<string>('')
 
-  // Fetch SUMMARY_PROMPT.md on mount
+  // Fetch TRANSLATE_PROMPT.md on mount
   useEffect(() => {
-    fetch('/SUMMARY_PROMPT.md')
+    fetch('/TRANSLATE_PROMPT.md')
       .then((res) => res.text())
       .then((text) => setSummaryPrompt(text))
-      .catch((err) => console.error('Failed to load SUMMARY_PROMPT.md:', err))
+      .catch((err) => console.error('Failed to load TRANSLATE_PROMPT.md:', err))
   }, [])
 
   useEffect(() => {
@@ -61,7 +61,14 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
           import('react-dom/client').then(({ createRoot }) => {
             const reactRoot = createRoot(root)
             reactRoot.render(
-              <ShareLinkButton url={href} title={title} summaryPrompt={summaryPrompt} />
+              <ShareAIButton
+                prompt={summaryPrompt}
+                url={href}
+                title={title}
+                buttonLabel="Copy for AI"
+                shareTitle="Summarize linked article with AI"
+                successMessage="Copied! Paste in ChatGPT/Gemini to fetch and summarize this link 🔊"
+              />
             )
           })
         }

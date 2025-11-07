@@ -5,8 +5,10 @@ import Footer from '@/components/footer'
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
 import { ReadAloudButton } from '@/components/read-aloud-button'
-import { ShareToAIButton } from '@/components/share-to-ai-button'
+import { ShareAIButton } from '@/components/share-ai-button'
 import { ArticleNavigation } from '@/components/article-navigation'
+import { promises as fs } from 'fs'
+import path from 'path'
 import { MarkdownContent } from '@/components/markdown-content'
 import { WakeLockProvider } from '@/components/wake-lock-provider'
 
@@ -92,6 +94,10 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     // Get all articles for navigation
     const allArticles = await getAllArticles()
 
+    // Load the summary prompt
+    const translatePromptPath = path.join(process.cwd(), 'public', 'SUMMARY_PROMPT.md')
+    const translatePrompt = await fs.readFile(translatePromptPath, 'utf-8')
+
     return (
       <div className="flex min-h-screen flex-col">
         <WakeLockProvider />
@@ -108,7 +114,14 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                 </p>
                 <div className="flex gap-2">
                   <ReadAloudButton hashtags={article.hashtags} />
-                  <ShareToAIButton content={article.content} />
+                  <ShareAIButton
+                    prompt={translatePrompt}
+                    content={article.content}
+                    buttonLabel="AI Review"
+                    shareTitle="Review article with AI"
+                    successMessage="Shared successfully! Now send the message and tap Read Aloud 🔊"
+                    desktopSuccessMessage="Copied! Open ChatGPT or Gemini, paste, and use Read Aloud 🔊"
+                  />
                 </div>
               </div>
               {article.hashtags.length > 0 && (
