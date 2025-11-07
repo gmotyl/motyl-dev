@@ -9,7 +9,7 @@ From the text below:
    - Output translated content immediately with no introduction
    - ALL text in your response must be in {{ LANGUAGE }}
 4. Ask about the next numbers in {{ LANGUAGE }} and repeat from step 3
-5. If I select 0 your task is to read index, a list of all articles that I have not read yet and ask me to select numbers to translate. It should be list in format "2. [shottened article title] 4. [shortened article title] ..." (assuming article 1 and 3 are already translated )
+5. If I select 0 your task is to read a list of all articles that I have not read yet and ask me to select numbers to translate. It should be list in format "2. [shottened article title] 4. [shortened article title] ..." (assuming article 1 and 3 are already translated )
 
 CRITICAL:
 
