@@ -27,6 +27,10 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
       .catch((err) => console.error('Failed to load TRANSLATE_PROMPT.md:', err))
   }, [])
 
+  // TEMPORARILY DISABLED FOR EDGE READ ALOUD COMPATIBILITY TESTING
+  // This dynamic DOM manipulation breaks Edge's Read Aloud feature
+  // TODO: Re-enable with a user-controlled option or find alternative solution
+  /*
   useEffect(() => {
     if (!containerRef.current || !summaryPrompt) return
 
@@ -87,6 +91,7 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
     // Cleanup timeout on unmount
     return () => clearTimeout(timeoutId)
   }, [content, summaryPrompt])
+  */
 
   // First, process emoji shortcodes like :rocket: -> 🚀
   const contentWithEmojis = emoji.emojify(content)
