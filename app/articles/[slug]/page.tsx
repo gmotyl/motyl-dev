@@ -10,7 +10,7 @@ import { ArticleNavigation } from '@/components/article-navigation'
 import { promises as fs } from 'fs'
 import path from 'path'
 import { MarkdownContent } from '@/components/markdown-content'
-import { WakeLockProvider } from '@/components/wake-lock-provider'
+import { WakeLockToggle } from '@/components/wake-lock-toggle'
 
 export async function generateStaticParams() {
   const articles = await getAllArticles()
@@ -100,7 +100,6 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
     return (
       <div className="flex min-h-screen flex-col">
-        <WakeLockProvider />
         <Header />
         <main className="flex-1 container py-10">
           <article className="max-w-3xl mx-auto">
@@ -113,6 +112,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                   Published on {new Date(article.publishedAt).toLocaleDateString()}
                 </p>
                 <div className="flex gap-2">
+                  <WakeLockToggle />
                   <ReadAloudButton hashtags={article.hashtags} />
                   <ShareAIButton
                     prompt={translatePrompt}

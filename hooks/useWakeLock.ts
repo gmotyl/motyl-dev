@@ -52,25 +52,12 @@ export function useWakeLock() {
     }
   }
 
-  // Automatically request wake lock on mount
+  // Cleanup: release wake lock on unmount
   useEffect(() => {
-    requestWakeLock()
-
-    // Re-request wake lock when page becomes visible again
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && isSupported) {
-        requestWakeLock()
-      }
-    }
-
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-
-    // Cleanup: release wake lock on unmount
     return () => {
       releaseWakeLock()
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
-  }, [isSupported])
+  }, [])
 
   return {
     isSupported,
