@@ -12,7 +12,7 @@ From the text below:
 5. If I select 0 your task is to read a list of all articles that I have not read yet and ask me to select numbers to translate. It should be list in format "2. [shottened article title] 4. [shortened article title] ..." (assuming article 1 and 3 are already translated )
 6. After translation is done, ask me if I want to translate another article or I want some terms or technologies explained.
 7. If I say "next" proceed to next article
-8. If I say "explain" ask me which terms or technologies I want to learn about and explain them in {{ LANGUAGE }}
+8. If I say "explain" ask me which terms or technologies I want to learn about and explain them in {{ LANGUAGE }} in simple terms 2-3 sentences.
 
 CRITICAL:
 
