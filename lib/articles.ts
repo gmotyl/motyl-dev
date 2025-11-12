@@ -4,6 +4,12 @@ import path from 'path'
 import fs from 'fs/promises'
 import matter from 'gray-matter'
 
+export interface ExternalLink {
+  url: string
+  title: string
+  order: number
+}
+
 export interface Article {
   slug: string
   title: string
@@ -11,6 +17,7 @@ export interface Article {
   publishedAt: string
   content: string
   hashtags: string[]
+  externalLinks?: ExternalLink[]
 }
 
 // Build-time hashtag index
@@ -40,6 +47,29 @@ function parseHashtags(hashtagData: any): string[] {
   }
 
   return []
+}
+
+// Extract external links from markdown content (internal helper)
+function extractExternalLinks(content: string): ExternalLink[] {
+  // Regex to match markdown links: [text](url)
+  const linkRegex = /\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g
+  const links: ExternalLink[] = []
+  let match
+  let order = 0
+
+  while ((match = linkRegex.exec(content)) !== null) {
+    const [, title, url] = match
+    // Exclude motyl.dev links (internal)
+    if (!url.includes('motyl.dev')) {
+      links.push({
+        title: title.trim(),
+        url: url.trim(),
+        order: order++,
+      })
+    }
+  }
+
+  return links
 }
 
 // Generate hashtag index at build time
@@ -103,6 +133,7 @@ export async function getArticleBySlug(slug: string): Promise<Article | null> {
       publishedAt: data.publishedAt,
       content,
       hashtags: parseHashtags(data.hashtags),
+      externalLinks: extractExternalLinks(content),
     }
   } catch (error) {
     return null

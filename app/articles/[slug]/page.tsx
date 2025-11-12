@@ -11,6 +11,7 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import { MarkdownContent } from '@/components/markdown-content'
 import { WakeLockToggle } from '@/components/wake-lock-toggle'
+import { ArticleExternalLinks } from '@/components/article-external-links'
 
 export async function generateStaticParams() {
   const articles = await getAllArticles()
@@ -142,6 +143,14 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
             </header>
 
             <MarkdownContent content={article.content} />
+
+            {/* External Links with Bookmark Functionality */}
+            {article.externalLinks && article.externalLinks.length > 0 && (
+              <ArticleExternalLinks
+                links={article.externalLinks}
+                articleHashtags={article.hashtags}
+              />
+            )}
 
             <ArticleNavigation currentSlug={slug} allArticles={allArticles} />
           </article>

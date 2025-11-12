@@ -1,6 +1,7 @@
 import type React from "react"
 import "@/app/globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
+import { SessionProvider } from "@/components/session-provider"
 import { Toaster } from "@/components/ui/toaster"
 
 export default function RootLayout({
@@ -12,10 +13,12 @@ export default function RootLayout({
     <html lang="en" className="dark" suppressHydrationWarning>
       <body className="min-h-screen bg-background font-sans antialiased relative">
         <div className="absolute inset-0 bg-butterfly-pattern opacity-5 pointer-events-none z-0"></div>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-          {children}
-          <Toaster />
-        </ThemeProvider>
+        <SessionProvider>
+          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+            {children}
+            <Toaster />
+          </ThemeProvider>
+        </SessionProvider>
       </body>
     </html>
   )
