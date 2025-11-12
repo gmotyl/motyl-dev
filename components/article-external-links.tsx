@@ -108,7 +108,7 @@ export function ArticleExternalLinks({ links, articleHashtags }: ArticleExternal
                   </div>
 
                   {session && (
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                       <BookmarkButton
                         url={link.url}
                         title={link.title}

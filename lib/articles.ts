@@ -59,8 +59,8 @@ function extractExternalLinks(content: string): ExternalLink[] {
 
   while ((match = linkRegex.exec(content)) !== null) {
     const [, title, url] = match
-    // Exclude motyl.dev links (internal)
-    if (!url.includes('motyl.dev')) {
+    // Exclude motyl.dev and newsletter-ai links (internal projects)
+    if (!url.includes('motyl.dev') && !url.includes('newsletter-ai')) {
       links.push({
         title: title.trim(),
         url: url.trim(),
