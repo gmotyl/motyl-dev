@@ -22,7 +22,7 @@ export default function Header() {
         </Link>
       </nav>
       <Sheet>
-        <SheetTrigger asChild className="md:hidden ml-4">
+        <SheetTrigger asChild className="md:hidden ml-auto">
           <Button variant="ghost" size="icon">
             <Menu className="h-5 w-5" />
             <span className="sr-only">Toggle menu</span>
