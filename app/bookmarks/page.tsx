@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Hash, Search, X, Loader2 } from 'lucide-react';
+import Header from '@/components/header';
+import Footer from '@/components/footer';
 
 /**
  * Bookmarks Page - Display user's bookmarks with filtering
@@ -89,39 +91,45 @@ export default function BookmarksPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background py-12 px-4">
-        <div className="container mx-auto max-w-4xl">
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 text-center">
-            <p className="text-red-600 dark:text-red-400">
-              Error loading bookmarks: {error.message}
-            </p>
+      <>
+        <Header />
+        <div className="min-h-screen bg-background py-12 px-4">
+          <div className="container mx-auto max-w-4xl">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 text-center">
+              <p className="text-red-600 dark:text-red-400">
+                Error loading bookmarks: {error.message}
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+        <Footer />
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4">
-      <div className="container mx-auto max-w-7xl">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-            <div>
-              <h1 className="text-4xl font-bold mb-2">My Bookmarks</h1>
-              <p className="text-muted-foreground">
-                {isLoading ? (
-                  'Loading...'
-                ) : (
-                  <>
-                    {filteredBookmarks.length} of {bookmarks.length} bookmarks
-                    {selectedHashtags.length > 0 || searchQuery ? ' (filtered)' : ''}
-                  </>
-                )}
-              </p>
+    <>
+      <Header />
+      <div className="min-h-screen bg-background py-12 px-4">
+        <div className="container mx-auto max-w-7xl">
+          {/* Page Header */}
+          <div className="mb-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <div>
+                <h1 className="text-4xl font-bold mb-2">My Bookmarks</h1>
+                <p className="text-muted-foreground">
+                  {isLoading ? (
+                    'Loading...'
+                  ) : (
+                    <>
+                      {filteredBookmarks.length} of {bookmarks.length} bookmarks
+                      {selectedHashtags.length > 0 || searchQuery ? ' (filtered)' : ''}
+                    </>
+                  )}
+                </p>
+              </div>
+              <BookmarksExport />
             </div>
-            <BookmarksExport />
-          </div>
 
           {/* Search */}
           <div className="relative mb-4">
@@ -238,7 +246,9 @@ export default function BookmarksPage() {
             ))}
           </div>
         )}
+        </div>
       </div>
-    </div>
+      <Footer />
+    </>
   );
 }

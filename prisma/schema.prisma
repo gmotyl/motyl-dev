@@ -57,6 +57,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   bookmarks     Bookmark[]
+  articleViews  ArticleView[]
 }
 
 model VerificationToken {
@@ -80,4 +81,17 @@ model Bookmark {
 
   @@index([userId])
   @@index([url])
+}
+
+// Article View Tracking
+model ArticleView {
+  id          String   @id @default(cuid())
+  articleSlug String
+  userId      String
+  viewedAt    DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, articleSlug])
+  @@index([userId])
+  @@index([articleSlug])
 }
