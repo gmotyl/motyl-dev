@@ -79,10 +79,12 @@ const { markAsVisited, isVisited, visitedArticles, isLoading } = useVisitedArtic
 ### Flow 2: User Logs In (First Time)
 1. User logs in → Session detected
 2. Hook reads localStorage: `['article-1', 'article-2', 'article-3']`
-3. Calls sync API with localStorage data
-4. Database now has: `['article-1', 'article-2', 'article-3']`
-5. localStorage cleared
-6. State updated from database
+3. Hook fetches from database: `[]` (empty on first login)
+4. **MERGES** both sources: `['article-1', 'article-2', 'article-3']`
+5. Displays merged data immediately
+6. Background: Calls sync API with localStorage data
+7. Database now has: `['article-1', 'article-2', 'article-3']`
+8. localStorage cleared after successful sync
 
 ### Flow 3: Logged-In User Reads Articles
 1. User clicks article → `markAsVisited()` called
@@ -93,10 +95,14 @@ const { markAsVisited, isVisited, visitedArticles, isLoading } = useVisitedArtic
 ### Flow 4: User Logs Out & Back In
 1. User logs out → Falls back to localStorage
 2. User reads more articles → localStorage: `['article-4', 'article-5']`
-3. User logs in again → Sync triggered
-4. Syncs `['article-4', 'article-5']` to database
-5. Database now has: `['article-1', 'article-2', 'article-3', 'article-4', 'article-5']`
-6. localStorage cleared again
+3. User logs in again → Session detected
+4. Hook reads localStorage: `['article-4', 'article-5']`
+5. Hook fetches from database: `['article-1', 'article-2', 'article-3']`
+6. **MERGES** both sources: `['article-1', 'article-2', 'article-3', 'article-4', 'article-5']`
+7. Displays all 5 articles as visited immediately
+8. Background: Syncs new articles `['article-4', 'article-5']` to database
+9. Database now has all 5 articles
+10. localStorage cleared after successful sync
 
 ### Flow 5: Cross-Device Sync
 1. User logs in on Device A → Sees visited articles
@@ -181,6 +187,13 @@ const { markAsVisited, isVisited, visitedArticles, isLoading } = useVisitedArtic
 - Migration: `prisma db push` (already executed)
 
 ## 🎯 Key Features
+
+### ✅ Smart Merging Strategy
+- **ALWAYS merges** localStorage with database data
+- **NEVER overwrites** localStorage - preserves all visited articles
+- Merge happens on every page load for logged-in users
+- localStorage cleared only AFTER successful sync to database
+- No data loss even if user forgets to sync
 
 ### ✅ Backward Compatible
 - Anonymous users experience no change

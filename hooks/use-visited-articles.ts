@@ -12,7 +12,7 @@ export function useVisitedArticles() {
   const hasSyncedRef = useRef(false)
   const previousSessionRef = useRef<string | null>(null)
 
-  // Initialize: Load from localStorage or database based on auth state
+  // Initialize: Load and MERGE from localStorage AND database
   useEffect(() => {
     const initializeVisitedArticles = async () => {
       setIsLoading(true)
@@ -21,26 +21,29 @@ export function useVisitedArticles() {
         return // Wait for session to load
       }
 
+      // Always start by loading localStorage
+      const localStorageSlugs = getLocalStorageSlugs()
+      const mergedSlugs = new Set<string>(localStorageSlugs)
+
       if (status === 'authenticated' && session?.user) {
-        // User is logged in - fetch from database
+        // User is logged in - fetch from database AND merge with localStorage
         try {
           const response = await fetch('/api/articles/views')
           if (response.ok) {
             const data = await response.json()
             if (data.success && Array.isArray(data.data)) {
-              setVisitedArticles(new Set(data.data))
+              // MERGE: Add all database slugs to the set (which already has localStorage slugs)
+              data.data.forEach((slug: string) => mergedSlugs.add(slug))
             }
           }
         } catch (error) {
           console.error('Failed to fetch viewed articles from database:', error)
-          // Fallback to localStorage
-          loadFromLocalStorage()
+          // Continue with localStorage data only
         }
-      } else {
-        // User is not logged in - use localStorage
-        loadFromLocalStorage()
       }
 
+      // Set the merged data
+      setVisitedArticles(mergedSlugs)
       setIsLoading(false)
     }
 
@@ -116,17 +119,19 @@ export function useVisitedArticles() {
     syncOnLogin()
   }, [status, session])
 
-  // Helper: Load from localStorage
-  const loadFromLocalStorage = () => {
+  // Helper: Get slugs from localStorage (doesn't set state)
+  const getLocalStorageSlugs = (): string[] => {
     const stored = localStorage.getItem(LOCALSTORAGE_KEY)
     if (stored) {
       try {
         const parsed = JSON.parse(stored)
-        setVisitedArticles(new Set(parsed))
+        return Array.isArray(parsed) ? parsed : []
       } catch (error) {
         console.error('Failed to parse visited articles:', error)
+        return []
       }
     }
+    return []
   }
 
   // Mark article as visited
