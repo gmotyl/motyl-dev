@@ -27,6 +27,11 @@ export default function Header() {
         <Link href="/articles" className="text-sm font-medium hover:text-primary transition-colors">
           Articles
         </Link>
+        {session && (
+          <Link href="/visit-all" className="text-sm font-medium hover:text-primary transition-colors">
+            Visit All
+          </Link>
+        )}
         {status === "loading" ? (
           <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
         ) : session ? (
@@ -54,9 +59,14 @@ export default function Header() {
               Articles
             </Link>
             {session && (
-              <Link href="/bookmarks" className="text-sm font-medium hover:text-primary transition-colors">
-                My Bookmarks
-              </Link>
+              <>
+                <Link href="/bookmarks" className="text-sm font-medium hover:text-primary transition-colors">
+                  My Bookmarks
+                </Link>
+                <Link href="/visit-all" className="text-sm font-medium hover:text-primary transition-colors">
+                  Visit All
+                </Link>
+              </>
             )}
             <div className="pt-4 border-t">
               {status === "loading" ? (
