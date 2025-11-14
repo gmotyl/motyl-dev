@@ -24,7 +24,10 @@ export default function Header() {
         <Link href="/#newsletter" className="text-sm font-medium hover:text-primary transition-colors">
           Newsletter
         </Link>
-        <Link href="/articles" className="text-sm font-medium hover:text-primary transition-colors">
+        <Link
+          href={session ? "/articles?unseen=true" : "/articles"}
+          className="text-sm font-medium hover:text-primary transition-colors"
+        >
           Articles
         </Link>
         {session && (
@@ -55,7 +58,10 @@ export default function Header() {
             <Link href="/#newsletter" className="text-sm font-medium hover:text-primary transition-colors">
               Newsletter
             </Link>
-            <Link href="/articles" className="text-sm font-medium hover:text-primary transition-colors">
+            <Link
+              href={session ? "/articles?unseen=true" : "/articles"}
+              className="text-sm font-medium hover:text-primary transition-colors"
+            >
               Articles
             </Link>
             {session && (
