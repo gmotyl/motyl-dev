@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { ExternalLink, Trash2, Edit, Hash } from 'lucide-react';
+import { ExternalLink, Trash2, Edit } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { HashtagsList } from '@/components/hashtags-list';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,7 +31,6 @@ interface BookmarkCardProps {
   bookmark: Bookmark;
   onUpdate: (id: string, data: { hashtags?: string[]; notes?: string }) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
-  onHashtagClick?: (hashtag: string) => void;
 }
 
 /**
@@ -42,14 +41,12 @@ interface BookmarkCardProps {
  *   bookmark={bookmark}
  *   onUpdate={handleUpdate}
  *   onDelete={handleDelete}
- *   onHashtagClick={handleHashtagClick}
  * />
  */
 export function BookmarkCard({
   bookmark,
   onUpdate,
   onDelete,
-  onHashtagClick,
 }: BookmarkCardProps) {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -128,25 +125,11 @@ export function BookmarkCard({
 
         <CardContent className="space-y-3">
           {/* Hashtags */}
-          {bookmark.hashtags.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {bookmark.hashtags.map((tag) => (
-                <Badge
-                  key={tag}
-                  variant="secondary"
-                  className={`gap-1 ${
-                    onHashtagClick
-                      ? 'cursor-pointer hover:bg-purple-600 hover:text-white transition-colors'
-                      : ''
-                  }`}
-                  onClick={() => onHashtagClick?.(tag)}
-                >
-                  <Hash className="h-3 w-3" />
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          )}
+          <HashtagsList
+            hashtags={bookmark.hashtags}
+            maxVisible={3}
+            linkToBookmarks={true}
+          />
 
           {/* Notes */}
           {bookmark.notes && (

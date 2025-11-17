@@ -1,13 +1,12 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { Suspense, useState, useMemo } from 'react';
 import { useBookmarks } from '@/hooks/use-bookmarks';
 import { BookmarkCard } from '@/components/bookmark-card';
 import { BookmarksExport } from '@/components/bookmarks-export';
-import { Badge } from '@/components/ui/badge';
+import { HashtagFilters } from '@/components/hashtag-filters';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Hash, Search, X, Loader2 } from 'lucide-react';
+import { Search, X, Loader2 } from 'lucide-react';
 import Header from '@/components/header';
 import Footer from '@/components/footer';
 
@@ -30,64 +29,23 @@ export default function BookmarksPage() {
     removeBookmark,
   } = useBookmarks();
 
-  const [selectedHashtags, setSelectedHashtags] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [hashtagFilteredBookmarks, setHashtagFilteredBookmarks] = useState(bookmarks);
 
-  // Calculate hashtag counts
-  const hashtagCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    bookmarks.forEach((bookmark) => {
-      bookmark.hashtags.forEach((tag) => {
-        counts.set(tag, (counts.get(tag) || 0) + 1);
-      });
-    });
-    return counts;
-  }, [bookmarks]);
-
-  // Get unique hashtags sorted by count
-  const sortedHashtags = useMemo(() => {
-    return Array.from(hashtagCounts.entries())
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .map(([tag]) => tag);
-  }, [hashtagCounts]);
-
-  // Filter bookmarks
+  // Apply search filter on top of hashtag filtering
   const filteredBookmarks = useMemo(() => {
-    let filtered = bookmarks;
-
-    // Filter by hashtags
-    if (selectedHashtags.length > 0) {
-      filtered = filtered.filter((bookmark) =>
-        selectedHashtags.every((tag) => bookmark.hashtags.includes(tag))
-      );
+    if (!searchQuery.trim()) {
+      return hashtagFilteredBookmarks;
     }
 
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (bookmark) =>
-          bookmark.title.toLowerCase().includes(query) ||
-          bookmark.url.toLowerCase().includes(query) ||
-          bookmark.notes?.toLowerCase().includes(query)
-      );
-    }
-
-    return filtered;
-  }, [bookmarks, selectedHashtags, searchQuery]);
-
-  // Toggle hashtag filter
-  const toggleHashtag = (tag: string) => {
-    setSelectedHashtags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+    const query = searchQuery.toLowerCase();
+    return hashtagFilteredBookmarks.filter(
+      (bookmark) =>
+        bookmark.title.toLowerCase().includes(query) ||
+        bookmark.url.toLowerCase().includes(query) ||
+        bookmark.notes?.toLowerCase().includes(query)
     );
-  };
-
-  // Clear all filters
-  const clearFilters = () => {
-    setSelectedHashtags([]);
-    setSearchQuery('');
-  };
+  }, [hashtagFilteredBookmarks, searchQuery]);
 
   if (error) {
     return (
@@ -123,7 +81,7 @@ export default function BookmarksPage() {
                   ) : (
                     <>
                       {filteredBookmarks.length} of {bookmarks.length} bookmarks
-                      {selectedHashtags.length > 0 || searchQuery ? ' (filtered)' : ''}
+                      {searchQuery ? ' (filtered)' : ''}
                     </>
                   )}
                 </p>
@@ -152,45 +110,12 @@ export default function BookmarksPage() {
           </div>
 
           {/* Hashtag Filters */}
-          {sortedHashtags.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <p className="text-sm text-muted-foreground">Filter by hashtags:</p>
-                {selectedHashtags.length > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearFilters}
-                    className="h-6 px-2 text-xs"
-                  >
-                    Clear all
-                  </Button>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {sortedHashtags.map((tag) => {
-                  const isSelected = selectedHashtags.includes(tag);
-                  const count = hashtagCounts.get(tag) || 0;
-                  return (
-                    <Badge
-                      key={tag}
-                      variant={isSelected ? 'default' : 'outline'}
-                      className={`cursor-pointer gap-1 ${
-                        isSelected
-                          ? 'bg-purple-600 hover:bg-purple-700 text-white'
-                          : 'hover:bg-purple-600 hover:text-white'
-                      } transition-colors`}
-                      onClick={() => toggleHashtag(tag)}
-                    >
-                      <Hash className="h-3 w-3" />
-                      {tag}
-                      <span className="text-xs opacity-75">({count})</span>
-                    </Badge>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+          <Suspense fallback={<div className="mb-8 text-sm text-muted-foreground">Loading filters...</div>}>
+            <HashtagFilters
+              items={bookmarks}
+              onFilteredItemsChange={setHashtagFilteredBookmarks}
+            />
+          </Suspense>
         </div>
 
         {/* Loading State */}
@@ -223,12 +148,9 @@ export default function BookmarksPage() {
               <Search className="h-8 w-8 text-muted-foreground" />
             </div>
             <h2 className="text-2xl font-semibold mb-2">No matching bookmarks</h2>
-            <p className="text-muted-foreground mb-6">
+            <p className="text-muted-foreground">
               Try adjusting your filters or search query.
             </p>
-            <Button onClick={clearFilters} variant="outline">
-              Clear Filters
-            </Button>
           </div>
         )}
 
@@ -241,7 +163,6 @@ export default function BookmarksPage() {
                 bookmark={bookmark}
                 onUpdate={updateBookmark}
                 onDelete={removeBookmark}
-                onHashtagClick={toggleHashtag}
               />
             ))}
           </div>

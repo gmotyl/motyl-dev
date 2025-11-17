@@ -2,8 +2,6 @@ import { notFound } from 'next/navigation'
 import { getArticleBySlug, getAllArticles } from '@/lib/articles'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
-import { Badge } from '@/components/ui/badge'
-import Link from 'next/link'
 import { ReadAloudButton } from '@/components/read-aloud-button'
 import { ShareAIButton } from '@/components/share-ai-button'
 import { ArticleNavigation } from '@/components/article-navigation'
@@ -12,6 +10,7 @@ import path from 'path'
 import { MarkdownContent } from '@/components/markdown-content'
 import { WakeLockToggle } from '@/components/wake-lock-toggle'
 import { ArticleExternalLinks } from '@/components/article-external-links'
+import { HashtagsList } from '@/components/hashtags-list'
 
 export async function generateStaticParams() {
   const articles = await getAllArticles()
@@ -129,21 +128,12 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                   />
                 </div>
               </div>
-              {article.hashtags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-2" data-hashtags-container>
-                  {article.hashtags.map((hashtag) => (
-                    <Link href={`/articles?hashtags=${hashtag}&mode=AND`} key={hashtag}>
-                      <Badge
-                        variant="secondary"
-                        className="text-gray-900 font-medium bg-purple-200 hover:bg-purple-300 cursor-pointer transition-colors"
-                        data-hashtag={hashtag}
-                      >
-                        #{hashtag}
-                      </Badge>
-                    </Link>
-                  ))}
-                </div>
-              )}
+              <HashtagsList
+                hashtags={article.hashtags}
+                maxVisible={3}
+                linkToArticles={true}
+                className="mt-2"
+              />
             </header>
 
             <MarkdownContent content={article.content} />
