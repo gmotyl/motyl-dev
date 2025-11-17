@@ -12,6 +12,7 @@ import { WakeLockToggle } from '@/components/wake-lock-toggle'
 import { ArticleExternalLinks } from '@/components/article-external-links'
 import { HashtagsList } from '@/components/hashtags-list'
 import { ArticleScrollHandler } from '@/components/article-scroll-handler'
+import { Breadcrumb } from '@/components/breadcrumb'
 
 export async function generateStaticParams() {
   const articles = await getAllArticles()
@@ -39,8 +40,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       title: article.title,
       description: article.excerpt,
       keywords: keywords,
-      authors: [{ name: 'Motyl.dev' }],
-      creator: 'Motyl.dev',
+      authors: [{ name: 'Grzegorz Motyl' }],
+      creator: 'Grzegorz Motyl',
       publisher: 'Motyl.dev',
       alternates: {
         canonical: articleUrl,
@@ -52,7 +53,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
         url: articleUrl,
         siteName: 'Motyl.dev',
         publishedTime: article.publishedAt,
-        authors: ['Motyl.dev'],
+        authors: ['Grzegorz Motyl'],
         tags: article.hashtags,
         locale: 'en_US',
       },
@@ -99,12 +100,78 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     const translatePromptPath = path.join(process.cwd(), 'public', 'SUMMARY_PROMPT.md')
     const translatePrompt = await fs.readFile(translatePromptPath, 'utf-8')
 
+    // Generate JSON-LD structured data for better SEO
+    const jsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'Article',
+      headline: article.title,
+      description: article.excerpt,
+      author: {
+        '@type': 'Person',
+        name: 'Grzegorz Motyl',
+        url: 'https://motyl.dev',
+      },
+      publisher: {
+        '@type': 'Organization',
+        name: 'Motyl.dev',
+        url: 'https://motyl.dev',
+      },
+      datePublished: article.publishedAt,
+      dateModified: article.publishedAt,
+      mainEntityOfPage: {
+        '@type': 'WebPage',
+        '@id': `https://motyl.dev/articles/${article.slug}`,
+      },
+      keywords: article.hashtags.join(', '),
+    }
+
+    // Breadcrumb structured data
+    const breadcrumbJsonLd = {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: 'https://motyl.dev',
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'Articles',
+          item: 'https://motyl.dev/articles',
+        },
+        {
+          '@type': 'ListItem',
+          position: 3,
+          name: article.title,
+          item: `https://motyl.dev/articles/${article.slug}`,
+        },
+      ],
+    }
+
     return (
       <div className="flex min-h-screen flex-col">
+        {/* Structured Data for SEO */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        />
         <Header />
         <ArticleScrollHandler />
         <main className="flex-1 container py-10">
           <article className="max-w-3xl mx-auto">
+            <Breadcrumb
+              items={[
+                { label: 'Articles', href: '/articles' },
+                { label: article.title, href: `/articles/${article.slug}` },
+              ]}
+            />
             <header className="mb-8">
               <div className="flex justify-between items-start mb-4">
                 <h1 className="text-4xl font-bold flex-1">{article.title}</h1>

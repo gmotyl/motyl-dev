@@ -1,45 +1,39 @@
-'use client'
-
-import { useEffect, useState } from 'react'
 import { Code, Zap, Sparkles, Building, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import NewsletterForm from '@/components/newsletter-form'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import Link from 'next/link'
+import { getAllArticles } from '@/lib/articles'
 
-interface Article {
-  slug: string
-  title: string
-  excerpt: string
-  publishedAt: string
-  content: string
-}
+export default async function Home() {
+  // Server-side data fetching for better SEO and indexability
+  const allArticles = await getAllArticles()
+  const latestArticles = allArticles.slice(0, 3)
+  const isLoading = false
 
-export default function Home() {
-  const [latestArticles, setLatestArticles] = useState<Article[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    const fetchArticles = async () => {
-      try {
-        const response = await fetch('/api/articles')
-        if (response.ok) {
-          const articles = await response.json()
-          setLatestArticles(articles.slice(0, 3))
-        }
-      } catch (error) {
-        console.error('Error fetching articles:', error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchArticles()
-  }, [])
+  // JSON-LD structured data for homepage
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Motyl.dev',
+    url: 'https://motyl.dev',
+    description: 'Stay up to date with the latest tech news, development insights, and industry trends. Covering JavaScript, AI, web development, and more.',
+    author: {
+      '@type': 'Person',
+      name: 'Grzegorz Motyl',
+      jobTitle: 'Senior Software Developer and Solution Architect',
+      url: 'https://motyl.dev',
+    },
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
+      {/* Structured Data for SEO */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Header />
       <main className="flex-1">
         <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 relative overflow-hidden">
