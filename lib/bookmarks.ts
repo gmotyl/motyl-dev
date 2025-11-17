@@ -11,6 +11,8 @@ export interface Bookmark {
   notes: string | null
   bookmarkedAt: Date
   userId: string
+  articleSlug: string | null
+  sectionTitle: string | null
 }
 
 export interface CreateBookmarkInput {
@@ -18,6 +20,8 @@ export interface CreateBookmarkInput {
   title: string
   hashtags: string[]
   notes?: string
+  articleSlug?: string
+  sectionTitle?: string
 }
 
 // Get all bookmarks for the current user
@@ -65,6 +69,8 @@ export async function addBookmark(input: CreateBookmarkInput): Promise<Bookmark>
       title: input.title,
       hashtags: input.hashtags,
       notes: input.notes || null,
+      articleSlug: input.articleSlug || null,
+      sectionTitle: input.sectionTitle || null,
     },
   })
 

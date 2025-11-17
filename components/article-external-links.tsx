@@ -12,6 +12,7 @@ import type { ExternalLink } from '@/lib/articles';
 interface ArticleExternalLinksProps {
   links: ExternalLink[];
   articleHashtags: string[];
+  articleSlug: string;
 }
 
 /**
@@ -23,7 +24,7 @@ interface ArticleExternalLinksProps {
  * - Quick bookmark with dialog for hashtags
  * - Suggest article hashtags for new bookmarks
  */
-export function ArticleExternalLinks({ links, articleHashtags }: ArticleExternalLinksProps) {
+export function ArticleExternalLinks({ links, articleHashtags, articleSlug }: ArticleExternalLinksProps) {
   const { data: session } = useSession();
   const { bookmarks, addBookmark, removeBookmark, isLoading } = useBookmarks();
 
@@ -58,7 +59,11 @@ export function ArticleExternalLinks({ links, articleHashtags }: ArticleExternal
     hashtags?: string[];
     notes?: string;
   }) => {
-    await addBookmark(data);
+    await addBookmark({
+      ...data,
+      articleSlug,
+      sectionTitle: selectedLink?.title, // Use the link title as section reference
+    });
     setDialogOpen(false);
     setSelectedLink(null);
   };

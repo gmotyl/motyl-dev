@@ -43,6 +43,8 @@ export async function GET() {
  *   title: string (required)
  *   hashtags?: string[]
  *   notes?: string
+ *   articleSlug?: string
+ *   sectionTitle?: string
  * }
  */
 export async function POST(request: NextRequest) {
@@ -57,7 +59,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { url, title, hashtags = [], notes = '' } = body;
+    const { url, title, hashtags = [], notes = '', articleSlug, sectionTitle } = body;
 
     // Validation
     if (!url || typeof url !== 'string') {
@@ -97,7 +99,9 @@ export async function POST(request: NextRequest) {
       url,
       title,
       hashtags,
-      notes
+      notes,
+      articleSlug,
+      sectionTitle
     });
 
     return NextResponse.json({

@@ -77,10 +77,13 @@ model Bookmark {
   notes        String?  @db.Text
   bookmarkedAt DateTime @default(now())
   userId       String
+  articleSlug  String?  // Parent article reference for bookmarks from articles
+  sectionTitle String?  // Section/heading near the bookmarked link (for scroll positioning)
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([url])
+  @@index([articleSlug])
 }
 
 // Article View Tracking

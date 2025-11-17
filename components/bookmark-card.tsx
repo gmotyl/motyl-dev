@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ExternalLink, Trash2, Edit } from 'lucide-react';
+import { ExternalLink, Trash2, Edit, FileText } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { HashtagsList } from '@/components/hashtags-list';
@@ -25,6 +25,8 @@ interface Bookmark {
   hashtags: string[];
   notes?: string;
   bookmarkedAt: Date;
+  articleSlug?: string;
+  sectionTitle?: string;
 }
 
 interface BookmarkCardProps {
@@ -124,6 +126,19 @@ export function BookmarkCard({
         </CardHeader>
 
         <CardContent className="space-y-3">
+          {/* Parent Article Link */}
+          {bookmark.articleSlug && (
+            <div className="pb-2 border-b">
+              <a
+                href={`/articles/${bookmark.articleSlug}#${encodeURIComponent(bookmark.sectionTitle || '')}`}
+                className="inline-flex items-center gap-2 text-sm text-purple-600 hover:text-purple-700 hover:underline transition-colors"
+              >
+                <FileText className="h-4 w-4" />
+                View summary
+              </a>
+            </div>
+          )}
+
           {/* Hashtags */}
           <HashtagsList
             hashtags={bookmark.hashtags}

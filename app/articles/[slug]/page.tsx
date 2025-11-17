@@ -11,6 +11,7 @@ import { MarkdownContent } from '@/components/markdown-content'
 import { WakeLockToggle } from '@/components/wake-lock-toggle'
 import { ArticleExternalLinks } from '@/components/article-external-links'
 import { HashtagsList } from '@/components/hashtags-list'
+import { ArticleScrollHandler } from '@/components/article-scroll-handler'
 
 export async function generateStaticParams() {
   const articles = await getAllArticles()
@@ -101,6 +102,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
     return (
       <div className="flex min-h-screen flex-col">
         <Header />
+        <ArticleScrollHandler />
         <main className="flex-1 container py-10">
           <article className="max-w-3xl mx-auto">
             <header className="mb-8">
@@ -143,6 +145,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               <ArticleExternalLinks
                 links={article.externalLinks}
                 articleHashtags={article.hashtags}
+                articleSlug={article.slug}
               />
             )}
 

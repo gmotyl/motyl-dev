@@ -9,11 +9,32 @@ interface MarkdownContentProps {
   content: string
 }
 
+// Helper function to generate slug from heading text
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 // Configure marked for better markdown rendering
 marked.setOptions({
   gfm: true,
   breaks: true,
-})
+});
+
+// Custom renderer to add IDs to headings
+const renderer = new marked.Renderer();
+const originalHeading = renderer.heading.bind(renderer);
+
+renderer.heading = function(this: any, { text, depth }: { text: string; depth: number }) {
+  const id = slugify(text);
+  return `<h${depth} id="${id}">${text}</h${depth}>`;
+};
+
+marked.use({ renderer });
 
 export function MarkdownContent({ content }: MarkdownContentProps) {
   const containerRef = useRef<HTMLDivElement>(null)

@@ -11,6 +11,9 @@ export interface Bookmark {
   notes?: string;
   bookmarkedAt: Date;
   userId: string;
+  // Parent article reference
+  articleSlug?: string; // Link back to source article
+  sectionTitle?: string; // The section/heading near the link (for scroll positioning)
 }
 
 interface UseBookmarksReturn {
@@ -22,6 +25,8 @@ interface UseBookmarksReturn {
     title: string;
     hashtags?: string[];
     notes?: string;
+    articleSlug?: string;
+    sectionTitle?: string;
   }) => Promise<void>;
   removeBookmark: (id: string) => Promise<void>;
   updateBookmark: (
@@ -92,6 +97,8 @@ export function useBookmarks(): UseBookmarksReturn {
       title: string;
       hashtags?: string[];
       notes?: string;
+      articleSlug?: string;
+      sectionTitle?: string;
     }) => {
       try {
         const response = await fetch('/api/bookmarks', {
