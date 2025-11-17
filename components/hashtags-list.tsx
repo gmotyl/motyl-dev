@@ -2,6 +2,7 @@
 
 import { Badge } from '@/components/ui/badge'
 import Link from 'next/link'
+import { useState } from 'react'
 
 interface HashtagsListProps {
   hashtags: string[]
@@ -14,7 +15,8 @@ interface HashtagsListProps {
 /**
  * HashtagsList - Generic hashtag display component with overflow indicator
  *
- * Shows first N hashtags and "..." if there are more.
+ * Shows first N hashtags and "..." button if there are more.
+ * Clicking "..." expands to show all hashtags.
  * Can link hashtags to articles or bookmarks filter pages.
  *
  * Usage:
@@ -31,11 +33,13 @@ export function HashtagsList({
   linkToBookmarks = false,
   className = ''
 }: HashtagsListProps) {
+  const [isExpanded, setIsExpanded] = useState(false)
+
   if (!hashtags || hashtags.length === 0) {
     return null
   }
 
-  const visibleHashtags = hashtags.slice(0, maxVisible)
+  const visibleHashtags = isExpanded ? hashtags : hashtags.slice(0, maxVisible)
   const hasMore = hashtags.length > maxVisible
 
   const getLink = (hashtag: string) => {
@@ -76,8 +80,14 @@ export function HashtagsList({
         return <span key={hashtag}>{badgeContent}</span>
       })}
 
-      {hasMore && (
-        <span className="text-sm text-muted-foreground font-medium">...</span>
+      {hasMore && !isExpanded && (
+        <button
+          onClick={() => setIsExpanded(true)}
+          className="text-sm text-muted-foreground font-medium hover:text-foreground transition-colors px-2 py-1 rounded hover:bg-secondary"
+          aria-label="Show all hashtags"
+        >
+          ...
+        </button>
       )}
     </div>
   )
