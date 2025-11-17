@@ -1,8 +1,8 @@
 From the text below:
 
-1. List numbered links with TLDR in {{ LANGUAGE }} for each (skip TLDR word itself)
+1. List numbered links with titles in {{ LANGUAGE }} for each article
 2. Ask which numbers to translate
-3. FOR THE SELECTED ARTICLE NUMBERS: Translate the following sections to {{ LANGUAGE }}: description, summary, key takeaways, and tradeoffs.
+3. FOR THE SELECTED ARTICLE NUMBERS: Translate the following sections to {{ LANGUAGE }}: title, TLDR, description, summary, key takeaways, and tradeoffs.
    - Translate sentence by sentence
    - Keep section headers in {{ LANGUAGE }}
    - Do not omit, modify, or add anything except translating
