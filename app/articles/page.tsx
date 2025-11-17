@@ -5,7 +5,6 @@ import { useSearchParams } from 'next/navigation'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import Link from 'next/link'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useHashtagFilter } from './useHashtagFilter'
 import { useVisitedArticles } from '@/hooks/use-visited-articles'
@@ -366,32 +365,12 @@ export default function ArticlesPage() {
                 <h2 className="article-title text-xl font-bold mb-2">{article.title}</h2>
                 <p className="article-excerpt flex-grow line-clamp-3">{article.excerpt}</p>
 
-                {/* Hashtags */}
-                {article.hashtags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-3 mb-2">
-                    {article.hashtags.map((hashtag) => (
-                      <button
-                        key={hashtag}
-                        onClick={(e) => {
-                          e.preventDefault()
-                          e.stopPropagation()
-                          handleHashtagToggle(hashtag)
-                        }}
-                        className="inline-block"
-                      >
-                        <Badge
-                          variant="secondary"
-                          className="text-xs text-gray-900 font-medium bg-purple-200 hover:bg-purple-300 cursor-pointer transition-colors"
-                        >
-                          #{hashtag}
-                        </Badge>
-                      </button>
-                    ))}
-                  </div>
-                )}
-
                 <p className="text-xs text-muted-foreground mt-auto">
-                  {new Date(article.publishedAt).toLocaleDateString()}
+                  {new Date(article.publishedAt).toLocaleDateString('pl-PL', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                  })}
                 </p>
               </Link>
             ))}

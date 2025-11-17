@@ -110,7 +110,11 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               </div>
               <div className="flex justify-between items-center mb-2">
                 <p className="text-muted-foreground">
-                  Published on {new Date(article.publishedAt).toLocaleDateString()}
+                  Published on {new Date(article.publishedAt).toLocaleDateString('pl-PL', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                  })}
                 </p>
                 <div className="flex gap-2">
                   <WakeLockToggle />
