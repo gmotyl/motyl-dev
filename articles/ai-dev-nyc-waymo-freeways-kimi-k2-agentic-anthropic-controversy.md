@@ -119,8 +119,4 @@ The gap between training simulations and real-world performance can challenge AI
 
 ---
 
-**🤖 Generated with [Claude Code](https://claude.com/claude-code)**
-
-Co-Authored-By: Claude <noreply@anthropic.com>
-
 **Disclaimer:** This article was generated from The Batch newsletter content using AI and may not capture all nuances of the original source material. Some details may be simplified or reorganized for clarity.
