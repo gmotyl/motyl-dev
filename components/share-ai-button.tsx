@@ -33,6 +33,7 @@ export function ShareAIButton({
   const [editLanguage, setEditLanguage] = useState(DEFAULT_OUTPUT_LANGUAGE)
   const [isOpen, setIsOpen] = useState(false)
   const [isHydrated, setIsHydrated] = useState(false)
+  const [isCopied, setIsCopied] = useState(false)
 
   useEffect(() => {
     // Mark as hydrated first
@@ -104,6 +105,8 @@ export function ShareAIButton({
           title,
           text: formattedPrompt,
         })
+        setIsCopied(true)
+        setTimeout(() => setIsCopied(false), 3000)
         toast.success(successMessage)
       } catch (err) {
         // User cancelled or error occurred
@@ -122,6 +125,8 @@ export function ShareAIButton({
   const handleCopy = async (formattedPrompt: string) => {
     try {
       await navigator.clipboard.writeText(formattedPrompt)
+      setIsCopied(true)
+      setTimeout(() => setIsCopied(false), 3000)
       toast.success(successMessage, {
         duration: 6000,
       })
@@ -150,8 +155,17 @@ export function ShareAIButton({
     <div className="flex gap-1 my-1">
       <Button onClick={handleShare} variant="outline" size="sm" className="gap-2" title={title}>
         <>
-          <Share2 className="h-4 w-4" />
-          Read with AI
+          {isCopied ? (
+            <>
+              <Copy className="h-4 w-4" />
+              Copied!
+            </>
+          ) : (
+            <>
+              <Share2 className="h-4 w-4" />
+              Read with AI
+            </>
+          )}
         </>
       </Button>
 
