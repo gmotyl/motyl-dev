@@ -139,7 +139,7 @@ export function ShareAIButton({
   // Prevent hydration mismatch by not rendering until client-side hydration is complete
   if (!isHydrated) {
     return (
-      <div className="flex gap-1 my-1">
+    <span className="inline-flex gap-1 my-1 align-middle">
         <Button variant="outline" size="sm" className="gap-2" disabled>
           <Share2 className="h-4 w-4" />
           Read with AI
@@ -147,12 +147,12 @@ export function ShareAIButton({
         <Button variant="ghost" size="sm" className="px-2" disabled>
           <Settings className="h-4 w-4" />
         </Button>
-      </div>
+    </span>
     )
   }
 
   return (
-    <div className="flex gap-1 my-1">
+    <span className="inline-flex gap-1 my-1 align-middle">
       <Button onClick={handleShare} variant="outline" size="sm" className="gap-2" title={title}>
         <>
           {isCopied ? (
@@ -198,6 +198,6 @@ export function ShareAIButton({
           </div>
         </PopoverContent>
       </Popover>
-    </div>
+    </span>
   )
 }
