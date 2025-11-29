@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { Mail, CheckCircle } from "lucide-react"
 
+import { queueNewsletterSubscription } from '@/lib/newsletter-queue'
+
 export default function NewsletterForm() {
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -55,11 +57,20 @@ export default function NewsletterForm() {
         throw new Error(data.error || "Subscription failed")
       }
     } catch (error) {
-      toast({
-        title: "Something went wrong.",
-        description: "Please try again later or contact support if the problem persists.",
-        variant: "destructive",
-      })
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        await queueNewsletterSubscription(email)
+        toast({
+          title: "You're offline",
+          description: "Subscription queued! Will sync when online.",
+        })
+        setEmail("")
+      } else {
+        toast({
+          title: "Something went wrong.",
+          description: "Please try again later or contact support if the problem persists.",
+          variant: "destructive",
+        })
+      }
     } finally {
       setIsLoading(false)
     }

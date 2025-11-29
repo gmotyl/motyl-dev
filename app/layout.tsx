@@ -4,6 +4,10 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { SessionProvider } from "@/components/session-provider"
 import { Toaster } from "@/components/ui/toaster"
 
+import { ServiceWorkerRegister } from "@/app/components/service-worker-register"
+import { InstallPrompt } from "@/components/install-prompt"
+import { UpdateNotification } from "@/components/update-notification"
+
 export default function RootLayout({
   children,
 }: {
@@ -17,6 +21,9 @@ export default function RootLayout({
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
             {children}
             <Toaster />
+            <ServiceWorkerRegister />
+            <InstallPrompt />
+            <UpdateNotification />
           </ThemeProvider>
         </SessionProvider>
       </body>
@@ -24,7 +31,32 @@ export default function RootLayout({
   )
 }
 
-export const metadata = {
+import type { Metadata, Viewport } from "next"
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  themeColor: [
+    { media: '(prefers-color-scheme: dark)', color: '#8B5CF6' },
+    { media: '(prefers-color-scheme: light)', color: '#A855F7' }
+  ],
+}
+
+export const metadata: Metadata = {
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Motyl.dev',
+    startupImage: [
+      '/icons/icon-512x512.png'
+    ]
+  },
+  formatDetection: {
+    telephone: false,
+  },
+
   title: {
     default: 'Motyl.dev - Tech News & Insights',
     template: '%s | Motyl.dev',
