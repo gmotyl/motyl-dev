@@ -26,6 +26,7 @@ interface HashtagIndex {
 }
 
 const articlesDirectory = path.join(process.cwd(), 'articles')
+const newsDirectory = path.join(process.cwd(), 'news')
 let hashtagIndexCache: HashtagIndex | null = null
 
 // Parse hashtags from metadata (supports both array and #hashtag format)
@@ -93,36 +94,68 @@ async function buildHashtagIndex(): Promise<HashtagIndex> {
   return index
 }
 
+// Helper to read articles from a single directory
+async function readArticlesFromDirectory(directory: string): Promise<Article[]> {
+  try {
+    const fileNames = await fs.readdir(directory)
+    const articles = await Promise.all(
+      fileNames
+        .filter((name) => name.endsWith('.md'))
+        .map(async (name) => {
+          const slug = name.replace(/\.md$/, '')
+          const fullPath = path.join(directory, name)
+          const fileContents = await fs.readFile(fullPath, 'utf8')
+          const { data, content } = matter(fileContents)
+
+          return {
+            slug,
+            title: data.title,
+            excerpt: data.excerpt,
+            publishedAt: data.publishedAt,
+            content,
+            hashtags: parseHashtags(data.hashtags),
+          }
+        })
+    )
+    return articles
+  } catch (error) {
+    return []
+  }
+}
+
+// Helper to get all year subdirectories from news folder
+async function getNewsYearDirectories(): Promise<string[]> {
+  try {
+    const entries = await fs.readdir(newsDirectory, { withFileTypes: true })
+    return entries
+      .filter((entry) => entry.isDirectory() && /^\d{4}$/.test(entry.name))
+      .map((entry) => path.join(newsDirectory, entry.name))
+  } catch (error) {
+    return []
+  }
+}
+
 export async function getAllArticles(): Promise<Article[]> {
-  const fileNames = await fs.readdir(articlesDirectory)
-  const articles = await Promise.all(
-    fileNames
-      .filter((name) => name.endsWith('.md'))
-      .map(async (name) => {
-        const slug = name.replace(/\.md$/, '')
-        const fullPath = path.join(articlesDirectory, name)
-        const fileContents = await fs.readFile(fullPath, 'utf8')
-        const { data, content } = matter(fileContents)
+  // Read from articles directory
+  const articlesPromise = readArticlesFromDirectory(articlesDirectory)
 
-        return {
-          slug,
-          title: data.title,
-          excerpt: data.excerpt,
-          publishedAt: data.publishedAt,
-          content,
-          hashtags: parseHashtags(data.hashtags),
-        }
-      })
-  )
+  // Read from all news year subdirectories
+  const newsYearDirs = await getNewsYearDirectories()
+  const newsPromises = newsYearDirs.map((dir) => readArticlesFromDirectory(dir))
 
-  return articles.sort(
+  const [articles, ...newsArticles] = await Promise.all([articlesPromise, ...newsPromises])
+
+  const allArticles = [...articles, ...newsArticles.flat()]
+
+  return allArticles.sort(
     (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
   )
 }
 
-export async function getArticleBySlug(slug: string): Promise<Article | null> {
+// Helper to find and read an article from any directory
+async function findArticleInDirectory(slug: string, directory: string): Promise<Article | null> {
   try {
-    const fullPath = path.join(articlesDirectory, `${slug}.md`)
+    const fullPath = path.join(directory, `${slug}.md`)
     const fileContents = await fs.readFile(fullPath, 'utf8')
     const { data, content } = matter(fileContents)
 
@@ -138,6 +171,21 @@ export async function getArticleBySlug(slug: string): Promise<Article | null> {
   } catch (error) {
     return null
   }
+}
+
+export async function getArticleBySlug(slug: string): Promise<Article | null> {
+  // Try articles directory first
+  let article = await findArticleInDirectory(slug, articlesDirectory)
+  if (article) return article
+
+  // Try news year subdirectories
+  const newsYearDirs = await getNewsYearDirectories()
+  for (const dir of newsYearDirs) {
+    article = await findArticleInDirectory(slug, dir)
+    if (article) return article
+  }
+
+  return null
 }
 
 export async function getAllHashtags(): Promise<string[]> {

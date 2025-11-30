@@ -4,35 +4,36 @@ import Header from '@/components/header'
 import Footer from '@/components/footer'
 
 export const metadata = {
-  title: 'Articles - Motyl.dev',
-  description: 'Original articles about web development, architecture, and software craftsmanship',
+  title: 'News - Motyl.dev',
+  description: 'Latest tech news and insights curated from newsletters',
 }
 
-function ArticlesContent() {
+function NewsContent() {
   return (
     <ArticlesListing
-      title="Articles"
-      description="Original articles about web development, architecture, and software craftsmanship"
+      title="News"
+      description="Latest tech news and insights curated from newsletters"
       filterConfig={{
-        excludeHashtags: ['generated'],
+        requireHashtags: ['generated'],
+        defaultFilters: { showUnseen: true },
       }}
     />
   )
 }
 
-export default function ArticlesPage() {
+export default function NewsPage() {
   return (
     <Suspense fallback={
       <div className="flex min-h-screen flex-col">
         <Header />
         <main className="flex-1 container py-10">
-          <h1 className="text-3xl font-bold mb-2">Articles</h1>
+          <h1 className="text-3xl font-bold mb-2">News</h1>
           <p className="text-muted-foreground mb-8">Loading...</p>
         </main>
         <Footer />
       </div>
     }>
-      <ArticlesContent />
+      <NewsContent />
     </Suspense>
   )
 }

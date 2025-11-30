@@ -125,6 +125,11 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
       keywords: article.hashtags.join(', '),
     }
 
+    // Determine if this is a news article (has #generated hashtag)
+    const isNewsArticle = article.hashtags.includes('generated')
+    const parentSection = isNewsArticle ? 'News' : 'Articles'
+    const parentPath = isNewsArticle ? '/news' : '/articles'
+
     // Breadcrumb structured data
     const breadcrumbJsonLd = {
       '@context': 'https://schema.org',
@@ -139,8 +144,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
         {
           '@type': 'ListItem',
           position: 2,
-          name: 'Articles',
-          item: 'https://motyl.dev/articles',
+          name: parentSection,
+          item: `https://motyl.dev${parentPath}`,
         },
         {
           '@type': 'ListItem',
@@ -168,7 +173,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           <article className="max-w-3xl mx-auto">
             <Breadcrumb
               items={[
-                { label: 'Articles', href: '/articles' },
+                { label: parentSection, href: parentPath },
                 { label: article.title, href: `/articles/${article.slug}` },
               ]}
             />

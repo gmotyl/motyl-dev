@@ -60,7 +60,13 @@ export default function Header() {
           Newsletter
         </Link>
         <Link
-          href={session ? "/articles?unseen=true" : "/articles"}
+          href={session ? "/news?unseen=true" : "/news"}
+          className="text-sm font-medium hover:text-primary transition-colors"
+        >
+          News
+        </Link>
+        <Link
+          href="/articles"
           className="text-sm font-medium hover:text-primary transition-colors"
         >
           Articles
@@ -105,7 +111,13 @@ export default function Header() {
               Newsletter
             </Link>
             <Link
-              href={session ? "/articles?unseen=true" : "/articles"}
+              href={session ? "/news?unseen=true" : "/news"}
+              className="text-sm font-medium hover:text-primary transition-colors"
+            >
+              News
+            </Link>
+            <Link
+              href="/articles"
               className="text-sm font-medium hover:text-primary transition-colors"
             >
               Articles

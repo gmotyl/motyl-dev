@@ -16,6 +16,9 @@ interface UseHashtagFilterProps {
   initialShowUnseen?: boolean
   visitedSlugs?: Set<string>
   initialPage?: number
+  // New filter config options
+  excludeHashtags?: string[] // Always exclude articles with these hashtags
+  requireHashtags?: string[] // Always require articles to have these hashtags
 }
 
 export function useHashtagFilter({
@@ -25,7 +28,34 @@ export function useHashtagFilter({
   initialShowUnseen = false,
   visitedSlugs = new Set(),
   initialPage = 1,
+  excludeHashtags = [],
+  requireHashtags = [],
 }: UseHashtagFilterProps) {
+  // Pre-filter articles based on exclude/require hashtags
+  const preFilteredArticles = useMemo(() => {
+    let result = articles
+
+    // Apply requireHashtags filter (must have ALL required hashtags)
+    if (requireHashtags.length > 0) {
+      result = result.filter((article) =>
+        requireHashtags.every((tag) => article.hashtags.includes(tag))
+      )
+    }
+
+    // Apply excludeHashtags filter (must NOT have ANY excluded hashtags)
+    if (excludeHashtags.length > 0) {
+      result = result.filter((article) =>
+        !excludeHashtags.some((tag) => article.hashtags.includes(tag))
+      )
+    }
+
+    return result
+  }, [articles, excludeHashtags, requireHashtags])
+
+  // Hashtags to hide from filter UI (those in excludeHashtags or requireHashtags)
+  const hiddenHashtags = useMemo(() => {
+    return new Set([...excludeHashtags, ...requireHashtags])
+  }, [excludeHashtags, requireHashtags])
   const [selectedHashtags, setSelectedHashtags] = useState<Set<string>>(initialHashtags)
   const [filterMode, setFilterMode] = useState<'AND' | 'OR' | 'EXCLUDE'>(initialMode)
   const [showUnseenOnly, setShowUnseenOnly] = useState<boolean>(initialShowUnseen)
@@ -130,7 +160,7 @@ export function useHashtagFilter({
 
   // Filter articles based on selected hashtags and mode
   const filteredArticles = useMemo(() => {
-    let result = articles
+    let result = preFilteredArticles
 
     // Apply UNSEEN filter first if enabled
     if (showUnseenOnly) {
@@ -158,31 +188,37 @@ export function useHashtagFilter({
         !Array.from(selectedHashtags).some((tag) => article.hashtags.includes(tag))
       )
     }
-  }, [articles, selectedHashtags, filterMode, showUnseenOnly, visitedSlugs])
+  }, [preFilteredArticles, selectedHashtags, filterMode, showUnseenOnly, visitedSlugs])
 
-  // Calculate dynamic hashtag counts based on filtered articles
+  // Calculate dynamic hashtag counts based on filtered articles (excluding hidden hashtags)
   const dynamicHashtagCounts = useMemo(() => {
     const counts: Record<string, number> = {}
 
     filteredArticles.forEach((article) => {
       article.hashtags.forEach((hashtag) => {
-        counts[hashtag] = (counts[hashtag] || 0) + 1
+        // Skip hidden hashtags (those in excludeHashtags or requireHashtags)
+        if (!hiddenHashtags.has(hashtag)) {
+          counts[hashtag] = (counts[hashtag] || 0) + 1
+        }
       })
     })
 
     return counts
-  }, [filteredArticles])
+  }, [filteredArticles, hiddenHashtags])
 
-  // Get all unique hashtags from all articles
+  // Get all unique hashtags from pre-filtered articles (excluding hidden hashtags)
   const allHashtags = useMemo(() => {
     const hashtagSet = new Set<string>()
-    articles.forEach((article) => {
+    preFilteredArticles.forEach((article) => {
       article.hashtags.forEach((hashtag) => {
-        hashtagSet.add(hashtag)
+        // Skip hidden hashtags (those in excludeHashtags or requireHashtags)
+        if (!hiddenHashtags.has(hashtag)) {
+          hashtagSet.add(hashtag)
+        }
       })
     })
     return Array.from(hashtagSet)
-  }, [articles])
+  }, [preFilteredArticles, hiddenHashtags])
 
   // Sort hashtags by count (descending), then alphabetically
   const sortedHashtags = useMemo(() => {
