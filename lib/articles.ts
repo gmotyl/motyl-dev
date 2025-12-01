@@ -147,9 +147,11 @@ export async function getAllArticles(): Promise<Article[]> {
 
   const allArticles = [...articles, ...newsArticles.flat()]
 
-  return allArticles.sort(
-    (a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-  )
+  return allArticles.sort((a, b) => {
+    const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0
+    const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0
+    return dateB - dateA
+  })
 }
 
 // Helper to find and read an article from any directory
