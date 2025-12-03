@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "newsletter-ai": {
+      "command": "pnpm",
+      "args": ["run:mcp"],
+      "env": {
+        "PROJECT_DIR": "/Volumes/GIT/prv/newsletter-ai"
+      }
+    }
+  }
+}
+
+
+
