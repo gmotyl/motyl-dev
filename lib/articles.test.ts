@@ -1,4 +1,8 @@
-import { describe, it, expect } from 'vitest'
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import fs from 'fs/promises'
+import os from 'os'
+import path from 'path'
+import { parseArticleFile } from './articles'
 
 // Extract the sorting logic to test it in isolation
 function sortArticlesByDate<T extends { publishedAt?: string }>(articles: T[]): T[] {
@@ -68,10 +72,10 @@ describe('Article sorting', () => {
     const sorted = sortArticlesByDate(articles)
 
     // All articles with 2025-11-30 should be at the top (order among same dates is stable)
-    const nov30Articles = sorted.filter(a => a.publishedAt === '2025-11-30')
-    const nov29Articles = sorted.filter(a => a.publishedAt === '2025-11-29')
-    const nov27Articles = sorted.filter(a => a.publishedAt === '2025-11-27')
-    const noDateArticles = sorted.filter(a => !a.publishedAt)
+    const nov30Articles = sorted.filter((a) => a.publishedAt === '2025-11-30')
+    const nov29Articles = sorted.filter((a) => a.publishedAt === '2025-11-29')
+    const nov27Articles = sorted.filter((a) => a.publishedAt === '2025-11-27')
+    const noDateArticles = sorted.filter((a) => !a.publishedAt)
 
     expect(nov30Articles.length).toBe(3)
     expect(nov29Articles.length).toBe(1)
@@ -79,10 +83,10 @@ describe('Article sorting', () => {
     expect(noDateArticles.length).toBe(1)
 
     // Check that articles are in correct date order (Nov 30 > Nov 29 > Nov 27 > no date)
-    const nov30Index = sorted.findIndex(a => a.publishedAt === '2025-11-30')
-    const nov29Index = sorted.findIndex(a => a.publishedAt === '2025-11-29')
-    const nov27Index = sorted.findIndex(a => a.publishedAt === '2025-11-27')
-    const noDateIndex = sorted.findIndex(a => !a.publishedAt)
+    const nov30Index = sorted.findIndex((a) => a.publishedAt === '2025-11-30')
+    const nov29Index = sorted.findIndex((a) => a.publishedAt === '2025-11-29')
+    const nov27Index = sorted.findIndex((a) => a.publishedAt === '2025-11-27')
+    const noDateIndex = sorted.findIndex((a) => !a.publishedAt)
 
     expect(nov30Index).toBeLessThan(nov29Index)
     expect(nov29Index).toBeLessThan(nov27Index)
@@ -100,8 +104,8 @@ describe('Article sorting', () => {
 
     expect(sorted[0].slug).toBe('valid')
     // Both no-date articles should be after the valid one
-    expect(sorted.slice(1).map(a => a.slug)).toContain('no-date-1')
-    expect(sorted.slice(1).map(a => a.slug)).toContain('no-date-2')
+    expect(sorted.slice(1).map((a) => a.slug)).toContain('no-date-1')
+    expect(sorted.slice(1).map((a) => a.slug)).toContain('no-date-2')
   })
 
   it('should handle empty array', () => {
@@ -113,5 +117,138 @@ describe('Article sorting', () => {
     const articles = [{ slug: 'single', publishedAt: '2025-11-30' }]
     const sorted = sortArticlesByDate(articles)
     expect(sorted[0].slug).toBe('single')
+  })
+})
+
+describe('Article parsing', () => {
+  const tmpDirs: string[] = []
+
+  afterAll(async () => {
+    await Promise.all(tmpDirs.map((dir) => fs.rm(dir, { recursive: true, force: true })))
+  })
+
+  async function createTempArticle({
+    frontmatter,
+    mtime,
+    slug,
+  }: {
+    frontmatter: string
+    mtime: Date
+    slug: string
+  }) {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'articles-'))
+    tmpDirs.push(dir)
+    const filePath = path.join(dir, `${slug}.md`)
+    await fs.writeFile(filePath, `---\n${frontmatter}\n---\n\nContent for ${slug}\n`)
+    await fs.utimes(filePath, mtime, mtime)
+    return filePath
+  }
+
+  it('normalizes missing publishedAt to file mtime (ISO date)', async () => {
+    const fallbackDate = new Date('2025-01-02T12:00:00Z')
+    const filePath = await createTempArticle({
+      frontmatter: [
+        'title: "No date article"',
+        'excerpt: "Missing date"',
+        'hashtags: "#demo"',
+        'slug: "no-date-article"',
+      ].join('\n'),
+      mtime: fallbackDate,
+      slug: 'no-date-article',
+    })
+
+    const article = await parseArticleFile(filePath, 'no-date-article')
+    expect(article.publishedAt).toBe('2025-01-02')
+  })
+
+  it('normalizes invalid publishedAt string to file mtime', async () => {
+    const fallbackDate = new Date('2024-12-24T08:00:00Z')
+    const filePath = await createTempArticle({
+      frontmatter: [
+        'title: "Invalid date article"',
+        'excerpt: "Invalid date"',
+        'publishedAt: "not-a-date"',
+        'hashtags: "#demo"',
+        'slug: "invalid-date-article"',
+      ].join('\n'),
+      mtime: fallbackDate,
+      slug: 'invalid-date-article',
+    })
+
+    const article = await parseArticleFile(filePath, 'invalid-date-article')
+    expect(article.publishedAt).toBe('2024-12-24')
+  })
+})
+
+describe('getAllArticles date normalization (integration)', () => {
+  const tmpDirs: string[] = []
+  const originalCwd = process.cwd()
+
+  beforeEach(() => {
+    vi.resetModules()
+  })
+
+  afterEach(async () => {
+    process.chdir(originalCwd)
+    await Promise.all(tmpDirs.map((dir) => fs.rm(dir, { recursive: true, force: true })))
+    tmpDirs.length = 0
+  })
+
+  async function setupTempRepo({
+    frontmatter,
+    mtime,
+    filename,
+  }: {
+    frontmatter: string
+    mtime: Date
+    filename: string
+  }) {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'articles-repo-'))
+    tmpDirs.push(dir)
+    const articlesDir = path.join(dir, 'articles')
+    await fs.mkdir(articlesDir, { recursive: true })
+    const filePath = path.join(articlesDir, filename)
+    await fs.writeFile(filePath, `---\n${frontmatter}\n---\n\nContent`)
+    await fs.utimes(filePath, mtime, mtime)
+    return dir
+  }
+
+  it('falls back to file mtime when publishedAt is missing', async () => {
+    const mtime = new Date('2025-02-03T10:00:00Z')
+    const dir = await setupTempRepo({
+      frontmatter: [
+        'title: "Missing date"',
+        'excerpt: "No date field"',
+        'hashtags: "#demo"',
+        'slug: "missing-date"',
+      ].join('\n'),
+      mtime,
+      filename: 'missing-date.md',
+    })
+
+    process.chdir(dir)
+    const { getAllArticles } = await import('./articles')
+    const articles = await getAllArticles()
+    expect(articles[0]?.publishedAt).toBe('2025-02-03')
+  })
+
+  it('falls back to file mtime when publishedAt is invalid', async () => {
+    const mtime = new Date('2024-11-11T05:00:00Z')
+    const dir = await setupTempRepo({
+      frontmatter: [
+        'title: "Invalid date field"',
+        'excerpt: "Bad date"',
+        'publishedAt: "not-a-date"',
+        'hashtags: "#demo"',
+        'slug: "invalid-date"',
+      ].join('\n'),
+      mtime,
+      filename: 'invalid-date.md',
+    })
+
+    process.chdir(dir)
+    const { getAllArticles } = await import('./articles')
+    const articles = await getAllArticles()
+    expect(articles[0]?.publishedAt).toBe('2024-11-11')
   })
 })

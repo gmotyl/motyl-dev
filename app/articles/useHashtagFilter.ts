@@ -21,6 +21,30 @@ interface UseHashtagFilterProps {
   requireHashtags?: string[] // Always require articles to have these hashtags
 }
 
+export function applyBaseFilters(
+  articles: Article[],
+  {
+    excludeHashtags = [],
+    requireHashtags = [],
+  }: { excludeHashtags?: string[]; requireHashtags?: string[] }
+) {
+  let result = articles
+
+  if (requireHashtags.length > 0) {
+    result = result.filter((article) =>
+      requireHashtags.every((tag) => article.hashtags.includes(tag))
+    )
+  }
+
+  if (excludeHashtags.length > 0) {
+    result = result.filter(
+      (article) => !excludeHashtags.some((tag) => article.hashtags.includes(tag))
+    )
+  }
+
+  return result
+}
+
 export function useHashtagFilter({
   articles,
   initialHashtags = new Set(),
@@ -31,25 +55,8 @@ export function useHashtagFilter({
   excludeHashtags = [],
   requireHashtags = [],
 }: UseHashtagFilterProps) {
-  // Pre-filter articles based on exclude/require hashtags
   const preFilteredArticles = useMemo(() => {
-    let result = articles
-
-    // Apply requireHashtags filter (must have ALL required hashtags)
-    if (requireHashtags.length > 0) {
-      result = result.filter((article) =>
-        requireHashtags.every((tag) => article.hashtags.includes(tag))
-      )
-    }
-
-    // Apply excludeHashtags filter (must NOT have ANY excluded hashtags)
-    if (excludeHashtags.length > 0) {
-      result = result.filter((article) =>
-        !excludeHashtags.some((tag) => article.hashtags.includes(tag))
-      )
-    }
-
-    return result
+    return applyBaseFilters(articles, { excludeHashtags, requireHashtags })
   }, [articles, excludeHashtags, requireHashtags])
 
   // Hashtags to hide from filter UI (those in excludeHashtags or requireHashtags)
@@ -82,7 +89,12 @@ export function useHashtagFilter({
   }, [initialPage])
 
   // Update URL when filters change
-  const updateURL = (hashtags: string[], mode: 'AND' | 'OR' | 'EXCLUDE', unseen: boolean, page: number) => {
+  const updateURL = (
+    hashtags: string[],
+    mode: 'AND' | 'OR' | 'EXCLUDE',
+    unseen: boolean,
+    page: number
+  ) => {
     const url = new URL(window.location.href)
 
     if (hashtags.length > 0) {
@@ -184,8 +196,8 @@ export function useHashtagFilter({
       )
     } else {
       // EXCLUDE: Must NOT have ANY of the selected hashtags
-      return result.filter((article) =>
-        !Array.from(selectedHashtags).some((tag) => article.hashtags.includes(tag))
+      return result.filter(
+        (article) => !Array.from(selectedHashtags).some((tag) => article.hashtags.includes(tag))
       )
     }
   }, [preFilteredArticles, selectedHashtags, filterMode, showUnseenOnly, visitedSlugs])

@@ -22,16 +22,18 @@ function ArticlesContent() {
 
 export default function ArticlesPage() {
   return (
-    <Suspense fallback={
-      <div className="flex min-h-screen flex-col">
-        <Header />
-        <main className="flex-1 container py-10">
-          <h1 className="text-3xl font-bold mb-2">Articles</h1>
-          <p className="text-muted-foreground mb-8">Loading...</p>
-        </main>
-        <Footer />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen flex-col">
+          <Header />
+          <main className="flex-1 container py-10">
+            <h1 className="text-3xl font-bold mb-2">Articles</h1>
+            <p className="text-muted-foreground mb-8">Loading...</p>
+          </main>
+          <Footer />
+        </div>
+      }
+    >
       <ArticlesContent />
     </Suspense>
   )

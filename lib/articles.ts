@@ -3,6 +3,7 @@
 import path from 'path'
 import fs from 'fs/promises'
 import matter from 'gray-matter'
+import yaml from 'js-yaml'
 
 export interface ExternalLink {
   url: string
@@ -28,6 +29,30 @@ interface HashtagIndex {
 const articlesDirectory = path.join(process.cwd(), 'articles')
 const newsDirectory = path.join(process.cwd(), 'news')
 let hashtagIndexCache: HashtagIndex | null = null
+
+const matterOptions = {
+  engines: {
+    yaml: (s: string, opts: yaml.LoadOptions) => yaml.load(s, opts),
+  },
+}
+
+function toISODate(date: Date) {
+  return date.toISOString().slice(0, 10)
+}
+
+function normalizePublishedAt(rawDate: unknown, fallbackDate: Date): string {
+  if (rawDate instanceof Date) {
+    const normalized = new Date(rawDate)
+    if (!Number.isNaN(normalized.getTime())) return toISODate(normalized)
+  }
+
+  if (typeof rawDate === 'string' || typeof rawDate === 'number') {
+    const normalized = new Date(rawDate)
+    if (!Number.isNaN(normalized.getTime())) return toISODate(normalized)
+  }
+
+  return toISODate(fallbackDate)
+}
 
 // Parse hashtags from metadata (supports both array and #hashtag format)
 function parseHashtags(hashtagData: any): string[] {
@@ -95,6 +120,23 @@ async function buildHashtagIndex(): Promise<HashtagIndex> {
 }
 
 // Helper to read articles from a single directory
+export async function parseArticleFile(fullPath: string, slug: string): Promise<Article> {
+  const fileContents = await fs.readFile(fullPath, 'utf8')
+  const { data, content } = matter(fileContents, matterOptions)
+  const stats = await fs.stat(fullPath)
+  const fallbackDate = stats.mtime || new Date()
+
+  return {
+    slug,
+    title: data.title,
+    excerpt: data.excerpt,
+    publishedAt: normalizePublishedAt(data.publishedAt, fallbackDate),
+    content,
+    hashtags: parseHashtags(data.hashtags),
+    externalLinks: extractExternalLinks(content),
+  }
+}
+
 async function readArticlesFromDirectory(directory: string): Promise<Article[]> {
   try {
     const fileNames = await fs.readdir(directory)
@@ -104,17 +146,7 @@ async function readArticlesFromDirectory(directory: string): Promise<Article[]> 
         .map(async (name) => {
           const slug = name.replace(/\.md$/, '')
           const fullPath = path.join(directory, name)
-          const fileContents = await fs.readFile(fullPath, 'utf8')
-          const { data, content } = matter(fileContents)
-
-          return {
-            slug,
-            title: data.title,
-            excerpt: data.excerpt,
-            publishedAt: data.publishedAt,
-            content,
-            hashtags: parseHashtags(data.hashtags),
-          }
+          return parseArticleFile(fullPath, slug)
         })
     )
     return articles
@@ -158,18 +190,7 @@ export async function getAllArticles(): Promise<Article[]> {
 async function findArticleInDirectory(slug: string, directory: string): Promise<Article | null> {
   try {
     const fullPath = path.join(directory, `${slug}.md`)
-    const fileContents = await fs.readFile(fullPath, 'utf8')
-    const { data, content } = matter(fileContents)
-
-    return {
-      slug,
-      title: data.title,
-      excerpt: data.excerpt,
-      publishedAt: data.publishedAt,
-      content,
-      hashtags: parseHashtags(data.hashtags),
-      externalLinks: extractExternalLinks(content),
-    }
+    return parseArticleFile(fullPath, slug)
   } catch (error) {
     return null
   }
