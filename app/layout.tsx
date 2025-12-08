@@ -1,24 +1,27 @@
-import type React from "react"
-import "@/app/globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
-import { SessionProvider } from "@/components/session-provider"
-import { Toaster } from "@/components/ui/toaster"
+import type React from 'react'
+import '@/app/globals.css'
+import { ThemeProvider } from '@/components/theme-provider'
+import { SessionProvider } from '@/components/session-provider'
+import { Toaster } from '@/components/ui/toaster'
+import { Analytics } from '@vercel/analytics/next'
 
-import { ServiceWorkerRegister } from "@/app/components/service-worker-register"
-import { InstallPrompt } from "@/components/install-prompt"
-import { UpdateNotification } from "@/components/update-notification"
+import { ServiceWorkerRegister } from '@/app/components/service-worker-register'
+import { InstallPrompt } from '@/components/install-prompt'
+import { UpdateNotification } from '@/components/update-notification'
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <body className="min-h-screen bg-background font-sans antialiased relative">
         <div className="absolute inset-0 bg-butterfly-pattern opacity-5 pointer-events-none z-0"></div>
+        <Analytics />
         <SessionProvider>
-          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="dark"
+            enableSystem
+            disableTransitionOnChange
+          >
             {children}
             <Toaster />
             <ServiceWorkerRegister />
@@ -31,7 +34,7 @@ export default function RootLayout({
   )
 }
 
-import type { Metadata, Viewport } from "next"
+import type { Metadata, Viewport } from 'next'
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -40,7 +43,7 @@ export const viewport: Viewport = {
   userScalable: true,
   themeColor: [
     { media: '(prefers-color-scheme: dark)', color: '#8B5CF6' },
-    { media: '(prefers-color-scheme: light)', color: '#A855F7' }
+    { media: '(prefers-color-scheme: light)', color: '#A855F7' },
   ],
 }
 
@@ -49,9 +52,7 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'Motyl.dev',
-    startupImage: [
-      '/icons/icon-512x512.png'
-    ]
+    startupImage: ['/icons/icon-512x512.png'],
   },
   formatDetection: {
     telephone: false,
@@ -61,8 +62,19 @@ export const metadata: Metadata = {
     default: 'Motyl.dev - Tech News & Insights',
     template: '%s | Motyl.dev',
   },
-  description: 'Stay up to date with the latest tech news, development insights, and industry trends. Covering JavaScript, AI, web development, and more.',
-  keywords: ['tech news', 'web development', 'JavaScript', 'TypeScript', 'React', 'Next.js', 'AI', 'programming', 'software engineering'],
+  description:
+    'Stay up to date with the latest tech news, development insights, and industry trends. Covering JavaScript, AI, web development, and more.',
+  keywords: [
+    'tech news',
+    'web development',
+    'JavaScript',
+    'TypeScript',
+    'React',
+    'Next.js',
+    'AI',
+    'programming',
+    'software engineering',
+  ],
   authors: [{ name: 'Motyl.dev' }],
   creator: 'Motyl.dev',
   publisher: 'Motyl.dev',
@@ -76,12 +88,14 @@ export const metadata: Metadata = {
     url: 'https://motyl.dev',
     siteName: 'Motyl.dev',
     title: 'Motyl.dev - Tech News & Insights',
-    description: 'Stay up to date with the latest tech news, development insights, and industry trends.',
+    description:
+      'Stay up to date with the latest tech news, development insights, and industry trends.',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Motyl.dev - Tech News & Insights',
-    description: 'Stay up to date with the latest tech news, development insights, and industry trends.',
+    description:
+      'Stay up to date with the latest tech news, development insights, and industry trends.',
     creator: '@motyldev',
     site: '@motyldev',
   },
@@ -100,4 +114,4 @@ export const metadata: Metadata = {
     google: 'Kqg71gyKXIEQobhFAvea9Ewnuvt9so3gDuK_70QOmak',
     // yandex: 'your-yandex-verification-token',
   },
-};
+}
