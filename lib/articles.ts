@@ -190,7 +190,9 @@ export async function getAllArticles(): Promise<Article[]> {
 async function findArticleInDirectory(slug: string, directory: string): Promise<Article | null> {
   try {
     const fullPath = path.join(directory, `${slug}.md`)
-    return parseArticleFile(fullPath, slug)
+    // Ensure the file exists before attempting to parse it to avoid unhandled rejections
+    await fs.access(fullPath)
+    return await parseArticleFile(fullPath, slug)
   } catch (error) {
     return null
   }

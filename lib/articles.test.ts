@@ -252,3 +252,76 @@ describe('getAllArticles date normalization (integration)', () => {
     expect(articles[0]?.publishedAt).toBe('2024-11-11')
   })
 })
+
+describe('getArticleBySlug integration', () => {
+  const tmpDirs: string[] = []
+  const originalCwd = process.cwd()
+
+  afterEach(async () => {
+    process.chdir(originalCwd)
+    await Promise.all(tmpDirs.map((dir) => fs.rm(dir, { recursive: true, force: true })))
+    tmpDirs.length = 0
+  })
+
+  async function setupNewsRepo({
+    frontmatter,
+    mtime,
+    filename,
+    year = '2025',
+  }: {
+    frontmatter: string
+    mtime: Date
+    filename: string
+    year?: string
+  }) {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'articles-news-'))
+    tmpDirs.push(dir)
+    const newsDir = path.join(dir, 'news', year)
+    await fs.mkdir(newsDir, { recursive: true })
+    const filePath = path.join(newsDir, filename)
+    await fs.writeFile(filePath, `---\n${frontmatter}\n---\n\nContent`)
+    await fs.utimes(filePath, mtime, mtime)
+    return dir
+  }
+
+  it('finds an article in a news year directory', async () => {
+    const mtime = new Date('2025-03-04T09:00:00Z')
+    const dir = await setupNewsRepo({
+      frontmatter: [
+        'title: "News article"',
+        'excerpt: "From news folder"',
+        'hashtags: "#generated #news"',
+        'slug: "news-article"',
+      ].join('\n'),
+      mtime,
+      filename: 'news-article.md',
+    })
+
+    process.chdir(dir)
+    const { getArticleBySlug } = await import('./articles')
+    const article = await getArticleBySlug('news-article')
+
+    expect(article?.title).toBe('News article')
+    expect(article?.publishedAt).toBe('2025-03-04')
+    expect(article?.hashtags).toContain('generated')
+  })
+
+  it('returns null when the slug does not exist in any directory', async () => {
+    const dir = await setupNewsRepo({
+      frontmatter: [
+        'title: "Existing news"',
+        'excerpt: "Only article present"',
+        'hashtags: "#generated"',
+        'slug: "existing-news"',
+      ].join('\n'),
+      mtime: new Date('2025-01-01T00:00:00Z'),
+      filename: 'existing-news.md',
+    })
+
+    process.chdir(dir)
+    const { getArticleBySlug } = await import('./articles')
+    const article = await getArticleBySlug('missing-slug')
+
+    expect(article).toBeNull()
+  })
+})
