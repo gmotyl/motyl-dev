@@ -20,10 +20,7 @@ export async function GET() {
     }
 
     console.error('Error fetching viewed articles:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch viewed articles' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to fetch viewed articles' }, { status: 500 })
   }
 }
 
@@ -39,16 +36,10 @@ export async function DELETE() {
     })
   } catch (error) {
     if (error instanceof Error && error.message === 'Unauthorized') {
-      return NextResponse.json(
-        { error: 'Unauthorized - please log in' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized - please log in' }, { status: 401 })
     }
 
     console.error('Error clearing view history:', error)
-    return NextResponse.json(
-      { error: 'Failed to clear view history' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: 'Failed to clear view history' }, { status: 500 })
   }
 }
