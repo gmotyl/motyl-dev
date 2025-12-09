@@ -14,6 +14,10 @@ import { HashtagsList } from '@/components/hashtags-list'
 import { ArticleScrollHandler } from '@/components/article-scroll-handler'
 import { Breadcrumb } from '@/components/breadcrumb'
 
+// Force static generation at build time - no ISR revalidation
+export const dynamic = 'force-static'
+export const dynamicParams = false // Return 404 for unknown slugs (don't generate on-demand)
+
 export async function generateStaticParams() {
   const articles = await getAllArticles()
   return articles.map((article) => ({
@@ -183,10 +187,11 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               </div>
               <div className="flex justify-between items-center mb-2">
                 <p className="text-muted-foreground">
-                  Published on {new Date(article.publishedAt).toLocaleDateString('pl-PL', {
+                  Published on{' '}
+                  {new Date(article.publishedAt).toLocaleDateString('pl-PL', {
                     day: '2-digit',
                     month: '2-digit',
-                    year: 'numeric'
+                    year: 'numeric',
                   })}
                 </p>
                 <div className="flex gap-2">

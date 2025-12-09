@@ -1,20 +1,16 @@
 import { NextResponse } from 'next/server'
-import { getAllArticles, getAllHashtags, getArticlesByHashtag, getHashtagCounts } from '@/lib/articles'
+import { getAllArticles, getAllHashtags, getHashtagCounts } from '@/lib/articles'
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const hashtag = searchParams.get('hashtag')
+// Force static generation at build time - no ISR revalidation
+// This endpoint returns all articles, filtering is done client-side
+export const dynamic = 'force-static'
 
+export async function GET() {
   try {
-    if (hashtag) {
-      const articles = await getArticlesByHashtag(hashtag)
-      return NextResponse.json({ articles })
-    } else {
-      const articles = await getAllArticles()
-      const hashtags = await getAllHashtags()
-      const hashtagCounts = await getHashtagCounts()
-      return NextResponse.json({ articles, hashtags, hashtagCounts })
-    }
+    const articles = await getAllArticles()
+    const hashtags = await getAllHashtags()
+    const hashtagCounts = await getHashtagCounts()
+    return NextResponse.json({ articles, hashtags, hashtagCounts })
   } catch (error) {
     console.error('Error fetching articles:', error)
     return NextResponse.json({ error: 'Failed to fetch articles' }, { status: 500 })

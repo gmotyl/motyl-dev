@@ -1,6 +1,9 @@
 import Link from 'next/link'
 import { WifiOff } from 'lucide-react'
 
+// Force static generation at build time - no ISR revalidation
+export const dynamic = 'force-static'
+
 export default function OfflinePage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
@@ -14,7 +17,8 @@ export default function OfflinePage() {
         <h1 className="text-3xl font-bold">You're Offline</h1>
 
         <p className="text-muted-foreground text-lg">
-          No internet connection detected. Don't worry, you can still browse previously visited articles.
+          No internet connection detected. Don't worry, you can still browse previously visited
+          articles.
         </p>
 
         <div className="space-y-3 pt-4">

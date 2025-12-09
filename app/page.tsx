@@ -6,6 +6,9 @@ import Footer from '@/components/footer'
 import Link from 'next/link'
 import { getAllArticles } from '@/lib/articles'
 
+// Force static generation at build time - no ISR revalidation
+export const dynamic = 'force-static'
+
 export default async function Home() {
   // Server-side data fetching for better SEO and indexability
   const allArticles = await getAllArticles()
@@ -18,7 +21,8 @@ export default async function Home() {
     '@type': 'WebSite',
     name: 'Motyl.dev',
     url: 'https://motyl.dev',
-    description: 'Stay up to date with the latest tech news, development insights, and industry trends. Covering JavaScript, AI, web development, and more.',
+    description:
+      'Stay up to date with the latest tech news, development insights, and industry trends. Covering JavaScript, AI, web development, and more.',
     author: {
       '@type': 'Person',
       name: 'Grzegorz Motyl',
