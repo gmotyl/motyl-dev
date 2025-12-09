@@ -3,9 +3,6 @@ import { ArticlesListing } from '@/components/articles-listing'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 
-// Force static generation at build time - no ISR revalidation
-export const dynamic = 'force-static'
-
 export const metadata = {
   title: 'News - Motyl.dev',
   description: 'Latest tech news and insights curated from newsletters',
