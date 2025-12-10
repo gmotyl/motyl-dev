@@ -2,6 +2,12 @@
 
 refer to (CLAUDE.md)[CLAUDE.md] for project documentation.
 
+## Testing
+
+- Write tests for new features
+- Ensure tests pass before merging changes
+- Run tests locally when you conclude work on a feature or bugfix
+
 ## Fixing bugs
 
 Every time a bug was identifed

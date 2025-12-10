@@ -50,6 +50,7 @@
 ## Key Features
 
 ### 1. Landing Page ([app/page.tsx](app/page.tsx))
+
 - **Hero Section**: Gradient background, value proposition, newsletter signup
 - **About Section**: Three-column grid showcasing expertise (Architecture, FP, Craftsmanship)
 - **Newsletter Section**: Detailed feature breakdown (3 pillars)
@@ -57,6 +58,7 @@
 - **Testimonials**: Social proof from colleagues
 
 **Design System**:
+
 - Purple-based color scheme (`#8B5CF6`, `#D946EF`, `#A855F7`)
 - Gradient backgrounds with opacity layers
 - Hover effects with glow animations
@@ -65,19 +67,21 @@
 ### 2. Articles System
 
 **Content Management**:
+
 - Articles stored as Markdown files in `/articles` directory
 - Frontmatter format:
   ```yaml
   ---
-  title: "Article Title"
-  excerpt: "Brief summary"
-  publishedAt: "2025-05-09"
-  slug: "article-slug"
-  hashtags: "#generated #pl #ai #architecture"
+  title: 'Article Title'
+  excerpt: 'Brief summary'
+  publishedAt: '2025-05-09'
+  slug: 'article-slug'
+  hashtags: '#generated #pl #ai #architecture'
   ---
   ```
 
 **Article Library** ([lib/articles.ts](lib/articles.ts)):
+
 - `getAllArticles()`: Returns all articles sorted by publishedAt (newest first)
 - `getArticleBySlug(slug)`: Fetches single article
 - `getAllHashtags()`: Returns unique hashtags sorted alphabetically
@@ -86,6 +90,7 @@
 - **Hashtag Index**: Build-time optimization for fast filtering
 
 **Articles Page** ([app/articles/page.tsx](app/articles/page.tsx)):
+
 - Client-side filtering with hashtag selection
 - Three filter modes: HAS (AND), ANY (OR), EXCLUDE
 - "UNSEEN" filter tracking visited articles via localStorage
@@ -93,6 +98,7 @@
 - URL state synchronization (`?hashtags=ai,react&mode=AND&unseen=true`)
 
 **Features**:
+
 - Hashtag filtering with multiple selection modes
 - Visited article tracking (localStorage)
 - Responsive grid layout (1/2/3 columns)
@@ -101,11 +107,13 @@
 ### 3. Newsletter System
 
 **Frontend** ([components/newsletter-form.tsx](components/newsletter-form.tsx)):
+
 - Email validation with react-hook-form + zod
 - Toast notifications on success/error
 - Accessible form with proper labels
 
 **Backend** ([app/api/subscribe/route.ts](app/api/subscribe/route.ts)):
+
 - POST endpoint for email subscriptions
 - Resend integration for email notifications
 - Sends notification to `gmotyl@gmail.com` on new subscriber
@@ -113,6 +121,7 @@
 - Graceful fallback if RESEND_API_KEY missing
 
 **TODO for Newsletter**:
+
 1. Integrate with actual newsletter platform (Mailchimp, ConvertKit, etc.)
 2. Store emails in database
 3. Send welcome email to subscribers
@@ -121,6 +130,7 @@
 ### 4. SEO & Metadata
 
 **Implementation** ([app/layout.tsx](app/layout.tsx)):
+
 - Comprehensive metadata with Open Graph and Twitter cards
 - Google verification token included
 - Canonical URLs configured
@@ -128,6 +138,7 @@
 - Robots.txt: [app/robots.ts](app/robots.ts) - Allows all crawlers
 
 **Metadata Structure**:
+
 ```typescript
 {
   title: 'Motyl.dev - Tech News & Insights',
@@ -143,6 +154,7 @@
 ### 5. Styling System
 
 **Tailwind Configuration** ([tailwind.config.ts](tailwind.config.ts)):
+
 - **Primary Colors**: Purple gradients (`#8B5CF6` to `#D946EF`)
 - **Custom Animations**: `float`, `glow`, `accordion-down/up`
 - **Background Images**:
@@ -152,6 +164,7 @@
 - **Typography Plugin**: For markdown rendering (@tailwindcss/typography)
 
 **Design Patterns**:
+
 - Glassmorphism: `backdrop-blur-sm` + `bg-background/50`
 - Border glow effects on hover
 - Consistent spacing and rounded corners
@@ -160,6 +173,7 @@
 ## Technical Decisions
 
 ### Next.js 15 Configuration ([next.config.mjs](next.config.mjs))
+
 ```javascript
 {
   eslint: { ignoreDuringBuilds: true },    // Speed up builds
@@ -169,16 +183,19 @@
 ```
 
 **Note**: For production improvements, consider:
+
 - Removing `ignoreBuildErrors` to catch type issues
 - Enabling image optimization for better performance
 - Adding proper ESLint rules
 
 ### State Management
+
 - **No global state library**: React hooks + URL state sufficient
 - **localStorage**: Used for visited articles tracking
 - **URL params**: Hashtag filters, mode, unseen state
 
 ### Rendering Strategy
+
 - **Landing page**: Client-side rendering (`'use client'`) for interactivity
 - **Articles pages**: Client-side rendering for filtering
 - **APIs**: Server-side route handlers
@@ -189,20 +206,21 @@
 ### Adding a New Article
 
 1. Create markdown file in `/articles` directory:
+
    ```bash
    touch articles/my-new-article.md
    ```
 
 2. Add frontmatter:
+
    ```yaml
    ---
-   title: "Your Article Title"
-   excerpt: "Brief description for previews"
-   publishedAt: "2025-11-02"
-   slug: "my-new-article"
-   hashtags: "#react #nextjs #typescript"
+   title: 'Your Article Title'
+   excerpt: 'Brief description for previews'
+   publishedAt: '2025-11-02'
+   slug: 'my-new-article'
+   hashtags: '#react #nextjs #typescript'
    ---
-
    # Article content here
    ```
 
@@ -214,29 +232,35 @@
 ### Modifying Landing Page Sections
 
 **Hero Section** ([app/page.tsx:45-109](app/page.tsx#L45-L109)):
+
 - Update heading, description, or newsletter CTA
 - Modify gradient backgrounds via Tailwind classes
 
 **About Section** ([app/page.tsx:111-163](app/page.tsx#L111-L163)):
+
 - Three-column grid showcasing expertise areas
 - Update icons from `lucide-react`
 
 **Newsletter Features** ([app/page.tsx:165-256](app/page.tsx#L165-L256)):
+
 - Three-pillar approach to value proposition
 - Each card has icon, title, description, bullet points
 
 **Testimonials** ([app/page.tsx:303-378](app/page.tsx#L303-L378)):
+
 - Update testimonial text and attributions
 - Add new testimonials by duplicating card structure
 
 ### Updating UI Components
 
 **Component Library**: Radix UI primitives in `/components/ui/`
+
 - All components use Tailwind for styling
 - Consistent color system via CSS variables
 - Dark theme support built-in
 
 **Key Components**:
+
 - `<Button>`: Multiple variants (default, outline, destructive, ghost)
 - `<Badge>`: For hashtag display
 - `<Toaster>`: Notification system (Sonner)
@@ -249,6 +273,7 @@
 3. Test dark theme compatibility
 
 **Current Brand Colors**:
+
 - Primary: `#8B5CF6` (Deep Purple)
 - Accent: `#A855F7` (Bright Purple)
 - Highlight: `#D946EF` (Electric Purple)
@@ -273,9 +298,11 @@
 ## API Endpoints
 
 ### GET /api/articles
+
 Returns all articles sorted by date (newest first).
 
 **Response**:
+
 ```json
 {
   "articles": [
@@ -292,14 +319,17 @@ Returns all articles sorted by date (newest first).
 ```
 
 ### GET /api/articles/[slug]
+
 Returns single article by slug.
 
 **Response**: Same as single article object above, or 404 if not found.
 
 ### POST /api/subscribe
+
 Newsletter subscription endpoint.
 
 **Request Body**:
+
 ```json
 {
   "email": "user@example.com"
@@ -307,6 +337,7 @@ Newsletter subscription endpoint.
 ```
 
 **Response**:
+
 ```json
 {
   "success": true,
@@ -315,33 +346,39 @@ Newsletter subscription endpoint.
 ```
 
 **Side Effects**:
+
 - Sends notification email to gmotyl@gmail.com via Resend
 - Logs subscription to console
 
 ## Environment Variables
 
 Required:
+
 - `RESEND_API_KEY`: For sending email notifications (optional but recommended)
 
 Not required but useful:
+
 - `NEWSLETTER_API_KEY`: For newsletter platform integration (future)
 - `DATABASE_URL`: If adding database for subscriber management (future)
 
 ## Build & Deploy
 
 ### Local Development
+
 ```bash
 pnpm install
 pnpm dev          # http://localhost:3000
 ```
 
 ### Build for Production
+
 ```bash
 pnpm build        # Creates .next directory
 pnpm start        # Serves production build
 ```
 
 ### Deployment
+
 - **Platform**: Vercel (automatic deployments on push to main)
 - **Domain**: motyl.dev
 - **Config**: [vercel.json](vercel.json) - GitHub integration silent mode
@@ -352,6 +389,7 @@ pnpm start        # Serves production build
 
 **Main Branch**: `main` (production)
 **Recent Commits**:
+
 - 54068c7: Fix redirect loop issue
 - 66a61cd: Fix duplicate content - canonical URL enforcement
 - df5a143: Google verification token
@@ -362,11 +400,13 @@ pnpm start        # Serves production build
 ## Performance Considerations
 
 **Current Status**:
+
 - Images unoptimized (consider enabling Next.js image optimization)
 - No code splitting beyond Next.js defaults
 - Client-side rendering for main pages (consider SSR/SSG where appropriate)
 
 **Optimization Opportunities**:
+
 1. Enable TypeScript strict mode and fix type errors
 2. Enable ESLint and address warnings
 3. Optimize images with Next.js Image component
@@ -393,6 +433,7 @@ pnpm start        # Serves production build
 **Current State**: No test suite implemented
 
 **Recommendations**:
+
 - Add Vitest for unit tests
 - Add Playwright for E2E tests
 - Test critical flows:
@@ -404,6 +445,7 @@ pnpm start        # Serves production build
 ## Accessibility
 
 **Current Implementation**:
+
 - Semantic HTML structure
 - Dark theme with high contrast
 - Keyboard navigation support (via Radix UI)
@@ -411,6 +453,7 @@ pnpm start        # Serves production build
 - Alt text needed for images
 
 **Improvements Needed**:
+
 - Add ARIA labels where appropriate
 - Test with screen readers
 - Ensure color contrast meets WCAG AAA
@@ -419,6 +462,7 @@ pnpm start        # Serves production build
 ## Content Strategy
 
 **Articles**:
+
 - 100+ Polish-language tech articles
 - Topics: AI, architecture, cloud, frontend, DevOps
 - Auto-generated from newsletter content (see `#generated` hashtag)
@@ -430,6 +474,7 @@ Common hashtags include: `#ai`, `#architecture`, `#frontend`, `#react`, `#nextjs
 ## Design System Reference
 
 **Typography**:
+
 - Headings: Bold, tight tracking
 - Body: Sans-serif, antialiased
 - Accent font: Default system font stack
@@ -437,6 +482,7 @@ Common hashtags include: `#ai`, `#architecture`, `#frontend`, `#react`, `#nextjs
 **Spacing Scale**: Tailwind default (4px base unit)
 
 **Breakpoints**:
+
 - sm: 640px
 - md: 768px
 - lg: 1024px
@@ -448,6 +494,7 @@ Common hashtags include: `#ai`, `#architecture`, `#frontend`, `#react`, `#nextjs
 ## External Dependencies
 
 **Key Libraries**:
+
 - `next`: 15.2.4 - Framework
 - `react`: 19 - UI library
 - `tailwindcss`: ^3.4.17 - Styling
@@ -462,6 +509,7 @@ Common hashtags include: `#ai`, `#architecture`, `#frontend`, `#react`, `#nextjs
 - `sonner`: Toast notifications
 
 **Dev Dependencies**:
+
 - TypeScript 5
 - PostCSS 8
 - Prettier 3
@@ -483,6 +531,10 @@ grep -r "#react" articles   # Search articles by hashtag
 git log --oneline -5        # Recent commits
 git status                  # Check status
 ```
+
+## Context
+
+refer to (AGENT.md)[AGENT.md] file for important user preferences and context.
 
 ## Support & Contact
 

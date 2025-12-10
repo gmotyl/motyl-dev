@@ -257,6 +257,10 @@ describe('getArticleBySlug integration', () => {
   const tmpDirs: string[] = []
   const originalCwd = process.cwd()
 
+  beforeEach(() => {
+    vi.resetModules()
+  })
+
   afterEach(async () => {
     process.chdir(originalCwd)
     await Promise.all(tmpDirs.map((dir) => fs.rm(dir, { recursive: true, force: true })))
