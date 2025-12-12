@@ -1,50 +1,16 @@
 "use client"
 
 import Link from "next/link"
-import { Code, Menu, Download } from "lucide-react"
+import { Code, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { useSession } from "next-auth/react"
 import { UserMenu } from "@/components/user-menu"
 import { SignInButton } from "@/components/sign-in-button"
-import { useState, useEffect } from "react"
+import { InstallPrompt } from "@/components/install-prompt"
 
 export default function Header() {
   const { data: session, status } = useSession()
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
-  const [showInstallButton, setShowInstallButton] = useState(false)
-
-  useEffect(() => {
-    const handler = (e: Event) => {
-      e.preventDefault()
-      setDeferredPrompt(e)
-      setShowInstallButton(true)
-    }
-
-    window.addEventListener('beforeinstallprompt', handler)
-
-    // Check if already installed
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setShowInstallButton(false)
-    }
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handler)
-    }
-  }, [])
-
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return
-
-    deferredPrompt.prompt()
-    const { outcome } = await deferredPrompt.userChoice
-
-    if (outcome === 'accepted') {
-      setShowInstallButton(false)
-    }
-
-    setDeferredPrompt(null)
-  }
 
   return (
     <header className="px-4 lg:px-6 h-16 flex items-center border-b border-border/40 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
@@ -76,17 +42,7 @@ export default function Header() {
             Visit All
           </Link>
         )}
-        {showInstallButton && (
-          <Button
-            onClick={handleInstallClick}
-            size="sm"
-            variant="outline"
-            className="gap-2"
-          >
-            <Download className="h-4 w-4" />
-            <span className="hidden md:inline">Install App</span>
-          </Button>
-        )}
+        <InstallPrompt />
         {status === "loading" ? (
           <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
         ) : session ? (
