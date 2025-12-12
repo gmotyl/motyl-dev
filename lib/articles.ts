@@ -1,6 +1,6 @@
 'use server'
 
-import path from 'path'
+import path from 'node:path'
 import fs from 'fs/promises'
 import matter from 'gray-matter'
 import yaml from 'js-yaml'

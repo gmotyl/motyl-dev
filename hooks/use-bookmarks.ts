@@ -70,7 +70,13 @@ export function useBookmarks(): UseBookmarksReturn {
       const response = await fetch('/api/bookmarks');
 
       if (!response.ok) {
-        throw new Error('Failed to fetch bookmarks');
+        if (response.status === 401) {
+          // User is not authenticated, this is not an error, just means no bookmarks.
+          setBookmarks([]);
+          return;
+        }
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to fetch bookmarks');
       }
 
       const data = await response.json();

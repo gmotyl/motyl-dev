@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import fs from 'fs/promises'
 import os from 'os'
-import path from 'path'
+import path from 'node:path'
 import { parseArticleFile } from './articles'
 
 // Extract the sorting logic to test it in isolation

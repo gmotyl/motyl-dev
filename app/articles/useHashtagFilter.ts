@@ -89,36 +89,41 @@ export function useHashtagFilter({
   }, [initialPage])
 
   // Update URL when filters change
-  const updateURL = (
-    hashtags: string[],
-    mode: 'AND' | 'OR' | 'EXCLUDE',
-    unseen: boolean,
-    page: number
-  ) => {
-    const url = new URL(window.location.href)
+  useEffect(() => {
+    const hashtags = Array.from(selectedHashtags);
+    const url = new URL(window.location.href);
 
     if (hashtags.length > 0) {
-      url.searchParams.set('hashtags', hashtags.join(','))
-      url.searchParams.set('mode', mode)
+      url.searchParams.set('hashtags', hashtags.join(','));
+      url.searchParams.set('mode', filterMode);
     } else {
-      url.searchParams.delete('hashtags')
-      url.searchParams.delete('mode')
+      url.searchParams.delete('hashtags');
+      url.searchParams.delete('mode');
     }
 
-    if (unseen) {
-      url.searchParams.set('unseen', 'true')
+    if (showUnseenOnly) {
+      url.searchParams.set('unseen', 'true');
     } else {
-      url.searchParams.delete('unseen')
+      url.searchParams.delete('unseen');
     }
 
-    if (page > 1) {
-      url.searchParams.set('page', page.toString())
+    if (currentPage > 1) {
+      url.searchParams.set('page', currentPage.toString());
     } else {
-      url.searchParams.delete('page')
+      url.searchParams.delete('page');
     }
 
-    window.history.pushState({}, '', url.toString())
-  }
+    // Use replaceState to avoid polluting browser history on every filter change
+    window.history.replaceState({ ...window.history.state, as: url.toString(), url: url.toString() }, '', url.toString());
+  }, [selectedHashtags, filterMode, showUnseenOnly, currentPage]);
+
+  // Scroll to top when page changes
+  useEffect(() => {
+    // We only want to scroll if the page is not the initial one, to avoid scrolling on load
+    if (currentPage !== initialPage) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [currentPage, initialPage]);
 
   // Toggle hashtag selection
   const handleHashtagToggle = (hashtag: string) => {
@@ -129,11 +134,9 @@ export function useHashtagFilter({
       } else {
         next.add(hashtag)
       }
-      const hashtagArray = Array.from(next)
-      setCurrentPage(1) // Reset to page 1 when changing filters
-      updateURL(hashtagArray, filterMode, showUnseenOnly, 1)
       return next
     })
+    setCurrentPage(1) // Reset to page 1 when changing filters
   }
 
   // Clear all filters
@@ -142,32 +145,23 @@ export function useHashtagFilter({
     setFilterMode('AND')
     setShowUnseenOnly(false)
     setCurrentPage(1)
-    updateURL([], 'AND', false, 1)
   }
 
   // Handle filter mode change
   const handleFilterModeChange = (mode: 'AND' | 'OR' | 'EXCLUDE') => {
     setFilterMode(mode)
     setCurrentPage(1) // Reset to page 1 when changing mode
-    updateURL(Array.from(selectedHashtags), mode, showUnseenOnly, 1)
   }
 
   // Toggle unseen filter
   const handleToggleUnseen = () => {
-    setShowUnseenOnly((prev) => {
-      const next = !prev
-      setCurrentPage(1) // Reset to page 1 when changing unseen filter
-      updateURL(Array.from(selectedHashtags), filterMode, next, 1)
-      return next
-    })
+    setShowUnseenOnly((prev) => !prev)
+    setCurrentPage(1) // Reset to page 1 when changing unseen filter
   }
 
   // Handle page change
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
-    updateURL(Array.from(selectedHashtags), filterMode, showUnseenOnly, page)
-    // Scroll to top when changing pages
-    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   // Filter articles based on selected hashtags and mode

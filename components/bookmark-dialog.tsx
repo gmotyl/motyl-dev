@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -12,12 +12,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { X, Plus, Hash } from 'lucide-react';
+import { getAllHashtags } from '@/lib/articles';
 
 const bookmarkSchema = z.object({
   url: z.string().url('Invalid URL format'),
@@ -62,6 +71,19 @@ export function BookmarkDialog({
   );
   const [hashtagInput, setHashtagInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [allHashtags, setAllHashtags] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const hashtagInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) {
+      const fetchHashtags = async () => {
+        const tags = await getAllHashtags();
+        setAllHashtags(tags);
+      };
+      fetchHashtags();
+    }
+  }, [open]);
 
   const {
     register,
@@ -81,8 +103,9 @@ export function BookmarkDialog({
     const cleanTag = tag.trim().toLowerCase().replace(/^#/, '');
     if (cleanTag && !hashtags.includes(cleanTag)) {
       setHashtags([...hashtags, cleanTag]);
-      setHashtagInput('');
     }
+    setHashtagInput('');
+    setShowSuggestions(false);
   };
 
   const handleRemoveHashtag = (tag: string) => {
@@ -99,6 +122,7 @@ export function BookmarkDialog({
       reset();
       setHashtags([]);
       setHashtagInput('');
+      hashtagInputRef.current?.blur();
       onOpenChange(false);
     } catch (error) {
       console.error('Error submitting bookmark:', error);
@@ -157,19 +181,36 @@ export function BookmarkDialog({
           <div className="space-y-2">
             <Label htmlFor="hashtags">Hashtags</Label>
             <div className="flex gap-2">
-              <Input
-                id="hashtags"
-                type="text"
-                placeholder="Add hashtag (e.g., react)"
-                value={hashtagInput}
-                onChange={(e) => setHashtagInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleAddHashtag(hashtagInput);
-                  }
-                }}
-              />
+              <Command className="relative">
+                <CommandInput
+                  ref={hashtagInputRef}
+                  placeholder="Add hashtag (e.g., react)"
+                  value={hashtagInput}
+                  onValueChange={setHashtagInput}
+                  onFocus={() => setShowSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                />
+                {showSuggestions && (
+                  <CommandList className="absolute top-10 z-10 w-full rounded-md border bg-popover text-popover-foreground shadow-md">
+                    <CommandEmpty>No results found.</CommandEmpty>
+                    <CommandGroup heading="Suggestions">
+                      {allHashtags
+                        .filter((tag) =>
+                          tag.toLowerCase().includes(hashtagInput.toLowerCase())
+                        )
+                        .slice(0, 5)
+                        .map((tag) => (
+                          <CommandItem
+                            key={tag}
+                            onSelect={() => handleAddHashtag(tag)}
+                          >
+                            {tag}
+                          </CommandItem>
+                        ))}
+                    </CommandGroup>
+                  </CommandList>
+                )}
+              </Command>
               <Button
                 type="button"
                 variant="outline"
