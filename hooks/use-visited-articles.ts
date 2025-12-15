@@ -137,14 +137,14 @@ export function useVisitedArticles() {
 
   // Persist to localStorage on state change
   useEffect(() => {
-    if (status === 'unauthenticated' && !isLoading) {
+    if (!isLoading) {
       localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify([...visitedArticles]))
     }
-  }, [visitedArticles, status, isLoading])
+  }, [visitedArticles, isLoading])
 
   // Mark article as visited
   const markAsVisited = useCallback(
-    (slug: string) => {
+    async (slug: string) => {
       setVisitedArticles((prev) => {
         if (prev.has(slug)) {
           return prev
@@ -155,11 +155,18 @@ export function useVisitedArticles() {
       })
 
       if (status === 'authenticated' && session?.user) {
-        fetch(`/api/articles/${slug}/view`, {
-          method: 'POST',
-        }).catch((error) => {
+        try {
+          const response = await fetch(`/api/articles/${slug}/view`, {
+            method: 'POST',
+          });
+          if (response.ok) {
+            console.log(`Successfully marked article ${slug} as viewed`);
+          } else {
+            console.error(`Failed to mark article ${slug} as viewed`);
+          }
+        } catch (error) {
           console.error('Failed to save article view to database:', error)
-        })
+        }
       }
     },
     [status, session]
