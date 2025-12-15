@@ -1,6 +1,7 @@
 import { Code, Zap, Sparkles, Building, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import NewsletterForm from '@/components/newsletter-form'
+import { Suspense } from 'react'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import Link from 'next/link'

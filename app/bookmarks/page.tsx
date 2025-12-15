@@ -1,5 +1,6 @@
 'use client';
 
+import { redirect } from 'next/navigation'
 import { Suspense, useState, useMemo } from 'react';
 import { useBookmarks } from '@/hooks/use-bookmarks';
 import { BookmarkCard } from '@/components/bookmark-card';
