@@ -3,7 +3,7 @@ import { GET } from './route'
 
 // Mock the articles library
 vi.mock('@/lib/articles', () => ({
-  getAllArticles: vi.fn(),
+  getAllArticlesWithContent: vi.fn(),
   getAllHashtags: vi.fn(),
   getHashtagCounts: vi.fn(),
 }))
@@ -14,7 +14,7 @@ describe('GET /api/articles', () => {
   })
 
   it('returns all articles with hashtags and counts', async () => {
-    const { getAllArticles, getAllHashtags, getHashtagCounts } = await import('@/lib/articles')
+    const { getAllArticlesWithContent, getAllHashtags, getHashtagCounts } = await import('@/lib/articles')
 
     // Mock data
     const mockArticles = [
@@ -43,7 +43,7 @@ describe('GET /api/articles', () => {
       typescript: 1,
     }
 
-    vi.mocked(getAllArticles).mockResolvedValue(mockArticles)
+    vi.mocked(getAllArticlesWithContent).mockResolvedValue(mockArticles)
     vi.mocked(getAllHashtags).mockResolvedValue(mockHashtags)
     vi.mocked(getHashtagCounts).mockResolvedValue(mockHashtagCounts)
 
@@ -69,16 +69,16 @@ describe('GET /api/articles', () => {
     })
 
     // Verify mocks were called
-    expect(getAllArticles).toHaveBeenCalledOnce()
+    expect(getAllArticlesWithContent).toHaveBeenCalledOnce()
     expect(getAllHashtags).toHaveBeenCalledOnce()
     expect(getHashtagCounts).toHaveBeenCalledOnce()
   })
 
   it('returns error when articles fetch fails', async () => {
-    const { getAllArticles } = await import('@/lib/articles')
+    const { getAllArticlesWithContent } = await import('@/lib/articles')
 
     // Mock error
-    vi.mocked(getAllArticles).mockRejectedValue(new Error('File system error'))
+    vi.mocked(getAllArticlesWithContent).mockRejectedValue(new Error('File system error'))
 
     // Call the API route
     const response = await GET()
@@ -91,10 +91,10 @@ describe('GET /api/articles', () => {
   })
 
   it('returns empty arrays when no articles exist', async () => {
-    const { getAllArticles, getAllHashtags, getHashtagCounts } = await import('@/lib/articles')
+    const { getAllArticlesWithContent, getAllHashtags, getHashtagCounts } = await import('@/lib/articles')
 
     // Mock empty data
-    vi.mocked(getAllArticles).mockResolvedValue([])
+    vi.mocked(getAllArticlesWithContent).mockResolvedValue([])
     vi.mocked(getAllHashtags).mockResolvedValue([])
     vi.mocked(getHashtagCounts).mockResolvedValue({})
 
@@ -110,7 +110,7 @@ describe('GET /api/articles', () => {
   })
 
   it('includes all required article fields', async () => {
-    const { getAllArticles, getAllHashtags, getHashtagCounts } = await import('@/lib/articles')
+    const { getAllArticlesWithContent, getAllHashtags, getHashtagCounts } = await import('@/lib/articles')
 
     const mockArticle = {
       slug: 'complete-article',
@@ -121,7 +121,7 @@ describe('GET /api/articles', () => {
       hashtags: ['test'],
     }
 
-    vi.mocked(getAllArticles).mockResolvedValue([mockArticle])
+    vi.mocked(getAllArticlesWithContent).mockResolvedValue([mockArticle])
     vi.mocked(getAllHashtags).mockResolvedValue(['test'])
     vi.mocked(getHashtagCounts).mockResolvedValue({ test: 1 })
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getAllArticles, getAllHashtags, getHashtagCounts } from '@/lib/articles'
+import { getAllArticlesWithContent, getAllHashtags, getHashtagCounts } from '@/lib/articles'
 
 // Force static generation at build time - no ISR revalidation
 // This endpoint returns all articles, filtering is done client-side
@@ -7,7 +7,7 @@ export const dynamic = 'force-static'
 
 export async function GET() {
   try {
-    const articles = await getAllArticles()
+    const articles = await getAllArticlesWithContent()
     const hashtags = await getAllHashtags()
     const hashtagCounts = await getHashtagCounts()
     return NextResponse.json({ articles, hashtags, hashtagCounts })

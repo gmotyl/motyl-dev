@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BookmarkButton } from '@/components/bookmark-button';
 import { BookmarkDialog } from '@/components/bookmark-dialog';
 import { useBookmarks } from '@/hooks/use-bookmarks';
-import type { ExternalLink } from '@/lib/articles';
+import type { ExternalLink } from '@/lib/types';
 
 interface ArticleExternalLinksProps {
   links: ExternalLink[];

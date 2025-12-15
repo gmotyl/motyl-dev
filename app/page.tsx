@@ -4,14 +4,14 @@ import NewsletterForm from '@/components/newsletter-form'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import Link from 'next/link'
-import { getAllArticles } from '@/lib/articles'
+import { getAllArticleMetadata } from '@/lib/articles'
 
 // Force static generation at build time - no ISR revalidation
 export const dynamic = 'force-static'
 
 export default async function Home() {
   // Server-side data fetching for better SEO and indexability
-  const allArticles = await getAllArticles()
+  const allArticles = await getAllArticleMetadata()
   const latestArticles = allArticles.slice(0, 3)
   const isLoading = false
 

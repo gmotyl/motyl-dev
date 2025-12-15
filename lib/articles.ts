@@ -1,16 +1,16 @@
+
+
 'use server'
 
+import { cache } from 'react'
 import path from 'node:path'
 import fs from 'fs/promises'
 import matter from 'gray-matter'
 import yaml from 'js-yaml'
 
-export interface ExternalLink {
-  url: string
-  title: string
-  order: number
-}
+import type { ExternalLink } from '@/lib/types'
 
+// Full Article type including content
 export interface Article {
   slug: string
   title: string
@@ -21,6 +21,9 @@ export interface Article {
   externalLinks?: ExternalLink[]
 }
 
+// Lightweight Article Metadata type
+export type ArticleMetadata = Omit<Article, 'content' | 'externalLinks'>
+
 // Build-time hashtag index
 interface HashtagIndex {
   [hashtag: string]: string[] // Maps hashtag -> array of article slugs
@@ -29,6 +32,7 @@ interface HashtagIndex {
 const articlesDirectory = path.join(process.cwd(), 'articles')
 const newsDirectory = path.join(process.cwd(), 'news')
 let hashtagIndexCache: HashtagIndex | null = null
+let allArticleMetadataCache: ArticleMetadata[] | null = null
 
 const matterOptions = {
   engines: {
@@ -54,17 +58,14 @@ function normalizePublishedAt(rawDate: unknown, fallbackDate: Date): string {
   return toISODate(fallbackDate)
 }
 
-// Parse hashtags from metadata (supports both array and #hashtag format)
 function parseHashtags(hashtagData: any): string[] {
   if (!hashtagData) return []
 
   if (Array.isArray(hashtagData)) {
-    // Handle array format: ["react", "nextjs"] or ["#react", "#nextjs"]
     return hashtagData.map((tag) => tag.toString().replace(/^#/, ''))
   }
 
   if (typeof hashtagData === 'string') {
-    // Handle string format: "#react #nextjs #tutorial"
     return hashtagData
       .split(/\s+/)
       .filter((tag) => tag.startsWith('#'))
@@ -75,22 +76,18 @@ function parseHashtags(hashtagData: any): string[] {
   return []
 }
 
-// Extract external links from markdown content (internal helper)
 function extractExternalLinks(content: string): ExternalLink[] {
-  // Regex to match markdown links: [text](url)
-  const linkRegex = /\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g
+  const linkRegex = /\!\?\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g
   const links: ExternalLink[] = []
-  let match
-  let order = 0
+  const matches = content.matchAll(linkRegex)
 
-  while ((match = linkRegex.exec(content)) !== null) {
+  for (const match of matches) {
     const [, title, url] = match
-    // Exclude motyl.dev and newsletter-ai links (internal projects)
-    if (!url.includes('motyl.dev') && !url.includes('newsletter-ai')) {
+    if (title && url && !url.includes('motyl.dev') && !url.includes('newsletter-ai')) {
       links.push({
         title: title.trim(),
         url: url.trim(),
-        order: order++,
+        order: links.length,
       })
     }
   }
@@ -98,28 +95,26 @@ function extractExternalLinks(content: string): ExternalLink[] {
   return links
 }
 
-// Generate hashtag index at build time
-async function buildHashtagIndex(): Promise<HashtagIndex> {
-  if (hashtagIndexCache) return hashtagIndexCache
+// Parses only the frontmatter for metadata
+export async function parseArticleMetadataFile(
+  fullPath: string,
+  slug: string
+): Promise<ArticleMetadata> {
+  const fileContents = await fs.readFile(fullPath, 'utf8')
+  const { data } = matter(fileContents, matterOptions)
+  const stats = await fs.stat(fullPath)
+  const fallbackDate = stats.mtime || new Date()
 
-  const articles = await getAllArticles()
-  const index: HashtagIndex = {}
-
-  articles.forEach((article) => {
-    const hashtags = article.hashtags || []
-    hashtags.forEach((hashtag) => {
-      if (!index[hashtag]) {
-        index[hashtag] = []
-      }
-      index[hashtag].push(article.slug)
-    })
-  })
-
-  hashtagIndexCache = index
-  return index
+  return {
+    slug,
+    title: data.title,
+    excerpt: data.excerpt,
+    publishedAt: normalizePublishedAt(data.publishedAt, fallbackDate),
+    hashtags: parseHashtags(data.hashtags),
+  }
 }
 
-// Helper to read articles from a single directory
+// Parses the full article including content
 export async function parseArticleFile(fullPath: string, slug: string): Promise<Article> {
   const fileContents = await fs.readFile(fullPath, 'utf8')
   const { data, content } = matter(fileContents, matterOptions)
@@ -137,7 +132,7 @@ export async function parseArticleFile(fullPath: string, slug: string): Promise<
   }
 }
 
-async function readArticlesFromDirectory(directory: string): Promise<Article[]> {
+async function readArticleMetadataFromDirectory(directory: string): Promise<ArticleMetadata[]> {
   try {
     const fileNames = await fs.readdir(directory)
     const articles = await Promise.all(
@@ -146,7 +141,7 @@ async function readArticlesFromDirectory(directory: string): Promise<Article[]> 
         .map(async (name) => {
           const slug = name.replace(/\.md$/, '')
           const fullPath = path.join(directory, name)
-          return parseArticleFile(fullPath, slug)
+          return parseArticleMetadataFile(fullPath, slug)
         })
     )
     return articles
@@ -155,7 +150,6 @@ async function readArticlesFromDirectory(directory: string): Promise<Article[]> 
   }
 }
 
-// Helper to get all year subdirectories from news folder
 async function getNewsYearDirectories(): Promise<string[]> {
   try {
     const entries = await fs.readdir(newsDirectory, { withFileTypes: true })
@@ -167,30 +161,29 @@ async function getNewsYearDirectories(): Promise<string[]> {
   }
 }
 
-export async function getAllArticles(): Promise<Article[]> {
-  // Read from articles directory
-  const articlesPromise = readArticlesFromDirectory(articlesDirectory)
+// Returns metadata for all articles, sorted by date
+export async function getAllArticleMetadata(): Promise<ArticleMetadata[]> {
+  if (allArticleMetadataCache) return allArticleMetadataCache
 
-  // Read from all news year subdirectories
+  const articlesPromise = readArticleMetadataFromDirectory(articlesDirectory)
   const newsYearDirs = await getNewsYearDirectories()
-  const newsPromises = newsYearDirs.map((dir) => readArticlesFromDirectory(dir))
+  const newsPromises = newsYearDirs.map((dir) => readArticleMetadataFromDirectory(dir))
 
   const [articles, ...newsArticles] = await Promise.all([articlesPromise, ...newsPromises])
+  const allMetadata = [...articles, ...newsArticles.flat()]
 
-  const allArticles = [...articles, ...newsArticles.flat()]
-
-  return allArticles.sort((a, b) => {
-    const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0
-    const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0
+  allArticleMetadataCache = allMetadata.sort((a, b) => {
+    const dateA = new Date(a.publishedAt).getTime()
+    const dateB = new Date(b.publishedAt).getTime()
     return dateB - dateA
   })
+
+  return allArticleMetadataCache
 }
 
-// Helper to find and read an article from any directory
 async function findArticleInDirectory(slug: string, directory: string): Promise<Article | null> {
   try {
     const fullPath = path.join(directory, `${slug}.md`)
-    // Ensure the file exists before attempting to parse it to avoid unhandled rejections
     await fs.access(fullPath)
     return await parseArticleFile(fullPath, slug)
   } catch (error) {
@@ -198,47 +191,189 @@ async function findArticleInDirectory(slug: string, directory: string): Promise<
   }
 }
 
-export async function getArticleBySlug(slug: string): Promise<Article | null> {
-  // Try articles directory first
-  let article = await findArticleInDirectory(slug, articlesDirectory)
-  if (article) return article
-
-  // Try news year subdirectories
-  const newsYearDirs = await getNewsYearDirectories()
-  for (const dir of newsYearDirs) {
-    article = await findArticleInDirectory(slug, dir)
+export const getArticleBySlug = cache(
+  async (slug: string): Promise<Article | null> => {
+    // Try articles directory first
+    let article = await findArticleInDirectory(slug, articlesDirectory)
     if (article) return article
+
+    // Try news year subdirectories
+    const newsYearDirs = await getNewsYearDirectories()
+    for (const dir of newsYearDirs) {
+      article = await findArticleInDirectory(slug, dir)
+      if (article) return article
+    }
+
+    return null
+  }
+)
+
+
+
+async function readArticlesFromDirectory(directory: string): Promise<Article[]> {
+
+  try {
+
+    const fileNames = await fs.readdir(directory)
+
+    const articles = await Promise.all(
+
+      fileNames
+
+        .filter((name) => name.endsWith('.md'))
+
+        .map(async (name) => {
+
+          const slug = name.replace(/\.md$/, '')
+
+          const fullPath = path.join(directory, name)
+
+          return parseArticleFile(fullPath, slug)
+
+        })
+
+    )
+
+    return articles
+
+  } catch (error) {
+
+    return []
+
   }
 
-  return null
 }
+
+
+
+export async function getAllArticlesWithContent(): Promise<Article[]> {
+
+  const articlesPromise = readArticlesFromDirectory(articlesDirectory)
+
+  const newsYearDirs = await getNewsYearDirectories()
+
+  const newsPromises = newsYearDirs.map((dir) => readArticlesFromDirectory(dir))
+
+
+
+  const [articles, ...newsArticles] = await Promise.all([
+
+    articlesPromise,
+
+    ...newsPromises,
+
+  ])
+
+  const allArticles = [...articles, ...newsArticles.flat()]
+
+
+
+  return allArticles.sort((a, b) => {
+
+    const dateA = new Date(a.publishedAt).getTime()
+
+    const dateB = new Date(b.publishedAt).getTime()
+
+    return dateB - dateA
+
+  })
+
+}
+
+
+
+export const getAllArticles = getAllArticleMetadata
+
+
+
+async function buildHashtagIndex(): Promise<HashtagIndex> {
+
+  if (hashtagIndexCache) return hashtagIndexCache
+
+
+
+  const articles = await getAllArticleMetadata() // Use metadata to build index
+
+  const index: HashtagIndex = {}
+
+
+
+  articles.forEach((article) => {
+
+    article.hashtags.forEach((hashtag) => {
+
+      if (!index[hashtag]) {
+
+        index[hashtag] = []
+
+      }
+
+      index[hashtag].push(article.slug)
+
+    })
+
+  })
+
+
+
+  hashtagIndexCache = index
+
+  return index
+
+}
+
+
 
 export async function getAllHashtags(): Promise<string[]> {
+
   const index = await buildHashtagIndex()
+
   return Object.keys(index).sort()
+
 }
 
+
+
 export async function getHashtagCounts(): Promise<Record<string, number>> {
+
   const index = await buildHashtagIndex()
+
   const counts: Record<string, number> = {}
 
   Object.entries(index).forEach(([hashtag, slugs]) => {
+
     counts[hashtag] = slugs.length
+
   })
 
   return counts
+
 }
 
+
+
 export async function getArticlesByHashtag(hashtag: string): Promise<Article[]> {
+
   const index = await buildHashtagIndex()
+
   const slugs = index[hashtag] || []
+
+
 
   if (slugs.length === 0) return []
 
-  // Get full article data for the matching slugs
+
+
   const articles = await Promise.all(slugs.map((slug) => getArticleBySlug(slug)))
+
   return articles.filter(Boolean) as Article[]
+
 }
 
+
+
 // Pre-build the index during module initialization
+
 buildHashtagIndex()
+
+

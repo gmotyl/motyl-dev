@@ -26,7 +26,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { X, Plus, Hash } from 'lucide-react';
-import { getAllHashtags } from '@/lib/articles';
 
 const bookmarkSchema = z.object({
   url: z.string().url('Invalid URL format'),
@@ -78,8 +77,16 @@ export function BookmarkDialog({
   useEffect(() => {
     if (open) {
       const fetchHashtags = async () => {
-        const tags = await getAllHashtags();
-        setAllHashtags(tags);
+        try {
+          const response = await fetch('/api/hashtags');
+          if (!response.ok) {
+            throw new Error('Failed to fetch hashtags');
+          }
+          const tags = await response.json();
+          setAllHashtags(tags);
+        } catch (error) {
+          console.error('Error fetching hashtags:', error);
+        }
       };
       fetchHashtags();
     }

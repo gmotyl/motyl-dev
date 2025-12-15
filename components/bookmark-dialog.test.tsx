@@ -4,22 +4,21 @@ import userEvent from '@testing-library/user-event';
 import { BookmarkDialog } from './bookmark-dialog';
 import { getAllHashtags } from '@/lib/articles';
 
-// Mock the getAllHashtags function using Vitest's mocking API.
-vi.mock('@/lib/articles', () => ({
-  getAllHashtags: vi.fn(),
-}));
+vi.mock('@/lib/articles');
 
-const mockedGetAllHashtags = vi.mocked(getAllHashtags);
+const mockFetch = vi.spyOn(window, 'fetch');
 
 describe('BookmarkDialog', () => {
   const mockOnOpenChange = vi.fn();
-  // Mock the onSubmit function to resolve immediately.
   const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
 
   beforeEach(() => {
-    // Clear all mocks and set a default empty array for hashtags before each test.
     vi.clearAllMocks();
-    mockedGetAllHashtags.mockResolvedValue([]);
+    // Mock a successful fetch response with hashtags
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ['react', 'nextjs', 'typescript'],
+    } as Response);
   });
 
   // Test case 1: Renders correctly in "create" mode and ensures fields are accessible.
@@ -137,7 +136,7 @@ describe('BookmarkDialog', () => {
   // Test case 8: Fetches and shows autocomplete suggestions for hashtags.
   it('fetches and shows autocomplete suggestions', async () => {
     const user = userEvent.setup();
-    mockedGetAllHashtags.mockResolvedValue(['react', 'nextjs', 'typescript']);
+    vi.mocked(getAllHashtags).mockResolvedValue(['react', 'nextjs', 'typescript']);
 
     render(
       <BookmarkDialog
@@ -150,9 +149,9 @@ describe('BookmarkDialog', () => {
     const hashtagInput = screen.getByPlaceholderText(/Add hashtag/i);
     await user.click(hashtagInput);
 
-    // Check that hashtags were fetched when the input was focused.
+    // Check that a fetch was made to the hashtags API when the input was focused.
     await waitFor(() => {
-        expect(mockedGetAllHashtags).toHaveBeenCalledTimes(1);
+        expect(mockFetch).toHaveBeenCalledWith('/api/hashtags');
     });
     
     // Filter suggestions by typing.

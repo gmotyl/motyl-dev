@@ -7,10 +7,11 @@ import { toast } from 'sonner'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { getArticleBySlug } from '@/lib/articles'
 
 interface ShareAIButtonProps {
   prompt: string
-  content?: string
+  articleSlug?: string
   url?: string
   title?: string
   buttonLabel?: string
@@ -24,7 +25,7 @@ const STORAGE_KEY_LANGUAGE = 'share-ai-output-language'
 
 export function ShareAIButton({
   prompt,
-  content,
+  articleSlug,
   url,
   title,
   successMessage = 'Copied! Paste in ChatGPT/Gemini 🔊',
@@ -34,6 +35,8 @@ export function ShareAIButton({
   const [isOpen, setIsOpen] = useState(false)
   const [isHydrated, setIsHydrated] = useState(false)
   const [isCopied, setIsCopied] = useState(false)
+  const [articleContent, setArticleContent] = useState<string | undefined>(undefined)
+  const [isLoadingContent, setIsLoadingContent] = useState(false)
 
   useEffect(() => {
     // Mark as hydrated first
@@ -47,6 +50,28 @@ export function ShareAIButton({
       setEditLanguage(savedLanguage)
     }
   }, [])
+
+  useEffect(() => {
+    if (isOpen && articleSlug && !articleContent && !isLoadingContent) {
+      const fetchContent = async () => {
+        setIsLoadingContent(true)
+        try {
+          const article = await getArticleBySlug(articleSlug)
+          if (article) {
+            setArticleContent(article.content)
+          } else {
+            toast.error('Failed to load article content.')
+          }
+        } catch (error) {
+          console.error('Error fetching article content:', error)
+          toast.error('Error loading article content.')
+        } finally {
+          setIsLoadingContent(false)
+        }
+      }
+      fetchContent()
+    }
+  }, [isOpen, articleSlug, articleContent, isLoadingContent])
 
   // Clean content: remove markdown, excessive whitespace
   const cleanContent = (text: string): string => {
@@ -73,8 +98,8 @@ export function ShareAIButton({
     }
 
     // Append content if provided (for content-based sharing)
-    if (content) {
-      const cleaned = cleanContent(content)
+    if (articleContent) {
+      const cleaned = cleanContent(articleContent)
       filledPrompt = `${filledPrompt}\n\n${cleaned}`
     }
 
@@ -96,6 +121,26 @@ export function ShareAIButton({
   }
 
   const handleShare = async () => {
+    if (!articleContent && articleSlug) {
+      setIsLoadingContent(true)
+      try {
+        const article = await getArticleBySlug(articleSlug)
+        if (article) {
+          setArticleContent(article.content)
+        } else {
+          toast.error('Failed to load article content. Cannot share.')
+          setIsLoadingContent(false)
+          return
+        }
+      } catch (error) {
+        console.error('Error fetching article content for share:', error)
+        toast.error('Error loading article content for share. Cannot share.')
+        setIsLoadingContent(false)
+        return
+      }
+    }
+    setIsLoadingContent(false)
+
     const formattedPrompt = formatPrompt()
 
     // Try Web Share API first (mobile)
@@ -153,9 +198,17 @@ export function ShareAIButton({
 
   return (
     <span className="inline-flex gap-1 my-1 align-middle">
-      <Button onClick={handleShare} variant="outline" size="sm" className="gap-2" title={title}>
+      <Button onClick={handleShare} variant="outline" size="sm" className="gap-2" title={title} disabled={isLoadingContent}>
         <>
-          {isCopied ? (
+          {isLoadingContent ? (
+            <div className="flex items-center gap-2">
+              <svg className="animate-spin h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Loading...
+            </div>
+          ) : isCopied ? (
             <>
               <Copy className="h-4 w-4" />
               Copied!

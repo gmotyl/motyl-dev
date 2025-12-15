@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { getArticleBySlug, getAllArticles } from '@/lib/articles'
+import { getArticleBySlug, getAllArticleMetadata } from '@/lib/articles' // Use getAllArticleMetadata
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import { ReadAloudButton } from '@/components/read-aloud-button'
@@ -14,12 +14,13 @@ import { HashtagsList } from '@/components/hashtags-list'
 import { ArticleScrollHandler } from '@/components/article-scroll-handler'
 import { Breadcrumb } from '@/components/breadcrumb'
 
-// Force static generation at build time - no ISR revalidation
+// Force static generation at build time
 export const dynamic = 'force-static'
 export const dynamicParams = false // Return 404 for unknown slugs (don't generate on-demand)
 
 export async function generateStaticParams() {
-  const articles = await getAllArticles()
+  // Use metadata to generate static params, faster and more efficient
+  const articles = await getAllArticleMetadata()
   return articles.map((article) => ({
     slug: article.slug,
   }))
@@ -97,14 +98,21 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
       notFound()
     }
 
-    // Get all articles for navigation
-    const allArticles = await getAllArticles()
+    // Get all article metadata for navigation
+    const allArticles = await getAllArticleMetadata()
+
+    // Find the current article's index
+    const currentIndex = allArticles.findIndex((a) => a.slug === slug)
+
+    // Determine previous and next articles
+    const prevArticle = currentIndex > 0 ? allArticles[currentIndex - 1] : null
+    const nextArticle = currentIndex < allArticles.length - 1 ? allArticles[currentIndex + 1] : null
 
     // Load the summary prompt
     const translatePromptPath = path.join(process.cwd(), 'public', 'SUMMARY_PROMPT.md')
     const translatePrompt = await fs.readFile(translatePromptPath, 'utf-8')
 
-    // Generate JSON-LD structured data for better SEO
+    // JSON-LD structured data for SEO
     const jsonLd = {
       '@context': 'https://schema.org',
       '@type': 'Article',
@@ -129,12 +137,10 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
       keywords: article.hashtags.join(', '),
     }
 
-    // Determine if this is a news article (has #generated hashtag)
     const isNewsArticle = article.hashtags.includes('generated')
     const parentSection = isNewsArticle ? 'News' : 'Articles'
     const parentPath = isNewsArticle ? '/news' : '/articles'
 
-    // Breadcrumb structured data
     const breadcrumbJsonLd = {
       '@context': 'https://schema.org',
       '@type': 'BreadcrumbList',
@@ -162,7 +168,6 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
     return (
       <div className="flex min-h-screen flex-col">
-        {/* Structured Data for SEO */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -196,10 +201,10 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
                 </p>
                 <div className="flex gap-2">
                   <WakeLockToggle />
-                  <ReadAloudButton hashtags={article.hashtags} />
+                  {/* <ReadAloudButton hashtags={article.hashtags} /> */}
                   <ShareAIButton
                     prompt={translatePrompt}
-                    content={article.content}
+                    articleSlug={article.slug}
                     buttonLabel="AI Review"
                     shareTitle="Review article with AI"
                     successMessage="Shared successfully! Now send the message and tap Read Aloud 🔊"
@@ -217,7 +222,6 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
 
             <MarkdownContent content={article.content} />
 
-            {/* External Links with Bookmark Functionality */}
             {article.externalLinks && article.externalLinks.length > 0 && (
               <ArticleExternalLinks
                 links={article.externalLinks}
@@ -226,7 +230,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
               />
             )}
 
-            <ArticleNavigation currentSlug={slug} allArticles={allArticles} />
+            <ArticleNavigation prevArticle={prevArticle} nextArticle={nextArticle} />
           </article>
         </main>
         <Footer />
