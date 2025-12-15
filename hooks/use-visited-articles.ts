@@ -12,6 +12,20 @@ export function useVisitedArticles() {
   const hasSyncedRef = useRef(false)
   const previousSessionRef = useRef<string | null>(null)
 
+  const getLocalStorageSlugs = (): string[] => {
+    const stored = localStorage.getItem(LOCALSTORAGE_KEY)
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored)
+        return Array.isArray(parsed) ? parsed : []
+      } catch (error) {
+        console.error('Failed to parse visited articles:', error)
+        return []
+      }
+    }
+    return []
+  }
+
   // Initialize: Load and MERGE from localStorage AND database
   useEffect(() => {
     const initializeVisitedArticles = async () => {
@@ -119,20 +133,7 @@ export function useVisitedArticles() {
     syncOnLogin()
   }, [status, session])
 
-  // Helper: Get slugs from localStorage (doesn't set state)
-  const getLocalStorageSlugs = (): string[] => {
-    const stored = localStorage.getItem(LOCALSTORAGE_KEY)
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored)
-        return Array.isArray(parsed) ? parsed : []
-      } catch (error) {
-        console.error('Failed to parse visited articles:', error)
-        return []
-      }
-    }
-    return []
-  }
+
 
   // Persist to localStorage on state change
   useEffect(() => {

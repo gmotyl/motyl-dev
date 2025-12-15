@@ -13,6 +13,7 @@ import { ArticleExternalLinks } from '@/components/article-external-links'
 import { HashtagsList } from '@/components/hashtags-list'
 import { ArticleScrollHandler } from '@/components/article-scroll-handler'
 import { Breadcrumb } from '@/components/breadcrumb'
+import { ArticleViewTracker } from '@/components/article-view-tracker'
 
 // Force static generation at build time
 export const dynamic = 'force-static'
@@ -26,9 +27,9 @@ export async function generateStaticParams() {
   }))
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+export async function generateMetadata({ params }: { params: { slug: string } }) {
   try {
-    const { slug } = await params
+    const { slug } = params
     const article = await getArticleBySlug(slug)
 
     if (!article) {
@@ -89,9 +90,9 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   }
 }
 
-export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function ArticlePage({ params }: { params: { slug: string } }) {
   try {
-    const { slug } = await params
+    const { slug } = params
     const article = await getArticleBySlug(slug)
 
     if (!article) {
@@ -177,6 +178,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ slug: 
           dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
         />
         <Header />
+        <ArticleViewTracker slug={slug} />
         <ArticleScrollHandler />
         <main className="flex-1 container py-10">
           <article className="max-w-3xl mx-auto">
