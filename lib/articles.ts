@@ -1,5 +1,3 @@
-
-
 'use server'
 
 import { cache } from 'react'
@@ -219,6 +217,98 @@ export async function getArticlesByHashtag(hashtag: string): Promise<Article[]> 
   return articles.filter(Boolean) as Article[]
 }
 
+// --- New Pagination and Filtering Logic ---
 
+export interface PageFilters {
+  hashtags?: string[]
+  mode?: 'AND' | 'OR' | 'EXCLUDE'
+  showUnseen?: boolean
+  requireHashtags?: string[]
+  excludeHashtags?: string[]
+}
 
+export interface PaginatedArticles {
+  articles: ArticleMetadata[]
+  currentPage: number
+  totalPages: number
+  totalArticles: number
+}
 
+export async function applyBaseFilters(
+  articles: ArticleMetadata[],
+  {
+    excludeHashtags = [],
+    requireHashtags = [],
+  }: { excludeHashtags?: string[]; requireHashtags?: string[] }
+) {
+  let result = articles
+
+  if (requireHashtags.length > 0) {
+    result = result.filter((article) =>
+      requireHashtags.every((tag) => article.hashtags.includes(tag))
+    )
+  }
+
+  if (excludeHashtags.length > 0) {
+    result = result.filter(
+      (article) => !excludeHashtags.some((tag) => article.hashtags.includes(tag))
+    )
+  }
+
+  return result
+}
+
+export async function getArticlePageData({
+  page = 1,
+  limit = 20,
+  filters = {},
+  visitedSlugs = new Set(),
+}: {
+  page?: number
+  limit?: number
+  filters?: PageFilters
+  visitedSlugs?: Set<string>
+}): Promise<PaginatedArticles> {
+  const allArticles = await getAllArticleMetadata()
+
+  let filtered = await applyBaseFilters(allArticles, {
+    requireHashtags: filters.requireHashtags,
+    excludeHashtags: filters.excludeHashtags,
+  })
+
+  if (filters.showUnseen) {
+    filtered = filtered.filter((article) => !visitedSlugs.has(article.slug))
+  }
+
+  if (filters.hashtags && filters.hashtags.length > 0) {
+    const mode = filters.mode || 'AND'
+    const filterTags = filters.hashtags
+
+    if (mode === 'AND') {
+      filtered = filtered.filter((article) =>
+        filterTags.every((tag) => article.hashtags.includes(tag))
+      )
+    } else if (mode === 'OR') {
+      filtered = filtered.filter((article) =>
+        filterTags.some((tag) => article.hashtags.includes(tag))
+      )
+    } else {
+      // EXCLUDE
+      filtered = filtered.filter(
+        (article) => !filterTags.some((tag) => article.hashtags.includes(tag))
+      )
+    }
+  }
+
+  const totalArticles = filtered.length
+  const totalPages = Math.ceil(totalArticles / limit)
+  const startIndex = (page - 1) * limit
+  const paginatedArticles = filtered.slice(startIndex, startIndex + limit)
+
+  return {
+    articles: paginatedArticles,
+    currentPage: page,
+    totalPages,
+    totalArticles,
+  }
+}

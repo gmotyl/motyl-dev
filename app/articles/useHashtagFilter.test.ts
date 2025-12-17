@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyBaseFilters } from './useHashtagFilter'
+import { applyBaseFilters } from '@/lib/articles'
 
 const sampleArticles = [
   { slug: 'article-1', hashtags: ['react', 'generated'] },
@@ -9,8 +9,8 @@ const sampleArticles = [
 ]
 
 describe('applyBaseFilters', () => {
-  it('excludes articles with generated hashtag', () => {
-    const filtered = applyBaseFilters(sampleArticles, {
+  it('excludes articles with generated hashtag', async () => {
+    const filtered = await applyBaseFilters(sampleArticles, {
       excludeHashtags: ['generated'],
       requireHashtags: [],
     })
@@ -18,8 +18,8 @@ describe('applyBaseFilters', () => {
     expect(slugs).toEqual(['article-2', 'article-4'])
   })
 
-  it('requires all specified hashtags', () => {
-    const filtered = applyBaseFilters(sampleArticles, {
+  it('requires all specified hashtags', async () => {
+    const filtered = await applyBaseFilters(sampleArticles, {
       excludeHashtags: [],
       requireHashtags: ['react'],
     })
@@ -27,8 +27,8 @@ describe('applyBaseFilters', () => {
     expect(slugs).toEqual(['article-1', 'article-2'])
   })
 
-  it('applies both exclude and require together', () => {
-    const filtered = applyBaseFilters(sampleArticles, {
+  it('applies both exclude and require together', async () => {
+    const filtered = await applyBaseFilters(sampleArticles, {
       excludeHashtags: ['generated'],
       requireHashtags: ['news'],
     })

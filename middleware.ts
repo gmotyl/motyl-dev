@@ -1,21 +1,15 @@
-import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
 
-/**
- * Lightweight middleware for route protection
- *
- * Note: We don't use NextAuth's auth() middleware here to avoid
- * bundling Prisma into the Edge Runtime (1MB limit).
- *
- * Instead, we rely on:
- * 1. API routes checking auth via auth() server-side
- * 2. Client components checking session via useSession()
- * 3. This middleware just provides a UX hint by redirecting unauthenticated users
- */
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
+  const requestHeaders = new Headers(req.headers)
 
-  // Check for session token cookie
+  // Pass visitedArticles cookie as a header to Server Components
+  const visitedCookie = req.cookies.get('visitedArticles')
+  requestHeaders.set('x-visited-articles', visitedCookie?.value || '[]')
+
+  // Check for session token cookie for auth
   const sessionToken = req.cookies.get('authjs.session-token') ||
                        req.cookies.get('__Secure-authjs.session-token')
 
@@ -24,13 +18,18 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/", req.url))
   }
 
-  // Let API routes handle their own auth (they use auth() server-side)
-  return NextResponse.next()
+  // Continue the request with the new headers
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  })
 }
 
 export const config = {
   matcher: [
-    "/bookmarks/:path*",
-    // Don't match API routes - they handle auth themselves
+    '/articles/:path*',
+    '/news/:path*',
+    '/bookmarks/:path*',
   ],
 }
