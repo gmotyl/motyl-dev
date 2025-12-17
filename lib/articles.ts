@@ -10,7 +10,7 @@ import type { ExternalLink } from '@/lib/types'
 
 // --- Type Definitions ---
 
-export interface Article {
+export interface ContentItem {
   slug: string
   title: string
   excerpt: string
@@ -18,9 +18,10 @@ export interface Article {
   content: string
   hashtags: string[]
   externalLinks?: ExternalLink[]
+  itemType: 'article' | 'news'
 }
 
-export type ArticleMetadata = Omit<Article, 'content' | 'externalLinks'>
+export type ContentItemMetadata = Omit<ContentItem, 'content' | 'externalLinks'>
 
 interface HashtagIndex {
   [hashtag: string]: string[]
@@ -28,8 +29,8 @@ interface HashtagIndex {
 
 // --- Caches ---
 
-let allArticlesCache: Article[] | null = null
-let slugToArticleMapCache: Map<string, Article> | null = null
+let allContentCache: ContentItem[] | null = null
+let slugToContentItemMapCache: Map<string, ContentItem> | null = null
 let hashtagIndexCache: HashtagIndex | null = null
 
 // --- Constants ---
@@ -90,11 +91,12 @@ function extractExternalLinks(content: string): ExternalLink[] {
 
 // --- Core Parsing and Caching Logic ---
 
-export async function parseArticleFile(fullPath: string, slugFromFile: string): Promise<Article> {
+export async function parseArticleFile(fullPath: string, slugFromFile: string): Promise<ContentItem> {
   const fileContents = await fs.readFile(fullPath, 'utf8')
   const { data, content } = matter(fileContents, matterOptions)
   const stats = await fs.stat(fullPath)
   const fallbackDate = stats.mtime || new Date()
+  const itemType = fullPath.includes(articlesDirectory) ? 'article' : 'news';
 
   return {
     slug: data.slug || slugFromFile, // Prioritize frontmatter slug
@@ -104,10 +106,11 @@ export async function parseArticleFile(fullPath: string, slugFromFile: string): 
     content,
     hashtags: parseHashtags(data.hashtags),
     externalLinks: extractExternalLinks(content),
+    itemType,
   }
 }
 
-async function readArticlesFromDirectory(directory: string): Promise<Article[]> {
+async function readArticlesFromDirectory(directory: string): Promise<ContentItem[]> {
   try {
     const fileNames = await fs.readdir(directory)
     return await Promise.all(
@@ -137,48 +140,48 @@ async function getNewsYearDirectories(): Promise<string[]> {
   }
 }
 
-async function buildArticleCache(): Promise<Map<string, Article>> {
-  if (slugToArticleMapCache) return slugToArticleMapCache
+async function buildArticleCache(): Promise<Map<string, ContentItem>> {
+  if (slugToContentItemMapCache) return slugToContentItemMapCache
 
   const articlesPromise = readArticlesFromDirectory(articlesDirectory)
   const newsYearDirs = await getNewsYearDirectories()
   const newsPromises = newsYearDirs.map((dir) => readArticlesFromDirectory(dir))
 
   const [articles, ...newsArticlesByYear] = await Promise.all([articlesPromise, ...newsPromises])
-  const allArticles = [...articles, ...newsArticlesByYear.flat()]
+  const allContent = [...articles, ...newsArticlesByYear.flat()]
 
-  allArticles.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+  allContent.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
 
-  allArticlesCache = allArticles
-  slugToArticleMapCache = new Map(allArticles.map((article) => [article.slug, article]))
+  allContentCache = allContent
+  slugToContentItemMapCache = new Map(allContent.map((article) => [article.slug, article]))
 
-  return slugToArticleMapCache
+  return slugToContentItemMapCache
 }
 
 // --- Public API ---
 
-export async function getAllArticleMetadata(): Promise<ArticleMetadata[]> {
+export async function getAllContentMetadata(): Promise<ContentItemMetadata[]> {
   await buildArticleCache()
-  // The type assertion is safe because buildArticleCache ensures allArticlesCache is populated.
-  return allArticlesCache as Article[]
+  // The type assertion is safe because buildArticleCache ensures allContentCache is populated.
+  return allContentCache as ContentItem[]
 }
 
-export const getArticleBySlug = cache(async (slug: string): Promise<Article | null> => {
+export const getContentItemBySlug = cache(async (slug: string): Promise<ContentItem | null> => {
   const map = await buildArticleCache()
   return map.get(slug) || null
 })
 
-export async function getAllArticlesWithContent(): Promise<Article[]> {
+export async function getAllContent(): Promise<ContentItem[]> {
   await buildArticleCache()
-  return allArticlesCache || []
+  return allContentCache || []
 }
 
-export const getAllArticles = getAllArticleMetadata
+export const getAllArticles = getAllContentMetadata
 
 async function buildHashtagIndex(): Promise<HashtagIndex> {
   if (hashtagIndexCache) return hashtagIndexCache
 
-  const articles = await getAllArticleMetadata()
+  const articles = await getAllContentMetadata()
   const index: HashtagIndex = {}
 
   articles.forEach((article) => {
@@ -208,13 +211,13 @@ export async function getHashtagCounts(): Promise<Record<string, number>> {
   return counts
 }
 
-export async function getArticlesByHashtag(hashtag: string): Promise<Article[]> {
+export async function getArticlesByHashtag(hashtag: string): Promise<ContentItem[]> {
   const index = await buildHashtagIndex()
   const slugs = index[hashtag] || []
   if (slugs.length === 0) return []
 
-  const articles = await Promise.all(slugs.map((slug) => getArticleBySlug(slug)))
-  return articles.filter(Boolean) as Article[]
+  const articles = await Promise.all(slugs.map((slug) => getContentItemBySlug(slug)))
+  return articles.filter(Boolean) as ContentItem[]
 }
 
 // --- New Pagination and Filtering Logic ---
@@ -227,15 +230,26 @@ export interface PageFilters {
   excludeHashtags?: string[]
 }
 
-export interface PaginatedArticles {
-  articles: ArticleMetadata[]
+export interface PaginatedContent {
+  items: ContentItemMetadata[]
   currentPage: number
   totalPages: number
-  totalArticles: number
+  totalItems: number
+  hashtagCounts: Record<string, number>
+}
+
+function getHashtagCountsFromArticles(articles: ContentItemMetadata[]): Record<string, number> {
+  const counts: Record<string, number> = {}
+  articles.forEach(article => {
+    article.hashtags.forEach(hashtag => {
+      counts[hashtag] = (counts[hashtag] || 0) + 1
+    })
+  })
+  return counts
 }
 
 export async function applyBaseFilters(
-  articles: ArticleMetadata[],
+  articles: ContentItemMetadata[],
   {
     excludeHashtags = [],
     requireHashtags = [],
@@ -254,29 +268,37 @@ export async function applyBaseFilters(
       (article) => !excludeHashtags.some((tag) => article.hashtags.includes(tag))
     )
   }
-
   return result
 }
 
-export async function getArticlePageData({
+export async function getContentPageData({
   page = 1,
   limit = 20,
   filters = {},
   visitedSlugs = new Set(),
+  contentType = 'all'
 }: {
   page?: number
   limit?: number
   filters?: PageFilters
   visitedSlugs?: Set<string>
-}): Promise<PaginatedArticles> {
-  const allArticles = await getAllArticleMetadata()
+  contentType?: 'article' | 'news' | 'all'
+}): Promise<PaginatedContent> {
+  const allArticles = await getAllContentMetadata()
+  
+  let content = allArticles;
+  if (contentType !== 'all') {
+    content = allArticles.filter(item => item.itemType === contentType)
+  }
 
-  let filtered = await applyBaseFilters(allArticles, {
+  let filtered = await applyBaseFilters(content, {
     requireHashtags: filters.requireHashtags,
     excludeHashtags: filters.excludeHashtags,
   })
 
-
+  if (filters.showUnseen) {
+    filtered = filtered.filter((article) => !visitedSlugs.has(article.slug))
+  }
 
   if (filters.hashtags && filters.hashtags.length > 0) {
     const mode = filters.mode || 'AND'
@@ -298,15 +320,17 @@ export async function getArticlePageData({
     }
   }
 
-  const totalArticles = filtered.length
-  const totalPages = Math.ceil(totalArticles / limit)
+  const hashtagCounts = getHashtagCountsFromArticles(filtered)
+  const totalItems = filtered.length
+  const totalPages = Math.ceil(totalItems / limit)
   const startIndex = (page - 1) * limit
   const paginatedArticles = filtered.slice(startIndex, startIndex + limit)
 
   return {
-    articles: paginatedArticles,
+    items: paginatedArticles,
     currentPage: page,
     totalPages,
-    totalArticles,
+    totalItems,
+    hashtagCounts,
   }
 }

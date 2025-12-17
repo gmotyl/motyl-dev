@@ -133,12 +133,15 @@ export function useVisitedArticles() {
     syncOnLogin()
   }, [status, session])
 
-  // Persist to localStorage on state change
+  // Persist to localStorage and cookie on state change
   useEffect(() => {
     if (!isLoading) {
-      localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify([...visitedArticles]))
+      const slugArray = [...visitedArticles];
+      const cookieValue = JSON.stringify(slugArray);
+      localStorage.setItem(LOCALSTORAGE_KEY, cookieValue);
+      document.cookie = `visitedArticles=${cookieValue};path=/;max-age=31536000;samesite=lax`;
     }
-  }, [visitedArticles, isLoading])
+  }, [visitedArticles, isLoading]);
 
   // Mark article as visited
   const markAsVisited = useCallback(

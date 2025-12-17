@@ -1,12 +1,11 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import { useState, useMemo, useTransition, useEffect, useCallback } from 'react'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { useHashtagFilter } from '@/app/articles/useHashtagFilter'
 import { useVisitedArticles } from '@/hooks/use-visited-articles'
 import {
   Pagination,
@@ -17,60 +16,149 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination'
-import { type ArticleMetadata } from '@/lib/articles'
+import { type ContentItemMetadata } from '@/lib/articles'
+import { getFilteredContent } from '@/app/actions'
 
-interface FilterConfig {
-  excludeHashtags?: string[]
-  requireHashtags?: string[]
-  defaultFilters?: {
-    showUnseen?: boolean
-  }
-}
-
-interface ArticlesListingProps {
+interface ContentListingProps {
   title: string
   description?: string
-  filterConfig?: FilterConfig
-  initialArticles: ArticleMetadata[]
+  initialItems: ContentItemMetadata[]
   totalPages: number
   currentPage: number
   allHashtags: string[]
   hashtagCounts: Record<string, number>
-  totalArticles: number
+  totalItems: number
+  contentType: 'article' | 'news' | 'all'
+  basePath: string
+  requireHashtags?: string[]
+  excludeHashtags?: string[]
 }
 
-export function ArticlesListing({
+export function ContentListing({
   title,
   description,
-  filterConfig = {},
-  initialArticles,
-  totalPages,
-  currentPage,
+  initialItems,
+  totalPages: initialTotalPages,
+  currentPage: initialCurrentPage,
   allHashtags,
-  hashtagCounts,
-  totalArticles,
-}: ArticlesListingProps) {
+  hashtagCounts: initialHashtagCounts,
+  totalItems: initialTotalItems,
+  contentType,
+  basePath,
+  requireHashtags,
+  excludeHashtags,
+}: ContentListingProps) {
   const { markAsVisited, isVisited } = useVisitedArticles()
   const router = useRouter()
+  const pathname = usePathname()
   const searchParams = useSearchParams()
+  const [isPending, startTransition] = useTransition()
 
-  const {
-    selectedHashtags,
-    filterMode,
-    showUnseenOnly,
-    handleHashtagToggle,
-    handleClearFilters,
-    handleFilterModeChange,
-    handleToggleUnseen
-  } = useHashtagFilter()
+  // Component state, initialized from props
+  const [items, setItems] = useState(initialItems)
+  const [currentPage, setCurrentPage] = useState(initialCurrentPage)
+  const [totalPages, setTotalPages] = useState(initialTotalPages)
+  const [totalItems, setTotalItems] = useState(initialTotalItems)
+  const [hashtagCounts, setHashtagCounts] = useState(initialHashtagCounts)
 
-  const handlePageChange = (page: number) => {
+  // Filter state derived from URL search parameters
+  const selectedHashtags = useMemo(() => {
+    const hashtags = searchParams.get('hashtags')
+    return new Set(hashtags ? hashtags.split(',') : [])
+  }, [searchParams])
+
+  const filterMode = useMemo(() => {
+    return (searchParams.get('mode') as 'AND' | 'OR' | 'EXCLUDE') || 'AND'
+  }, [searchParams])
+
+  const showUnseenOnly = useMemo(() => {
+    return searchParams.get('unseen') === 'true'
+  }, [searchParams])
+
+  // Central function to run filters and update state
+  const runFilter = useCallback((newFilterState: {
+    page?: number;
+    hashtags?: Set<string>;
+    mode?: 'AND' | 'OR' | 'EXCLUDE';
+    showUnseen?: boolean;
+  }) => {
     const params = new URLSearchParams(searchParams)
-    params.set('page', page.toString())
-    router.push(`?${params.toString()}`)
+
+    const finalState = {
+      page: newFilterState.page ?? currentPage,
+      hashtags: Array.from(newFilterState.hashtags ?? selectedHashtags),
+      mode: newFilterState.mode ?? filterMode,
+      showUnseen: newFilterState.showUnseen ?? showUnseenOnly,
+      contentType: contentType,
+      requireHashtags: requireHashtags,
+      excludeHashtags: excludeHashtags,
+    }
+
+    // Update URL
+    params.set('page', finalState.page.toString())
+    if (finalState.hashtags.length > 0) {
+      params.set('hashtags', finalState.hashtags.join(','))
+    } else {
+      params.delete('hashtags')
+    }
+    params.set('mode', finalState.mode)
+    if (finalState.showUnseen) {
+      params.set('unseen', 'true')
+    } else {
+      params.delete('unseen')
+    }
+    router.push(`${pathname}?${params.toString()}`, { scroll: false })
+
+    // Call server action
+    startTransition(async () => {
+      const result = await getFilteredContent(finalState)
+      setItems(result.items)
+      setCurrentPage(result.currentPage)
+      setTotalPages(result.totalPages)
+      setTotalItems(result.totalItems)
+      setHashtagCounts(result.hashtagCounts)
+    })
+  }, [searchParams, currentPage, selectedHashtags, filterMode, showUnseenOnly, router, pathname, contentType, requireHashtags, excludeHashtags])
+
+
+  // Handlers for UI interactions
+  const handlePageChange = (page: number) => {
+    runFilter({ page })
   }
 
-  // State for hashtag visibility
+  const handleHashtagToggle = (hashtag: string) => {
+    const newHashtags = new Set(selectedHashtags)
+    if (newHashtags.has(hashtag)) {
+      newHashtags.delete(hashtag)
+    } else {
+      newHashtags.add(hashtag)
+    }
+    runFilter({ hashtags: newHashtags, page: 1 })
+  }
+
+  const handleFilterModeChange = (mode: 'AND' | 'OR' | 'EXCLUDE') => {
+    runFilter({ mode, page: 1 })
+  }
+
+  const handleToggleUnseen = () => {
+    runFilter({ showUnseen: !showUnseenOnly, page: 1 })
+  }
+  
+  const handleClearFilters = () => {
+    runFilter({ hashtags: new Set(), showUnseen: false, page: 1, mode: 'AND' })
+  }
+
+  // When initial props change (e.g., direct navigation), sync state
+  useEffect(() => {
+    setItems(initialItems)
+    setCurrentPage(initialCurrentPage)
+    setTotalPages(initialTotalPages)
+    setTotalItems(initialTotalItems)
+    setHashtagCounts(initialHashtagCounts)
+  }, [initialItems, initialCurrentPage, initialTotalPages, initialTotalItems, initialHashtagCounts])
+
+
+  // State for hashtag visibility UI
   const [showAllHashtags, setShowAllHashtags] = useState(false)
   const [showZeroCountHashtags, setShowZeroCountHashtags] = useState(false)
 
@@ -85,7 +173,6 @@ export function ArticlesListing({
     })
   }, [allHashtags, hashtagCounts])
 
-  // Calculate visible hashtags based on collapse state
   const { visibleHashtags, hiddenHashtagsWithCounts, hiddenHashtagsWithoutCounts } = useMemo(() => {
     const selectedHashtagsArray = Array.from(selectedHashtags)
     const selectedHashtagsSet = new Set(selectedHashtagsArray)
@@ -125,7 +212,6 @@ export function ArticlesListing({
     }
   }, [sortedHashtags, hashtagCounts, selectedHashtags, showAllHashtags, showZeroCountHashtags])
 
-  // Generate page numbers for pagination
   const getPageNumbers = () => {
     const pages: (number | 'ellipsis')[] = []
     if (totalPages <= 7) {
@@ -150,15 +236,8 @@ export function ArticlesListing({
     return pages
   }
 
-  const articlesToDisplay = useMemo(() => {
-    if (!showUnseenOnly) {
-      return initialArticles;
-    }
-    return initialArticles.filter(article => !isVisited(article.slug));
-  }, [initialArticles, showUnseenOnly, isVisited]);
-
   const startIndex = (currentPage - 1) * 20;
-  const endIndex = startIndex + articlesToDisplay.length;
+  const endIndex = startIndex + items.length;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -232,11 +311,11 @@ export function ArticlesListing({
 
             <div className="flex flex-wrap gap-2">
               <Button
-                variant={selectedHashtags.size === 0 ? 'default' : 'outline'}
+                variant={selectedHashtags.size === 0 && !showUnseenOnly ? 'default' : 'outline'}
                 size="sm"
                 onClick={handleClearFilters}
               >
-                All ({totalArticles})
+                All ({totalItems})
               </Button>
 
               {visibleHashtags.map((hashtag) => {
@@ -249,10 +328,10 @@ export function ArticlesListing({
                     variant={isSelected ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => handleHashtagToggle(hashtag)}
-                    className={count === 0 ? 'text-muted-foreground' : ''}
+                    className={count === 0 && !isSelected ? 'text-muted-foreground line-through' : ''}
                   >
                     #{hashtag}
-                    {count > 1 && ` (${count})`}
+                    {count > 0 && ` (${count})`}
                   </Button>
                 )
               })}
@@ -295,89 +374,90 @@ export function ArticlesListing({
             </div>
           </div>
         )}
-
-        {articlesToDisplay.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No articles found.</p>
-          </div>
-        ) : (
-          <>
-            <div className="mb-4 text-sm text-muted-foreground">
-              Showing {startIndex + 1}-{endIndex} of {totalArticles} articles
+        <div className={`transition-opacity ${isPending ? 'opacity-50' : 'opacity-100'}`}>
+          {items.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">No items found.</p>
             </div>
-
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {articlesToDisplay.map((article) => (
-                <Link
-                  key={article.slug}
-                  href={`/articles/${article.slug}`}
-                  onClick={() => markAsVisited(article.slug)}
-                  className={`rounded-lg border backdrop-blur-sm p-6 transition-all hover:shadow-md hover:border-primary/50 flex flex-col ${
-                    isVisited(article.slug) ? 'visited-article' : 'unvisited-article'
-                  }`}
-                >
-                  <h2 className="article-title text-xl font-bold mb-2">{article.title}</h2>
-                  <p className="article-excerpt flex-grow line-clamp-3">{article.excerpt}</p>
-                  <p className="text-xs text-muted-foreground mt-auto">
-                    {new Date(article.publishedAt).toLocaleDateString('pl-PL', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      year: 'numeric'
-                    })}
-                  </p>
-                </Link>
-              ))}
-            </div>
-
-            {totalPages > 1 && (
-              <div className="mt-8">
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          if (currentPage > 1) handlePageChange(currentPage - 1)
-                        }}
-                        className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                      />
-                    </PaginationItem>
-                    {getPageNumbers().map((page, index) => (
-                      <PaginationItem key={index}>
-                        {page === 'ellipsis' ? (
-                          <PaginationEllipsis />
-                        ) : (
-                          <PaginationLink
-                            href="#"
-                            onClick={(e) => {
-                              e.preventDefault()
-                              handlePageChange(page as number)
-                            }}
-                            isActive={currentPage === page}
-                            className="cursor-pointer"
-                          >
-                            {page}
-                          </PaginationLink>
-                        )}
-                      </PaginationItem>
-                    ))}
-                    <PaginationItem>
-                      <PaginationNext
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault()
-                          if (currentPage < totalPages) handlePageChange(currentPage + 1)
-                        }}
-                        className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
+          ) : (
+            <>
+              <div className="mb-4 text-sm text-muted-foreground">
+                Showing {startIndex + 1}-{endIndex} of {totalItems} items
               </div>
-            )}
-          </>
-        )}
+
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {items.map((item) => (
+                  <Link
+                    key={item.slug}
+                    href={`${basePath}/${item.slug}`}
+                    onClick={() => markAsVisited(item.slug)}
+                    className={`rounded-lg border backdrop-blur-sm p-6 transition-all hover:shadow-md hover:border-primary/50 flex flex-col ${
+                      isVisited(item.slug) ? 'visited-article' : 'unvisited-article'
+                    }`}
+                  >
+                    <h2 className="article-title text-xl font-bold mb-2">{item.title}</h2>
+                    <p className="article-excerpt flex-grow line-clamp-3">{item.excerpt}</p>
+                    <p className="text-xs text-muted-foreground mt-auto">
+                      {new Date(item.publishedAt).toLocaleDateString('pl-PL', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                      })}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+
+              {totalPages > 1 && (
+                <div className="mt-8">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            if (currentPage > 1) handlePageChange(currentPage - 1)
+                          }}
+                          className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        />
+                      </PaginationItem>
+                      {getPageNumbers().map((page, index) => (
+                        <PaginationItem key={index}>
+                          {page === 'ellipsis' ? (
+                            <PaginationEllipsis />
+                          ) : (
+                            <PaginationLink
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault()
+                                handlePageChange(page as number)
+                              }}
+                              isActive={currentPage === page}
+                              className="cursor-pointer"
+                            >
+                              {page}
+                            </PaginationLink>
+                          )}
+                        </PaginationItem>
+                      ))}
+                      <PaginationItem>
+                        <PaginationNext
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            if (currentPage < totalPages) handlePageChange(currentPage + 1)
+                          }}
+                          className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </main>
       <Footer />
     </div>

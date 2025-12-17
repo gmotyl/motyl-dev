@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { getArticleBySlug } from '@/lib/articles'
+import { getContentItemBySlug } from '@/lib/articles'
 
 interface ShareAIButtonProps {
   prompt: string
@@ -56,7 +56,7 @@ export function ShareAIButton({
       const fetchContent = async () => {
         setIsLoadingContent(true)
         try {
-          const article = await getArticleBySlug(articleSlug)
+          const article = await getContentItemBySlug(articleSlug)
           if (article) {
             setArticleContent(article.content)
           } else {
@@ -124,7 +124,7 @@ export function ShareAIButton({
     if (!articleContent && articleSlug) {
       setIsLoadingContent(true)
       try {
-        const article = await getArticleBySlug(articleSlug)
+        const article = await getContentItemBySlug(articleSlug)
         if (article) {
           setArticleContent(article.content)
         } else {

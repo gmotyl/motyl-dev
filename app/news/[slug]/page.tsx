@@ -7,7 +7,7 @@ export const dynamic = 'force-static'
 export const dynamicParams = false // Return 404 for unknown slugs (don't generate on-demand)
 
 export async function generateStaticParams() {
-  const articles = (await getAllContentMetadata()).filter(p => p.itemType === 'article');
+  const articles = (await getAllContentMetadata()).filter(p => p.itemType === 'news');
   return articles.map((article) => ({
     slug: article.slug,
   }))
@@ -21,12 +21,12 @@ export async function generateMetadata({ params: paramsPromise }: { params: Prom
 
     if (!article) {
       return {
-        title: 'Article Not Found',
+        title: 'News Item Not Found',
       }
     }
 
     const baseUrl = 'https://motyl.dev'
-    const articleUrl = `${baseUrl}/articles/${article.slug}`
+    const articleUrl = `${baseUrl}/news/${article.slug}`
     const keywords = article.hashtags.join(', ')
 
     return {
@@ -72,12 +72,12 @@ export async function generateMetadata({ params: paramsPromise }: { params: Prom
   } catch (error) {
     console.error('Error in generateMetadata:', error)
     return {
-      title: 'Error Loading Article',
+      title: 'Error Loading News Item',
     }
   }
 }
 
-export default async function ArticlePage({ params: paramsPromise }: { params: Promise<{ slug: string }> }) {
+export default async function NewsItemPage({ params: paramsPromise }: { params: Promise<{ slug: string }> }) {
   try {
     const params = await paramsPromise;
     const { slug } = params
@@ -99,7 +99,7 @@ export default async function ArticlePage({ params: paramsPromise }: { params: P
 
     return <ContentPage article={article} prevArticle={prevArticle} nextArticle={nextArticle} />
   } catch (error) {
-    console.error('Error in ArticlePage:', error)
+    console.error('Error in NewsItemPage:', error)
     throw error
   }
 }

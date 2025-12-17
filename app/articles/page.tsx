@@ -1,5 +1,5 @@
-import { ArticlesListing } from '@/components/articles-listing'
-import { getArticlePageData, PageFilters, getAllHashtags, getHashtagCounts } from '@/lib/articles'
+import { ContentListing } from '@/components/content-listing'
+import { getContentPageData, PageFilters, getAllHashtags } from '@/lib/articles'
 import { headers } from 'next/headers'
 
 export const metadata = {
@@ -16,6 +16,7 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
   const page = parseInt((params.page as string) || '1', 10)
   const hashtags = params.hashtags ? (params.hashtags as string).split(',') : []
   const mode = params.mode as 'AND' | 'OR' | 'EXCLUDE' | undefined
+  const showUnseen = params.unseen === 'true'
 
   // Get visited articles from request headers (set in middleware)
   const headersList = await headers()
@@ -24,28 +25,28 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
   const filters: PageFilters = {
     hashtags,
     mode,
+    showUnseen,
     excludeHashtags: ['generated'],
   }
 
-  const [pageData, allHashtags, hashtagCounts] = await Promise.all([
-    getArticlePageData({ page, filters, visitedSlugs }),
+  const [pageData, allHashtags] = await Promise.all([
+    getContentPageData({ page, filters, visitedSlugs, contentType: 'article' }),
     getAllHashtags(),
-    getHashtagCounts(),
   ])
 
   return (
-    <ArticlesListing
-      initialArticles={pageData.articles}
+    <ContentListing
+      initialItems={pageData.items}
       totalPages={pageData.totalPages}
       currentPage={pageData.currentPage}
-      totalArticles={pageData.totalArticles}
+      totalItems={pageData.totalItems}
       allHashtags={allHashtags}
-      hashtagCounts={hashtagCounts}
+      hashtagCounts={pageData.hashtagCounts}
       title="Articles"
       description="Original articles about web development, architecture, and software craftsmanship"
-      filterConfig={{
-        excludeHashtags: ['generated'],
-      }}
+      contentType='article'
+      basePath='/articles'
+      excludeHashtags={['generated']}
     />
   )
 }

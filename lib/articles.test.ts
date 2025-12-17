@@ -180,7 +180,7 @@ describe('Article parsing', () => {
   })
 })
 
-describe('getAllArticles date normalization (integration)', () => {
+describe('getAllContentMetadata date normalization (integration)', () => {
   const tmpDirs: string[] = []
   const originalCwd = process.cwd()
 
@@ -227,8 +227,8 @@ describe('getAllArticles date normalization (integration)', () => {
     })
 
     process.chdir(dir)
-    const { getAllArticles } = await import('./articles')
-    const articles = await getAllArticles()
+    const { getAllContentMetadata } = await import('./articles')
+    const articles = await getAllContentMetadata()
     expect(articles[0]?.publishedAt).toBe('2025-02-03')
   })
 
@@ -247,13 +247,13 @@ describe('getAllArticles date normalization (integration)', () => {
     })
 
     process.chdir(dir)
-    const { getAllArticles } = await import('./articles')
-    const articles = await getAllArticles()
+    const { getAllContentMetadata } = await import('./articles')
+    const articles = await getAllContentMetadata()
     expect(articles[0]?.publishedAt).toBe('2024-11-11')
   })
 })
 
-describe('getArticleBySlug integration', () => {
+describe('getContentItemBySlug integration', () => {
   const tmpDirs: string[] = []
   const originalCwd = process.cwd()
 
@@ -302,12 +302,13 @@ describe('getArticleBySlug integration', () => {
     })
 
     process.chdir(dir)
-    const { getArticleBySlug } = await import('./articles')
-    const article = await getArticleBySlug('news-article')
+    const { getContentItemBySlug } = await import('./articles')
+    const article = await getContentItemBySlug('news-article')
 
     expect(article?.title).toBe('News article')
     expect(article?.publishedAt).toBe('2025-03-04')
     expect(article?.hashtags).toContain('generated')
+    expect(article?.itemType).toBe('news')
   })
 
   it('returns null when the slug does not exist in any directory', async () => {
@@ -323,8 +324,8 @@ describe('getArticleBySlug integration', () => {
     })
 
     process.chdir(dir)
-    const { getArticleBySlug } = await import('./articles')
-    const article = await getArticleBySlug('missing-slug')
+    const { getContentItemBySlug } = await import('./articles')
+    const article = await getContentItemBySlug('missing-slug')
 
     expect(article).toBeNull()
   })

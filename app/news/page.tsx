@@ -1,5 +1,5 @@
-import { ArticlesListing } from '@/components/articles-listing'
-import { getArticlePageData, PageFilters, getAllHashtags, getHashtagCounts } from '@/lib/articles'
+import { ContentListing } from '@/components/content-listing'
+import { getContentPageData, PageFilters, getAllHashtags } from '@/lib/articles'
 import { headers } from 'next/headers'
 
 export const metadata = {
@@ -29,26 +29,24 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
     showUnseen,
   }
 
-  const [pageData, allHashtags, hashtagCounts] = await Promise.all([
-    getArticlePageData({ page, filters, visitedSlugs }),
+  const [pageData, allHashtags] = await Promise.all([
+    getContentPageData({ page, filters, visitedSlugs, contentType: 'news' }),
     getAllHashtags(),
-    getHashtagCounts(),
   ])
 
   return (
-    <ArticlesListing
-      initialArticles={pageData.articles}
+    <ContentListing
+      initialItems={pageData.items}
       totalPages={pageData.totalPages}
       currentPage={pageData.currentPage}
-      totalArticles={pageData.totalArticles}
+      totalItems={pageData.totalItems}
       allHashtags={allHashtags}
-      hashtagCounts={hashtagCounts}
+      hashtagCounts={pageData.hashtagCounts}
       title="News"
       description="Latest tech news and insights curated from newsletters"
-      filterConfig={{
-        requireHashtags: ['generated'],
-        defaultFilters: { showUnseen: true },
-      }}
+      contentType='news'
+      basePath='/news'
+      requireHashtags={['generated']}
     />
   )
 }

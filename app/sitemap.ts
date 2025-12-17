@@ -1,11 +1,11 @@
 import { MetadataRoute } from 'next';
-import { getAllArticleMetadata } from '@/lib/articles';
+import { getAllContentMetadata } from '@/lib/articles';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://motyl.dev';
 
   // Get all articles
-  const articles = await getAllArticleMetadata();
+  const articles = await getAllContentMetadata();
 
   // Generate sitemap entries for all articles
   const articleEntries: MetadataRoute.Sitemap = articles.map((article) => {

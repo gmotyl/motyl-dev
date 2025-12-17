@@ -5,14 +5,14 @@ import { Suspense } from 'react'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import Link from 'next/link'
-import { getAllArticleMetadata } from '@/lib/articles'
+import { getAllContentMetadata } from '@/lib/articles'
 
 // Force static generation at build time - no ISR revalidation
 export const dynamic = 'force-static'
 
 export default async function Home() {
   // Server-side data fetching for better SEO and indexability
-  const allArticles = await getAllArticleMetadata()
+  const allArticles = await getAllContentMetadata()
   const latestArticles = allArticles.slice(0, 3)
   const isLoading = false
 
