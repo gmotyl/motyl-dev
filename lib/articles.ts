@@ -276,9 +276,7 @@ export async function getArticlePageData({
     excludeHashtags: filters.excludeHashtags,
   })
 
-  if (filters.showUnseen) {
-    filtered = filtered.filter((article) => !visitedSlugs.has(article.slug))
-  }
+
 
   if (filters.hashtags && filters.hashtags.length > 0) {
     const mode = filters.mode || 'AND'

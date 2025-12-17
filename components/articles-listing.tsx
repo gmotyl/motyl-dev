@@ -150,8 +150,15 @@ export function ArticlesListing({
     return pages
   }
 
+  const articlesToDisplay = useMemo(() => {
+    if (!showUnseenOnly) {
+      return initialArticles;
+    }
+    return initialArticles.filter(article => !isVisited(article.slug));
+  }, [initialArticles, showUnseenOnly, isVisited]);
+
   const startIndex = (currentPage - 1) * 20;
-  const endIndex = startIndex + initialArticles.length;
+  const endIndex = startIndex + articlesToDisplay.length;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -289,7 +296,7 @@ export function ArticlesListing({
           </div>
         )}
 
-        {initialArticles.length === 0 ? (
+        {articlesToDisplay.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">No articles found.</p>
           </div>
@@ -300,7 +307,7 @@ export function ArticlesListing({
             </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {initialArticles.map((article) => (
+              {articlesToDisplay.map((article) => (
                 <Link
                   key={article.slug}
                   href={`/articles/${article.slug}`}
