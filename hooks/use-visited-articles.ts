@@ -133,8 +133,6 @@ export function useVisitedArticles() {
     syncOnLogin()
   }, [status, session])
 
-
-
   // Persist to localStorage on state change
   useEffect(() => {
     if (!isLoading) {
@@ -158,11 +156,11 @@ export function useVisitedArticles() {
         try {
           const response = await fetch(`/api/articles/${slug}/view`, {
             method: 'POST',
-          });
+          })
           if (response.ok) {
-            console.log(`Successfully marked article ${slug} as viewed`);
+            console.log(`Successfully marked article ${slug} as viewed`)
           } else {
-            console.error(`Failed to mark article ${slug} as viewed`);
+            console.error(`Failed to mark article ${slug} as viewed`)
           }
         } catch (error) {
           console.error('Failed to save article view to database:', error)
@@ -173,10 +171,7 @@ export function useVisitedArticles() {
   )
 
   // Check if article is visited
-  const isVisited = useCallback(
-    (slug: string) => visitedArticles.has(slug),
-    [visitedArticles]
-  )
+  const isVisited = useCallback((slug: string) => visitedArticles.has(slug), [visitedArticles])
 
   return { markAsVisited, isVisited, visitedArticles, isLoading }
 }

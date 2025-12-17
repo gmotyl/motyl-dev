@@ -3,10 +3,10 @@ import { markArticleAsViewed } from '@/lib/article-views'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const { slug } = params
+    const { slug } = await params
 
     if (!slug) {
       return NextResponse.json({ error: 'Article slug is required' }, { status: 400 })
