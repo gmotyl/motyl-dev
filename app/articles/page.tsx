@@ -1,6 +1,8 @@
 import { ContentListing } from '@/components/content-listing'
 import { getContentPageData, PageFilters, getAllHashtags } from '@/lib/articles'
 import { headers } from 'next/headers'
+import { auth } from '@/lib/auth'
+import { getUserViewedArticles } from '@/lib/article-views'
 
 export const metadata = {
   title: 'Articles - Motyl.dev',
@@ -18,10 +20,20 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
   const mode = params.mode as 'AND' | 'OR' | 'EXCLUDE' | undefined
   const showUnseen = params.unseen === 'true'
 
-  // Get visited articles from request headers (set in middleware)
-  const headersList = await headers()
-  const visitedArticlesHeader = headersList.get('x-visited-articles')
-  const visitedSlugs = new Set<string>(JSON.parse(visitedArticlesHeader || '[]'))
+  // Get visited articles from cookie (for anonymous users) OR database (for logged-in users)
+  const session = await auth()
+  let visitedSlugs: Set<string>
+
+  if (session?.user?.id) {
+    // Logged in - fetch from database
+    const dbSlugs = await getUserViewedArticles()
+    visitedSlugs = new Set(dbSlugs)
+  } else {
+    // Anonymous - read from cookie via middleware header
+    const headersList = await headers()
+    const visitedArticlesHeader = headersList.get('x-visited-articles')
+    visitedSlugs = new Set<string>(JSON.parse(visitedArticlesHeader || '[]'))
+  }
   const filters: PageFilters = {
     hashtags,
     mode,
@@ -44,8 +56,8 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
       hashtagCounts={pageData.hashtagCounts}
       title="Articles"
       description="Original articles about web development, architecture, and software craftsmanship"
-      contentType='article'
-      basePath='/articles'
+      contentType="article"
+      basePath="/articles"
       excludeHashtags={['generated']}
     />
   )

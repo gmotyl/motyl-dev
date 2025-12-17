@@ -169,7 +169,11 @@ export function useVisitedArticles() {
       const slugArray = [...visitedArticles]
       const cookieValue = JSON.stringify(slugArray)
       localStorage.setItem(LOCALSTORAGE_KEY, cookieValue)
-      document.cookie = `visitedArticles=${cookieValue};path=/;max-age=31536000;samesite=lax`
+
+      // Set cookie with Secure flag for HTTPS (production)
+      const isSecure = typeof window !== 'undefined' && window.location.protocol === 'https:'
+      const secureFlag = isSecure ? ';secure' : ''
+      document.cookie = `visitedArticles=${cookieValue};path=/;max-age=31536000;samesite=lax${secureFlag}`
     }
   }, [visitedArticles, isLoading])
 
