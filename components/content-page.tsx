@@ -125,7 +125,7 @@ export async function ContentPage({ article, prevArticle, nextArticle }: Content
             <HashtagsList
               hashtags={article.hashtags}
               maxVisible={3}
-              linkToArticles={true}
+              basePath={parentPath}
               className="mt-2"
             />
           </header>

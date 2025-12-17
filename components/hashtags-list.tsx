@@ -9,6 +9,7 @@ interface HashtagsListProps {
   maxVisible?: number
   linkToArticles?: boolean
   linkToBookmarks?: boolean
+  basePath?: string
   className?: string
 }
 
@@ -31,6 +32,7 @@ export function HashtagsList({
   maxVisible = 3,
   linkToArticles = false,
   linkToBookmarks = false,
+  basePath,
   className = ''
 }: HashtagsListProps) {
   const [isExpanded, setIsExpanded] = useState(false)
@@ -43,6 +45,9 @@ export function HashtagsList({
   const hasMore = hashtags.length > maxVisible
 
   const getLink = (hashtag: string) => {
+    if (basePath) {
+      return `${basePath}?hashtags=${hashtag}&mode=AND`
+    }
     if (linkToArticles) {
       return `/articles?hashtags=${hashtag}&mode=AND`
     }

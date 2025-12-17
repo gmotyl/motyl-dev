@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import React from "react"
 import { Code, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
@@ -11,6 +12,11 @@ import { InstallPrompt } from "@/components/install-prompt"
 
 export default function Header() {
   const { data: session, status } = useSession()
+  const [mounted, setMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   return (
     <header className="px-4 lg:px-6 h-16 flex items-center border-b border-border/40 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
@@ -53,10 +59,12 @@ export default function Header() {
       </nav>
       <Sheet>
         <SheetTrigger asChild className="md:hidden ml-auto">
-          <Button variant="ghost" size="icon">
-            <Menu className="h-5 w-5" />
-            <span className="sr-only">Toggle menu</span>
-          </Button>
+          {mounted && (
+            <Button variant="ghost" size="icon">
+              <Menu className="h-5 w-5" />
+              <span className="sr-only">Toggle menu</span>
+            </Button>
+          )}
         </SheetTrigger>
         <SheetContent side="right">
           <nav className="flex flex-col gap-4 mt-8">
