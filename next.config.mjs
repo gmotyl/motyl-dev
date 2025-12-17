@@ -1,11 +1,22 @@
+import { getAllContent } from './lib/articles.ts';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-
   typescript: {
     ignoreBuildErrors: true,
   },
   images: {
     unoptimized: true,
+  },
+  async redirects() {
+    const allContent = await getAllContent();
+    const newsItems = allContent.filter((item) => item.itemType === 'news');
+
+    return newsItems.map((item) => ({
+      source: `/articles/${item.slug}`,
+      destination: `/news/${item.slug}`,
+      permanent: true,
+    }));
   },
   async headers() {
     return [
@@ -22,8 +33,8 @@ const nextConfig = {
           },
         ],
       },
-    ]
+    ];
   },
-}
+};
 
-export default nextConfig
+export default nextConfig;

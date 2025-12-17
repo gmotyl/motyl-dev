@@ -88,14 +88,15 @@ export default async function NewsItemPage({ params: paramsPromise }: { params: 
     }
 
     // Get all article metadata for navigation
-    const allArticles = await getAllContentMetadata()
+    const allContent = await getAllContentMetadata()
+    const allNews = allContent.filter(item => item.itemType === 'news');
 
     // Find the current article's index
-    const currentIndex = allArticles.findIndex((a) => a.slug === slug)
+    const currentIndex = allNews.findIndex((a) => a.slug === slug)
 
     // Determine previous and next articles
-    const prevArticle = currentIndex > 0 ? allArticles[currentIndex - 1] : null
-    const nextArticle = currentIndex < allArticles.length - 1 ? allArticles[currentIndex + 1] : null
+    const prevArticle = currentIndex > 0 ? allNews[currentIndex - 1] : null
+    const nextArticle = currentIndex < allNews.length - 1 ? allNews[currentIndex + 1] : null
 
     return <ContentPage article={article} prevArticle={prevArticle} nextArticle={nextArticle} />
   } catch (error) {

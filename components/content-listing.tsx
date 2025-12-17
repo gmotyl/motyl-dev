@@ -76,50 +76,63 @@ export function ContentListing({
   }, [searchParams])
 
   // Central function to run filters and update state
-  const runFilter = useCallback((newFilterState: {
-    page?: number;
-    hashtags?: Set<string>;
-    mode?: 'AND' | 'OR' | 'EXCLUDE';
-    showUnseen?: boolean;
-  }) => {
-    const params = new URLSearchParams(searchParams)
+  const runFilter = useCallback(
+    (newFilterState: {
+      page?: number
+      hashtags?: Set<string>
+      mode?: 'AND' | 'OR' | 'EXCLUDE'
+      showUnseen?: boolean
+    }) => {
+      const params = new URLSearchParams(searchParams)
 
-    const finalState = {
-      page: newFilterState.page ?? currentPage,
-      hashtags: Array.from(newFilterState.hashtags ?? selectedHashtags),
-      mode: newFilterState.mode ?? filterMode,
-      showUnseen: newFilterState.showUnseen ?? showUnseenOnly,
-      contentType: contentType,
-      requireHashtags: requireHashtags,
-      excludeHashtags: excludeHashtags,
-    }
+      const finalState = {
+        page: newFilterState.page ?? currentPage,
+        hashtags: Array.from(newFilterState.hashtags ?? selectedHashtags),
+        mode: newFilterState.mode ?? filterMode,
+        showUnseen: newFilterState.showUnseen ?? showUnseenOnly,
+        contentType: contentType,
+        requireHashtags: requireHashtags,
+        excludeHashtags: excludeHashtags,
+      }
 
-    // Update URL
-    params.set('page', finalState.page.toString())
-    if (finalState.hashtags.length > 0) {
-      params.set('hashtags', finalState.hashtags.join(','))
-    } else {
-      params.delete('hashtags')
-    }
-    params.set('mode', finalState.mode)
-    if (finalState.showUnseen) {
-      params.set('unseen', 'true')
-    } else {
-      params.delete('unseen')
-    }
-    router.push(`${pathname}?${params.toString()}`, { scroll: false })
+      // Update URL
+      params.set('page', finalState.page.toString())
+      if (finalState.hashtags.length > 0) {
+        params.set('hashtags', finalState.hashtags.join(','))
+      } else {
+        params.delete('hashtags')
+      }
+      params.set('mode', finalState.mode)
+      if (finalState.showUnseen) {
+        params.set('unseen', 'true')
+      } else {
+        params.delete('unseen')
+      }
+      router.push(`${pathname}?${params.toString()}`, { scroll: false })
 
-    // Call server action
-    startTransition(async () => {
-      const result = await getFilteredContent(finalState)
-      setItems(result.items)
-      setCurrentPage(result.currentPage)
-      setTotalPages(result.totalPages)
-      setTotalItems(result.totalItems)
-      setHashtagCounts(result.hashtagCounts)
-    })
-  }, [searchParams, currentPage, selectedHashtags, filterMode, showUnseenOnly, router, pathname, contentType, requireHashtags, excludeHashtags])
-
+      // Call server action
+      startTransition(async () => {
+        const result = await getFilteredContent(finalState)
+        setItems(result.items)
+        setCurrentPage(result.currentPage)
+        setTotalPages(result.totalPages)
+        setTotalItems(result.totalItems)
+        setHashtagCounts(result.hashtagCounts)
+      })
+    },
+    [
+      searchParams,
+      currentPage,
+      selectedHashtags,
+      filterMode,
+      showUnseenOnly,
+      router,
+      pathname,
+      contentType,
+      requireHashtags,
+      excludeHashtags,
+    ]
+  )
 
   // Handlers for UI interactions
   const handlePageChange = (page: number) => {
@@ -143,7 +156,7 @@ export function ContentListing({
   const handleToggleUnseen = () => {
     runFilter({ showUnseen: !showUnseenOnly, page: 1 })
   }
-  
+
   const handleClearFilters = () => {
     runFilter({ hashtags: new Set(), showUnseen: false, page: 1, mode: 'AND' })
   }
@@ -156,7 +169,6 @@ export function ContentListing({
     setTotalItems(initialTotalItems)
     setHashtagCounts(initialHashtagCounts)
   }, [initialItems, initialCurrentPage, initialTotalPages, initialTotalItems, initialHashtagCounts])
-
 
   // State for hashtag visibility UI
   const [showAllHashtags, setShowAllHashtags] = useState(false)
@@ -177,11 +189,11 @@ export function ContentListing({
     const selectedHashtagsArray = Array.from(selectedHashtags)
     const selectedHashtagsSet = new Set(selectedHashtagsArray)
 
-    const hashtagsWithCounts = sortedHashtags.filter(hashtag =>
-      (hashtagCounts[hashtag] || 0) > 0 || selectedHashtagsSet.has(hashtag)
+    const hashtagsWithCounts = sortedHashtags.filter(
+      (hashtag) => (hashtagCounts[hashtag] || 0) > 0 || selectedHashtagsSet.has(hashtag)
     )
-    const hashtagsWithoutCounts = sortedHashtags.filter(hashtag =>
-      (hashtagCounts[hashtag] || 0) === 0 && !selectedHashtagsSet.has(hashtag)
+    const hashtagsWithoutCounts = sortedHashtags.filter(
+      (hashtag) => (hashtagCounts[hashtag] || 0) === 0 && !selectedHashtagsSet.has(hashtag)
     )
 
     if (showAllHashtags) {
@@ -189,7 +201,7 @@ export function ContentListing({
       return {
         visibleHashtags: showZeroCountHashtags ? sortedHashtags : hashtagsWithCounts,
         hiddenHashtagsWithCounts: [],
-        hiddenHashtagsWithoutCounts: hiddenZeroCounts
+        hiddenHashtagsWithoutCounts: hiddenZeroCounts,
       }
     }
 
@@ -197,7 +209,7 @@ export function ContentListing({
     const visible: string[] = []
     const hidden: string[] = []
 
-    hashtagsWithCounts.forEach(hashtag => {
+    hashtagsWithCounts.forEach((hashtag) => {
       if (selectedHashtagsSet.has(hashtag) || visible.length < VISIBLE_COUNT) {
         visible.push(hashtag)
       } else {
@@ -208,7 +220,7 @@ export function ContentListing({
     return {
       visibleHashtags: visible,
       hiddenHashtagsWithCounts: hidden,
-      hiddenHashtagsWithoutCounts: hashtagsWithoutCounts
+      hiddenHashtagsWithoutCounts: hashtagsWithoutCounts,
     }
   }, [sortedHashtags, hashtagCounts, selectedHashtags, showAllHashtags, showZeroCountHashtags])
 
@@ -236,17 +248,15 @@ export function ContentListing({
     return pages
   }
 
-  const startIndex = (currentPage - 1) * 20;
-  const endIndex = startIndex + items.length;
+  const startIndex = (currentPage - 1) * 20
+  const endIndex = startIndex + items.length
 
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
       <main className="flex-1 container py-10">
         <h1 className="text-3xl font-bold mb-2">{title}</h1>
-        {description && (
-          <p className="text-muted-foreground mb-8">{description}</p>
-        )}
+        {description && <p className="text-muted-foreground mb-8">{description}</p>}
 
         {allHashtags.length > 0 && (
           <div className="mb-8">
@@ -328,7 +338,9 @@ export function ContentListing({
                     variant={isSelected ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => handleHashtagToggle(hashtag)}
-                    className={count === 0 && !isSelected ? 'text-muted-foreground line-through' : ''}
+                    className={
+                      count === 0 && !isSelected ? 'text-muted-foreground line-through' : ''
+                    }
                   >
                     #{hashtag}
                     {count > 0 && ` (${count})`}
@@ -336,41 +348,45 @@ export function ContentListing({
                 )
               })}
 
-              {!showAllHashtags && (hiddenHashtagsWithCounts.length > 0 || hiddenHashtagsWithoutCounts.length > 0) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowAllHashtags(true)}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  more...
-                </Button>
-              )}
+              {!showAllHashtags &&
+                (hiddenHashtagsWithCounts.length > 0 || hiddenHashtagsWithoutCounts.length > 0) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAllHashtags(true)}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    more...
+                  </Button>
+                )}
 
-              {showAllHashtags && !showZeroCountHashtags && hiddenHashtagsWithoutCounts.length > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowZeroCountHashtags(true)}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  more...
-                </Button>
-              )}
+              {showAllHashtags &&
+                !showZeroCountHashtags &&
+                hiddenHashtagsWithoutCounts.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowZeroCountHashtags(true)}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    more...
+                  </Button>
+                )}
 
-              {showAllHashtags && (showZeroCountHashtags || hiddenHashtagsWithoutCounts.length === 0) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setShowAllHashtags(false)
-                    setShowZeroCountHashtags(false)
-                  }}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  less...
-                </Button>
-              )}
+              {showAllHashtags &&
+                (showZeroCountHashtags || hiddenHashtagsWithoutCounts.length === 0) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setShowAllHashtags(false)
+                      setShowZeroCountHashtags(false)
+                    }}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    less...
+                  </Button>
+                )}
             </div>
           </div>
         )}
@@ -390,6 +406,7 @@ export function ContentListing({
                   <Link
                     key={item.slug}
                     href={`${basePath}/${item.slug}`}
+                    prefetch={false}
                     onClick={() => markAsVisited(item.slug)}
                     className={`rounded-lg border backdrop-blur-sm p-6 transition-all hover:shadow-md hover:border-primary/50 flex flex-col ${
                       isVisited(item.slug) ? 'visited-article' : 'unvisited-article'
@@ -401,7 +418,7 @@ export function ContentListing({
                       {new Date(item.publishedAt).toLocaleDateString('pl-PL', {
                         day: '2-digit',
                         month: '2-digit',
-                        year: 'numeric'
+                        year: 'numeric',
                       })}
                     </p>
                   </Link>
@@ -419,7 +436,9 @@ export function ContentListing({
                             e.preventDefault()
                             if (currentPage > 1) handlePageChange(currentPage - 1)
                           }}
-                          className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                          className={
+                            currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'
+                          }
                         />
                       </PaginationItem>
                       {getPageNumbers().map((page, index) => (
@@ -448,7 +467,11 @@ export function ContentListing({
                             e.preventDefault()
                             if (currentPage < totalPages) handlePageChange(currentPage + 1)
                           }}
-                          className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                          className={
+                            currentPage === totalPages
+                              ? 'pointer-events-none opacity-50'
+                              : 'cursor-pointer'
+                          }
                         />
                       </PaginationItem>
                     </PaginationContent>

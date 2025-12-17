@@ -88,7 +88,8 @@ export default async function ArticlePage({ params: paramsPromise }: { params: P
     }
 
     // Get all article metadata for navigation
-    const allArticles = await getAllContentMetadata()
+    const allContent = await getAllContentMetadata()
+    const allArticles = allContent.filter(item => item.itemType === 'article');
 
     // Find the current article's index
     const currentIndex = allArticles.findIndex((a) => a.slug === slug)

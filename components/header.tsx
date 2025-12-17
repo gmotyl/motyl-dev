@@ -32,7 +32,7 @@ export default function Header() {
           Newsletter
         </Link>
         <Link
-          href={session ? "/news?unseen=true" : "/news"}
+          href="/news?unseen=true"
           className="text-sm font-medium hover:text-primary transition-colors"
         >
           News
@@ -75,7 +75,7 @@ export default function Header() {
               Newsletter
             </Link>
             <Link
-              href={session ? "/news?unseen=true" : "/news"}
+              href="/news?unseen=true"
               className="text-sm font-medium hover:text-primary transition-colors"
             >
               News
