@@ -77,13 +77,13 @@ function parseHashtags(hashtagData: any): string[] {
 }
 
 function extractExternalLinks(content: string): ExternalLink[] {
-  const linkRegex = /\!\[\?\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g
+  const linkRegex = /(?<!\!)\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g
   const links: ExternalLink[] = []
   const matches = content.matchAll(linkRegex)
   for (const match of matches) {
     const [, title, url] = match
     if (title && url && !url.includes('motyl.dev') && !url.includes('newsletter-ai')) {
-      links.push({ title: title.trim(), url: url.trim(), order: links.length })
+      links.push({ title: title.trim(), url: url.trim() })
     }
   }
   return links

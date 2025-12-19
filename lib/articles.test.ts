@@ -178,7 +178,7 @@ describe('Article parsing', () => {
     const article = await parseArticleFile(filePath, 'invalid-date-article')
     expect(article.publishedAt).toBe('2024-12-24')
   })
-})
+});
 
 describe('getAllContentMetadata date normalization (integration)', () => {
   const tmpDirs: string[] = []
