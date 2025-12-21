@@ -17,6 +17,7 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination'
 import { type ContentItemMetadata } from '@/lib/articles'
+import AdUnit from '@/components/ad-unit'
 import { getFilteredContent } from '@/app/actions'
 
 interface ContentListingProps {
@@ -399,6 +400,14 @@ export function ContentListing({
             <>
               <div className="mb-4 text-sm text-muted-foreground">
                 Showing {startIndex + 1}-{endIndex} of {totalItems} items
+              </div>
+
+              <div className="my-6">
+                <AdUnit
+                  pId="5937972178718571"
+                  adSlot="9373832601"
+                  adFormat="fluid"
+                />
               </div>
 
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
