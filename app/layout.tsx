@@ -19,7 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           async
           src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5937972178718571`}
           crossOrigin="anonymous"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
         <Analytics />
         <SessionProvider>
@@ -120,5 +120,10 @@ export const metadata: Metadata = {
   verification: {
     google: 'Kqg71gyKXIEQobhFAvea9Ewnuvt9so3gDuK_70QOmak',
     // yandex: 'your-yandex-verification-token',
+  },
+  icons: {
+    icon: '/icons/icon-192x192.png',
+    shortcut: '/icons/icon-192x192.png',
+    apple: '/icons/apple-icon.png',
   },
 }

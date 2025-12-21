@@ -162,8 +162,9 @@ async function buildArticleCache(): Promise<Map<string, ContentItem>> {
 
 export async function getAllContentMetadata(): Promise<ContentItemMetadata[]> {
   await buildArticleCache()
-  // The type assertion is safe because buildArticleCache ensures allContentCache is populated.
-  return allContentCache as ContentItem[]
+  if (!allContentCache) return []
+
+  return allContentCache.map(({ content, externalLinks, ...metadata }) => metadata)
 }
 
 export const getContentItemBySlug = cache(async (slug: string): Promise<ContentItem | null> => {
