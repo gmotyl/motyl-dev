@@ -1,5 +1,4 @@
 import type React from 'react'
-import Script from 'next/script'
 import '@/app/globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
 import { SessionProvider } from '@/components/session-provider'
@@ -9,17 +8,13 @@ import { Analytics } from '@vercel/analytics/next'
 import { ServiceWorkerRegister } from '@/app/components/service-worker-register'
 import { InstallPrompt } from '@/components/install-prompt'
 import { UpdateNotification } from '@/components/update-notification'
+import GdprConsent from '@/components/cookie-consent'
+import AdsenseScript from '@/components/adsense-script'
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
-      <head>
-        <script
-          async
-          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5937972178718571`}
-          crossOrigin="anonymous"
-        ></script>
-      </head>
+      <head></head>
       <body className="min-h-screen bg-background font-sans antialiased relative">
         <div className="absolute inset-0 bg-butterfly-pattern opacity-5 pointer-events-none z-0"></div>
         <Analytics />
@@ -35,6 +30,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <ServiceWorkerRegister />
             <InstallPrompt />
             <UpdateNotification />
+            <GdprConsent />
+            <AdsenseScript />
           </ThemeProvider>
         </SessionProvider>
       </body>
