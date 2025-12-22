@@ -1,19 +1,25 @@
 import { notFound } from 'next/navigation'
 import { getContentItemBySlug, getAllContentMetadata } from '@/lib/articles'
 import { ContentPage } from '@/components/content-page'
+import { getContentUrl } from '@/lib/urls'
+import { ItemType } from '@/lib/types'
 
 // Force static generation at build time
 export const dynamic = 'force-static'
 export const dynamicParams = false // Return 404 for unknown slugs (don't generate on-demand)
 
 export async function generateStaticParams() {
-  const articles = (await getAllContentMetadata()).filter(p => p.itemType === 'article');
+  const articles = (await getAllContentMetadata()).filter((p) => p.itemType === 'article')
   return articles.map((article) => ({
     slug: article.slug,
   }))
 }
 
-export async function generateMetadata({ params: paramsPromise }: { params: Promise<{ slug: string }> }) {
+export async function generateMetadata({
+  params: paramsPromise,
+}: {
+  params: Promise<{ slug: string }>
+}) {
   try {
     const params = await paramsPromise
     const { slug } = params
@@ -25,8 +31,7 @@ export async function generateMetadata({ params: paramsPromise }: { params: Prom
       }
     }
 
-    const baseUrl = 'https://motyl.dev'
-    const articleUrl = `${baseUrl}/articles/${article.slug}`
+    const articleUrl = getContentUrl(article, true)
     const keywords = article.hashtags.join(', ')
 
     return {
@@ -77,9 +82,13 @@ export async function generateMetadata({ params: paramsPromise }: { params: Prom
   }
 }
 
-export default async function ArticlePage({ params: paramsPromise }: { params: Promise<{ slug: string }> }) {
+export default async function ArticlePage({
+  params: paramsPromise,
+}: {
+  params: Promise<{ slug: string }>
+}) {
   try {
-    const params = await paramsPromise;
+    const params = await paramsPromise
     const { slug } = params
     const article = await getContentItemBySlug(slug)
 
@@ -89,7 +98,7 @@ export default async function ArticlePage({ params: paramsPromise }: { params: P
 
     // Get all article metadata for navigation
     const allContent = await getAllContentMetadata()
-    const allArticles = allContent.filter(item => item.itemType === 'article');
+    const allArticles = allContent.filter((item) => item.itemType === 'article')
 
     // Find the current article's index
     const currentIndex = allArticles.findIndex((a) => a.slug === slug)

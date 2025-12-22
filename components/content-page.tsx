@@ -12,12 +12,14 @@ import { ArticleViewTracker } from '@/components/article-view-tracker'
 import { ShareAIButton } from '@/components/share-ai-button'
 import { ArticleNavigation } from '@/components/article-navigation'
 import AdUnit from '@/components/ad-unit'
-import { type ContentItem } from '@/lib/articles'
+import { type Content, ItemType } from '@/lib/types'
+import { getContentUrl } from '@/lib/urls'
+import { ContentItemMetadata } from '@/lib/articles'
 
 interface ContentPageProps {
-  article: ContentItem
-  prevArticle: ContentItem | null
-  nextArticle: ContentItem | null
+  article: Content
+  prevArticle: ContentItemMetadata | null
+  nextArticle: ContentItemMetadata | null
 }
 
 export async function ContentPage({ article, prevArticle, nextArticle }: ContentPageProps) {
@@ -43,12 +45,12 @@ export async function ContentPage({ article, prevArticle, nextArticle }: Content
     dateModified: article.publishedAt,
     mainEntityOfPage: {
       '@type': 'WebPage',
-      '@id': `https://motyl.dev/articles/${article.slug}`,
+      '@id': getContentUrl(article, true),
     },
     keywords: article.hashtags.join(', '),
   }
 
-  const isNewsArticle = article.itemType === 'news'
+  const isNewsArticle = article.itemType === ItemType.News
   const parentSection = isNewsArticle ? 'News' : 'Articles'
   const parentPath = isNewsArticle ? '/news' : '/articles'
 
@@ -72,7 +74,7 @@ export async function ContentPage({ article, prevArticle, nextArticle }: Content
         '@type': 'ListItem',
         position: 3,
         name: article.title,
-        item: `https://motyl.dev${parentPath}/${article.slug}`,
+        item: getContentUrl(article, true),
       },
     ],
   }
@@ -95,7 +97,7 @@ export async function ContentPage({ article, prevArticle, nextArticle }: Content
           <Breadcrumb
             items={[
               { label: parentSection, href: parentPath },
-              { label: article.title, href: `${parentPath}/${article.slug}` },
+              { label: article.title, href: getContentUrl(article) },
             ]}
           />
           <header className="mb-8">

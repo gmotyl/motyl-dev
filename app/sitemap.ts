@@ -1,19 +1,16 @@
 import { MetadataRoute } from 'next';
 import { getAllContentMetadata } from '@/lib/articles';
+import { getContentUrl } from '@/lib/urls';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = 'https://motyl.dev';
+  const baseUrl = process.env.BASE_URL || 'https://motyl.dev';
 
-  // Get all articles
-  const articles = await getAllContentMetadata();
+  const content = await getAllContentMetadata();
 
-  // Generate sitemap entries for all articles
-  const articleEntries: MetadataRoute.Sitemap = articles.map((article) => {
-    // Handle invalid dates gracefully
+  const contentEntries: MetadataRoute.Sitemap = content.map((item) => {
     let lastModified: Date;
     try {
-      lastModified = new Date(article.publishedAt);
-      // Check if date is valid
+      lastModified = new Date(item.publishedAt);
       if (isNaN(lastModified.getTime())) {
         lastModified = new Date();
       }
@@ -22,34 +19,33 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }
 
     return {
-      url: `${baseUrl}/articles/${article.slug}`,
+      url: getContentUrl(item, true),
       lastModified,
-      changeFrequency: 'monthly' as const,
+      changeFrequency: 'monthly',
       priority: 0.8,
     };
   });
 
-  // Static pages
   const staticPages: MetadataRoute.Sitemap = [
     {
       url: baseUrl,
       lastModified: new Date(),
-      changeFrequency: 'daily' as const,
+      changeFrequency: 'daily',
       priority: 1,
     },
     {
       url: `${baseUrl}/news`,
       lastModified: new Date(),
-      changeFrequency: 'daily' as const,
+      changeFrequency: 'daily',
       priority: 0.9,
     },
     {
       url: `${baseUrl}/articles`,
       lastModified: new Date(),
-      changeFrequency: 'weekly' as const,
+      changeFrequency: 'weekly',
       priority: 0.8,
     },
   ];
 
-  return [...staticPages, ...articleEntries];
+  return [...staticPages, ...contentEntries];
 }

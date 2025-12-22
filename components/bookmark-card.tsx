@@ -17,6 +17,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { BookmarkDialog } from '@/components/bookmark-dialog';
 import { formatDistanceToNow } from 'date-fns';
+import { getContentUrl } from '@/lib/urls';
+import { ItemType, type Content } from '@/lib/types';
 
 interface Bookmark {
   id: string;
@@ -130,7 +132,9 @@ export function BookmarkCard({
           {bookmark.articleSlug && (
             <div className="pb-2 border-b">
               <a
-                href={`/articles/${bookmark.articleSlug}#${encodeURIComponent(bookmark.sectionTitle || '')}`}
+                href={`${getContentUrl(
+                  { slug: bookmark.articleSlug, itemType: ItemType.Article } as Content,
+                )}#${encodeURIComponent(bookmark.sectionTitle || '')}`}
                 className="inline-flex items-center gap-2 text-sm text-purple-600 hover:text-purple-700 hover:underline transition-colors"
               >
                 <FileText className="h-4 w-4" />

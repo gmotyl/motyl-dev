@@ -6,22 +6,12 @@ import fs from 'fs/promises'
 import matter from 'gray-matter'
 import yaml from 'js-yaml'
 
-import type { ExternalLink } from '@/lib/types'
+import { type ExternalLink, type Content, ItemType } from './types.ts'
 
 // --- Type Definitions ---
 
-export interface ContentItem {
-  slug: string
-  title: string
-  excerpt: string
-  publishedAt: string
-  content: string
-  hashtags: string[]
-  externalLinks?: ExternalLink[]
-  itemType: 'article' | 'news'
-}
-
-export type ContentItemMetadata = Omit<ContentItem, 'content' | 'externalLinks'>
+export type ContentItem = Content
+export type ContentItemMetadata = Omit<Content, 'content' | 'externalLinks'>
 
 interface HashtagIndex {
   [hashtag: string]: string[]
@@ -39,7 +29,7 @@ const articlesDirectory = path.join(process.cwd(), 'articles')
 const newsDirectory = path.join(process.cwd(), 'news')
 const matterOptions = {
   engines: {
-    yaml: (s: string, opts: yaml.LoadOptions) => yaml.load(s, opts),
+    yaml: (s: string) => yaml.load(s) as object,
   },
 }
 
@@ -80,10 +70,11 @@ function extractExternalLinks(content: string): ExternalLink[] {
   const linkRegex = /(?<!\!)\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g
   const links: ExternalLink[] = []
   const matches = content.matchAll(linkRegex)
+  let order = 0
   for (const match of matches) {
     const [, title, url] = match
     if (title && url && !url.includes('motyl.dev') && !url.includes('newsletter-ai')) {
-      links.push({ title: title.trim(), url: url.trim() })
+      links.push({ title: title.trim(), url: url.trim(), order: order++ })
     }
   }
   return links
@@ -91,12 +82,15 @@ function extractExternalLinks(content: string): ExternalLink[] {
 
 // --- Core Parsing and Caching Logic ---
 
-export async function parseArticleFile(fullPath: string, slugFromFile: string): Promise<ContentItem> {
+export async function parseArticleFile(
+  fullPath: string,
+  slugFromFile: string
+): Promise<ContentItem> {
   const fileContents = await fs.readFile(fullPath, 'utf8')
   const { data, content } = matter(fileContents, matterOptions)
   const stats = await fs.stat(fullPath)
   const fallbackDate = stats.mtime || new Date()
-  const itemType = fullPath.includes(articlesDirectory) ? 'article' : 'news';
+  const itemType = fullPath.includes(articlesDirectory) ? ItemType.Article : ItemType.News
 
   return {
     slug: data.slug || slugFromFile, // Prioritize frontmatter slug
@@ -186,7 +180,7 @@ async function buildHashtagIndex(): Promise<HashtagIndex> {
   const index: HashtagIndex = {}
 
   articles.forEach((article) => {
-    article.hashtags.forEach((hashtag) => {
+    article.hashtags.forEach((hashtag: string) => {
       if (!index[hashtag]) {
         index[hashtag] = []
       }
@@ -241,8 +235,8 @@ export interface PaginatedContent {
 
 function getHashtagCountsFromArticles(articles: ContentItemMetadata[]): Record<string, number> {
   const counts: Record<string, number> = {}
-  articles.forEach(article => {
-    article.hashtags.forEach(hashtag => {
+  articles.forEach((article) => {
+    article.hashtags.forEach((hashtag: string) => {
       counts[hashtag] = (counts[hashtag] || 0) + 1
     })
   })
@@ -277,19 +271,19 @@ export async function getContentPageData({
   limit = 20,
   filters = {},
   visitedSlugs = new Set(),
-  contentType = 'all'
+  contentType = 'all',
 }: {
   page?: number
   limit?: number
   filters?: PageFilters
   visitedSlugs?: Set<string>
-  contentType?: 'article' | 'news' | 'all'
+  contentType?: ItemType | 'all'
 }): Promise<PaginatedContent> {
   const allArticles = await getAllContentMetadata()
-  
-  let content = allArticles;
+
+  let content = allArticles
   if (contentType !== 'all') {
-    content = allArticles.filter(item => item.itemType === contentType)
+    content = allArticles.filter((item) => item.itemType === contentType)
   }
 
   let filtered = await applyBaseFilters(content, {

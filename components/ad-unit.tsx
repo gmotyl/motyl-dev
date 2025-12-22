@@ -23,10 +23,13 @@ const AdUnit: React.FC<AdUnitProps> = ({
   const pathname = usePathname();
 
   useEffect(() => {
-    try {
-      ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
-    } catch (err) {
-      console.error('AdSense error', err);
+    // In production, push the ad unit to adsbygoogle
+    if (process.env.NODE_ENV === 'production') {
+      try {
+        ((window as any).adsbygoogle = (window as any).adsbygoogle || []).push({});
+      } catch (err) {
+        console.error('AdSense error', err);
+      }
     }
   }, [pathname]); // Re-run on route changes
 
@@ -52,6 +55,7 @@ const AdUnit: React.FC<AdUnitProps> = ({
 
   return (
     <ins
+      key={`${pathname}-${adSlot}`}
       className="adsbygoogle"
       style={style}
       data-ad-client={`ca-pub-${pId}`}

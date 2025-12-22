@@ -1,11 +1,11 @@
 import { Code, Zap, Sparkles, Building, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import NewsletterForm from '@/components/newsletter-form'
-import { Suspense } from 'react'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import Link from 'next/link'
 import { getAllContentMetadata } from '@/lib/articles'
+import { getContentUrl } from '@/lib/urls'
 
 // Force static generation at build time - no ISR revalidation
 export const dynamic = 'force-static'
@@ -273,7 +273,7 @@ export default async function Home() {
                 {latestArticles.map((article) => (
                   <Link
                     key={article.slug}
-                    href={`/articles/${article.slug}`}
+                    href={getContentUrl(article)}
                     className="rounded-lg border border-primary/20 bg-background/50 backdrop-blur-sm p-6 transition-all hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 hover:scale-105 duration-300"
                   >
                     <h3 className="text-xl font-bold mb-2 hover:text-primary transition-colors">

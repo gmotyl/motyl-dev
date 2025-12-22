@@ -1,13 +1,15 @@
 import { notFound } from 'next/navigation'
 import { getContentItemBySlug, getAllContentMetadata } from '@/lib/articles'
 import { ContentPage } from '@/components/content-page'
+import { ItemType } from '@/lib/types'
+import { getContentUrl } from '@/lib/urls'
 
 // Force static generation at build time
 export const dynamic = 'force-static'
 export const dynamicParams = false // Return 404 for unknown slugs (don't generate on-demand)
 
 export async function generateStaticParams() {
-  const articles = (await getAllContentMetadata()).filter(p => p.itemType === 'news');
+  const articles = (await getAllContentMetadata()).filter(p => p.itemType === ItemType.News);
   return articles.map((article) => ({
     slug: article.slug,
   }))
@@ -25,8 +27,7 @@ export async function generateMetadata({ params: paramsPromise }: { params: Prom
       }
     }
 
-    const baseUrl = 'https://motyl.dev'
-    const articleUrl = `${baseUrl}/news/${article.slug}`
+    const articleUrl = getContentUrl(article, true)
     const keywords = article.hashtags.join(', ')
 
     return {
@@ -89,7 +90,7 @@ export default async function NewsItemPage({ params: paramsPromise }: { params: 
 
     // Get all article metadata for navigation
     const allContent = await getAllContentMetadata()
-    const allNews = allContent.filter(item => item.itemType === 'news');
+    const allNews = allContent.filter(item => item.itemType === ItemType.News);
 
     // Find the current article's index
     const currentIndex = allNews.findIndex((a) => a.slug === slug)

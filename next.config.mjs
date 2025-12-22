@@ -1,4 +1,5 @@
 import { getAllContent } from './lib/articles.ts';
+import { ItemType } from './lib/types.ts';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -10,7 +11,7 @@ const nextConfig = {
   },
   async redirects() {
     const allContent = await getAllContent();
-    const newsItems = allContent.filter((item) => item.itemType === 'news');
+    const newsItems = allContent.filter((item) => item.itemType === ItemType.News);
 
     return newsItems.map((item) => ({
       source: `/articles/${item.slug}`,
