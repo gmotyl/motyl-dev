@@ -1,8 +1,9 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import fs from 'fs/promises'
-import os from 'os'
+import fs from 'node:fs/promises'
+import fsSync from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
-import { parseArticleFile } from './articles'
+import { parseArticleFile, getAllContentMetadata } from './articles'
 
 // Extract the sorting logic to test it in isolation
 function sortArticlesByDate<T extends { publishedAt?: string }>(articles: T[]): T[] {
@@ -330,5 +331,49 @@ describe('getContentItemBySlug integration', () => {
     const article = await getContentItemBySlug('missing-slug')
 
     expect(article).toBeNull()
+  })
+})
+
+describe('Article file count integrity', () => {
+  function countMdFilesInDir(dir: string): number {
+    if (!fsSync.existsSync(dir)) return 0
+    return fsSync.readdirSync(dir).filter((f) => f.endsWith('.md')).length
+  }
+
+  function countMdFilesRecursive(baseDir: string): number {
+    if (!fsSync.existsSync(baseDir)) return 0
+
+    let count = countMdFilesInDir(baseDir)
+
+    const entries = fsSync.readdirSync(baseDir, { withFileTypes: true })
+    for (const entry of entries) {
+      if (entry.isDirectory() && /^\d{4}$/.test(entry.name)) {
+        count += countMdFilesInDir(path.join(baseDir, entry.name))
+      }
+    }
+
+    return count
+  }
+
+  it('should load ALL markdown files without silent failures', async () => {
+    const projectRoot = process.cwd()
+    const articlesDir = path.join(projectRoot, 'articles')
+    const newsDir = path.join(projectRoot, 'news')
+
+    const articlesOnDisk = countMdFilesInDir(articlesDir)
+    const newsOnDisk = countMdFilesRecursive(newsDir)
+    const totalOnDisk = articlesOnDisk + newsOnDisk
+
+    const loadedArticles = await getAllContentMetadata()
+
+    expect(loadedArticles.length).toBe(totalOnDisk)
+  })
+
+  it('should have no duplicate slugs across all content', async () => {
+    const loadedArticles = await getAllContentMetadata()
+    const slugs = loadedArticles.map((a) => a.slug)
+    const uniqueSlugs = new Set(slugs)
+
+    expect(slugs.length).toBe(uniqueSlugs.size)
   })
 })
