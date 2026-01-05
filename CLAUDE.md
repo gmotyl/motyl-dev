@@ -534,7 +534,7 @@ git status                  # Check status
 
 ## Context
 
-refer to (AGENT.md)[AGENT.md] file for important user preferences and context.
+Refer to [AGENT.md](AGENT.md) for important user preferences, workflow rules, and context. **This file contains critical guidelines that must be followed when working on this project.**
 
 ## Support & Contact
 

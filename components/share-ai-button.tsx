@@ -85,7 +85,8 @@ export function ShareAIButton({
   }
 
   // Format the prompt based on the provided template and parameters
-  const formatPrompt = (): string => {
+  // Accepts optional content parameter to avoid race condition with async state updates
+  const formatPrompt = (content?: string): string => {
     let filledPrompt = prompt
 
     // Replace language placeholder
@@ -98,8 +99,10 @@ export function ShareAIButton({
     }
 
     // Append content if provided (for content-based sharing)
-    if (articleContent) {
-      const cleaned = cleanContent(articleContent)
+    // Use passed content parameter, falling back to state
+    const contentToUse = content ?? articleContent
+    if (contentToUse) {
+      const cleaned = cleanContent(contentToUse)
       filledPrompt = `${filledPrompt}\n\n${cleaned}`
     }
 
@@ -121,12 +124,15 @@ export function ShareAIButton({
   }
 
   const handleShare = async () => {
+    let contentForPrompt = articleContent
+
     if (!articleContent && articleSlug) {
       setIsLoadingContent(true)
       try {
         const article = await getContentItemBySlug(articleSlug)
         if (article) {
-          setArticleContent(article.content)
+          contentForPrompt = article.content
+          setArticleContent(article.content) // Cache for future clicks
         } else {
           toast.error('Failed to load article content. Cannot share.')
           setIsLoadingContent(false)
@@ -141,7 +147,7 @@ export function ShareAIButton({
     }
     setIsLoadingContent(false)
 
-    const formattedPrompt = formatPrompt()
+    const formattedPrompt = formatPrompt(contentForPrompt)
 
     // Try Web Share API first (mobile)
     if (navigator.share) {
