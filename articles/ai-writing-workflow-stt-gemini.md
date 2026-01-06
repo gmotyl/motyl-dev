@@ -1,10 +1,10 @@
 ---
-
-## title: 'The Best Editor is the One in Your Pocket: My AI-Driven Writing Workflow'
+title: 'The Best Editor is the One in Your Pocket: My AI-Driven Writing Workflow'
 excerpt: 'A deep dive into transforming messy mobile voice memos into high-quality technical blog posts using custom LLMs.'
 publishedAt: '2026-01-06'
 slug: 'ai-writing-workflow-stt-gemini'
 hashtags: "#AI #Workflow #Gemini #TechWriting #VibeCoding"
+---
 
 ### TLDR:
 
