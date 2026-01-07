@@ -10,7 +10,11 @@ import { Mail, CheckCircle } from "lucide-react"
 
 import { queueNewsletterSubscription } from '@/lib/newsletter-queue'
 
-export default function NewsletterForm() {
+interface NewsletterFormProps {
+  articleSlug?: string
+}
+
+export default function NewsletterForm({ articleSlug }: NewsletterFormProps = {}) {
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isSubscribed, setIsSubscribed] = useState(false)
@@ -36,7 +40,7 @@ export default function NewsletterForm() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, articleSlug }),
       })
 
       const data = await response.json()

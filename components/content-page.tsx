@@ -12,6 +12,7 @@ import { ArticleViewTracker } from '@/components/article-view-tracker'
 import { ShareAIButton } from '@/components/share-ai-button'
 import { ArticleNavigation } from '@/components/article-navigation'
 import AdUnit from '@/components/ad-unit'
+import { NewsletterCTA } from '@/components/newsletter-cta'
 import { type Content, ItemType } from '@/lib/types'
 import { getContentUrl } from '@/lib/urls'
 import { ContentItemMetadata } from '@/lib/articles'
@@ -134,6 +135,14 @@ export async function ContentPage({ article, prevArticle, nextArticle }: Content
           </header>
 
           <MarkdownContent content={article.content} itemType={article.itemType} />
+
+          {article.hashtags.includes('newsletter-cta') && (
+            <NewsletterCTA
+              title="Stay Updated with Fresh Insights"
+              description="Get the latest tech news, architecture patterns, and software craftsmanship tips delivered to your inbox. Join hundreds of developers who stay ahead of the curve."
+              articleSlug={article.slug}
+            />
+          )}
 
           <div className="my-6">
             <AdUnit
