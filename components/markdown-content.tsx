@@ -7,12 +7,15 @@ import * as emoji from 'node-emoji'
 import { ShareAIButton } from '@/components/share-ai-button'
 import { useEffect, useState } from 'react'
 import type { Components } from 'react-markdown'
+import { ItemType, type ItemTypeValue } from '@/lib/types'
 
 interface MarkdownContentProps {
   content: string
+  itemType?: ItemTypeValue
 }
 
-export function MarkdownContent({ content }: MarkdownContentProps) {
+export function MarkdownContent({ content, itemType }: MarkdownContentProps) {
+  const isNews = itemType === ItemType.News
   const [summaryPrompt, setSummaryPrompt] = useState<string>('')
 
   // Fetch TRANSLATE_PROMPT.md on mount
@@ -31,7 +34,7 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
       const isExternal = href?.startsWith('http://') || href?.startsWith('https://')
       const title = typeof children === 'string' ? children : ''
 
-      if (isExternal && summaryPrompt) {
+      if (isExternal && summaryPrompt && isNews) {
         return (
           <>
             <a href={href} {...props} target="_blank" rel="noopener noreferrer">

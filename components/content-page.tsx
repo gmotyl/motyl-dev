@@ -133,7 +133,7 @@ export async function ContentPage({ article, prevArticle, nextArticle }: Content
             />
           </header>
 
-          <MarkdownContent content={article.content} />
+          <MarkdownContent content={article.content} itemType={article.itemType} />
 
           <div className="my-6">
             <AdUnit
