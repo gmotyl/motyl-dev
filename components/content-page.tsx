@@ -2,7 +2,7 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
-import { MarkdownContent } from '@/components/markdown-content'
+import { MarkdownWithCTA } from '@/components/markdown-with-cta'
 import { WakeLockToggle } from '@/components/wake-lock-toggle'
 import { ArticleExternalLinks } from '@/components/article-external-links'
 import { HashtagsList } from '@/components/hashtags-list'
@@ -12,8 +12,6 @@ import { ArticleViewTracker } from '@/components/article-view-tracker'
 import { ShareAIButton } from '@/components/share-ai-button'
 import { ArticleNavigation } from '@/components/article-navigation'
 import AdUnit from '@/components/ad-unit'
-import { NewsletterCTA } from '@/components/newsletter-cta'
-import { parseNewsletterCTAHashtag } from '@/lib/newsletter-cta-parser'
 import { type Content, ItemType } from '@/lib/types'
 import { getContentUrl } from '@/lib/urls'
 import { ContentItemMetadata } from '@/lib/articles'
@@ -135,19 +133,7 @@ export async function ContentPage({ article, prevArticle, nextArticle }: Content
             />
           </header>
 
-          <MarkdownContent content={article.content} itemType={article.itemType} />
-
-          {article.hashtags.some((tag) => tag.startsWith('newsletter-cta')) && (() => {
-            const ctaHashtag = article.hashtags.find((tag) => tag.startsWith('newsletter-cta'))
-            const params = ctaHashtag ? parseNewsletterCTAHashtag(`#${ctaHashtag}`) : null
-            return (
-              <NewsletterCTA
-                title={params?.title}
-                description={params?.description}
-                articleSlug={article.slug}
-              />
-            )
-          })()}
+          <MarkdownWithCTA content={article.content} itemType={article.itemType} articleSlug={article.slug} />
 
           <div className="my-6">
             <AdUnit
