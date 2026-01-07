@@ -1,9 +1,9 @@
 ---
 title: 'Newsletter CTA Feature Test'
-excerpt: 'Test article to demonstrate the newsletter CTA feature integration'
+excerpt: 'Test article to demonstrate the newsletter CTA feature integration with customizable messages'
 publishedAt: '2026-01-07'
 slug: 'newsletter-cta-test'
-hashtags: '#newsletter-cta #testing #feature'
+hashtags: "#newsletter-cta('Want me to email this to you?', 'Get this and future prompts and insights to your mailbox') #testing #feature"
 ---
 
 # Newsletter CTA Feature Test

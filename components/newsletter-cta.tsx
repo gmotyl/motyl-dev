@@ -1,12 +1,20 @@
 import NewsletterForm from '@/components/newsletter-form'
 
 interface NewsletterCTAProps {
-  title: string
-  description: string
+  title?: string
+  description?: string
   articleSlug?: string
 }
 
-export function NewsletterCTA({ title, description, articleSlug }: NewsletterCTAProps) {
+const DEFAULT_TITLE = 'Stay Updated with Fresh Insights'
+const DEFAULT_DESCRIPTION =
+  'Get the latest tech news, architecture patterns, and software craftsmanship tips delivered to your inbox. Join hundreds of developers who stay ahead of the curve.'
+
+export function NewsletterCTA({
+  title = DEFAULT_TITLE,
+  description = DEFAULT_DESCRIPTION,
+  articleSlug
+}: NewsletterCTAProps) {
   return (
     <section className="my-12 rounded-lg border border-primary/30 bg-gradient-to-br from-primary/5 via-background to-primary/5 p-8 backdrop-blur-sm">
       <div className="max-w-2xl mx-auto">
