@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server"
 import { Resend } from "resend"
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://motyl.dev'
+
+function getArticleUrl(articleSlug?: string): string | null {
+  return articleSlug ? `${SITE_URL}/articles/${articleSlug}` : null
+}
+
 export async function POST(request: Request) {
   try {
     const { email, articleSlug } = await request.json()
@@ -51,7 +57,7 @@ async function sendNotificationEmail(subscriberEmail: string, articleSlug?: stri
     const resend = new Resend(apiKey)
 
     // Send to your verified email address (gmotyl@gmail.com) since domain isn't verified yet
-    const articleUrl = articleSlug ? `https://motyl.dev/articles/${articleSlug}` : null
+    const articleUrl = getArticleUrl(articleSlug)
     const sourceText = articleSlug ? `Article: <a href="${articleUrl}" style="color: #0066cc; text-decoration: none;">${articleSlug}</a>` : 'Frontend Newsletter Landing Page'
 
     const { data, error } = await resend.emails.send({
@@ -125,7 +131,7 @@ Next steps:
 }
 
 function logEmailNotification(subscriberEmail: string, articleSlug?: string) {
-  const articleUrl = articleSlug ? `https://motyl.dev/articles/${articleSlug}` : null
+  const articleUrl = getArticleUrl(articleSlug)
   console.log("📧 EMAIL NOTIFICATION (Logged due to service issue):")
   console.log("=".repeat(50))
   console.log(`To: gmotyl@gmail.com (verified address)`)
