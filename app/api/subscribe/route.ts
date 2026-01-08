@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server"
 import { Resend } from "resend"
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://motyl.dev'
+
+function getArticleUrl(articleSlug?: string): string | null {
+  return articleSlug ? `${SITE_URL}/articles/${articleSlug}` : null
+}
+
 export async function POST(request: Request) {
   try {
-    const { email } = await request.json()
+    const { email, articleSlug } = await request.json()
 
     if (!email || !email.includes("@")) {
       return NextResponse.json({ error: "Invalid email address" }, { status: 400 })
@@ -11,7 +17,7 @@ export async function POST(request: Request) {
 
     // Send notification email to Greg
     try {
-      await sendNotificationEmail(email)
+      await sendNotificationEmail(email, articleSlug)
     } catch (emailError) {
       console.error("Failed to send notification email:", emailError)
       // Continue with subscription even if email fails
@@ -22,7 +28,7 @@ export async function POST(request: Request) {
     // 2. Send it to your newsletter service (Mailchimp, ConvertKit, etc.)
     // 3. Send a welcome email to the subscriber
 
-    console.log(`New subscriber: ${email}`)
+    console.log(`New subscriber: ${email}${articleSlug ? ` from article: ${articleSlug}` : ''}`)
 
     // Simulate a successful subscription
     return NextResponse.json(
@@ -38,12 +44,12 @@ export async function POST(request: Request) {
   }
 }
 
-async function sendNotificationEmail(subscriberEmail: string) {
+async function sendNotificationEmail(subscriberEmail: string, articleSlug?: string) {
   const apiKey = process.env.RESEND_API_KEY
 
   if (!apiKey) {
     console.log("RESEND_API_KEY not found, logging email notification instead:")
-    logEmailNotification(subscriberEmail)
+    logEmailNotification(subscriberEmail, articleSlug)
     return
   }
 
@@ -51,6 +57,9 @@ async function sendNotificationEmail(subscriberEmail: string) {
     const resend = new Resend(apiKey)
 
     // Send to your verified email address (gmotyl@gmail.com) since domain isn't verified yet
+    const articleUrl = getArticleUrl(articleSlug)
+    const sourceText = articleSlug ? `Article: <a href="${articleUrl}" style="color: #0066cc; text-decoration: none;">${articleSlug}</a>` : 'Frontend Newsletter Landing Page'
+
     const { data, error } = await resend.emails.send({
       from: "Newsletter <onboarding@resend.dev>",
       to: ["gmotyl@gmail.com"], // Changed to your verified email address
@@ -60,7 +69,7 @@ async function sendNotificationEmail(subscriberEmail: string) {
           <div style="background: linear-gradient(135deg, #8B5CF6 0%, #D946EF 100%); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
             <h1 style="color: white; margin: 0; text-align: center;">🎉 New Newsletter Subscriber!</h1>
           </div>
-          
+
           <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #8B5CF6;">
             <h2 style="color: #333; margin-top: 0;">Subscriber Details</h2>
             <p style="color: #666; font-size: 16px; margin: 10px 0;">
@@ -70,8 +79,9 @@ async function sendNotificationEmail(subscriberEmail: string) {
               <strong>Subscribed at:</strong> ${new Date().toLocaleString()}
             </p>
             <p style="color: #666; font-size: 16px; margin: 10px 0;">
-              <strong>Source:</strong> Frontend Newsletter Landing Page
+              <strong>Source:</strong> ${sourceText}
             </p>
+            ${articleUrl ? `<p style="color: #666; font-size: 16px; margin: 10px 0;"><strong>Article URL:</strong> <a href="${articleUrl}" style="color: #0066cc; text-decoration: none;">${articleUrl}</a></p>` : ''}
           </div>
           
           <div style="margin-top: 20px; padding: 15px; background: #e8f4fd; border-radius: 8px;">
@@ -93,20 +103,21 @@ New Newsletter Subscriber!
 
 Email: ${subscriberEmail}
 Subscribed at: ${new Date().toLocaleString()}
-Source: Frontend Newsletter Landing Page
+Source: ${articleSlug ? `Article: ${articleSlug}` : 'Frontend Newsletter Landing Page'}
+${articleUrl ? `Article URL: ${articleUrl}` : ''}
 
 Note: Email sent to gmotyl@gmail.com (verified address). To send to greg@motyl.dev, please verify the motyl.dev domain in Resend.
 
-Next steps: 
+Next steps:
 1. Consider sending a welcome email to ${subscriberEmail}
-2. Add them to your newsletter platform  
+2. Add them to your newsletter platform
 3. Verify motyl.dev domain in Resend to use greg@motyl.dev
       `,
     })
 
     if (error) {
       console.error("Resend API Error:", error)
-      logEmailNotification(subscriberEmail)
+      logEmailNotification(subscriberEmail, articleSlug)
       throw new Error(`Email service error: ${error.message}`)
     }
 
@@ -114,19 +125,23 @@ Next steps:
     return data
   } catch (error) {
     console.error("Error sending email:", error)
-    logEmailNotification(subscriberEmail)
+    logEmailNotification(subscriberEmail, articleSlug)
     throw error
   }
 }
 
-function logEmailNotification(subscriberEmail: string) {
+function logEmailNotification(subscriberEmail: string, articleSlug?: string) {
+  const articleUrl = getArticleUrl(articleSlug)
   console.log("📧 EMAIL NOTIFICATION (Logged due to service issue):")
   console.log("=".repeat(50))
   console.log(`To: gmotyl@gmail.com (verified address)`)
   console.log(`Subject: Greg, there is new newsletter subscriber!`)
   console.log(`New Subscriber: ${subscriberEmail}`)
   console.log(`Timestamp: ${new Date().toLocaleString()}`)
-  console.log(`Source: Frontend Newsletter Landing Page`)
+  console.log(`Source: ${articleSlug ? `Article: ${articleSlug}` : 'Frontend Newsletter Landing Page'}`)
+  if (articleUrl) {
+    console.log(`Article URL: ${articleUrl}`)
+  }
   console.log(`Note: To send to greg@motyl.dev, verify motyl.dev domain in Resend`)
   console.log("=".repeat(50))
 }

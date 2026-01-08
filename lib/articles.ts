@@ -6,6 +6,7 @@ import fs from 'fs/promises'
 import matter from 'gray-matter'
 import yaml from 'js-yaml'
 
+import { extractInlineCTAs } from './extract-inline-cta.ts'
 import { type ExternalLink, type Content, ItemType } from './types.ts'
 
 // --- Type Definitions ---
@@ -92,13 +93,22 @@ export async function parseArticleFile(
   const fallbackDate = stats.mtime || new Date()
   const itemType = fullPath.includes(articlesDirectory) ? ItemType.Article : ItemType.News
 
+  // Extract inline CTAs from content
+  const { hasNewsletterCTA } = extractInlineCTAs(content)
+
+  // Parse frontmatter hashtags and add newsletter-cta if found inline
+  const hashtags = parseHashtags(data.hashtags)
+  if (hasNewsletterCTA && !hashtags.includes('newsletter-cta')) {
+    hashtags.push('newsletter-cta')
+  }
+
   return {
     slug: data.slug || slugFromFile, // Prioritize frontmatter slug
     title: data.title || 'Untitled',
     excerpt: data.excerpt || '',
     publishedAt: normalizePublishedAt(data.publishedAt, fallbackDate),
     content,
-    hashtags: parseHashtags(data.hashtags),
+    hashtags,
     externalLinks: extractExternalLinks(content),
     itemType,
   }

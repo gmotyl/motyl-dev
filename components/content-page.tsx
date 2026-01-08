@@ -2,7 +2,7 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
-import { MarkdownContent } from '@/components/markdown-content'
+import { MarkdownWithCTA } from '@/components/markdown-with-cta'
 import { WakeLockToggle } from '@/components/wake-lock-toggle'
 import { ArticleExternalLinks } from '@/components/article-external-links'
 import { HashtagsList } from '@/components/hashtags-list'
@@ -133,7 +133,7 @@ export async function ContentPage({ article, prevArticle, nextArticle }: Content
             />
           </header>
 
-          <MarkdownContent content={article.content} itemType={article.itemType} />
+          <MarkdownWithCTA content={article.content} itemType={article.itemType} articleSlug={article.slug} />
 
           <div className="my-6">
             <AdUnit
