@@ -1,5 +1,7 @@
 ---
 description: Generate newsletter articles from mailbox
+allowed-tools: ["mcp__newsletter-ai__*"]
+argument-hint: [limit] [pattern]
 ---
 
 Generate newsletter articles using the MCP server workflow.
@@ -8,11 +10,7 @@ Generate newsletter articles using the MCP server workflow.
 
 - First argument: limit - number of newsletters to process or "all" (default: 1)
 - Second argument (optional): pattern - filter by newsletter pattern (e.g., "daily.dev") OR "safe" keyword
-- If "safe" is included anywhere in arguments, emails will NOT be deleted (safe mode)
-
-## newsletter-ai MCP
-
-Ensure the `newsletter-ai` MCP server is configured and running.
+- If "safe" is included anywhere in arguments, emails will NOT be deleted (safe mode is off by default)
 
 ## Hashtags
 
@@ -20,11 +18,12 @@ Newsletters can have default hashtags configured in `config.yaml`:
 
 ```yaml
 newsletterPatterns:
-  - name: "daily.dev"
-    hashtags: ["#dailydev", "#frontend", "#webdev"]
+  - name: 'daily.dev'
+    hashtags: ['#dailydev', '#frontend', '#webdev']
 ```
 
 When preparing newsletters:
+
 - Default hashtags are copied from `config.yaml` to `LINKS.yaml`
 - You can manually edit hashtags in `LINKS.yaml` before generation
 - During article generation, newsletter hashtags are provided to the LLM
@@ -135,3 +134,15 @@ When preparing newsletters:
    - If safe mode: Display reminder that emails were NOT deleted
 
 8. commit new articles and push to remote
+
+**Important:**
+
+- **Process automatically without user confirmation** - no prompts between steps
+- Process newsletters one at a time (sequentially)
+- Scrape articles in parallel when possible for speed
+- Respect the user's specified limit
+- Show clear progress indicators for each step
+- Handle errors gracefully and continue with remaining newsletters/articles if one fails
+- Skip articles that fail to scrape rather than stopping the entire process
+- do not mention persona in generated articles
+- do not mention {NARRATOR_PERSONA} in generated articles
