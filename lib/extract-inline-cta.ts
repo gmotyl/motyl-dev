@@ -1,18 +1,21 @@
 export interface InlineCTA {
-  title: string
-  description: string
+  title?: string
+  description?: string
   index: number
 }
 
 /**
  * Extracts inline newsletter CTAs from markdown content
- * Format: #newsletter-cta('Title', 'Description')
+ * Supports two formats:
+ * - #newsletter-cta (uses default title and description)
+ * - #newsletter-cta('Title', 'Description') (custom values, supports escaped quotes)
  *
  * @param content - The markdown content to parse
  * @returns Object with cleaned content and extracted CTAs
  */
-// Regex pattern supports escaped single quotes: #newsletter-cta('It\'s great', 'Description')
-const CTA_PATTERN = /#newsletter-cta\(\s*'((?:\\'|[^'])*)'\s*,\s*'((?:\\'|[^'])*)'\s*\)/g
+
+// Combined pattern: matches both #newsletter-cta and #newsletter-cta('title', 'desc')
+const CTA_PATTERN = /#newsletter-cta(?:\(\s*'((?:\\'|[^'])*)'\s*,\s*'((?:\\'|[^'])*)'\s*\))?/g
 
 function unescapeQuotes(str: string): string {
   return str.replace(/\\'/g, "'")
@@ -38,11 +41,10 @@ export function extractInlineCTAs(content: string): {
 
   while ((match = CTA_PATTERN.exec(content)) !== null) {
     ctas.push({
-      title: unescapeQuotes(match[1]),
-      description: unescapeQuotes(match[2]),
-      index,
+      title: match[1] ? unescapeQuotes(match[1]) : undefined,
+      description: match[2] ? unescapeQuotes(match[2]) : undefined,
+      index: index++,
     })
-    index++
   }
 
   // Reset regex lastIndex for reuse
@@ -51,7 +53,13 @@ export function extractInlineCTAs(content: string): {
   // Replace CTAs with a placeholder that MarkdownContent can handle
   const cleanedContent = content.replace(
     CTA_PATTERN,
-    (_, title, desc) => `\n<!-- NEWSLETTER_CTA:${toBase64(JSON.stringify({ title: unescapeQuotes(title), desc: unescapeQuotes(desc) }))} -->\n`
+    (_, title, desc) => {
+      const data = {
+        title: title ? unescapeQuotes(title) : undefined,
+        desc: desc ? unescapeQuotes(desc) : undefined,
+      }
+      return `\n<!-- NEWSLETTER_CTA:${toBase64(JSON.stringify(data))} -->\n`
+    }
   )
 
   return {
