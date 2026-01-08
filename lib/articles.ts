@@ -6,7 +6,7 @@ import fs from 'fs/promises'
 import matter from 'gray-matter'
 import yaml from 'js-yaml'
 
-import { extractInlineCTAs } from './extract-inline-cta'
+import { extractInlineCTAs } from './extract-inline-cta.ts'
 import { type ExternalLink, type Content, ItemType } from './types.ts'
 
 // --- Type Definitions ---
