@@ -3,7 +3,7 @@ title: 'Evals - testing AI agents'
 excerpt: 'Howto build Evaluation Systems for LLMs and Agents'
 publishedAt: '2025-07-28'
 slug: 'evaluating-llm'
-hashtags: "#ai #agent #dev"
+hashtags: '#ai #agent #dev'
 ---
 
 When you go deeper into Agents development, you will encounter problem of evaluationg your Agents. In short you could say that evals are tests for LLMs and Agents. Challange here is that LLMs are non-deterministic, so you can't just write a test that will pass or fail. Tests are binary they will PASS or Fail. Evels are more like a "fuzzy" tests. They will give you a score.
@@ -339,3 +339,5 @@ main()
 ✅ Full test data set input
 ✅ JSON persistence
 ✅ Diff of previous set for feedback
+
+#newsletter-cta
