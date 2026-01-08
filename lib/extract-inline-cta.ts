@@ -18,6 +18,14 @@ function unescapeQuotes(str: string): string {
   return str.replace(/\\'/g, "'")
 }
 
+// Browser-compatible base64 encoding (works in both Node.js and browser)
+function toBase64(str: string): string {
+  if (typeof btoa === 'function') {
+    return btoa(unescape(encodeURIComponent(str)))
+  }
+  return Buffer.from(str).toString('base64')
+}
+
 export function extractInlineCTAs(content: string): {
   content: string
   ctas: InlineCTA[]
@@ -43,7 +51,7 @@ export function extractInlineCTAs(content: string): {
   // Replace CTAs with a placeholder that MarkdownContent can handle
   const cleanedContent = content.replace(
     CTA_PATTERN,
-    (_, title, desc) => `\n<!-- NEWSLETTER_CTA:${Buffer.from(JSON.stringify({ title: unescapeQuotes(title), desc: unescapeQuotes(desc) })).toString('base64')} -->\n`
+    (_, title, desc) => `\n<!-- NEWSLETTER_CTA:${toBase64(JSON.stringify({ title: unescapeQuotes(title), desc: unescapeQuotes(desc) }))} -->\n`
   )
 
   return {
