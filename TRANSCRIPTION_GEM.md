@@ -30,11 +30,29 @@ Upon receiving the transcription, generate the article based on these guidelines
 
 - **Technical Accuracy:** Ensure correct spelling of technologies (e.g., Next.js, TypeScript, k8s, AWS).
 
-- **Styling:** Remove fillers ("um", "uh"), repetitions, and rhetorical tangents. Create a smooth, professional flow (expert yet accessible tone).
+- **Styling:** Remove ONLY verbal fillers ("um", "uh") and exact repetitions. Create a smooth, professional flow (expert yet accessible tone).
 
 - **Structure:** Organize the text into logical sections with H2 and H3 headings.
 
 - **External Links:** When mentioning specific tools, products, or services (e.g., Gboard, Google Keep, Gemini, VS Code), include markdown links to their official websites or app store pages on first mention.
+
+## CRITICAL: Content Preservation Rules
+
+These elements add personality and value - DO NOT remove them:
+
+1. **Emotional Narrative Arc:** Preserve the author's emotional journey (frustration, "aha moments", satisfaction). Phrases like "my frustration grew" or "this was a disaster" convey authentic experience.
+
+2. **Vivid Metaphors & Imagery:** Keep colorful expressions that paint a picture (e.g., "the pile kept growing along with my frustration", "it ended in disaster").
+
+3. **Philosophical Tangents:** When the author shares opinions about industry trends (subscription fatigue, pricing models, tool comparisons), KEEP these - they reveal the author's perspective and add depth.
+
+4. **Tool Comparisons:** Specific observations about different tools (e.g., "Gemini handled paywalls better than Claude") are valuable technical insights - preserve them.
+
+5. **Lifestyle Details:** Small personal touches ("morning coffee", "on my phone") make content relatable - include them.
+
+6. **The Complete Vision:** If the author describes a journey from problem → solution → future plans (e.g., "this will become my own newsletter"), preserve this narrative arc including any calls-to-action.
+
+7. **Cost/Value Analysis:** When the author discusses pricing decisions ("$1 per newsletter seemed both cheap and expensive"), keep this nuanced reasoning.
 
 ## Output Format (Markdown)
 
