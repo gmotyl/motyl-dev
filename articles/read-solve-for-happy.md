@@ -3,7 +3,7 @@ title: 'Read: Solve for Happy by Mo Gawdat'
 excerpt: 'My review of Solve for Happy by Mo Gawdat'
 publishedAt: '2025-06-17'
 slug: 'read-solve-for-happy'
-hashtags: '#philosophy #book #soft-skills'
+hashtags: "#philosophy #book #soft-skills"
 ---
 
 An interesting book that I recommend to anyone on a personal development journey.
@@ -21,8 +21,6 @@ Happiness is therefore a conscious choice we can make. It comes down to acceptin
 Meditation is a practice that allows you to break away from the stream of often negative thoughts or those that are currently not useful and become a source of anxiety or stress. If you meditate yourself, you know what I'm talking about - it's one of the basic skills we should teach everyone, just like riding a bicycle.
 
 The author addresses various aspects of life and his concept of how to live it to be happy. One of the chapters is devoted to life and death. The topic of death and the passing of people close to us can be a source of suffering and knock us out of the attitude of happiness. This was the case with the author himself, who lost his son. However, because he is an engineer, an analysis of quantum theory combined with the Big Bang theory helped him achieve peace. According to quantum theory, without an observer, particles are in a state of superposition and are therefore an indefinite wave of infinite possibilities until a (living) observer appears. So how could the universe and life on it arise without an external observer? In the author's understanding, according to quantum theory, life had to exist before the creation of the world because there had to be a conscious observer. However, it should be emphasized that the above statements contained in the discussed book are criticized by physicists, and no experiment has shown that consciousness is required to collapse the wave function (but at the same time, this has not been experimentally ruled out).
-
-#newsletter-cta('Want me to email more articles like this to you?', 'Get curated articles to your mailbox, subscribe to newsletter:')
 
 In summary, I appreciate Mo Gawdat's practical approach to happiness and recommend the book, especially for its engineering style of thinking. The main message of the book that happiness is a conscious choice resulting from accepting reality and adjusting expectations, I consider very valuable and consistent with the Christian attitude of trusting God and with many other philosophical, religious systems and currents of psychology and spirituality.
 

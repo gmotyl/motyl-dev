@@ -3,7 +3,7 @@ title: 'Optimizing Build-Time Hashtag Indexing'
 excerpt: 'How critical thinking led to a performant and user-friendly hashtag system for my blog.'
 publishedAt: '2025-06-04'
 slug: 'optimizing-badges-support'
-hashtags: '#performance #ai #vibe-coding #ux'
+hashtags: "#performance #ai #vibe-coding #ux"
 ---
 
 ### TLDR:
@@ -109,5 +109,3 @@ Additionally I added prettier to the project, since it was annoying that V0 adds
 ### Conclusion :tada:
 
 Vibe coding, works indeed! :rocket: ...but it requires some expertise to make it right. In the end, I managed to get it working, but I had to fix some issues manually, and I learned something in the process. I am glad I persevered, because the result is worth it. **_It took only 2h to implement this feature, and I am happy with the result._**
-
-#newsletter-cta

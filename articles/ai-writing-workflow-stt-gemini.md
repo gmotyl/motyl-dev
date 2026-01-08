@@ -3,7 +3,7 @@ title: 'The Best Editor is the One in Your Pocket: My AI-Driven Writing Workflow
 excerpt: 'A deep dive into transforming messy mobile voice memos into high-quality technical blog posts using custom LLMs.'
 publishedAt: '2026-01-06'
 slug: 'ai-writing-workflow-stt-gemini'
-hashtags: '#AI #Workflow #Gemini #TechWriting #VibeCoding'
+hashtags: "#AI #Workflow #Gemini #TechWriting #VibeCoding"
 ---
 
 ### TLDR:
@@ -46,5 +46,3 @@ The workflow is simple but effective:
 In this workflow, AI handles the tedious, manual labor of editing and formatting. It doesn't generate the ideas, those come from me during my walks or quiet moments away from the screen.
 
 While I do have a "News" section on my blog that utilizes more generative AI for speed, my main articles remain human-centric. The goal isn't to let AI think for me; it's to let AI clear the path so my thoughts can reach the reader more clearly.
-
-#newsletter-cta
