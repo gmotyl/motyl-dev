@@ -20,7 +20,8 @@ export function MarkdownWithCTA({ content, itemType, articleSlug }: MarkdownWith
   }
 
   // Split content by CTA placeholders (format: <!-- NEWSLETTER_CTA:base64string -->)
-  const parts = cleanedContent.split(/\n<!-- NEWSLETTER_CTA:[A-Za-z0-9+/=]+ -->\n/g)
+  // Use flexible whitespace matching to handle various newline scenarios
+  const parts = cleanedContent.split(/\s*<!-- NEWSLETTER_CTA:[A-Za-z0-9+/=]+ -->\s*/g)
 
   return (
     <>
