@@ -4,7 +4,7 @@ allowed-tools: ["mcp__newsletter-ai__*"]
 argument-hint: [limit] [pattern]
 ---
 
-Generate newsletter articles using the MCP server workflow.
+Generate newsletter articles using the newsletter-ai MCP server.
 
 **Arguments:**
 
@@ -14,7 +14,7 @@ Generate newsletter articles using the MCP server workflow.
 
 ## Hashtags
 
-Newsletters can have default hashtags configured in `config.yaml`:
+Newsletters can have default hashtags configured in the newsletter-ai MCP server's config:
 
 ```yaml
 newsletterPatterns:
@@ -24,20 +24,17 @@ newsletterPatterns:
 
 When preparing newsletters:
 
-- Default hashtags are copied from `config.yaml` to `LINKS.yaml`
+- Default hashtags are copied from newsletter-ai MCP config to `LINKS.yaml`
 - You can manually edit hashtags in `LINKS.yaml` before generation
 - During article generation, newsletter hashtags are provided to the LLM
 - The LLM combines newsletter hashtags with article-specific tags
 
 **Examples:**
 
-- `/generate-news` → Process 1 newsletter, respects config.json autoDelete
-- `/generate-news 1 safe` → Process 1 newsletter, safe mode (no deletion)
-- `/generate-news 5` → Process 5 newsletters, respects config.json autoDelete
-- `/generate-news all safe` → Process all newsletters, safe mode (no deletion)
-- `/generate-news 3 daily.dev` → Process 3 daily.dev newsletters, respects config.json autoDelete
-- `/generate-news 3 daily.dev safe` → Process 3 daily.dev newsletters, safe mode (no deletion)
-- `/generate-news all daily.dev` → Process all daily.dev newsletters, respects config.json autoDelete
+- `/generate-news` → Process 1 newsletter
+- `/generate-news 5 safe` → Process 5 newsletters, safe mode (no deletion)
+- `/generate-news 3 daily.dev` → Process 3 daily.dev newsletters only
+- `/generate-news all daily.dev safe` → Process all daily.dev newsletters, safe mode
 
 **Workflow:**
 
@@ -61,11 +58,13 @@ When preparing newsletters:
      - pattern: optional newsletter filter
      - safeMode: true if "safe" keyword was in arguments
    - This will fetch emails, extract links, clean/enrich them, and write to LINKS.yaml
-   - If safeMode=false and config.json has autoDelete=true, emails will be deleted after processing
+   - If safeMode=false and newsletter-ai MCP config has autoDelete=true, emails will be deleted after processing
 
-4. **Get newsletters list**
+4. **Get newsletters list and config**
 
    - Call `mcp__newsletter-ai__get_newsletters_list` to see what was prepared
+   - Call `mcp__newsletter-ai__get_config` to get newsletter-ai MCP config
+   - Call `mcp__newsletter-ai__get_prompt_template` to get PROMPT.md
 
 5. **For each newsletter (sequentially, automatically):**
 
@@ -88,8 +87,6 @@ When preparing newsletters:
        - If body is NOT available:
          - Display: "✗ Newsletter body not available. Skipping this newsletter."
          - Continue to next newsletter
-   - Call `mcp__newsletter-ai__get_config` to get output settings
-   - Call `mcp__newsletter-ai__get_prompt_template` to get PROMPT.md
    - Display: "Generating article content..."
    - **Generate article content** using the prompt template:
      - Replace `{NARRATOR_PERSONA}` with config.narratorPersona
@@ -133,7 +130,11 @@ When preparing newsletters:
    - Display total time taken
    - If safe mode: Display reminder that emails were NOT deleted
 
-8. commit new articles and push to remote
+8. **Commit and push**
+
+   - Stage new articles: `git add news/`
+   - Commit with descriptive message
+   - Push to remote
 
 **Important:**
 
@@ -144,5 +145,4 @@ When preparing newsletters:
 - Show clear progress indicators for each step
 - Handle errors gracefully and continue with remaining newsletters/articles if one fails
 - Skip articles that fail to scrape rather than stopping the entire process
-- do not mention persona in generated articles
-- do not mention {NARRATOR_PERSONA} in generated articles
+- Do NOT mention `{NARRATOR_PERSONA}` or persona name in generated articles
