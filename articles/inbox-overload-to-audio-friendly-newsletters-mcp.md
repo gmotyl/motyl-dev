@@ -58,6 +58,6 @@ Now, my morning routine is simple:
 
 I even added a "bookmarking" feature for the most interesting articles. This is the "Aha!" moment: this filtered list of high-value, front-end, and productivity insights isn't just for me. This curated stream will eventually become the basis for my _own_ newsletter, which you can subscribe to for the "best of the best" technical content.
 
-#newsletter-cta('Get step-by-step guide howto use newsletter-ai?', 'Join the newsletter and I'll mail free guide to your inbox.')
+#newsletter-cta('Want to build your own newsletter-to-audio pipeline?', 'Subscribe and get a free step-by-step guide to setting up newsletter-ai.')
 
 The system I described isn't just about saving money; it's about reclaiming time and turning a source of frustration into a streamlined source of knowledge. It is example of lavage of AI and automation to improve quality of life.
