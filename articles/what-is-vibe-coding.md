@@ -13,4 +13,5 @@ Vibe coding is (in theory) about finding your natural rhythm and flow when writi
 I wrote motyl.dev in vercel v0 and I will describe in following articles how I did it :writing_hand:. For now I can say it works, but it's not perfect (yet) :construction: and my developer experience was already needed to go to this point :muscle:.
 
 ... to be continued :wink: ...
-\`\`\`
+
+#newsletter-cta('Intrigued by vibe coding?', 'Subscribe to follow my AI development experiments and learn what works (and what doesn\'t).')

@@ -84,4 +84,5 @@ The term "vibe coding" perfectly encapsulates the experience. It wasn't about wr
 This accelerated development cycle, from an initial concept to a fully functional, aesthetically pleasing, and personalized prototype in less than an hour, is a testament to the transformative power of platforms like Vercel's v0. It significantly reduces the barrier to entry for creators and developers, allowing for rapid experimentation and iteration.
 
 In upcoming articles, I'll delve deeper into specific aspects of this process, providing more technical insights and exploring the implications of AI-driven development for the future of software craftsmanship.
-\`\`\`
+
+#newsletter-cta('Curious about AI-powered development?', 'Subscribe for more experiments, lessons learned, and practical AI coding insights.')

@@ -3,7 +3,7 @@ title: 'Optimizing Content Creation: Why I Switched to Gboard and Google Keep fo
 excerpt: 'A deep dive into why moving from standard voice recorders to integrated voice typing significantly improves transcription accuracy and workflow continuity.'
 publishedAt: '2026-01-08'
 slug: 'optimizing-content-creation-gboard-google-keep-dictation'
-hashtags: "#Productivity #ContentCreation #Gboard #GoogleKeep #Workflow"
+hashtags: '#Productivity #ContentCreation #Gboard #GoogleKeep #Workflow'
 ---
 
 ### TLDR:
@@ -37,5 +37,7 @@ Working within a document allows me to see the preceding paragraphs. If I get in
 ## Bridging the Language Gap with AI
 
 Despite being fluent in English and using it daily for work, I still prefer to dictate my initial thoughts in my native Polish. It is physically less exhausting and allows for a more natural, fluid expression of ideas.
+
+#newsletter-cta('Want to learn more about this workflow?', 'Join the newsletter to get the latest tech news, architecture patterns, and software craftsmanship tips delivered to your inbox.')
 
 The final stage of my workflow remains the same: I take the high-quality Polish draft generated in Google Keep and pass it through **[Gemini](https://gemini.google.com/)**. The AI handles the logical structuring, divides the text into sections, and provides a professional English translation. By providing the AI with a cleaner, punctuated source text, the final output is much more accurate and faithful to my original intent.

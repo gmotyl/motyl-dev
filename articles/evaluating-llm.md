@@ -339,3 +339,5 @@ main()
 ✅ Full test data set input
 ✅ JSON persistence
 ✅ Diff of previous set for feedback
+
+#newsletter-cta('Building AI agents? Get the evaluation playbook.', 'Join my newsletter for deep-dives into AI engineering, agent development, and production-ready LLM practices.')
