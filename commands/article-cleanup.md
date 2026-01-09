@@ -1,4 +1,4 @@
-edit @artciles/art.md
+edit @articles/art.md
 
 edit @articles/art.md
 - rename file according to slug
