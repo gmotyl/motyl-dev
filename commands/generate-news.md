@@ -31,13 +31,13 @@ When preparing newsletters:
 
 **Examples:**
 
-- `/generate-article` → Process 1 newsletter, respects config.json autoDelete
-- `/generate-article 1 safe` → Process 1 newsletter, safe mode (no deletion)
-- `/generate-article 5` → Process 5 newsletters, respects config.json autoDelete
-- `/generate-article all safe` → Process all newsletters, safe mode (no deletion)
-- `/generate-article 3 daily.dev` → Process 3 daily.dev newsletters, respects config.json autoDelete
-- `/generate-article 3 daily.dev safe` → Process 3 daily.dev newsletters, safe mode (no deletion)
-- `/generate-article all daily.dev` → Process all daily.dev newsletters, respects config.json autoDelete
+- `/generate-news` → Process 1 newsletter, respects config.json autoDelete
+- `/generate-news 1 safe` → Process 1 newsletter, safe mode (no deletion)
+- `/generate-news 5` → Process 5 newsletters, respects config.json autoDelete
+- `/generate-news all safe` → Process all newsletters, safe mode (no deletion)
+- `/generate-news 3 daily.dev` → Process 3 daily.dev newsletters, respects config.json autoDelete
+- `/generate-news 3 daily.dev safe` → Process 3 daily.dev newsletters, safe mode (no deletion)
+- `/generate-news all daily.dev` → Process all daily.dev newsletters, respects config.json autoDelete
 
 **Workflow:**
 
