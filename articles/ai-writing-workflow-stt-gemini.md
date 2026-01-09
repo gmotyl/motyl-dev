@@ -46,3 +46,5 @@ The workflow is simple but effective:
 In this workflow, AI handles the tedious, manual labor of editing and formatting. It doesn't generate the ideas, those come from me during my walks or quiet moments away from the screen.
 
 While I do have a "News" section on my blog that utilizes more generative AI for speed, my main articles remain human-centric. The goal isn't to let AI think for me; it's to let AI clear the path so my thoughts can reach the reader more clearly.
+
+#newsletter-cta('Want to streamline your writing workflow?', 'Get more AI-powered productivity tips and workflows delivered straight to your inbox.')

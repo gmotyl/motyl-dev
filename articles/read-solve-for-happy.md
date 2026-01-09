@@ -31,3 +31,5 @@ It is worth noting that this wisdom appears in many traditions:
 - Taoism (living in harmony with the natural order)
 - Cognitive psychology (changing the interpretation of events)
 - Christianity (trusting Divine Providence)
+
+#newsletter-cta('Looking for more mindset insights?', 'Join the newsletter for a blend of tech wisdom and personal growth reflections.')
