@@ -60,4 +60,4 @@ I even added a "bookmarking" feature for the most interesting articles. This is 
 
 #newsletter-cta('Want to build your own newsletter-to-audio pipeline?', 'Subscribe and get a free step-by-step guide to setting up newsletter-ai.')
 
-The system I described isn't just about saving money; it's about reclaiming time and turning a source of frustration into a streamlined source of knowledge. It is example of lavage of AI and automation to improve quality of life.
+The system I described isn't just about saving money; it's about reclaiming time and turning a source of frustration into a streamlined source of knowledge. It is example of leverage of AI and automation to improve quality of life.
