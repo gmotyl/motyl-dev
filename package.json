@@ -9,7 +9,8 @@
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "init:claude": "mkdir -p .claude/commands && cp commands/*.md .claude/commands/"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
