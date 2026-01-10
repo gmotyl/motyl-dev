@@ -1,12 +1,6 @@
 'use server'
 
 import { cache } from 'react'
-import path from 'node:path'
-import fs from 'fs/promises'
-import matter from 'gray-matter'
-import yaml from 'js-yaml'
-
-import { extractInlineCTAs } from './extract-inline-cta.ts'
 import { type ExternalLink, type Content, ItemType } from './types.ts'
 
 // --- Type Definitions ---
@@ -18,174 +12,62 @@ interface HashtagIndex {
   [hashtag: string]: string[]
 }
 
-// --- Caches ---
-
-let allContentCache: ContentItem[] | null = null
-let slugToContentItemMapCache: Map<string, ContentItem> | null = null
-let hashtagIndexCache: HashtagIndex | null = null
-
-// --- Constants ---
-
-const articlesDirectory = path.join(process.cwd(), 'articles')
-const newsDirectory = path.join(process.cwd(), 'news')
-const matterOptions = {
-  engines: {
-    yaml: (s: string) => yaml.load(s) as object,
-  },
+interface ContentCache {
+  generatedAt: string
+  totalItems: number
+  items: ContentItem[]
 }
 
-// --- Utility Functions ---
+// --- Cache Loading ---
 
-function toISODate(date: Date): string {
-  return date.toISOString().slice(0, 10)
-}
-
-function normalizePublishedAt(rawDate: unknown, fallbackDate: Date): string {
-  if (rawDate instanceof Date) {
-    const normalized = new Date(rawDate)
-    if (!Number.isNaN(normalized.getTime())) return toISODate(normalized)
-  }
-  if (typeof rawDate === 'string' || typeof rawDate === 'number') {
-    const normalized = new Date(rawDate)
-    if (!Number.isNaN(normalized.getTime())) return toISODate(normalized)
-  }
-  return toISODate(fallbackDate)
-}
-
-function parseHashtags(hashtagData: any): string[] {
-  if (!hashtagData) return []
-  if (Array.isArray(hashtagData)) {
-    return hashtagData.map((tag) => tag.toString().replace(/^#/, ''))
-  }
-  if (typeof hashtagData === 'string') {
-    return hashtagData
-      .split(/\s+/)
-      .filter((tag) => tag.startsWith('#'))
-      .map((tag) => tag.substring(1))
-      .filter((tag) => tag.length > 0)
-  }
-  return []
-}
-
-function extractExternalLinks(content: string): ExternalLink[] {
-  const linkRegex = /(?<!\!)\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g
-  const links: ExternalLink[] = []
-  const matches = content.matchAll(linkRegex)
-  let order = 0
-  for (const match of matches) {
-    const [, title, url] = match
-    if (title && url && !url.includes('motyl.dev') && !url.includes('newsletter-ai')) {
-      links.push({ title: title.trim(), url: url.trim(), order: order++ })
-    }
-  }
-  return links
-}
-
-// --- Core Parsing and Caching Logic ---
-
-export async function parseArticleFile(
-  fullPath: string,
-  slugFromFile: string
-): Promise<ContentItem> {
-  const fileContents = await fs.readFile(fullPath, 'utf8')
-  const { data, content } = matter(fileContents, matterOptions)
-  const stats = await fs.stat(fullPath)
-  const fallbackDate = stats.mtime || new Date()
-  const itemType = fullPath.includes(articlesDirectory) ? ItemType.Article : ItemType.News
-
-  // Extract inline CTAs from content
-  const { hasNewsletterCTA } = extractInlineCTAs(content)
-
-  // Parse frontmatter hashtags and add newsletter-cta if found inline
-  const hashtags = parseHashtags(data.hashtags)
-  if (hasNewsletterCTA && !hashtags.includes('newsletter-cta')) {
-    hashtags.push('newsletter-cta')
-  }
-
-  return {
-    slug: data.slug || slugFromFile, // Prioritize frontmatter slug
-    title: data.title || 'Untitled',
-    excerpt: data.excerpt || '',
-    publishedAt: normalizePublishedAt(data.publishedAt, fallbackDate),
-    content,
-    hashtags,
-    externalLinks: extractExternalLinks(content),
-    itemType,
-  }
-}
-
-async function readArticlesFromDirectory(directory: string): Promise<ContentItem[]> {
+// Load the pre-built content cache (generated at build time by scripts/build-content-cache.ts)
+// This is imported as a module, so it's consistent across all serverless instances
+async function loadContentCache(): Promise<ContentItem[]> {
   try {
-    const fileNames = await fs.readdir(directory)
-    return await Promise.all(
-      fileNames
-        .filter((name) => name.endsWith('.md'))
-        .map((name) => {
-          const slugFromFile = name.replace(/\.md$/, '')
-          const fullPath = path.join(directory, name)
-          return parseArticleFile(fullPath, slugFromFile)
-        })
-    )
+    // Dynamic import to load the JSON cache
+    const cacheModule = await import('../data/content-cache.json', {
+      with: { type: 'json' }
+    })
+    const cache = cacheModule.default as ContentCache
+    return cache.items
   } catch (error) {
-    console.error(`Error reading articles from ${directory}:`, error)
+    console.error('Failed to load content cache:', error)
+    console.error('Make sure to run "pnpm prebuild" or "pnpm build" first')
     return []
   }
 }
 
-async function getNewsYearDirectories(): Promise<string[]> {
-  try {
-    const entries = await fs.readdir(newsDirectory, { withFileTypes: true })
-    return entries
-      .filter((entry) => entry.isDirectory() && /^\d{4}$/.test(entry.name))
-      .map((entry) => path.join(newsDirectory, entry.name))
-  } catch (error) {
-    console.error('Error finding news year directories:', error)
-    return []
-  }
-}
+// Request-scoped cache using React's cache() function
+const getCachedContent = cache(async (): Promise<ContentItem[]> => {
+  return loadContentCache()
+})
 
-async function buildArticleCache(): Promise<Map<string, ContentItem>> {
-  if (slugToContentItemMapCache) return slugToContentItemMapCache
-
-  const articlesPromise = readArticlesFromDirectory(articlesDirectory)
-  const newsYearDirs = await getNewsYearDirectories()
-  const newsPromises = newsYearDirs.map((dir) => readArticlesFromDirectory(dir))
-
-  const [articles, ...newsArticlesByYear] = await Promise.all([articlesPromise, ...newsPromises])
-  const allContent = [...articles, ...newsArticlesByYear.flat()]
-
-  allContent.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
-
-  allContentCache = allContent
-  slugToContentItemMapCache = new Map(allContent.map((article) => [article.slug, article]))
-
-  return slugToContentItemMapCache
-}
+const getCachedContentMap = cache(async (): Promise<Map<string, ContentItem>> => {
+  const items = await getCachedContent()
+  return new Map(items.map((item) => [item.slug, item]))
+})
 
 // --- Public API ---
 
 export async function getAllContentMetadata(): Promise<ContentItemMetadata[]> {
-  await buildArticleCache()
-  if (!allContentCache) return []
-
-  return allContentCache.map(({ content, externalLinks, ...metadata }) => metadata)
+  const items = await getCachedContent()
+  return items.map(({ content, externalLinks, ...metadata }) => metadata)
 }
 
 export const getContentItemBySlug = cache(async (slug: string): Promise<ContentItem | null> => {
-  const map = await buildArticleCache()
+  const map = await getCachedContentMap()
   return map.get(slug) || null
 })
 
 export async function getAllContent(): Promise<ContentItem[]> {
-  await buildArticleCache()
-  return allContentCache || []
+  return getCachedContent()
 }
 
 export const getAllArticles = getAllContentMetadata
 
-async function buildHashtagIndex(): Promise<HashtagIndex> {
-  if (hashtagIndexCache) return hashtagIndexCache
+// --- Hashtag Functions ---
 
+const getCachedHashtagIndex = cache(async (): Promise<HashtagIndex> => {
   const articles = await getAllContentMetadata()
   const index: HashtagIndex = {}
 
@@ -198,17 +80,16 @@ async function buildHashtagIndex(): Promise<HashtagIndex> {
     })
   })
 
-  hashtagIndexCache = index
   return index
-}
+})
 
 export async function getAllHashtags(): Promise<string[]> {
-  const index = await buildHashtagIndex()
+  const index = await getCachedHashtagIndex()
   return Object.keys(index).sort()
 }
 
 export async function getHashtagCounts(): Promise<Record<string, number>> {
-  const index = await buildHashtagIndex()
+  const index = await getCachedHashtagIndex()
   const counts: Record<string, number> = {}
   Object.entries(index).forEach(([hashtag, slugs]) => {
     counts[hashtag] = slugs.length
@@ -217,7 +98,7 @@ export async function getHashtagCounts(): Promise<Record<string, number>> {
 }
 
 export async function getArticlesByHashtag(hashtag: string): Promise<ContentItem[]> {
-  const index = await buildHashtagIndex()
+  const index = await getCachedHashtagIndex()
   const slugs = index[hashtag] || []
   if (slugs.length === 0) return []
 
@@ -225,7 +106,7 @@ export async function getArticlesByHashtag(hashtag: string): Promise<ContentItem
   return articles.filter(Boolean) as ContentItem[]
 }
 
-// --- New Pagination and Filtering Logic ---
+// --- Pagination and Filtering Logic ---
 
 export interface PageFilters {
   hashtags?: string[]
