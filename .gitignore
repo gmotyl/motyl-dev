@@ -31,3 +31,6 @@ next-env.d.ts
 # MCP ouput
 /processed-uids.json
 .env*
+
+# Generated content cache (built at build time)
+/data/content-cache.json
