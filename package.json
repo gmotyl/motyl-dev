@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev",
+    "dev": "pnpm prebuild && next dev",
     "prebuild": "tsx scripts/build-content-cache.ts",
     "build": "prisma generate && next build",
     "start": "next start",

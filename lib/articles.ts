@@ -33,7 +33,7 @@ async function loadContentCache(): Promise<ContentItem[]> {
   } catch (error) {
     console.error('Failed to load content cache:', error)
     console.error('Make sure to run "pnpm prebuild" or "pnpm build" first')
-    return []
+    throw new Error('Failed to load content cache. Run "pnpm prebuild" to generate it.')
   }
 }
 
