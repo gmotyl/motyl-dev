@@ -4,6 +4,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { SessionProvider } from '@/components/session-provider'
 import { Toaster } from '@/components/ui/toaster'
 import { Analytics } from '@vercel/analytics/next'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 
 import { ServiceWorkerRegister } from '@/app/components/service-worker-register'
 import { InstallPrompt } from '@/components/install-prompt'
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen bg-background font-sans antialiased relative">
         <div className="absolute inset-0 bg-butterfly-pattern opacity-5 pointer-events-none z-0"></div>
         <Analytics />
+        <SpeedInsights />
         <SessionProvider>
           <ThemeProvider
             attribute="class"
