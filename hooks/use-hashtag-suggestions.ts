@@ -132,10 +132,8 @@ export function useHashtagSuggestions({
 
       // 2. Recent hashtags that match input
       for (const tag of recent) {
-        if (
-          tag.includes(normalizedInput) &&
-          results.length < maxSuggestions
-        ) {
+        if (results.length >= maxSuggestions) break
+        if (tag.includes(normalizedInput)) {
           addSuggestion(tag, 'recent')
         }
       }

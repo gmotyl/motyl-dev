@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { Hash, X, Plus, Search, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useIsMobile } from '@/components/ui/use-mobile'
@@ -63,6 +63,26 @@ export function HashtagInput({
     enabled: open,
   })
 
+  // Pre-compute Set for O(1) lookup
+  const selectedHashtagsSet = useMemo(
+    () => new Set(selectedHashtags.map((t) => t.toLowerCase())),
+    [selectedHashtags]
+  )
+
+  // Pre-group suggestions to avoid filtering twice in render
+  const { recentSuggestions, otherSuggestions } = useMemo(() => {
+    const recent: typeof suggestions = []
+    const other: typeof suggestions = []
+    for (const s of suggestions) {
+      if (s.source === 'recent') {
+        recent.push(s)
+      } else {
+        other.push(s)
+      }
+    }
+    return { recentSuggestions: recent, otherSuggestions: other }
+  }, [suggestions])
+
   // Focus input when opened (with delay for mobile drawer animation)
   useEffect(() => {
     if (open) {
@@ -76,7 +96,7 @@ export function HashtagInput({
 
   const handleSelectHashtag = (hashtag: string) => {
     const normalized = hashtag.toLowerCase().trim().replace(/^#/, '')
-    if (normalized && !selectedHashtags.includes(normalized)) {
+    if (normalized && !selectedHashtagsSet.has(normalized)) {
       onHashtagAdd(normalized)
       addRecent(normalized)
     }
@@ -155,45 +175,41 @@ export function HashtagInput({
         )}
 
         {/* Recent suggestions */}
-        {suggestions.filter((s) => s.source === 'recent').length > 0 && (
+        {recentSuggestions.length > 0 && (
           <CommandGroup heading="Recent">
-            {suggestions
-              .filter((s) => s.source === 'recent')
-              .map((suggestion) => (
-                <CommandItem
-                  key={suggestion.hashtag}
-                  value={suggestion.hashtag}
-                  onSelect={() => handleSelectHashtag(suggestion.hashtag)}
-                  className="gap-2"
-                >
-                  <Hash className="h-3 w-3 opacity-50" />
-                  <span>{suggestion.hashtag}</span>
-                  <span className="ml-auto text-xs text-muted-foreground">
-                    Recent
-                  </span>
-                </CommandItem>
-              ))}
+            {recentSuggestions.map((suggestion) => (
+              <CommandItem
+                key={suggestion.hashtag}
+                value={suggestion.hashtag}
+                onSelect={() => handleSelectHashtag(suggestion.hashtag)}
+                className="gap-2"
+              >
+                <Hash className="h-3 w-3 opacity-50" />
+                <span>{suggestion.hashtag}</span>
+                <span className="ml-auto text-xs text-muted-foreground">
+                  Recent
+                </span>
+              </CommandItem>
+            ))}
           </CommandGroup>
         )}
 
         {/* Matching/Popular suggestions */}
-        {suggestions.filter((s) => s.source !== 'recent').length > 0 && (
+        {otherSuggestions.length > 0 && (
           <CommandGroup
             heading={inputValue.trim() ? 'Matching' : 'Popular'}
           >
-            {suggestions
-              .filter((s) => s.source !== 'recent')
-              .map((suggestion) => (
-                <CommandItem
-                  key={suggestion.hashtag}
-                  value={suggestion.hashtag}
-                  onSelect={() => handleSelectHashtag(suggestion.hashtag)}
-                  className="gap-2"
-                >
-                  <Hash className="h-3 w-3 opacity-50" />
-                  <span>{suggestion.hashtag}</span>
-                </CommandItem>
-              ))}
+            {otherSuggestions.map((suggestion) => (
+              <CommandItem
+                key={suggestion.hashtag}
+                value={suggestion.hashtag}
+                onSelect={() => handleSelectHashtag(suggestion.hashtag)}
+                className="gap-2"
+              >
+                <Hash className="h-3 w-3 opacity-50" />
+                <span>{suggestion.hashtag}</span>
+              </CommandItem>
+            ))}
           </CommandGroup>
         )}
       </CommandList>
