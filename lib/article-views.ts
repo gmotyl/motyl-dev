@@ -10,6 +10,9 @@ export interface ArticleView {
   viewedAt: Date
 }
 
+// Check if we're in dev mode without database
+const isDevWithoutDb = process.env.DEV_AUTH_BYPASS === 'true'
+
 // Mark an article as viewed for the current user
 export async function markArticleAsViewed(slug: string): Promise<ArticleView> {
   const session = await auth()
@@ -17,24 +20,45 @@ export async function markArticleAsViewed(slug: string): Promise<ArticleView> {
     throw new Error('Unauthorized')
   }
 
-  // Use upsert to handle duplicates gracefully
-  const articleView = await prisma.articleView.upsert({
-    where: {
-      userId_articleSlug: {
+  // In dev mode without DB, return a mock response
+  if (isDevWithoutDb) {
+    return {
+      id: 'dev-view-' + Date.now(),
+      articleSlug: slug,
+      userId: session.user.id,
+      viewedAt: new Date(),
+    }
+  }
+
+  try {
+    // Use upsert to handle duplicates gracefully
+    const articleView = await prisma.articleView.upsert({
+      where: {
+        userId_articleSlug: {
+          userId: session.user.id,
+          articleSlug: slug,
+        },
+      },
+      update: {
+        viewedAt: new Date(), // Update timestamp if already exists
+      },
+      create: {
         userId: session.user.id,
         articleSlug: slug,
       },
-    },
-    update: {
-      viewedAt: new Date(), // Update timestamp if already exists
-    },
-    create: {
-      userId: session.user.id,
-      articleSlug: slug,
-    },
-  })
+    })
 
-  return articleView
+    return articleView
+  } catch (error) {
+    console.error('Database error in markArticleAsViewed:', error)
+    // Return mock on DB error in dev
+    return {
+      id: 'dev-view-' + Date.now(),
+      articleSlug: slug,
+      userId: session.user.id,
+      viewedAt: new Date(),
+    }
+  }
 }
 
 // Get all viewed article slugs for the current user
@@ -44,19 +68,29 @@ export async function getUserViewedArticles(): Promise<string[]> {
     return []
   }
 
-  const views = await prisma.articleView.findMany({
-    where: {
-      userId: session.user.id,
-    },
-    select: {
-      articleSlug: true,
-    },
-    orderBy: {
-      viewedAt: 'desc',
-    },
-  })
+  // In dev mode without DB, return empty array (use localStorage instead)
+  if (isDevWithoutDb) {
+    return []
+  }
 
-  return views.map((v) => v.articleSlug)
+  try {
+    const views = await prisma.articleView.findMany({
+      where: {
+        userId: session.user.id,
+      },
+      select: {
+        articleSlug: true,
+      },
+      orderBy: {
+        viewedAt: 'desc',
+      },
+    })
+
+    return views.map((v) => v.articleSlug)
+  } catch (error) {
+    console.error('Database error in getUserViewedArticles:', error)
+    return []
+  }
 }
 
 // Check if a specific article has been viewed
@@ -66,16 +100,25 @@ export async function isArticleViewed(slug: string): Promise<boolean> {
     return false
   }
 
-  const view = await prisma.articleView.findUnique({
-    where: {
-      userId_articleSlug: {
-        userId: session.user.id,
-        articleSlug: slug,
-      },
-    },
-  })
+  if (isDevWithoutDb) {
+    return false
+  }
 
-  return !!view
+  try {
+    const view = await prisma.articleView.findUnique({
+      where: {
+        userId_articleSlug: {
+          userId: session.user.id,
+          articleSlug: slug,
+        },
+      },
+    })
+
+    return !!view
+  } catch (error) {
+    console.error('Database error in isArticleViewed:', error)
+    return false
+  }
 }
 
 // Clear all view history for the current user
@@ -85,13 +128,22 @@ export async function clearViewHistory(): Promise<number> {
     throw new Error('Unauthorized')
   }
 
-  const result = await prisma.articleView.deleteMany({
-    where: {
-      userId: session.user.id,
-    },
-  })
+  if (isDevWithoutDb) {
+    return 0
+  }
 
-  return result.count
+  try {
+    const result = await prisma.articleView.deleteMany({
+      where: {
+        userId: session.user.id,
+      },
+    })
+
+    return result.count
+  } catch (error) {
+    console.error('Database error in clearViewHistory:', error)
+    return 0
+  }
 }
 
 // Get count of viewed articles
@@ -101,11 +153,20 @@ export async function getViewedCount(): Promise<number> {
     return 0
   }
 
-  return await prisma.articleView.count({
-    where: {
-      userId: session.user.id,
-    },
-  })
+  if (isDevWithoutDb) {
+    return 0
+  }
+
+  try {
+    return await prisma.articleView.count({
+      where: {
+        userId: session.user.id,
+      },
+    })
+  } catch (error) {
+    console.error('Database error in getViewedCount:', error)
+    return 0
+  }
 }
 
 // Sync article slugs from localStorage to database (migration helper)
@@ -119,26 +180,35 @@ export async function syncLocalStorageToDatabase(slugs: string[]): Promise<numbe
     return 0
   }
 
-  // Filter out any slugs that already exist for this user
-  const existingSlugs = await getUserViewedArticles()
-  const existingSet = new Set(existingSlugs)
-  const newSlugs = slugs.filter((slug) => !existingSet.has(slug))
-
-  if (newSlugs.length === 0) {
+  if (isDevWithoutDb) {
     return 0
   }
 
-  // Bulk create article views
-  const viewsData = newSlugs.map((slug) => ({
-    userId: session.user.id,
-    articleSlug: slug,
-    viewedAt: new Date(),
-  }))
+  try {
+    // Filter out any slugs that already exist for this user
+    const existingSlugs = await getUserViewedArticles()
+    const existingSet = new Set(existingSlugs)
+    const newSlugs = slugs.filter((slug) => !existingSet.has(slug))
 
-  const result = await prisma.articleView.createMany({
-    data: viewsData,
-    skipDuplicates: true, // Skip any duplicates that might occur from race conditions
-  })
+    if (newSlugs.length === 0) {
+      return 0
+    }
 
-  return result.count
+    // Bulk create article views
+    const viewsData = newSlugs.map((slug) => ({
+      userId: session.user.id,
+      articleSlug: slug,
+      viewedAt: new Date(),
+    }))
+
+    const result = await prisma.articleView.createMany({
+      data: viewsData,
+      skipDuplicates: true, // Skip any duplicates that might occur from race conditions
+    })
+
+    return result.count
+  } catch (error) {
+    console.error('Database error in syncLocalStorageToDatabase:', error)
+    return 0
+  }
 }

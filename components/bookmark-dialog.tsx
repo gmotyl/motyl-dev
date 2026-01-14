@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -12,20 +12,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { X, Plus, Hash } from 'lucide-react';
+import { Hash } from 'lucide-react';
+import { HashtagInput } from '@/components/hashtag-input';
 
 const bookmarkSchema = z.object({
   url: z.string().url('Invalid URL format'),
@@ -68,29 +61,7 @@ export function BookmarkDialog({
   const [hashtags, setHashtags] = useState<string[]>(
     initialData?.hashtags || []
   );
-  const [hashtagInput, setHashtagInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [allHashtags, setAllHashtags] = useState<string[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const hashtagInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (open) {
-      const fetchHashtags = async () => {
-        try {
-          const response = await fetch('/api/hashtags');
-          if (!response.ok) {
-            throw new Error('Failed to fetch hashtags');
-          }
-          const tags = await response.json();
-          setAllHashtags(tags);
-        } catch (error) {
-          console.error('Error fetching hashtags:', error);
-        }
-      };
-      fetchHashtags();
-    }
-  }, [open]);
 
   const {
     register,
@@ -111,8 +82,6 @@ export function BookmarkDialog({
     if (cleanTag && !hashtags.includes(cleanTag)) {
       setHashtags([...hashtags, cleanTag]);
     }
-    setHashtagInput('');
-    setShowSuggestions(false);
   };
 
   const handleRemoveHashtag = (tag: string) => {
@@ -128,8 +97,6 @@ export function BookmarkDialog({
       });
       reset();
       setHashtags([]);
-      setHashtagInput('');
-      hashtagInputRef.current?.blur();
       onOpenChange(false);
     } catch (error) {
       console.error('Error submitting bookmark:', error);
@@ -187,75 +154,21 @@ export function BookmarkDialog({
           {/* Hashtags Field */}
           <div className="space-y-2">
             <Label htmlFor="hashtags">Hashtags</Label>
-            <div className="flex gap-2">
-              <Command className="relative">
-                <CommandInput
-                  ref={hashtagInputRef}
-                  placeholder="Add hashtag (e.g., react)"
-                  value={hashtagInput}
-                  onValueChange={setHashtagInput}
-                  onFocus={() => setShowSuggestions(true)}
-                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                />
-                {showSuggestions && (
-                  <CommandList className="absolute top-10 z-10 w-full rounded-md border bg-popover text-popover-foreground shadow-md">
-                    <CommandEmpty>No results found.</CommandEmpty>
-                    <CommandGroup heading="Suggestions">
-                      {allHashtags
-                        .filter((tag) =>
-                          tag.toLowerCase().includes(hashtagInput.toLowerCase())
-                        )
-                        .slice(0, 5)
-                        .map((tag) => (
-                          <CommandItem
-                            key={tag}
-                            onSelect={() => handleAddHashtag(tag)}
-                          >
-                            {tag}
-                          </CommandItem>
-                        ))}
-                    </CommandGroup>
-                  </CommandList>
-                )}
-              </Command>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleAddHashtag(hashtagInput)}
-                disabled={!hashtagInput.trim()}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
+            <HashtagInput
+              selectedHashtags={hashtags}
+              onHashtagAdd={handleAddHashtag}
+              onHashtagRemove={handleRemoveHashtag}
+              placeholder="Add hashtag..."
+              allowNewHashtags={true}
+              showSelectedBadges={true}
+            />
 
-            {/* Selected Hashtags */}
-            {hashtags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {hashtags.map((tag) => (
-                  <Badge
-                    key={tag}
-                    variant="secondary"
-                    className="gap-1 pl-2 pr-1"
-                  >
-                    <Hash className="h-3 w-3" />
-                    {tag}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveHashtag(tag)}
-                      className="ml-1 hover:bg-muted rounded-sm"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-            )}
-
-            {/* Suggested Hashtags */}
+            {/* Suggested Hashtags from article context */}
             {suggestedHashtags.length > 0 && (
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Suggestions:</p>
+                <p className="text-xs text-muted-foreground">
+                  Suggestions from article:
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {suggestedHashtags
                     .filter((tag) => !hashtags.includes(tag))

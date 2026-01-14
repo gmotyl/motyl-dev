@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useHashtagFilter } from '@/hooks/use-hashtag-filter'
+import { HashtagInput } from '@/components/hashtag-input'
 
 interface ItemWithHashtags {
   hashtags: string[]
@@ -146,7 +147,18 @@ export function HashtagFilters<T extends ItemWithHashtags>({
   return (
     <div className={`mb-8 ${className}`}>
       <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
-        <h2 className="text-lg font-semibold">Filter by hashtags:</h2>
+        <div className="flex items-center gap-4 flex-wrap">
+          <h2 className="text-lg font-semibold">Filter by hashtags:</h2>
+          {/* Hashtag Search Input */}
+          <HashtagInput
+            selectedHashtags={Array.from(selectedHashtags)}
+            onHashtagAdd={handleHashtagToggle}
+            onHashtagRemove={handleHashtagToggle}
+            placeholder="Search hashtags..."
+            allowNewHashtags={false}
+            showSelectedBadges={false}
+          />
+        </div>
 
         <div className="flex items-center gap-4 flex-wrap">
           {/* UNSEEN Filter */}

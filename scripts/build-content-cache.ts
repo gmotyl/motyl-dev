@@ -42,12 +42,19 @@ interface ContentCache {
   items: ContentItem[]
 }
 
+interface HashtagStats {
+  generatedAt: string
+  totalHashtags: number
+  frequency: Record<string, number>
+}
+
 // --- Constants ---
 
 const ROOT_DIR = process.cwd()
 const articlesDirectory = path.join(ROOT_DIR, 'articles')
 const newsDirectory = path.join(ROOT_DIR, 'news')
 const outputPath = path.join(ROOT_DIR, 'data', 'content-cache.json')
+const hashtagStatsPath = path.join(ROOT_DIR, 'data', 'hashtag-stats.json')
 
 const matterOptions = {
   engines: {
@@ -174,6 +181,40 @@ async function getNewsYearDirectories(): Promise<string[]> {
   }
 }
 
+// --- Hashtag Stats Function ---
+
+async function buildHashtagStats(items: ContentItem[]): Promise<void> {
+  console.log('\nBuilding hashtag statistics...')
+
+  // Count frequency of each hashtag
+  const frequency: Record<string, number> = {}
+  for (const item of items) {
+    for (const tag of item.hashtags) {
+      frequency[tag] = (frequency[tag] || 0) + 1
+    }
+  }
+
+  // Sort by frequency (highest first) for easier debugging
+  const sortedFrequency: Record<string, number> = {}
+  Object.entries(frequency)
+    .sort((a, b) => b[1] - a[1])
+    .forEach(([tag, count]) => {
+      sortedFrequency[tag] = count
+    })
+
+  const stats: HashtagStats = {
+    generatedAt: new Date().toISOString(),
+    totalHashtags: Object.keys(frequency).length,
+    frequency: sortedFrequency,
+  }
+
+  // Write stats file (minified for smaller size)
+  await fs.writeFile(hashtagStatsPath, JSON.stringify(stats), 'utf8')
+
+  console.log(`  Unique hashtags: ${stats.totalHashtags}`)
+  console.log(`  Output: ${hashtagStatsPath}`)
+}
+
 // --- Main Build Function ---
 
 async function buildContentCache(): Promise<void> {
@@ -211,6 +252,9 @@ async function buildContentCache(): Promise<void> {
   console.log(`  Total items: ${cache.totalItems}`)
   console.log(`  Output: ${outputPath}`)
   console.log(`  Generated at: ${cache.generatedAt}`)
+
+  // Build hashtag statistics
+  await buildHashtagStats(allContent)
 }
 
 // Run the build

@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { useSession } from "next-auth/react"
 import { UserMenu } from "@/components/user-menu"
 import { SignInButton } from "@/components/sign-in-button"
+import { DevSignInButton } from "@/components/dev-sign-in-button"
 import { InstallPrompt } from "@/components/install-prompt"
 
 export default function Header() {
@@ -54,7 +55,10 @@ export default function Header() {
         ) : session ? (
           <UserMenu user={session.user} />
         ) : (
-          <SignInButton />
+          <>
+            <DevSignInButton />
+            <SignInButton />
+          </>
         )}
       </nav>
       <Sheet>
@@ -96,7 +100,7 @@ export default function Header() {
                 </Link>
               </>
             )}
-            <div className="pt-4 border-t">
+            <div className="pt-4 border-t flex flex-col gap-2">
               {status === "loading" ? (
                 <div className="h-10 w-full rounded-md bg-muted animate-pulse" />
               ) : session ? (
@@ -105,7 +109,10 @@ export default function Header() {
                   <span className="text-sm">{session.user.name}</span>
                 </div>
               ) : (
-                <SignInButton />
+                <>
+                  <DevSignInButton />
+                  <SignInButton />
+                </>
               )}
             </div>
           </nav>
