@@ -7,6 +7,7 @@ import Footer from '@/components/footer'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { useVisitedArticles } from '@/hooks/use-visited-articles'
+import { HashtagInput } from '@/components/hashtag-input'
 import {
   Pagination,
   PaginationContent,
@@ -262,7 +263,18 @@ export function ContentListing({
         {allHashtags.length > 0 && (
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
-              <h2 className="text-lg font-semibold">Filter by hashtags:</h2>
+              <div className="flex items-center gap-4 flex-wrap">
+                <h2 className="text-lg font-semibold">Filter by hashtags:</h2>
+                {/* Hashtag Search Input */}
+                <HashtagInput
+                  selectedHashtags={Array.from(selectedHashtags)}
+                  onHashtagAdd={handleHashtagToggle}
+                  onHashtagRemove={handleHashtagToggle}
+                  placeholder="Search hashtags..."
+                  allowNewHashtags={false}
+                  showSelectedBadges={false}
+                />
+              </div>
 
               <div className="flex items-center gap-4 flex-wrap">
                 <Button
