@@ -3,7 +3,7 @@ title: "Generative UI i RSC: jak AI zmienia interfejsy; nowości w React, Tailwi
 excerpt: "Przegląd najważniejszych technicznych wpisów: Vercel i Generative UI z React Server Components, nowe API Reacta, optymalizacje Shopify, SSRF w Node.js, Tailwind v4 i webowe animacje sterowane przewijaniem."
 publishedAt: "2025-10-27"
 slug: "generative-ui-rsc-ai-react-tailwind-shopify-bezpieczenstwo"
-hashtags: "#generated #pl #frontend #react #react-server-components #vercel #v0 #ai #typescript #tailwind #rust #lightning-css #shopify #react-native #security #ssrf #snyk #css #gleam #architecture"
+hashtags: "#generated #pl #frontend #react #server-components #vercel #v0 #ai #typescript #tailwind #rust #lightning-css #shopify #react-native #security #ssrf #snyk #css #gleam #architecture"
 ---
 
 ## Bytes #269 — Artificially Intelligent React Server Components

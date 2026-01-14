@@ -3,7 +3,7 @@ title: "Rundka: Bare runtime, React dla dwóch komputerów, Waku API routes, luk
 excerpt: "Podsumowanie technicznych nowości: lekki runtime Bare, refleksje o React Server Components, API routes w Waku, krytyczna luka w React Router + Remix oraz przegląd nowości WebKit/Safari 18.4."
 publishedAt: "2025-04-11"
 slug: "bare-react-two-computers-waku-react-router-safari-18-4"
-hashtags: "#generated #pl #react #typescript #frontend #ai #architecture #nodejs #deno #react-router #remix #security #webdev #web-performance"
+hashtags: "#generated #pl #react #typescript #frontend #ai #architecture #nodejs #deno #react-router #remix #security #webdev #performance"
 ---
 
 ## Bytes #383 - Barenaked Runtimes

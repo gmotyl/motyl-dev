@@ -3,7 +3,7 @@ title: "Frontend i architektura: Valibot, Convex, Astro, Deno i praktyki wydajno
 excerpt: "Przegląd ważnych materiałów dla frontendowców i architektów: nowe Valibot, Convex i jego typowanie end-to-end, aktualizacja Deno, zero-JS view transitions w Astro oraz praktyczne analizy wydajności Reacta i DOM."
 publishedAt: "2025-10-27"
 slug: "frontend-architektura-valibot-convex-astro-deno-wydajnosc-2024-06-13"
-hashtags: "#generated #pl #frontend #react #typescript #architecture #web-performance #valibot #zod #convex #astro #deno #trpc #expo #view-transitions #dom #inp"
+hashtags: "#generated #pl #frontend #react #typescript #architecture #performance #valibot #zod #convex #astro #deno #trpc #expo #view-transitions #dom #inp"
 ---
 
 ## Bytes #297 - Valibot and the circle of life

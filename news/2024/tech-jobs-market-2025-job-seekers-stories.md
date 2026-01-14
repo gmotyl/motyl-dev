@@ -3,7 +3,7 @@ title: "Tech Jobs Market 2025: Job Seekers Navigate Picky Employers and Shifting
 excerpt: "Analysis of the current tech hiring landscape reveals falling remote work demand, junior engineer recruitment rebound, and increasingly selective employers."
 publishedAt: "2024-11-04"
 slug: "tech-jobs-market-2025-job-seekers-stories"
-hashtags: "#generated #en #tech-jobs #hiring #remote-work #engineering-leadership #ai #backend #frontend #mobile #career"
+hashtags: "#generated #en #tech-jobs #hiring #remote-work #leadership #ai #backend #frontend #mobile #career"
 ---
 
 ## Tech jobs market 2025, part 3: job seekers' stories

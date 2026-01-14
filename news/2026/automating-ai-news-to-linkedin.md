@@ -3,7 +3,7 @@ title: 'The Automation Paradox: Turning AI News Into LinkedIn Gold Without Becom
 excerpt: 'How to build a workflow that harvests AI news, curates it, and publishes to LinkedIn—and why doing this at scale forces you to ask uncomfortable questions about signal and noise.'
 publishedAt: '2026-01-06'
 slug: 'automating-ai-news-to-linkedin'
-hashtags: '#substack #automation #ai #linkedin #contentcreation #workflow #productivity #generated #en'
+hashtags: "#substack #automation #ai #linkedin #content-creation #workflow #productivity #generated #en"
 ---
 
 ### TLDR:

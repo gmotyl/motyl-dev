@@ -3,7 +3,7 @@ title: "Is AI Eating Code? Anthropic's Supremacy and the Future of Software Deve
 excerpt: "Exploring AI's impact on coding, Anthropic's dominance, and how tools like Cursor are transforming software development in 2025."
 publishedAt: "2025-12-10"
 slug: "is-ai-eating-code-anthropic-cursor-future-of-software-development"
-hashtags: "#agregate #substack #ai #coding #anthropic #cursor #software-engineering #generated #en"
+hashtags: "#agregate #substack #ai #coding #anthropic #cursor #engineering #generated #en"
 ---
 
 ## Is AI Eating Code? Anthropic's Supremacy and the Future of Software Development

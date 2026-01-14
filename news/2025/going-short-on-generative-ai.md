@@ -3,7 +3,7 @@ title: "Michael Burry's Bearish Stance on the Generative AI Market"
 excerpt: "A deep dive into Michael Burry's predictions of a Generative AI bubble, citing flattening adoption rates, questionable ROI, and accounting practices reminiscent of past market manias."
 publishedAt: "2025-11-29"
 slug: "michael-burry-short-on-generative-ai"
-hashtags: "#substack #ai #generative-ai #nvidia #michael-burry #investment #generated #en"
+hashtags: "#substack #ai #nvidia #michael-burry #investment #generated #en"
 ---
 
 ## Going Short on Generative AI 

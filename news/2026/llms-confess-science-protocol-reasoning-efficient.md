@@ -3,7 +3,7 @@ title: "LLMs Learn to Confess, Science Gets a Protocol, and Reasoning Goes Effic
 excerpt: "OpenAI teaches models to admit mistakes, Shanghai lab creates scientific research protocol, and researchers find cheaper ways to reason longer"
 publishedAt: "2026-01-09"
 slug: "llms-confess-science-protocol-reasoning-efficient"
-hashtags: "#thebatch #ai #llm #ml #openai #reinforcement-learning #science #research #architecture #generated #en"
+hashtags: "#thebatch #ai #llm #ml #openai #science #research #architecture #generated #en"
 ---
 
 ## Teaching Models to Tell the Truth

@@ -3,7 +3,7 @@ title: "RedwoodJS v8.0, Svelte 5 Signals, i GitHub - dlaczego te technologie wyg
 excerpt: "Przegląd najważniejszych trendów w React, Svelte i architekturze platform deweloperskich"
 publishedAt: "2024-09-13"
 slug: "redwoodjs-svelte-signals-github-dominacja"
-hashtags: "#generated #pl #react #svelte #redwoodjs #signals #github #typescript #frontend #architecture #rsc #graphql"
+hashtags: "#generated #pl #react #svelte #redwoodjs #signals #github #typescript #frontend #architecture #server-components #graphql"
 ---
 
 ## RedwoodJS v8.0 - React dla miliarderów z nowymi Server Components

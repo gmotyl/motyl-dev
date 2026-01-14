@@ -3,7 +3,7 @@ title: "From Knowledge to Wisdom: Rethinking Developer Training and Learning Imp
 excerpt: "A deep dive into why traditional developer training fails and how live team coaching can transform software engineering skills development."
 publishedAt: "2024-11-07"
 slug: "from-knowledge-to-wisdom-developer-training"
-hashtags: "#generated #en #software-engineering #training #coaching #ai #learning #developer-experience #team-development #skills"
+hashtags: "#generated #en #engineering #training #coaching #ai #learning #dx #teams #skills"
 ---
 
 ## From Knowledge to Wisdom 🧠 — with Hywel Carver

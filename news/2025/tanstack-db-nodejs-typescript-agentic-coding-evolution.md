@@ -3,7 +3,7 @@ title: "TanStack DB Launches with Revolutionary Client-Side Database, Node.js En
 excerpt: "TanStack DB introduces differential dataflow for lightning-fast client updates while Node.js v22.18.0 brings native TypeScript execution without configuration."
 publishedAt: "2025-08-01"
 slug: "tanstack-db-nodejs-typescript-agentic-coding-evolution"
-hashtags: "#generated #en #tanstack-query #nodejs #typescript #react #frontend #architecture #performance #ai #coding-agents #type-system #differential-dataflow"
+hashtags: "#generated #en #react-query #nodejs #typescript #react #frontend #architecture #performance #ai #agents #type-system #differential-dataflow"
 ---
 
 ## TanStack DB: The Client-Side Database Revolution

@@ -3,7 +3,7 @@ title: "Building Your Own AI Creative Engine with Composable Workflows"
 excerpt: "A shift from using individual AI tools to orchestrating multimodal workflows is enabling a new level of creativity. This article explores how to build your own creative engine using platforms like Glif."
 publishedAt: "2025-12-25"
 slug: "building-ai-creative-engine-glif"
-hashtags: "#substack #ai #creativity #automation #workflows #nocode #generated #en"
+hashtags: "#substack #ai #creativity #automation #workflow #nocode #generated #en"
 ---
 
 ## I Built My Own AI Creative Engine (Here's How You Can Too)

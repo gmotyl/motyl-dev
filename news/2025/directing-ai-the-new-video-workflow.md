@@ -3,7 +3,7 @@ title: "Directing AI: The New Video Workflow Beyond Generation"
 excerpt: "Adobe's latest Firefly tools signal a major shift in AI video creation, moving from a frustrating cycle of regeneration to a new workflow focused on directorial control, refinement, and predictable results."
 publishedAt: "2025-12-16"
 slug: "directing-ai-the-new-video-workflow"
-hashtags: "#substack #ai #video #editing #adobe #firefly #creativity #generativeai #generated #en"
+hashtags: "#substack #ai #video #editing #adobe #firefly #creativity #generated #en"
 ---
 
 ## Stop "Generating" and Start Directing: The New AI Video Workflow

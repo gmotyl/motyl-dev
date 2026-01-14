@@ -3,7 +3,7 @@ title: "Why Software Development Slows: The Options vs Features Tradeoff"
 excerpt: "Kent Beck explores why development velocity degrades over time through a novel visualization framework, showing how features consume optionality and how tidying can restore it."
 publishedAt: "2025-11-19"
 slug: "why-software-development-slows-options-features-tradeoff"
-hashtags: "#generated #en #architecture #software-craftsmanship #technical-debt #refactoring #velocity #dx"
+hashtags: "#generated #en #architecture #software-craftsmanship #refactoring #velocity #dx"
 ---
 
 ## Why Does Development Slow?

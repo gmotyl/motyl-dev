@@ -1,9 +1,9 @@
 ---
 title: "Daily.dev Tech Roundup: Vite 8, NestJS, Node.js Frameworks, and Cosmic UI"
-excerpt: "This daily.dev roundup covers significant updates in web development, including Vite 8's performance boost with Rolldown, an introductory guide to NestJS, a comprehensive overview of Node.js frameworks, and the futuristic Cosmic UI library. It also touches on the philosophy of embracing friction over AI-driven convenience."
+excerpt: This daily.dev roundup covers significant updates in web development, including Vite 8's performance boost with Rolldown, an introductory guide to NestJS, a comprehensive overview of Node.js frameworks, and the futuristic Cosmic UI library. It also touches on the philosophy of embracing friction over AI-driven convenience.
 publishedAt: "2025-12-04T07:00:23.000Z"
-slug: "dailydev-tech-roundup-vite8-nestjs-nodejs-cosmicui"
-hashtags: ["#dailydev", "#tech", "#webdev", "#Vite", "#NestJS", "#Nodejs", "#UI"]
+slug: dailydev-tech-roundup-vite8-nestjs-nodejs-cosmicui
+hashtags: "#dailydev #tech #webdev #vite #nestjs #nodejs #ui"
 ---
 
 ## TLDR;

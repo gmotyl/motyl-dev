@@ -3,7 +3,7 @@ title: "AI SDK Innovation, Manufacturing Reality, and CSS Evolution: The Week in
 excerpt: "A comprehensive look at AI development tools, the future of software engineering roles, manufacturing infrastructure challenges, and the CSS features reshaping frontend development."
 publishedAt: "2026-01-06"
 slug: "ai-sdk-manufacturing-css-evolution"
-hashtags: "#dailydev #ai #typescript #frontend #css #architecture #generativeai #generated #en"
+hashtags: "#dailydev #ai #typescript #frontend #css #architecture #generated #en"
 ---
 
 ## AI SDK 6: The New Frontier of Intelligent Application Building

@@ -3,7 +3,7 @@ title: 'Survey-Driven Product Decisions: The Gap Between Asking and Understandin
 excerpt: 'Why surveys are such a popular product tool—and why they might be telling you what you want to hear instead of what you need to know.'
 publishedAt: '2026-01-07'
 slug: 'survey-driven-product-decisions-2026-01-07'
-hashtags: '#substack #productmanagement #userresearch #feedback #methodology #engagement #generated #en'
+hashtags: "#substack #product #userresearch #feedback #methodology #engagement #generated #en"
 ---
 
 # Survey-Driven Product Decisions: The Gap Between Asking and Understanding

@@ -3,7 +3,7 @@ title: "The Counterintuitive Move: Why Killing RAG, MCP, and Agentic Loops Led t
 excerpt: "A case study from the trenches on how simplifying an AI agent's architecture by removing popular but complex components like RAG and MCP resulted in a faster, more stable, and scalable product."
 publishedAt: "2025-12-23"
 slug: "killing-rag-mcp-and-agentic-loops-for-better-ai"
-hashtags: "#decodingai #substack #ai #rag #mcp #agentic-loops #architecture #generated #en"
+hashtags: "#decodingai #substack #ai #rag #mcp #agents #architecture #generated #en"
 ---
 ## We Killed RAG, MCP, and Agentic Loops. Here's What Happened.
 **TLDR:** The ZTRON team built a vertical AI agent for financial advisors and found that their initial complex architecture, using trendy technologies like multi-index RAG and MCP, created a slow and unstable application. They achieved stability, performance, and scalability by simplifying their stack, replacing agentic RAG with Context-Aware Generation (CAG) for many tasks, and using durable workflows for background processing.

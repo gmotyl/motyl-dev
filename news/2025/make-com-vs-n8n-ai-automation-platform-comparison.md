@@ -3,7 +3,7 @@ title: "Make.com vs n8n: Critical Analysis of AI Automation Platform Trade-offs"
 excerpt: "A comprehensive comparison of Make.com and n8n automation platforms, revealing where each tool optimizes for different user capabilities and workflow complexity."
 publishedAt: "2025-11-18"
 slug: "make-com-vs-n8n-ai-automation-platform-comparison"
-hashtags: "#generated #en #ai #automation #make #n8n #workflow #integration #low-code #no-code #architecture #developer-tools"
+hashtags: "#generated #en #ai #automation #make #n8n #workflow #integration #low-code #no-code #architecture #devtools"
 ---
 
 ## Make.com vs n8n: What Most Reviews Get Wrong About These AI Automation Platforms

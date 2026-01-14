@@ -3,7 +3,7 @@ title: "Tooling and Architecture Roundup: Vite+, Next.js 16, Oxlint, Front‑end
 excerpt: "A focused audio‑style summary covering recent developments in frontend tooling, Next.js 16 beta, Rust-powered linting, front‑end maximalism, and router context inheritance — with practical implications for teams and architects."
 publishedAt: "2025-10-21"
 slug: "vite-plus-nextjs16-oxlint-front-end-maximalism-router-inheritance"
-hashtags: "#generated #en #frontend #react #typescript #vite #nextjs #turbopack #oxc #react-query #ai #architecture #performance #web-performance"
+hashtags: "#generated #en #frontend #react #typescript #vite #nextjs #turbopack #oxc #react-query #ai #architecture #performance"
 ---
 
 ## Bytes #435 - Vite+ is the future of something

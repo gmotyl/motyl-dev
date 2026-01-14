@@ -3,7 +3,7 @@ title: "AI's Evolution from Assistants to Autonomous Engineers"
 excerpt: "Exploring the shift from AI code assistants to autonomous AI software engineers, and the impact on enterprise software development."
 publishedAt: "2025-12-13"
 slug: "ai-evolution-from-assistants-to-autonomous-engineers"
-hashtags: "#ona #ai #ai-engineering #software-development #llm #generated #en"
+hashtags: "#ona #ai #engineering #software-development #llm #generated #en"
 ---
 
 ## 2025: The State of Generative AI in the Enterprise

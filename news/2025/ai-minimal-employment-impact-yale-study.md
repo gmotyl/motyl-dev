@@ -3,7 +3,7 @@ title: "AI's Minimal Impact on Employment: Yale Study Challenges Disruption Narr
 excerpt: "Three years after ChatGPT's launch, a Yale study reveals AI's surprisingly limited impact on job displacement and creation, contradicting Silicon Valley's transformation promises."
 publishedAt: "2025-10-14"
 slug: "ai-minimal-employment-impact-yale-study"
-hashtags: "#generated #en #ai #future-of-work #employment #chatgpt #generative-ai #yale-study #silicon-valley #labor-market"
+hashtags: "#generated #en #ai #future-of-work #employment #chatgpt #yale-study #silicon-valley #labor-market"
 ---
 
 ## AI and the Future of (Non-existent) Work

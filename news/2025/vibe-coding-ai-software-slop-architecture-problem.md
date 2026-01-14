@@ -3,7 +3,7 @@ title: "Vibe Coding Problem: AI Tools Generate Software Slop Without Architectur
 excerpt: "AI coding assistants like Cursor and Windsurf act as eager junior developers, producing working demos that collapse when real architectural decisions emerge."
 publishedAt: "2025-12-22"
 slug: "vibe-coding-ai-software-slop-architecture-problem"
-hashtags: "#smartpromptsforai #ai #cursor #windsurf #bolt #software-architecture #ai-coding #prompt-engineering #generated #en"
+hashtags: "#smartpromptsforai #ai #cursor #windsurf #bolt #architecture #ai-coding #prompt-engineering #generated #en"
 ---
 
 ## The Vibe Coding Trap: Speed Without Architecture

@@ -3,7 +3,7 @@ title: "The Learning Loop and LLMs: Why AI Cannot Replace Understanding in Softw
 excerpt: "Martin Fowler explores why LLMs, despite their power, cannot bypass the fundamental learning cycle that transforms developers from code generators into system designers."
 publishedAt: "2025-11-18"
 slug: "learning-loop-llms-software-development"
-hashtags: "#generated #en #ai #llm #architecture #agile #learning #developer-productivity #software-craftsmanship #tdd #devops"
+hashtags: "#generated #en #ai #llm #architecture #agile #learning #productivity #software-craftsmanship #tdd #devops"
 ---
 
 ## The Learning Loop and LLMs

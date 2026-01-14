@@ -3,7 +3,7 @@ title: "Browser Performance Revolution: Speedometer 3.0 and the Devaluation of F
 excerpt: "Major browser vendors collaborate on Speedometer 3.0 benchmark while the frontend community grapples with the systematic undervaluation of CSS and HTML expertise."
 publishedAt: "2024-03-13"
 slug: "speedometer-3-frontend-devaluation-browser-performance"
-hashtags: "#generated #en #frontend #css #html #javascript #performance #browser #webkit #chrome #firefox #speedometer #react #vue #angular #svelte #web-performance #core-web-vitals #inp"
+hashtags: "#generated #en #frontend #css #html #javascript #performance #browser #webkit #chrome #firefox #speedometer #react #vue #angular #svelte #inp"
 ---
 
 ## Speedometer 3.0: A Collaborative Benchmark Revolution

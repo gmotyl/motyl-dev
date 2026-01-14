@@ -3,7 +3,7 @@ title: 'Leadership, Craft, and the Art of Jamming Together: Rethinking How Desig
 excerpt: 'Five perspectives on why staying close to reality matters more than following best practices. Design leaders should jam with their teams, engineers need authority over their own systems, and micromanagement fears often mask deeper trust issues.'
 publishedAt: '2026-01-07'
 slug: 'unicorn-club-leadership-design-craft-2026-01-07'
-hashtags: '#unicornclub #leadership #design #engineering #productmanagement #micromanagement #culture #generated #en'
+hashtags: "#unicornclub #leadership #design #engineering #product #micromanagement #culture #generated #en"
 ---
 
 # Leadership, Craft, and the Art of Jamming Together: Rethinking How Design and Engineering Teams Actually Work

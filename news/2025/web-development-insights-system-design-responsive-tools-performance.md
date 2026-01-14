@@ -3,7 +3,7 @@ title: "Web Development Insights: System Design, Responsive Tools, and Performan
 excerpt: "A deep dive into learning system design, building developer tools, and the latest performance optimizations in web development"
 publishedAt: "2025-11-14"
 slug: "web-development-insights-system-design-responsive-tools-performance"
-hashtags: "#generated #en #system-design #frontend #css #responsive-design #laravel #websockets #chrome #performance #devtools #cron #docker"
+hashtags: "#generated #en #architecture #frontend #css #responsive-design #laravel #websockets #chrome #performance #devtools #cron #docker"
 ---
 
 ## How I Learned System Design

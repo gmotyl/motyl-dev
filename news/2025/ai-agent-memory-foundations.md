@@ -3,7 +3,7 @@ title: "The Four Foundational Layers of AI Agent Memory"
 excerpt: "Exploring the cognitive architecture of AI agents, from static internal knowledge to dynamic long-term memory systems."
 publishedAt: "2025-12-02"
 slug: "ai-agent-memory-foundations"
-hashtags: "#decodingai #substack #ai #llm #architecture #agentic-ai #generated #en"
+hashtags: "#decodingai #substack #ai #llm #architecture #agents #generated #en"
 ---
 
 ## How Does Memory for AI Agents Work?

@@ -3,7 +3,7 @@ title: "Refactoring Newsletter 2025 Retrospective: AI, Product Engineering, and 
 excerpt: "A year-end review of the biggest trends in engineering leadership: AI's cognitive costs, the rise of product engineering, platform teams, and what elite engineering organizations look like today."
 publishedAt: "2025-12-31"
 slug: "refactoring-2025-retrospective-ai-product-engineering-trends"
-hashtags: "#refactoring #substack #ai #architecture #engineering-leadership #product-engineering #platform-engineering #career #generated #en"
+hashtags: "#refactoring #substack #ai #architecture #leadership #product #platform-engineering #career #generated #en"
 ---
 
 ## The Best of Refactoring in 2025

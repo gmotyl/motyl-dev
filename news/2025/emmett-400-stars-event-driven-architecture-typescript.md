@@ -3,7 +3,7 @@ title: "Emmett Hits 400 Stars: Event-Driven Architecture Framework Momentum"
 excerpt: "Open-source TypeScript framework Emmett reaches milestone, showcasing organic growth in event-driven tooling ecosystem."
 publishedAt: "2025-12-22"
 slug: "emmett-400-stars-event-driven-architecture-typescript"
-hashtags: "#oskardudycz #event-driven #typescript #nodejs #opensource #github #generated #en"
+hashtags: "#oskardudycz #event-driven #typescript #nodejs #open-source #github #generated #en"
 ---
 
 ## Emmett Framework Achieves 400 GitHub Stars

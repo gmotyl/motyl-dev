@@ -3,7 +3,7 @@ title: "This Week In React: Security Vulnerabilities, RSC Explorer, Base UI, and
 excerpt: "This week's edition covers a critical security vulnerability in React Server Components, the new RSC Explorer, the launch of Base UI, and other news from the React and web development ecosystem."
 publishedAt: "2025-12-18"
 slug: "this-week-in-react-263"
-hashtags: "#thisweekinreact #react #reactnative #rsc #security #webdev #generated #en"
+hashtags: "#thisweekinreact #react #react-native #server-components #security #webdev #generated #en"
 ---
 
 ## React Security Vulnerability

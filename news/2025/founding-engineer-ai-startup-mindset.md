@@ -3,7 +3,7 @@ title: "The Mindset of a Founding Engineer in an AI Startup"
 excerpt: "Michelle Lim, first engineer at Warp and founder of Flint, shares insights on what it takes to be a successful founding engineer at an AI startup, emphasizing a product-first mindset, a willingness to go beyond the job description, and the importance of choosing the right founders."
 publishedAt: "2025-12-04"
 slug: "founding-engineer-ai-startup-mindset"
-hashtags: "#substack #ai #startup #engineering-culture #product-engineering #career #generated #en"
+hashtags: "#substack #ai #startup #engineering-culture #product #career #generated #en"
 ---
 
 ## Being a founding engineer at an AI startup

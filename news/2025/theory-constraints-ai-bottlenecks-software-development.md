@@ -3,7 +3,7 @@ title: "Theory of Constraints and AI Bottlenecks in Software Development"
 excerpt: "Exploring how AI adoption creates new bottlenecks in development workflows and applying constraint theory to optimize system performance."
 publishedAt: "2025-11-03"
 slug: "theory-constraints-ai-bottlenecks-software-development"
-hashtags: "#generated #en #ai #architecture #devops #performance #productivity #dx #theory-of-constraints #software-engineering"
+hashtags: "#generated #en #ai #architecture #devops #performance #productivity #dx #theory-of-constraints #engineering"
 ---
 
 ## Constraints, leading metrics, and local-first software 💡

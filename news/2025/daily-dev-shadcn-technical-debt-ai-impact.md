@@ -3,7 +3,7 @@ title: "Shadcn's Evolution, The Myth of Technical Debt, and AI's Impact on Devel
 excerpt: "This edition covers the latest Shadcn UI update, a critical look at the concept of technical debt, the launch of Vibe Pocket for mobile AI agents, and a reflection on how AI is reshaping engineering priorities."
 publishedAt: "2025-12-24"
 slug: "daily-dev-shadcn-technical-debt-ai-impact"
-hashtags: "#dailydev #frontend #react #shadcn #technicaldebt #ai #typescript #performance #generated #en"
+hashtags: "#dailydev #frontend #react #shadcn #refactoring #ai #typescript #performance #generated #en"
 ---
 
 ## NEW Shadcn Update is NOT as Great as Everyone Thinks

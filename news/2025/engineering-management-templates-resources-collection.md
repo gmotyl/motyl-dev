@@ -3,7 +3,7 @@ title: "Engineering Management Templates and Resources Collection"
 excerpt: "A comprehensive collection of practical templates and resources for engineering managers and software engineers covering metrics, performance reviews, hiring, and team management."
 publishedAt: "2025-10-31"
 slug: "engineering-management-templates-resources-collection"
-hashtags: "#generated #en #engineering-management #software-engineering #templates #performance-reviews #hiring #onboarding #metrics #leadership"
+hashtags: "#generated #en #management #engineering #templates #performance-reviews #hiring #onboarding #metrics #leadership"
 ---
 
 ## Templates as Inspiration for Engineering Managers and Software Engineers

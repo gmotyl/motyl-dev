@@ -3,7 +3,7 @@ title: "The Rise of the AI Solo-Founder in 2026"
 excerpt: "An article from ai-supremacy.com argues that 2026 is the best time ever to become a solo-founder, thanks to the proliferation of AI and no-code tools."
 publishedAt: "2025-12-06"
 slug: "rise-of-ai-solo-founder-2026"
-hashtags: "#substack #ai #solopreneur #startup #business #futureofwork #generated #en"
+hashtags: "#substack #ai #solopreneur #startup #business #future-of-work #generated #en"
 ---
 
 ## Why 2026 Is the best time (ever) to become an AI solo-founder

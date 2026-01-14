@@ -3,7 +3,7 @@ title: 'Daily Dev Update: React Security Vulnerability, Agent Engineering, CSS S
 excerpt: 'Critical React server components vulnerability, emerging agent engineering discipline, CSS scrollbar customization, and upcoming ES2026 JavaScript enhancements'
 publishedAt: '2025-12-10'
 slug: 'daily-dev-react-security-agent-engineering-css-es2026'
-hashtags: '#dailydev #frontend #react #servercomponents #security #ai #agentengineering #css #javascript #es2026 #generated #en'
+hashtags: "#dailydev #frontend #react #server-components #security #ai #agents #css #javascript #es2026 #generated #en"
 ---
 
 ## React.js shell shocked by 10.0 critical vulnerability…

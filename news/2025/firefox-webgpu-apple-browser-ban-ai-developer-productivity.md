@@ -3,7 +3,7 @@ title: "Firefox Ships WebGPU, Apple's Browser Engine Ban Persists, and AI's Mixe
 excerpt: "Firefox finally releases WebGPU on Windows, Apple continues blocking browser engine competition despite DMA requirements, and new research reveals AI tools actually slow down experienced developers."
 publishedAt: "2025-07-16"
 slug: "firefox-webgpu-apple-browser-ban-ai-developer-productivity"
-hashtags: "#generated #en #firefox #webgpu #apple #safari #browser-engine #webassembly #css #scroll-driven-animations #ai #developer-productivity #accessibility #aria #frontend #performance"
+hashtags: "#generated #en #firefox #webgpu #apple #safari #browser #webassembly #css #animation #ai #productivity #accessibility #aria #frontend #performance"
 ---
 
 ## Firefox Finally Ships WebGPU on Windows

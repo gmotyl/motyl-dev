@@ -3,7 +3,7 @@ title: "AI Coding Tools, Open Source Governance, and Modern CSS Conditionals"
 excerpt: "A critical look at AI code generation limitations, parallel AI development workflows, and the arrival of CSS conditional logic"
 publishedAt: "2025-11-25"
 slug: "ai-coding-vibe-mux-parallel-css-if-open-source-governance"
-hashtags: "#generated #en #ai #frontend #css #opensource #tauri #rust #llm #github-copilot #cursor #claude #gpt #ollama"
+hashtags: "#generated #en #ai #frontend #css #open-source #tauri #rust #llm #github-copilot #cursor #claude #gpt #ollama"
 ---
 
 ## Vibe Coding: What is it Good For? Absolutely Nothing

@@ -3,7 +3,7 @@ title: "AI Agents Planning: From Python Developer to AI Engineer"
 excerpt: "A comprehensive guide to understanding the difference between workflows and agents, focusing on planning as the key differentiator."
 publishedAt: "2024-11-11"
 slug: "ai-agents-planning-fundamentals"
-hashtags: "#generated #en #ai #agents #python #llm #planning #react #architecture #workflows"
+hashtags: "#generated #en #ai #agents #python #llm #planning #react #architecture #workflow"
 ---
 
 ## You're Not Building Agents: Learn the Fundamentals From Scratch

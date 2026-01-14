@@ -3,7 +3,7 @@ title: "The Batch: OpenAI's GPT-5.2, Runway's Interactive Worlds, and Disney's A
 excerpt: "This week's edition of The Batch covers OpenAI's response to Gemini 3 with GPT-5.2, Runway's new GWM-1 family of world models, Disney's partnership with OpenAI, and a new method for adapting LLMs to new data types with few examples."
 publishedAt: "2025-12-18"
 slug: "the-batch-openai-gpt-5-2-runway-interactive-worlds-disney-ai-alliance"
-hashtags: "#thebatch #ai #llm #openai #gpt5 #disney #runway #generativeai #generated #en"
+hashtags: "#thebatch #ai #llm #openai #gpt5 #disney #runway #generated #en"
 ---
 
 ## OpenAI’s Answer to Gemini 3: GPT-5.2

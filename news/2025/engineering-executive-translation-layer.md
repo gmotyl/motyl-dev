@@ -3,7 +3,7 @@ title: "Engineering-Executive Communication: Building the Translation Layer"
 excerpt: "Essential strategies for translating technical proposals into executive language that drives business decisions."
 publishedAt: "2025-11-12"
 slug: "engineering-executive-translation-layer"
-hashtags: "#generated #en #architecture #leadership #communication #engineering-management #cto #business-strategy #team-leadership"
+hashtags: "#generated #en #architecture #leadership #communication #management #cto #business-strategy"
 ---
 
 ## The Engineer → Executive Translation Layer

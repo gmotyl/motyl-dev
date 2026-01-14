@@ -3,7 +3,7 @@ title: "Five AI Systems That Increase Business Valuation Through Risk Reduction"
 excerpt: "How documentation, financial automation, and support systems can increase business multiples by 1-1.5x in 90 days"
 publishedAt: "2025-11-18"
 slug: "five-ai-systems-increase-business-valuation"
-hashtags: "#generated #en #ai #business #automation #valuation #documentation #startups #finance"
+hashtags: "#generated #en #ai #business #automation #valuation #documentation #startup #finance"
 ---
 
 ## Five AI Systems That Raise Your Business Valuation

@@ -3,7 +3,7 @@ title: "Modern Web Development: CSS Resets, Core Web Vitals, and Browser Innovat
 excerpt: "Exploring contemporary approaches to CSS resets, Google's performance optimization strategies, and the latest browser developments in web standards."
 publishedAt: "2024-10-30"
 slug: "modern-web-development-css-resets-core-web-vitals-browser-innovation"
-hashtags: "#generated #en #css #performance #core-web-vitals #safari #chrome #webkit #frontend #css-reset #web-vitals #browser-compatibility"
+hashtags: "#generated #en #css #performance #safari #chrome #webkit #frontend #css-reset #browser"
 ---
 
 ## My Modern CSS Reset

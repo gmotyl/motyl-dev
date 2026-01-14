@@ -3,7 +3,7 @@ title: 'Rebuilding Event-Driven Read Models: The Architecture of Resilience'
 excerpt: 'A deep dive into safe and resilient event-driven architecture, exploring inline vs async projections, distributed coordination strategies, and practical implementation patterns for handling eventual consistency during read model rebuilds.'
 publishedAt: '2026-01-05'
 slug: 'rebuilding-event-driven-read-models'
-hashtags: '#substack #architecture #event-sourcing #postgresql #distributed-systems #database-design #resilience #generated #en'
+hashtags: "#substack #architecture #event-sourcing #postgresql #distributed-systems #database #resilience #generated #en"
 ---
 
 # Rebuilding Event-Driven Read Models: The Architecture of Resilience

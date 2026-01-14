@@ -3,7 +3,7 @@ title: "Terminal Instagram, AI vs Junior Hiring, TanStack Start vs Next.js, Next
 excerpt: "A focused audio-ready roundup: a terminal Instagram client, new evidence that generative AI is reducing junior hiring, why some teams are switching from Next.js to TanStack Start, deep bundle problems in Nextcloud, and a curated backend reading list."
 publishedAt: "2025-11-04"
 slug: "terminal-instagram-ai-junior-hiring-tanstack-start-nextcloud-backend-books"
-hashtags: "#generated #en #frontend #react #typescript #ai #architecture #web-performance #vite #nextjs #backend #career #performance #devops"
+hashtags: "#generated #en #frontend #react #typescript #ai #architecture #performance #vite #nextjs #backend #career #devops"
 ---
 
 ## I Used Instagram from the Linux Terminal. It’s Cool Until It’s Not.

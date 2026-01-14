@@ -3,7 +3,7 @@ title: "System design, Cursor 2.0, nauka przez gry i JUnit 6 — przegląd techn
 excerpt: "Cztery teksty o nauce system designu, nowych możliwościach Cursor 2.0, wartości nauki programowania przez gry oraz ewolucji JUnit do wersji 6 — streszczenia, krytyka i praktyczne wnioski."
 publishedAt: "2025-10-31"
 slug: "system-design-cursor2-games-junit6-przeglad"
-hashtags: "#generated #pl #ai #architecture #system-design #devtools #testing #java #frontend #game-development #performance #typescript"
+hashtags: "#generated #pl #ai #architecture #devtools #testing #java #frontend #game-development #performance #typescript"
 ---
 
 ## How I Learned System Design

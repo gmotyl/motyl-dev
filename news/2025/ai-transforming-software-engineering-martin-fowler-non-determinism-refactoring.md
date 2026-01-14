@@ -3,7 +3,7 @@ title: "AI Transforming Software Engineering - Martin Fowler on Non-Determinism 
 excerpt: "Martin Fowler discusses how AI introduces non-determinism to software development, the importance of testing and refactoring in the LLM era, and timeless engineering skills."
 publishedAt: "2025-11-19"
 slug: "ai-transforming-software-engineering-martin-fowler-non-determinism-refactoring"
-hashtags: "#generated #en #ai #llm #architecture #refactoring #testing #agile #thoughtworks #software-engineering"
+hashtags: "#generated #en #ai #llm #architecture #refactoring #testing #agile #thoughtworks #engineering"
 ---
 
 ## How AI Will Change Software Engineering – with Martin Fowler

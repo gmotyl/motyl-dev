@@ -1,0 +1,385 @@
+# Hashtag Refactoring Mapping
+# Generated: 2026-01-14T11:48:04.386Z
+#
+# Review this file before running --apply
+# Remove or comment out lines you don't want to apply
+#
+# Format:
+#   - from: original hashtag
+#     to: target hashtag
+#     reason: case | hyphen | merge | consolidation
+#     count: number of occurrences
+
+version: 1
+generatedAt: "2026-01-14T11:48:04.386Z"
+totalMappings: 92
+affectedArticles: 0
+mappings:
+  - from: opensource
+    to: open-source
+    reason: hyphen
+    count: 9
+  - from: uidev
+    to: ui
+    reason: merge
+    count: 9
+  - from: web-performance
+    to: performance
+    reason: consolidation
+    count: 8
+  - from: software-engineering
+    to: engineering
+    reason: consolidation
+    count: 8
+  - from: developer-experience
+    to: dx
+    reason: consolidation
+    count: 6
+  - from: developer-tools
+    to: devtools
+    reason: consolidation
+    count: 5
+  - from: react-server-components
+    to: server-components
+    reason: consolidation
+    count: 5
+  - from: rsc
+    to: server-components
+    reason: consolidation
+    count: 5
+  - from: productmanagement
+    to: product
+    reason: hyphen
+    count: 4
+  - from: developer-productivity
+    to: productivity
+    reason: consolidation
+    count: 4
+  - from: system-design
+    to: architecture
+    reason: consolidation
+    count: 4
+  - from: engineering-management
+    to: management
+    reason: consolidation
+    count: 4
+  - from: agentic-ai
+    to: agents
+    reason: consolidation
+    count: 4
+  - from: generative-ai
+    to: ai
+    reason: consolidation
+    count: 4
+  - from: scroll-driven-animations
+    to: animation
+    reason: consolidation
+    count: 4
+  - from: promptengineering
+    to: prompt-engineering
+    reason: hyphen
+    count: 3
+  - from: generativeai
+    to: ai
+    reason: hyphen
+    count: 3
+  - from: reinforcement-learning
+    to: ml
+    reason: consolidation
+    count: 3
+  - from: prompting
+    to: prompt-engineering
+    reason: consolidation
+    count: 3
+  - from: startups
+    to: startup
+    reason: consolidation
+    count: 3
+  - from: workflows
+    to: workflow
+    reason: consolidation
+    count: 3
+  - from: tanstack-query
+    to: react-query
+    reason: merge
+    count: 3
+  - from: AI
+    to: ai
+    reason: case
+    count: 2
+  - from: Productivity
+    to: productivity
+    reason: case
+    count: 2
+  - from: Workflow
+    to: workflow
+    reason: case
+    count: 2
+  - from: Gemini
+    to: gemini
+    reason: case
+    count: 2
+  - from: servercomponents
+    to: server-components
+    reason: hyphen
+    count: 2
+  - from: tailwindcss
+    to: tailwind
+    reason: hyphen
+    count: 2
+  - from: core-web-vitals
+    to: performance
+    reason: consolidation
+    count: 2
+  - from: engineering-leadership
+    to: leadership
+    reason: consolidation
+    count: 2
+  - from: coding-agents
+    to: agents
+    reason: consolidation
+    count: 2
+  - from: professional-development
+    to: career
+    reason: consolidation
+    count: 2
+  - from: personal-growth
+    to: career
+    reason: consolidation
+    count: 2
+  - from: product-engineering
+    to: product
+    reason: consolidation
+    count: 2
+  - from: a11y
+    to: accessibility
+    reason: consolidation
+    count: 2
+  - from: technical-debt
+    to: refactoring
+    reason: consolidation
+    count: 2
+  - from: databases
+    to: database
+    reason: consolidation
+    count: 2
+  - from: animations
+    to: animation
+    reason: consolidation
+    count: 2
+  - from: browser-compatibility
+    to: browser
+    reason: consolidation
+    count: 2
+  - from: LLM
+    to: llm
+    reason: case
+    count: 1
+  - from: MCP
+    to: mcp
+    reason: case
+    count: 1
+  - from: UI
+    to: ui
+    reason: case
+    count: 1
+  - from: OpenAI
+    to: openai
+    reason: case
+    count: 1
+  - from: ChatGPT
+    to: chatgpt
+    reason: case
+    count: 1
+  - from: Anthropic
+    to: anthropic
+    reason: case
+    count: 1
+  - from: Automation
+    to: automation
+    reason: case
+    count: 1
+  - from: VibeCoding
+    to: vibe-coding
+    reason: case
+    count: 1
+  - from: NestJS
+    to: nestjs
+    reason: case
+    count: 1
+  - from: Nodejs
+    to: nodejs
+    reason: case
+    count: 1
+  - from: Vite
+    to: vite
+    reason: case
+    count: 1
+  - from: Robotics
+    to: robotics
+    reason: case
+    count: 1
+  - from: ContentCreation
+    to: content-creation
+    reason: case
+    count: 1
+  - from: TechnicalWriting
+    to: documentation
+    reason: case
+    count: 1
+  - from: TechWriting
+    to: documentation
+    reason: case
+    count: 1
+  - from: contentcreation
+    to: content-creation
+    reason: hyphen
+    count: 1
+  - from: reactnative
+    to: react-native
+    reason: hyphen
+    count: 1
+  - from: futureofwork
+    to: future-of-work
+    reason: hyphen
+    count: 1
+  - from: systemdesign
+    to: architecture
+    reason: hyphen
+    count: 1
+  - from: softwareengineering
+    to: engineering
+    reason: hyphen
+    count: 1
+  - from: machinelearning
+    to: ml
+    reason: hyphen
+    count: 1
+  - from: team-productivity
+    to: productivity
+    reason: consolidation
+    count: 1
+  - from: employee-productivity
+    to: productivity
+    reason: consolidation
+    count: 1
+  - from: web-vitals
+    to: performance
+    reason: consolidation
+    count: 1
+  - from: software-architecture
+    to: architecture
+    reason: consolidation
+    count: 1
+  - from: clean-architecture
+    to: architecture
+    reason: consolidation
+    count: 1
+  - from: ai-engineering
+    to: engineering
+    reason: consolidation
+    count: 1
+  - from: project-management
+    to: management
+    reason: consolidation
+    count: 1
+  - from: team-management
+    to: management
+    reason: consolidation
+    count: 1
+  - from: product-management
+    to: management
+    reason: consolidation
+    count: 1
+  - from: team-leadership
+    to: leadership
+    reason: consolidation
+    count: 1
+  - from: team-collaboration
+    to: teams
+    reason: consolidation
+    count: 1
+  - from: team-development
+    to: teams
+    reason: consolidation
+    count: 1
+  - from: devex
+    to: dx
+    reason: consolidation
+    count: 1
+  - from: dev-tools
+    to: devtools
+    reason: consolidation
+    count: 1
+  - from: ai-agents
+    to: agents
+    reason: consolidation
+    count: 1
+  - from: agentic
+    to: agents
+    reason: consolidation
+    count: 1
+  - from: agentic-loops
+    to: agents
+    reason: consolidation
+    count: 1
+  - from: agent
+    to: agents
+    reason: consolidation
+    count: 1
+  - from: agent-patterns
+    to: agents
+    reason: consolidation
+    count: 1
+  - from: agentengineering
+    to: agents
+    reason: consolidation
+    count: 1
+  - from: machine-learning
+    to: ml
+    reason: consolidation
+    count: 1
+  - from: deep-learning
+    to: ml
+    reason: consolidation
+    count: 1
+  - from: neural-networks
+    to: ml
+    reason: consolidation
+    count: 1
+  - from: technicaldebt
+    to: refactoring
+    reason: consolidation
+    count: 1
+  - from: techdebt
+    to: refactoring
+    reason: consolidation
+    count: 1
+  - from: database-design
+    to: database
+    reason: consolidation
+    count: 1
+  - from: scroll-animations
+    to: animation
+    reason: consolidation
+    count: 1
+  - from: workflow-optimization
+    to: workflow
+    reason: consolidation
+    count: 1
+  - from: google-gemini
+    to: gemini
+    reason: consolidation
+    count: 1
+  - from: browsers
+    to: browser
+    reason: consolidation
+    count: 1
+  - from: browser-apis
+    to: browser
+    reason: consolidation
+    count: 1
+  - from: browser-engine
+    to: browser
+    reason: consolidation
+    count: 1

@@ -3,7 +3,7 @@ title: "AnalogJS 2.0 and the TypeScript Revolution: AI Drives Developer Growth a
 excerpt: "TypeScript overtakes JavaScript as GitHub's most-used language while AnalogJS 2.0 modernizes Angular development with file-based routing and Vite integration."
 publishedAt: "2025-11-05"
 slug: "analogjs-2-typescript-revolution-ai-developer-growth"
-hashtags: "#generated #en #angular #typescript #analogjs #vite #react #nextjs #github #ai #frontend #meta-frameworks #ssr #developer-tools"
+hashtags: "#generated #en #angular #typescript #analogjs #vite #react #nextjs #github #ai #frontend #meta-frameworks #ssr #devtools"
 ---
 
 ## AnalogJS 2.0 Brings Modern Meta-Framework Patterns to Angular

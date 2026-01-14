@@ -3,7 +3,7 @@ title: "A 3-Prompt Pipeline for AI-Assisted Content Repurposing"
 excerpt: "A practical guide on using a three-prompt system to validate, refine, and repurpose articles, moving from a Substack post to a LinkedIn update without losing the author's voice."
 publishedAt: "2025-12-02"
 slug: "ai-content-repurposing-automation-substack-to-linkedin"
-hashtags: "#aimaker #substack #ai #writing #promptengineering #linkedin #content #generated #en"
+hashtags: "#aimaker #substack #ai #writing #prompt-engineering #linkedin #content #generated #en"
 ---
 
 ## The 3-Prompt Pipeline: From Substack Article to LinkedIn Post (Without Losing Your Voice)

@@ -3,7 +3,7 @@ title: "AI Developments, Performance Reviews, and the Importance of Accessibilit
 excerpt: "Exploring the MIRA OS, the AI bubble, a system for automating performance reviews, Linus Torvalds' take on AI, and the non-negotiable nature of web accessibility."
 publishedAt: "2025-12-22"
 slug: "ai-developments-performance-reviews-and-accessibility"
-hashtags: "#dailydev #ai #llm #github #opensource #performance #accessibility #a11y #webdev #generated #en"
+hashtags: "#dailydev #ai #llm #github #open-source #performance #accessibility #webdev #generated #en"
 ---
 
 ## MIRA OS: An Open-Source Persistent AI Entity

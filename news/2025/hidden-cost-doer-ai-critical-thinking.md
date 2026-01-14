@@ -3,7 +3,7 @@ title: "The Hidden Cost of Doer AI: When Teams Stop Thinking Critically"
 excerpt: "Microsoft research reveals teams using AI for six months show declining critical evaluation skills—here's how to deploy AI that makes you smarter, not lazier."
 publishedAt: "2025-11-07"
 slug: "hidden-cost-doer-ai-critical-thinking"
-hashtags: "#generated #en #ai #llm #leadership #strategy #decision-making #microsoft #team-productivity"
+hashtags: "#generated #en #ai #llm #leadership #strategy #decision-making #microsoft #productivity"
 ---
 
 ## Your Team Stopped Questioning AI Six Weeks Ago

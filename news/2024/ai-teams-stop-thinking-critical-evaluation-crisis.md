@@ -3,7 +3,7 @@ title: "When AI Makes Teams Stop Thinking: The Critical Evaluation Crisis"
 excerpt: "Teams using AI for six months show declining critical thinking skills as they delegate more tasks to AI without questioning its reasoning."
 publishedAt: "2024-11-07"
 slug: "ai-teams-stop-thinking-critical-evaluation-crisis"
-hashtags: "#generated #en #ai #ml #llm #architecture #microsoft #decision-making #team-management #productivity"
+hashtags: "#generated #en #ai #ml #llm #architecture #microsoft #decision-making #management #productivity"
 ---
 
 ## Your Team Stopped Questioning AI Six Weeks Ago

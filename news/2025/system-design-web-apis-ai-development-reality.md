@@ -3,7 +3,7 @@ title: "System Design Learning, Web APIs Evolution, and AI Development Reality C
 excerpt: "A comprehensive look at mastering system design skills, emerging web technologies, and realistic timelines for AI agent development."
 publishedAt: "2025-11-03"
 slug: "system-design-web-apis-ai-development-reality"
-hashtags: "#generated #en #system-design #architecture #ai #web-apis #view-transitions #cli #devtools #npm"
+hashtags: "#generated #en #architecture #ai #web-apis #view-transitions #cli #devtools #npm"
 ---
 
 ## How I Learned System Design

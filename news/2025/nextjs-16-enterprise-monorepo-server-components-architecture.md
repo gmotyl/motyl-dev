@@ -3,7 +3,7 @@ title: "Next.js 16 in Enterprise: Ten Apps, One Monorepo, Five Developers"
 excerpt: "Real-world case study of running 10 Next.js applications in a monorepo with microservices backend. How Server Components, pnpm catalogs, and consistent architecture patterns enabled a small team to ship at startup speed in an enterprise environment."
 publishedAt: "2025-11-27"
 slug: "nextjs-16-enterprise-monorepo-server-components-architecture"
-hashtags: "#nextjs #react #architecture #enterprise #monorepo #servercomponents #generated #en"
+hashtags: "#nextjs #react #architecture #enterprise #monorepo #server-components #generated #en"
 ---
 
 # Next.js 16 in Enterprise: Ten Apps, One Monorepo, Five Developers

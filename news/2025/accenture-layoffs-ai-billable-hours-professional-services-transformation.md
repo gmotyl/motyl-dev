@@ -3,7 +3,7 @@ title: "Accenture's 11,000 Layoffs and the Death of Billable-Hour Professional S
 excerpt: "How AI is forcing consulting firms to abandon time-based billing and transform into product-oriented, value-based service delivery models"
 publishedAt: "2025-11-24"
 slug: "accenture-layoffs-ai-billable-hours-professional-services-transformation"
-hashtags: "#generated #en #ai #consulting #business-model #transformation #professional-services #gemini #agentic-ai #automation"
+hashtags: "#generated #en #ai #consulting #business-model #transformation #professional-services #gemini #agents #automation"
 ---
 
 ## Accenture Fires 11,000: The Billable Hour Economy Collapses

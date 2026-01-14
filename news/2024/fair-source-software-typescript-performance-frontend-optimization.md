@@ -3,7 +3,7 @@ title: "Fair Source Software, TypeScript Performance Optimization, and Modern Fr
 excerpt: "Exploring Fair Source as an alternative to traditional open source licensing, TypeScript performance optimization techniques, and modern approaches to SPA load time improvements."
 publishedAt: "2024-08-15"
 slug: "fair-source-software-typescript-performance-frontend-optimization"
-hashtags: "#generated #pl #opensource #licensing #typescript #performance #frontend #spa #css #svg #figma #preloading #code-splitting #fair-source #sentry"
+hashtags: "#generated #pl #open-source #licensing #typescript #performance #frontend #spa #css #svg #figma #preloading #code-splitting #fair-source #sentry"
 ---
 
 ## Fair Source Software - Nowa alternatywa dla tradycyjnego open source

@@ -3,7 +3,7 @@ title: "Mitmproxy 11: HTTP/3, rozszerzone DNS i implikacje dla inżynierów siec
 excerpt: "Mitmproxy 11 dodaje pełne wsparcie dla HTTP/3, znaczące ulepszenia DNS i mechanizmy obchodzenia ECH — ważne zmiany dla osób zajmujących się bezpieczeństwem, testowaniem i inżynierią ruchu sieciowego."
 publishedAt: "2024-10-06"
 slug: "mitmproxy-11-http3-dns-implications"
-hashtags: "#generated #pl #architecture #ai #security #devops #webdev #frontend #performance #web-performance #mitmproxy #http3"
+hashtags: "#generated #pl #architecture #ai #security #devops #webdev #frontend #performance #mitmproxy #http3"
 ---
 
 ## Mitmproxy 11 Released: Full HTTP/3 Support and DNS Enhancements

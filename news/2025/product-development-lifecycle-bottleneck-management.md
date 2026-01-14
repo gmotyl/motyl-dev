@@ -3,7 +3,7 @@ title: "Product Development Lifecycle: From Exploration to Extraction with Strat
 excerpt: "Understand the three phases of product development—exploration, expansion, and extraction—and how strategic management of technical bottlenecks is crucial for sustained, profitable growth."
 publishedAt: "2025-12-04"
 slug: "product-development-lifecycle-bottleneck-management"
-hashtags: "#substack #architecture #devops #engineering-management #product-management #scalability #generated #en"
+hashtags: "#substack #architecture #devops #management #scalability #generated #en"
 ---
 
 ## Product Development Lifecycle: From Exploration to Extraction with Strategic Bottleneck Management

@@ -3,7 +3,7 @@ title: "Web Animation Performance, CSS Highlights API, and AI Browser Concerns"
 excerpt: "This week covers animation performance tier lists, CSS Highlights API for syntax highlighting, sticky positioning challenges, and concerns about AI browsers undermining the open web."
 publishedAt: "2025-11-12"
 slug: "web-animation-performance-css-highlights-ai-browsers"
-hashtags: "#generated #en #frontend #css #javascript #performance #animation #webdev #ai #browsers #accessibility"
+hashtags: "#generated #en #frontend #css #javascript #performance #animation #webdev #ai #browser #accessibility"
 ---
 
 ## The Web Animation Performance Tier List

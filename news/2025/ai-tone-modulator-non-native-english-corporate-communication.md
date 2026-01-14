@@ -3,7 +3,7 @@ title: "AI as Tone Modulator: 5 Communication Fixes for Non-Native English Speak
 excerpt: "When grammatically perfect English still reads as threatening in American Corporate culture. How to use AI to bridge the gap between direct communication styles and US workplace expectations—without losing your authentic voice."
 publishedAt: "2025-11-27"
 slug: "ai-tone-modulator-non-native-english-corporate-communication"
-hashtags: "#ai #communication #prompting #productivity #workflow #generated #en"
+hashtags: "#ai #communication #prompt-engineering #productivity #workflow #generated #en"
 ---
 
 # AI as Tone Modulator: 5 Communication Fixes for Non-Native English Speakers

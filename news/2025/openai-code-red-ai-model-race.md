@@ -3,7 +3,7 @@ title: "OpenAI's 'Code Red' and the Intensifying AI Model Race"
 excerpt: "OpenAI declares 'Code Red' to prioritize beating Google's Gemini 3, pausing other projects amid rapid advancements in AI models and agent development."
 publishedAt: "2025-12-04"
 slug: "openai-code-red-ai-model-race"
-hashtags: "#substack #ai #llm #openai #google #anthropic #mistral #ai-agents #automation #generated #en"
+hashtags: "#substack #ai #llm #openai #google #anthropic #mistral #agents #automation #generated #en"
 ---
 
 ## OpenAI's 'Code Red' and the Intensifying AI Model Race

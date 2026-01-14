@@ -3,7 +3,7 @@ title: "Everything as Code, Code Hotspots, and Process Notifications"
 excerpt: "A look at the benefits of an 'everything as code' approach, how to prioritize tech debt by focusing on code 'hotspots', and a strategy for using notifications to improve team accountability."
 publishedAt: "2025-12-22"
 slug: "everything-as-code-hotspots-and-process-notifications"
-hashtags: "#substack #refactoring #ai #architecture #devops #cicd #automation #techdebt #management #generated #en"
+hashtags: "#substack #refactoring #ai #architecture #devops #cicd #automation #management #generated #en"
 ---
 
 ## Everything as Code

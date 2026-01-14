@@ -3,7 +3,7 @@ title: "CSS Animation Advances and Modern Frontend Optimization"
 excerpt: "Chrome launches comprehensive scroll-driven animations course while developers reassess CSS minification practices in modern toolchains."
 publishedAt: "2024-05-08"
 slug: "css-animation-advances-modern-frontend-optimization"
-hashtags: "#generated #en #css #frontend #performance #animation #scroll-driven-animations #chrome #minification #accessibility #popover-api #css-grid #subgrid"
+hashtags: "#generated #en #css #frontend #performance #animation #chrome #minification #accessibility #popover-api #css-grid #subgrid"
 ---
 
 ## Chrome's Comprehensive Scroll-Driven Animations Course

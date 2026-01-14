@@ -3,7 +3,7 @@ title: "CSS Text Box Trim, WordPress Drama, Browser Performance Insights, and Te
 excerpt: "New CSS typography controls arrive, WordPress governance crisis escalates, browser performance metrics get scrutinized, and teams focus on building testing culture."
 publishedAt: "2025-01-15"
 slug: "css-text-box-trim-wordpress-drama-browser-performance-testing-culture"
-hashtags: "#generated #en #css #wordpress #performance #testing #frontend #typography #browser-compatibility #governance #culture"
+hashtags: "#generated #en #css #wordpress #performance #testing #frontend #typography #browser #governance #culture"
 ---
 
 ## CSS text-box-trim: Typography Control Finally Arrives

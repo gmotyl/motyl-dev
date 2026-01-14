@@ -1,9 +1,9 @@
 ---
 title: "OpenAI's Code Red: A Look at ChatGPT's Shifting Landscape in 2025"
-excerpt: "An in-depth analysis of OpenAI's internal 'code red' directive, recent challenges including the GPT-5 flop, increased competition from Gemini and Anthropic, and the company's financial and strategic missteps as it approaches 2026."
+excerpt: An in-depth analysis of OpenAI's internal 'code red' directive, recent challenges including the GPT-5 flop, increased competition from Gemini and Anthropic, and the company's financial and strategic missteps as it approaches 2026.
 publishedAt: "2025-12-04T11:59:40.000Z"
-slug: "openai-code-red-chatgpt-2025-challenges"
-hashtags: ["#agregate", "#substack", "#OpenAI", "#ChatGPT", "#AIIndustry", "#Gemini", "#Anthropic"]
+slug: openai-code-red-chatgpt-2025-challenges
+hashtags: "#agregate #substack #openai #chatgpt #AIIndustry #gemini #anthropic"
 ---
 
 ## TLDR;

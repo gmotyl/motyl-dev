@@ -3,7 +3,7 @@ title: "Safari 26 Beta Brings Major Web Platform Updates and Apple's New Liquid 
 excerpt: "Apple's WWDC 2025 introduces Safari 26 beta with 67 new features including WebGPU, scroll-driven animations, and SVG icons, alongside a comprehensive new design system called Liquid Glass."
 publishedAt: "2025-06-11"
 slug: "safari-26-beta-web-platform-updates-liquid-glass-design"
-hashtags: "#generated #en #safari #webkit #css #webgpu #svg #scroll-driven-animations #anchor-positioning #web-components #ios #macos #visionos #declarative-web-push #digital-credentials #accessibility #performance"
+hashtags: "#generated #en #safari #webkit #css #webgpu #svg #animation #anchor-positioning #web-components #ios #macos #visionos #declarative-web-push #digital-credentials #accessibility #performance"
 ---
 
 ## Safari 26 Beta: A Massive Web Platform Update

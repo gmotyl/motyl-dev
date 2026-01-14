@@ -3,7 +3,7 @@ title: "AI-Powered Customer Feedback Analysis"
 excerpt: "Using LLMs to analyze customer feedback more effectively."
 publishedAt: "2025-12-03"
 slug: "ai-powered-customer-feedback-analysis"
-hashtags: "#substack #ai #llm #customerexperience #promptengineering #generated #en"
+hashtags: "#substack #ai #llm #customerexperience #prompt-engineering #generated #en"
 ---
 
 ## 4 Prompts to Spot Trends in Customer Reviews

@@ -3,7 +3,7 @@ title: "React Compiler Goes Stable, Reanimated 4 Launches, and Go-Powered Lintin
 excerpt: "React Compiler documentation signals stable release, while React Native gets CSS animations and experimental Go-based linting shows massive performance gains."
 publishedAt: "2025-07-25"
 slug: "react-compiler-stable-reanimated-4-go-linting"
-hashtags: "#generated #en #react #typescript #frontend #react-compiler #react-native #reanimated #eslint #go #performance #css #animations #worklets"
+hashtags: "#generated #en #react #typescript #frontend #react-compiler #react-native #reanimated #eslint #go #performance #css #animation #worklets"
 ---
 
 ## React Compiler – The End of Manual Memoization

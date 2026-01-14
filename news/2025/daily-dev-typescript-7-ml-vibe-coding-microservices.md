@@ -3,7 +3,7 @@ title: "Daily.dev Digest: TypeScript 7, ML Book Journey, Vibe Coding, and Micros
 excerpt: "This daily.dev digest explores significant updates in TypeScript 7, a mathematician's unexpected journey into writing an ML book, the concept of AI-driven 'vibe coding,' and key microservices architecture patterns."
 publishedAt: "2025-12-03"
 slug: "daily-dev-typescript-7-ml-vibe-coding-microservices"
-hashtags: "#dailydev #typescript #machinelearning #ai #microservices #webdev #frontend #backend #architecture #generated #en"
+hashtags: "#dailydev #typescript #ml #ai #microservices #webdev #frontend #backend #architecture #generated #en"
 ---
 
 ## Progress on TypeScript 7

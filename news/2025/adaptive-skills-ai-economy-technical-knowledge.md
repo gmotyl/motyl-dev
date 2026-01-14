@@ -3,7 +3,7 @@ title: "Building Adaptive Skills in an AI-Driven Economy: Why Technical Knowledg
 excerpt: "Exploring how adaptability and resilience matter more than technical certifications in today's rapidly changing professional landscape."
 publishedAt: "2025-11-11"
 slug: "adaptive-skills-ai-economy-technical-knowledge"
-hashtags: "#generated #en #ai #career #skills #adaptability #leadership #professional-development #neuroplasticity #future-of-work"
+hashtags: "#generated #en #ai #career #skills #adaptability #leadership #neuroplasticity #future-of-work"
 ---
 
 ## I Just Watched Predator: Badlands. It's About Your Career

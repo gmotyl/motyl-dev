@@ -3,7 +3,7 @@ title: 'Architektura systemów, narzędzia AI i przyszłość developmentu - prz
 excerpt: 'Przegląd najważniejszych trendów w developmencie: od nauki architektury systemów po rewolucję w narzędziach AI i alternatywy dla ciężkich frameworków.'
 publishedAt: '2024-10-27'
 slug: 'architektura-systemow-ai-narzedzia-przyszlosc-developmentu'
-hashtags: "#generated #pl #systemdesign #ai #frontend #htmx #architecture"
+hashtags: "#generated #pl #architecture #ai #frontend #htmx"
 ---
 
 ## Jak nauczyłem się projektowania systemów

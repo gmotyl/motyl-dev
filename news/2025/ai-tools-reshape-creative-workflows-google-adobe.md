@@ -3,7 +3,7 @@ title: "AI Tools Reshape Creative Workflows: From Google's First AI Ad to Adobe'
 excerpt: "Google debuts its first AI-generated advertisement while Adobe showcases experimental tools that edit entire videos from a single frame, signaling AI's rapid evolution from hype to practical creative applications."
 publishedAt: "2025-11-03"
 slug: "ai-tools-reshape-creative-workflows-google-adobe"
-hashtags: "#generated #en #ai #google #adobe #video #creative #automation #generative-ai #text-to-3d #health-tech"
+hashtags: "#generated #en #ai #google #adobe #video #creative #automation #text-to-3d #health-tech"
 ---
 
 ## Google's First AI-Generated Holiday Advertisement

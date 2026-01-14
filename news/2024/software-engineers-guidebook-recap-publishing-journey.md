@@ -3,7 +3,7 @@ title: "The Software Engineer's Guidebook: Writing, Publishing, and Earning $611
 excerpt: "A behind-the-scenes look at how Gergely Orosz wrote and self-published his engineering career guide, earning over $600k from 40,000 copies sold."
 publishedAt: "2024-11-11"
 slug: "software-engineers-guidebook-recap-publishing-journey"
-hashtags: "#generated #en #career #software-engineering #publishing #self-publishing #tech-books #professional-development #engineering-management #uber"
+hashtags: "#generated #en #career #engineering #publishing #self-publishing #tech-books #management #uber"
 ---
 
 ## The Software Engineer's Guidebook: a recap

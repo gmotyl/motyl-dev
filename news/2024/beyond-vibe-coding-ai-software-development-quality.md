@@ -3,7 +3,7 @@ title: "Beyond Vibe Coding: AI's Impact on Software Development Quality and Work
 excerpt: "Exploring how AI tools accelerate development but struggle with the final 30% of software quality, and why understanding generated code remains critical."
 publishedAt: "2024-10-29"
 slug: "beyond-vibe-coding-ai-software-development-quality"
-hashtags: "#generated #en #ai #chrome #devtools #performance #testing #architecture #frontend #webdev #google #developer-experience"
+hashtags: "#generated #en #ai #chrome #devtools #performance #testing #architecture #frontend #webdev #google #dx"
 ---
 
 ## Beyond Vibe Coding with Addy Osmani

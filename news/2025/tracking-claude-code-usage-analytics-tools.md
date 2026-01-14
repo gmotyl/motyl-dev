@@ -3,7 +3,7 @@ title: "Tracking Claude Code Usage: Tools and Analytics for AI-Assisted Developm
 excerpt: "A comprehensive guide to monitoring Claude Code token consumption, usage patterns, and productivity metrics across different subscription tiers."
 publishedAt: "2025-11-18"
 slug: "tracking-claude-code-usage-analytics-tools"
-hashtags: "#generated #en #ai #claude #devtools #analytics #cli #developer-productivity #monitoring"
+hashtags: "#generated #en #ai #claude #devtools #analytics #cli #productivity #monitoring"
 ---
 
 ## How to track Claude Code usage + analytics

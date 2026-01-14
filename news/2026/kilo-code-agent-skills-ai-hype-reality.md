@@ -3,7 +3,7 @@ title: "Kilo Code Agent Skills and the Space Between AI Hype and Reality"
 excerpt: "Exploring Kilo Code's new Agent Skills system for extending AI capabilities, plus a balanced take on AI coding tools that cuts through both hype and denial."
 publishedAt: "2026-01-08"
 slug: "kilo-code-agent-skills-ai-hype-reality"
-hashtags: "#kilocode #ai #vscode #developer-tools #llm #coding-agents #open-source #generated #en"
+hashtags: "#kilocode #ai #vscode #devtools #llm #agents #open-source #generated #en"
 ---
 
 ## Agent Skills: A Lightweight Format for Extending AI Coding Agents

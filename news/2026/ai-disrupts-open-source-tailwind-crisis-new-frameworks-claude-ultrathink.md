@@ -3,7 +3,7 @@ title: "AI Disrupts Open Source: Tailwind's Crisis, New Frameworks, and Claude's
 excerpt: "From Tailwind's 80% revenue collapse to signal-based frameworks and Claude's ultrathink mode - today's newsletter explores how AI is reshaping the developer ecosystem."
 publishedAt: "2026-01-09"
 slug: "ai-disrupts-open-source-tailwind-crisis-new-frameworks-claude-ultrathink"
-hashtags: "#dailydev #ai #frontend #tailwind #javascript #opensource #claude #llm #architecture #generated #en"
+hashtags: "#dailydev #ai #frontend #tailwind #javascript #open-source #claude #llm #architecture #generated #en"
 ---
 
 ## Tailwind CSS Lays Off 75% of Engineers as AI Devastates Revenue

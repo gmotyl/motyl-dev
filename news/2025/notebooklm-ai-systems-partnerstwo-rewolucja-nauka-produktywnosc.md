@@ -3,7 +3,7 @@ title: "NotebookLM, AI Systems i Partnerstwo z AI - Rewolucja w Nauce i Produkty
 excerpt: "Przegląd najnowszych trendów w AI: od NotebookLM jako narzędzia do nauki 10x szybszej, przez automatyzację życia z pomocą 15 systemów AI, po partnerstwo z AI zamiast zwykłego promptowania."
 publishedAt: "2025-01-27"
 slug: "notebooklm-ai-systems-partnerstwo-rewolucja-nauka-produktywnosc"
-hashtags: "#generated #pl #ai #llm #notebooklm #productivity #automation #machine-learning #research #habits #systems"
+hashtags: "#generated #pl #ai #llm #notebooklm #productivity #automation #ml #research #habits #systems"
 ---
 
 ## NotebookLM - Jak Nauczyć Się Złożonych Tematów 10x Szybciej

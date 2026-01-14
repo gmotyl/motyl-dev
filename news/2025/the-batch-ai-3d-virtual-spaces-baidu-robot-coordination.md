@@ -1,9 +1,9 @@
 ---
 title: "The Batch: Trust in AI, Meta's 3D Pipeline, Virtual Spaces, Baidu's Multimodal Models, and Robot Coordination"
-excerpt: "This edition of The Batch explores public distrust in AI, Meta's advancements in 3D object generation, World Labs' editable virtual spaces, Baidu's new multimodal AI models, and Google DeepMind's graph neural networks for robot coordination."
+excerpt: This edition of The Batch explores public distrust in AI, Meta's advancements in 3D object generation, World Labs' editable virtual spaces, Baidu's new multimodal AI models, and Google DeepMind's graph neural networks for robot coordination.
 publishedAt: "2025-12-04T11:00:48.000Z"
-slug: "the-batch-ai-3d-virtual-spaces-baidu-robot-coordination"
-hashtags: ["#thebatch", "#ai", "#3D", "#Robotics", "#MultimodalAI"]
+slug: the-batch-ai-3d-virtual-spaces-baidu-robot-coordination
+hashtags: "#thebatch #ai #3D #robotics #MultimodalAI"
 ---
 
 ## TLDR;

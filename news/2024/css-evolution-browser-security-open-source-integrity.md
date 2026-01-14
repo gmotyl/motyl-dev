@@ -3,7 +3,7 @@ title: "CSS Evolution, Browser Security, and Open Source Integrity"
 excerpt: "CSS nesting improvements, private network access delays, and the WordPress licensing controversy highlight key developments in web standards and open source governance."
 publishedAt: "2024-10-09"
 slug: "css-evolution-browser-security-open-source-integrity"
-hashtags: "#generated #en #css #frontend #chrome #firefox #safari #wordpress #opensource #security #browser-apis #web-standards"
+hashtags: "#generated #en #css #frontend #chrome #firefox #safari #wordpress #open-source #security #browser #web-standards"
 ---
 
 ## CSS Nesting Improves with CSSNestedDeclarations

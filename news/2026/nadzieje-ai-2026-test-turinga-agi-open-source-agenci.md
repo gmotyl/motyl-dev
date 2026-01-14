@@ -3,7 +3,7 @@ title: "Nadzieje AI na 2026: Test Turinga-AGI, Open Source i Agenci"
 excerpt: "Specjalny noworoczny numer The Batch z wizjami przyszłości AI od Andrew Ng i czołowych badaczy - od nowego testu na AGI po rewolucję w edukacji"
 publishedAt: "2026-01-03"
 slug: "nadzieje-ai-2026-test-turinga-agi-open-source-agenci"
-hashtags: "#thebatch #ai #llm #ml #architecture #opensource #education #scientific-discovery #agents #generated #pl"
+hashtags: "#thebatch #ai #llm #ml #architecture #open-source #education #scientific-discovery #agents #generated #pl"
 ---
 
 ## Test Turinga-AGI: Nowy sposób mierzenia inteligencji maszyn

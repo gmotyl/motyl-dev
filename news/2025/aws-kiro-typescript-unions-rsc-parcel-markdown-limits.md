@@ -3,7 +3,7 @@ title: "AWS Kiro AI IDE, TypeScript Discriminated Unions, and React Server Compo
 excerpt: "AWS launches Kiro with spec-driven AI development and property-based testing, TypeScript tricks for discriminated unions, RSC beyond Next.js, and why Markdown may not be enough for serious documentation."
 publishedAt: "2025-11-26"
 slug: "aws-kiro-typescript-unions-rsc-parcel-markdown-limits"
-hashtags: "#generated #en #ai #typescript #react #react-server-components #parcel #aws #documentation #testing #tanstack #convex"
+hashtags: "#generated #en #ai #typescript #react #server-components #parcel #aws #documentation #testing #tanstack #convex"
 ---
 
 ## AWS Kiro Reaches General Availability: Spec-Driven AI Development

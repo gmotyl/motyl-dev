@@ -3,7 +3,7 @@ title: "AI's Office Fling: Understanding Shadow AI and Organizational Desire Pat
 excerpt: "Exploring how employees create 'desire paths' with AI tools, the risks of Shadow AI adoption, and strategies for organizations to leverage AI strategically rather than reactively."
 publishedAt: "2025-12-09"
 slug: "ai-office-fling-shadow-ai-organizational-desire-paths"
-hashtags: "#substack #ai #workplace #shadow-ai #organizational-design #digital-transformation #employee-productivity #generated #en"
+hashtags: "#substack #ai #workplace #shadow-ai #organizational-design #digital-transformation #productivity #generated #en"
 ---
 
 # AI's Office Fling: Understanding Shadow AI and Organizational Desire Paths

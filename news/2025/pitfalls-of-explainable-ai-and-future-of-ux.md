@@ -3,7 +3,7 @@ title: "The Pitfalls of Explainable AI and the Future of UX"
 excerpt: "This week, we dive into the misleading nature of explainable AI in chat interfaces, the importance of precise prompts in AI-prototyping, the latest in CSS, and the ongoing debate about the role of UX in a product-driven world."
 publishedAt: "2025-12-17"
 slug: "pitfalls-of-explainable-ai-and-future-of-ux"
-hashtags: "#unicornclub #ux #ai #css #productmanagement #generated #en"
+hashtags: "#unicornclub #ux #ai #css #product #generated #en"
 ---
 
 ## Explainable AI is (often) misleading in chat UX

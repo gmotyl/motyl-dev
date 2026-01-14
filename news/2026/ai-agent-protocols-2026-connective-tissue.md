@@ -3,7 +3,7 @@ title: 'AI Agent Protocols: The Connective Tissue of the 2026 AI Economy'
 excerpt: 'Exploring the protocols that enable AI agents to safely communicate, access tools, and transact autonomously—and what might be missing from this emerging standardization.'
 publishedAt: '2026-01-06'
 slug: 'ai-agent-protocols-2026-connective-tissue'
-hashtags: '#substack #ai #agents #protocol #architecture #opensource #standardization #generated #en'
+hashtags: "#substack #ai #agents #protocol #architecture #open-source #standardization #generated #en"
 ---
 
 ## AI Agents Need Standards Too

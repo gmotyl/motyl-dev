@@ -3,7 +3,7 @@ title: "Frontend System Design, AI-Free Coding, and the Evolution of UI Componen
 excerpt: "A deep dive into frontend architecture patterns, the developer experience without AI assistance, and rethinking common UI components like date pickers."
 publishedAt: "2024-11-12"
 slug: "frontend-system-design-ai-free-coding-ui-evolution"
-hashtags: "#generated #en #frontend #architecture #system-design #ai #tdd #testing #ui #ux #html #javascript #figma #webdev"
+hashtags: "#generated #en #frontend #architecture #ai #tdd #testing #ui #ux #html #javascript #figma #webdev"
 ---
 
 ## 21 Frontend System Design Concepts for Software Engineers

@@ -3,7 +3,7 @@ title: "How Graphite Cultivates High-Agency Engineering Teams"
 excerpt: "Graphite, the company behind the popular developer tool, fosters a high-agency engineering culture by empowering developers with end-to-end ownership, relentless dogfooding, and a commitment to simple, 'boring' technology."
 publishedAt: "2025-12-04"
 slug: "how-graphite-ships"
-hashtags: "#substack #engineering-culture #dev-tools #ai #graphite #generated #en"
+hashtags: "#substack #engineering-culture #devtools #ai #graphite #generated #en"
 ---
 
 ## How Graphite Ships

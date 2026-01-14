@@ -3,7 +3,7 @@ title: "Frontend Focus: ShadCN Themes, GNOME's Stance on AI, and the Full-Stack 
 excerpt: "This edition covers a new theme builder for shadcn/ui, GNOME's new policy against AI-generated code, the challenges of modern full-stack development, a critique of the Go framework Gin, and the impact of AI on coding practices."
 publishedAt: "2025-12-16"
 slug: "frontend-focus-shadcn-themes-gnome-ai-full-stack-dilemma"
-hashtags: "#dailydev #frontend #ai #fullstack #go #react #tailwindcss #shadcn #gnome #webdev #generated #en"
+hashtags: "#dailydev #frontend #ai #fullstack #go #react #tailwind #shadcn #gnome #webdev #generated #en"
 ---
 
 ## ShadCN Themes - Create Beautiful Themes for shadcn/ui

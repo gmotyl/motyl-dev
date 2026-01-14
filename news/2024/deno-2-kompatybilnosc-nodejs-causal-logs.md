@@ -3,7 +3,7 @@ title: "Deno 2.0 z pełną kompatybilnością Node.js i wprowadzenie do causal l
 excerpt: "Deno 2.0 wprowadza pełną kompatybilność z Node.js i npm, podczas gdy causal logs oferują nowe podejście do rozproszonych systemów bez centralnego punktu kontroli"
 publishedAt: "2024-10-11"
 slug: "deno-2-kompatybilnosc-nodejs-causal-logs"
-hashtags: "#generated #pl #deno #nodejs #typescript #architecture #distributed-systems #react #nextjs #clean-architecture"
+hashtags: "#generated #pl #deno #nodejs #typescript #architecture #distributed-systems #react #nextjs"
 ---
 
 ## Deno 2.0 w końcu się wykluł

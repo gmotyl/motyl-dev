@@ -3,7 +3,7 @@ title: "Claude Skills Deep Dive: Building, Debugging, and Fixing Your First Skil
 excerpt: "A practical guide to building Claude Skills that reveals the messy reality of broken files, wrong naming conventions, and how to fix them systematically."
 publishedAt: "2025-11-20"
 slug: "claude-skills-deep-dive-building-debugging-fixing"
-hashtags: "#generated #en #ai #claude #anthropic #developer-tools #cursor #vscode #debugging #architecture #workflow"
+hashtags: "#generated #en #ai #claude #anthropic #devtools #cursor #vscode #debugging #architecture #workflow"
 ---
 
 ## Claude Skills Deep Dive: The Reality of Building Custom AI Workflows

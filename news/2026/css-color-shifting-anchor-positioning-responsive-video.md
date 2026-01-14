@@ -3,7 +3,7 @@ title: "CSS Color Shifting, Anchor Positioning, and the Art of Responsive Video"
 excerpt: "Deep dive into modern CSS techniques for color animations, the new anchor positioning API, and a comprehensive guide to self-hosted responsive video."
 publishedAt: "2026-01-13"
 slug: "css-color-shifting-anchor-positioning-responsive-video"
-hashtags: "#tailwindweekly #tailwindcss #css #frontend #webdev #animation #responsive #video #generated #en"
+hashtags: "#tailwindweekly #tailwind #css #frontend #webdev #animation #responsive #video #generated #en"
 ---
 
 ## Color Shifting in CSS

@@ -3,7 +3,7 @@ title: "Anthropic Acquires Bun, Sentry Integrates Cursor, and TanStack's Future"
 excerpt: "This week, Anthropic acquired Bun to bolster its AI coding tools, Sentry launched an integration with Cursor to automate bug fixes, and TanStack's founder reflected on two years of full-time open-source development."
 publishedAt: "2025-12-04"
 slug: "anthropic-acquires-bun-sentry-integrates-cursor-tanstack-future"
-hashtags: "#uidev #bun #anthropic #ai #sentry #cursor #tanstack #opensource #prettier #popover-api #generated #en"
+hashtags: "#uidev #bun #anthropic #ai #sentry #cursor #tanstack #open-source #prettier #popover-api #generated #en"
 ---
 
 ## Anthropic Acquires Bun, a Major Move in AI-Powered Development

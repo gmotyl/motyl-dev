@@ -3,7 +3,7 @@ title: "AI Dev NYC Insights: Waymo Freeways, Kimi K2 Agentic Search, Anthropic C
 excerpt: "Andrew Ng reflects on AI Dev NYC's optimism while exploring Waymo's freeway autonomy, Kimi K2 Thinking's agentic capabilities, debated Anthropic cyberattack claims, and efficient self-search reinforcement learning."
 publishedAt: "2025-11-20"
 slug: "ai-dev-nyc-waymo-freeways-kimi-k2-agentic-anthropic-controversy"
-hashtags: "#generated #en #ai #autonomous-vehicles #llm #agents #cybersecurity #waymo #anthropic #reinforcement-learning #ml #architecture #self-driving"
+hashtags: "#generated #en #ai #autonomous-vehicles #llm #agents #cybersecurity #waymo #anthropic #ml #architecture #self-driving"
 ---
 
 ## TLDR

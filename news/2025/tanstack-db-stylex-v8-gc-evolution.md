@@ -3,7 +3,7 @@ title: "TanStack DB Query-Driven Sync, StyleX at Scale, and V8 GC Evolution"
 excerpt: "Deep dive into TanStack DB's revolutionary query-driven sync, Meta's StyleX styling system, and the latest developments in V8's garbage collector"
 publishedAt: "2025-11-14"
 slug: "tanstack-db-stylex-v8-gc-evolution"
-hashtags: "#generated #en #react #typescript #frontend #tanstack-query #css #css-in-js #javascript #nodejs #performance #architecture #v8 #erlang #flutter #dart #sentry #testing #observability"
+hashtags: "#generated #en #react #typescript #frontend #react-query #css #css-in-js #javascript #nodejs #performance #architecture #v8 #erlang #flutter #dart #sentry #testing #observability"
 ---
 
 ## TanStack DB 0.5 — Query-Driven Sync

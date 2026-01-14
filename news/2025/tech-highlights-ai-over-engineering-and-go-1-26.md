@@ -3,7 +3,7 @@ title: 'Tech Highlights: AI, Over-Engineering, and Go 1.26'
 excerpt: "This week's tech news covers Addy Osmani's move to Google Cloud AI, the dangers of over-engineering and 'vibe coding', a confirmation of the Assassin's Creed Black Flag remake, and new features in Go 1.26."
 publishedAt: '2025-12-11'
 slug: 'tech-highlights-ai-over-engineering-and-go-1-26'
-hashtags: '#dailydev #ai #gcp #google-gemini #vertex-ai #architecture #golang #gamedev #generated #en'
+hashtags: "#dailydev #ai #gcp #gemini #vertex-ai #architecture #golang #gamedev #generated #en"
 ---
 
 ## Addy Osmani Joins Google Cloud AI

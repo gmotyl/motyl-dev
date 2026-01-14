@@ -3,7 +3,7 @@ title: "pnpm 10 Security Update, React's New Animation API, and Performance Moni
 excerpt: "Przegląd najważniejszych zmian w pnpm 10 z nowymi zabezpieczeniami, eksperymentalnego API animacji w React oraz praktycznych podejść do monitorowania wydajności."
 publishedAt: "2025-01-13"
 slug: "pnpm-10-react-animations-performance-monitoring"
-hashtags: "#generated #pl #pnpm #react #performance #monitoring #sentry #frontend #security #animations #view-transitions #ttfb #architecture"
+hashtags: "#generated #pl #pnpm #react #performance #monitoring #sentry #frontend #security #animation #view-transitions #ttfb #architecture"
 ---
 
 ## pnpm 10 - Bezpieczeństwo na pierwszym miejscu

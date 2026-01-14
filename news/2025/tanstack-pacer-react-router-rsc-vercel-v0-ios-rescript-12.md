@@ -3,7 +3,7 @@ title: "TanStack Pacer, React Router RSC, Vercel v0 iOS App Deep Dive, and ReScr
 excerpt: "This week brings TanStack's new rate-limiting library, React Router's RSC implementation, a detailed breakdown of how Vercel built their native iOS app with React Native, and major releases across the ecosystem."
 publishedAt: "2025-11-30"
 slug: "tanstack-pacer-react-router-rsc-vercel-v0-ios-rescript-12"
-hashtags: "#thisweekinreact #react #tanstack #react-native #expo #rsc #server-components #typescript #nextjs #kubernetes #performance #testing #css #generated #en"
+hashtags: "#thisweekinreact #react #tanstack #react-native #expo #server-components #typescript #nextjs #kubernetes #performance #testing #css #generated #en"
 ---
 
 ## TanStack Pacer: Framework-Agnostic Rate Limiting Utilities

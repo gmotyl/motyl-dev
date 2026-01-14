@@ -3,7 +3,7 @@ title: "Rethinking AI: From Autonomous Agents to Structured Workflows"
 excerpt: "A deep dive into why the obsession with fully autonomous AI agents is misguided and how structured, 'agentic' workflows deliver more reliable and valuable results."
 publishedAt: "2025-12-12"
 slug: "rethinking-ai-from-autonomous-agents-to-structured-workflows"
-hashtags: "#aimaker #substack #ai #agents #workflows #zapier #architecture #generated #en"
+hashtags: "#aimaker #substack #ai #agents #workflow #zapier #architecture #generated #en"
 ---
 
 ## Zapier CEO Just Revealed What Most People Get Wrong About AI Agents

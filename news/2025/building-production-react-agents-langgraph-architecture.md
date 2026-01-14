@@ -3,7 +3,7 @@ title: "Building Production-Ready ReAct AI Agents: A Deep Dive into LangGraph's 
 excerpt: "An in-depth exploration of how to build ReAct agents from scratch by understanding LangGraph's implementation patterns and production-ready architecture."
 publishedAt: "2025-11-18"
 slug: "building-production-react-agents-langgraph-architecture"
-hashtags: "#generated #en #ai #llm #python #langchain #langgraph #architecture #agents #react #agent-patterns"
+hashtags: "#generated #en #ai #llm #python #langchain #langgraph #architecture #agents #react"
 ---
 
 ## Building Production ReAct Agents From Scratch Is Simple

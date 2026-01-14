@@ -3,7 +3,7 @@ title: "Nowoczesny CSS, TypeScript i przyszłość startupów AI - przegląd naj
 excerpt: "Omówienie najnowszych rozwiązań w CSS Grid, zaawansowanych funkcji TypeScript oraz zmieniającego się krajobrazu startupów AI."
 publishedAt: "2024-10-24"
 slug: "nowoczesny-css-typescript-przyszlosc-startupow-ai"
-hashtags: "#generated #pl #frontend #css #typescript #astro #ai #startups #nuxt #vue #multitenancy #architecture"
+hashtags: "#generated #pl #frontend #css #typescript #astro #ai #startup #nuxt #vue #multitenancy #architecture"
 ---
 
 ## Solved By Modern CSS: Section Layout

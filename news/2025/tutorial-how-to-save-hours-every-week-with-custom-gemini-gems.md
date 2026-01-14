@@ -3,7 +3,7 @@ title: "A Tutorial on Creating Custom Gemini Gems for Workflow Automation"
 excerpt: "Learn how to build custom Gemini Gems to automate your most repetitive tasks, saving hours each week with personalized AI assistants trained on your specific context and files."
 publishedAt: "2025-12-02"
 slug: "tutorial-how-to-save-hours-every-week-with-custom-gemini-gems"
-hashtags: "#theaibreak #substack #ai #gemini #google #promptengineering #automation #tutorial #generated #en"
+hashtags: "#theaibreak #substack #ai #gemini #google #prompt-engineering #automation #tutorial #generated #en"
 ---
 
 ## ☕🤖 Tutorial: How To Save Hours Every Week With Custom Gemini Gems

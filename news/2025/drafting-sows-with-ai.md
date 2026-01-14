@@ -3,7 +3,7 @@ title: "Using AI to Create Bulletproof Statements of Work"
 excerpt: "A practical guide to leveraging Large Language Models (LLMs) to draft robust Statements of Work (SOWs), preventing scope creep by defining clear requirements and explicitly stating what's not included."
 publishedAt: "2025-12-05"
 slug: "using-ai-to-draft-sows"
-hashtags: "#substack #ai #llm #project-management #sow #documentation #generated #en"
+hashtags: "#substack #ai #llm #management #sow #documentation #generated #en"
 ---
 
 ## 5 Prompts to Draft SOWs (Statements of Work)

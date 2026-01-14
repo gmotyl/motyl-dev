@@ -3,7 +3,7 @@ title: "Machine Learning and AI Education Resources: From Fundamentals to Advanc
 excerpt: "A comprehensive collection of open-source educational resources covering machine learning basics, neural networks, computer vision, NLP, reinforcement learning, and advanced AI agent development."
 publishedAt: "2024-11-11"
 slug: "ml-ai-education-resources-comprehensive-guide"
-hashtags: "#generated #en #ai #ml #llm #python #pytorch #tensorflow #computer-vision #nlp #reinforcement-learning #prompt-engineering #rag #neural-networks #deep-learning #education"
+hashtags: "#generated #en #ai #ml #llm #python #pytorch #tensorflow #computer-vision #nlp #prompt-engineering #rag #education"
 ---
 
 ## Microsoft's ML-For-Beginners: 12-Week Machine Learning Curriculum

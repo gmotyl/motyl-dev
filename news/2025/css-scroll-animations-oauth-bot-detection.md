@@ -3,7 +3,7 @@ title: "CSS Scroll Animations, OAuth Deep Dive, and Web Bot Detection Evolution"
 excerpt: "Exploring scroll-driven CSS animations, OAuth implementation patterns, and the ongoing battle between web bots and detection systems."
 publishedAt: "2025-06-25"
 slug: "css-scroll-animations-oauth-bot-detection"
-hashtags: "#generated #en #css #oauth #security #frontend #scroll-animations #bot-detection #astro #firefox #json-modules #accessibility"
+hashtags: "#generated #en #css #oauth #security #frontend #animation #bot-detection #astro #firefox #json-modules #accessibility"
 ---
 
 ## A Guide to Scroll-Driven Animations with Just CSS

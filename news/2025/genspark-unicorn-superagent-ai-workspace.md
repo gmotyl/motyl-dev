@@ -3,7 +3,7 @@ title: "Genspark: A Deep Dive into the AI Super Agent Unicorn"
 excerpt: "From its origins as an AI search engine to its current status as a $1B+ unicorn, this article traces the rapid evolution of Genspark, an all-in-one agentic AI workspace designed to automate complex tasks for knowledge workers."
 publishedAt: "2025-12-24"
 slug: "genspark-unicorn-superagent-ai-workspace"
-hashtags: "#aisupremacy #substack #ai #genspark #agentic-ai #startup #productivity #generated #en"
+hashtags: "#aisupremacy #substack #ai #genspark #agents #startup #productivity #generated #en"
 ---
 
 ## Genspark Is a Unicorn Now. Let’s Get up to Speed

@@ -3,7 +3,7 @@ title: 'When AI Writes Almost All Code: The Inflection Point and What We Lose'
 excerpt: 'We have crossed a threshold where AI generates ~90% of code. But what happens to engineering skill, team structure, and the craft itself when humans stop writing?'
 publishedAt: '2026-01-06'
 slug: 'ai-writes-almost-all-code'
-hashtags: '#substack #ai #softwareengineering #coding #llm #agents #productivity #generated #en'
+hashtags: "#substack #ai #engineering #coding #llm #agents #productivity #generated #en"
 ---
 
 ### TLDR:

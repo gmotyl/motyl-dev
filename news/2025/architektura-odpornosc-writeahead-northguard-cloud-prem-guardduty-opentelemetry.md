@@ -3,7 +3,7 @@ title: "Architektura i odporność: od write‑ahead loggingu Netflixa po Northg
 excerpt: "Przegląd tygodnia: odporność baz danych, nowe podejścia do logów i pub/sub w skali, Cloud‑Prem dla AI/enterprise, bezpieczeństwo EKS, OpenTelemetry i przeglądy Java/Spring."
 publishedAt: "2025-10-31"
 slug: "architektura-odpornosc-writeahead-northguard-cloud-prem-guardduty-opentelemetry"
-hashtags: "#generated #pl #architecture #cloud #databases #kafka #kubernetes #aws #azure #observability #security #java #ai"
+hashtags: "#generated #pl #architecture #cloud #database #kafka #kubernetes #aws #azure #observability #security #java #ai"
 ---
 
 ## Beyond Durability: Database Resilience and Entropy Reduction with Write-Ahead Logging at Netflix

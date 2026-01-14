@@ -3,7 +3,7 @@ title: "Frontend roundup: Parcel w Rust, RSC vs Astro, OXVG i wydajność, Elect
 excerpt: "Przegląd ważnych tekstów o frontendzie i architekturze: Parcel rewriten w Rust, html5ever i OXVG, porównanie mentalnych modeli RSC i Astro, obrona Electron oraz nowe narzędzia VS Code i profile w produkcji."
 publishedAt: "2025-05-13"
 slug: "frontend-parcel-rust-rsc-astro-oxvg-electron-vscode-profiling"
-hashtags: "#generated #pl #frontend #react #typescript #rust #parcel #react-server-components #electron #vscode #performance #architecture #svg #profiling"
+hashtags: "#generated #pl #frontend #react #typescript #rust #parcel #server-components #electron #vscode #performance #architecture #svg #profiling"
 ---
 
 ## Bytes #392 - Parcel joins the Church of Rust

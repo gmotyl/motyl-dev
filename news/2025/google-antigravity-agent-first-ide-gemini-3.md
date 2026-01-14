@@ -3,7 +3,7 @@ title: "Google Antigravity: The Agent-First IDE Challenging Cursor and Copilot"
 excerpt: "Google launches Antigravity, an experimental AI-powered IDE built around Gemini 3 that coordinates multiple AI agents with direct access to editor, terminal, and browser for autonomous coding tasks."
 publishedAt: "2025-11-26"
 slug: "google-antigravity-agent-first-ide-gemini-3"
-hashtags: "#generated #en #ai #vscode #ide #gemini #google #cursor #github-copilot #agentic"
+hashtags: "#generated #en #ai #vscode #ide #gemini #google #cursor #github-copilot #agents"
 ---
 
 ## Google Antigravity: Building Apps with an Agent-First IDE

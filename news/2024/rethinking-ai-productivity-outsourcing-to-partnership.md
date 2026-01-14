@@ -3,7 +3,7 @@ title: "Rethinking AI Productivity: From Outsourcing to Partnership"
 excerpt: "How AI can make you faster and lazier simultaneously, and why thinking with AI beats outsourcing to AI."
 publishedAt: "2024-11-11"
 slug: "rethinking-ai-productivity-outsourcing-to-partnership"
-hashtags: "#generated #en #ai #productivity #llm #chatgpt #developer-experience #architecture #learning"
+hashtags: "#generated #en #ai #productivity #llm #chatgpt #dx #architecture #learning"
 ---
 
 ## AI Made Me 50x Faster — And Somehow More Lazy

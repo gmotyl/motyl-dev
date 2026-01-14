@@ -3,7 +3,7 @@ title: "Waku wprowadza Server Actions, Nuxt Scripts i nowe trendy w React ekosys
 excerpt: "Przegląd najnowszych rozwiązań w React, including Waku z pełnym wsparciem dla Server Actions, Nuxt Scripts dla lepszej wydajności oraz trendy w architekturze frontendu."
 publishedAt: "2024-12-19"
 slug: "waku-server-actions-nuxt-scripts-react-trends"
-hashtags: "#generated #pl #react #typescript #frontend #waku #nuxt #server-actions #spa #performance #regex #javascript #effect #spatial-compute #developer-experience"
+hashtags: "#generated #pl #react #typescript #frontend #waku #nuxt #server-actions #spa #performance #regex #javascript #effect #spatial-compute #dx"
 ---
 
 ## Waku wprowadza pełne wsparcie dla React Server Actions

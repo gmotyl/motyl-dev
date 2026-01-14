@@ -3,7 +3,7 @@ title: "Frontend Focus — Highlights: CSS5, Web Graphics, AI Regulation, and Pr
 excerpt: "A focused audio-style summary covering CSS versioning debates, shader-driven retro effects, the EU AI Act, video alpha on the web, container units, web components, accessibility nuance, clipboard APIs, Astro 4.13, and handwriting attribute intent."
 publishedAt: "2024-08-07"
 slug: "frontend-focus-css5-dithering-ai-act-video-alpha-container-units-web-components-accessibility-astro"
-hashtags: "#generated #en #frontend #css #webdev #ai #architecture #web-components #accessibility #web-performance #astro #container-queries"
+hashtags: "#generated #en #frontend #css #webdev #ai #architecture #web-components #accessibility #performance #astro #container-queries"
 ---
 
 ## It’s Time To Talk About “CSS5” — Smashing Magazine

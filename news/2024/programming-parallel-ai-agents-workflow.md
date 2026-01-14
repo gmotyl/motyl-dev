@@ -3,7 +3,7 @@ title: "Programming with Parallel AI Agents: A New Development Workflow Emerges"
 excerpt: "Software engineers are experimenting with running multiple AI coding agents simultaneously to boost productivity, potentially disrupting traditional flow-based development practices."
 publishedAt: "2024-10-30"
 slug: "programming-parallel-ai-agents-workflow"
-hashtags: "#generated #en #ai #claude #cursor #openai #software-engineering #productivity #workflow #development #agents"
+hashtags: "#generated #en #ai #claude #cursor #openai #engineering #productivity #workflow #development #agents"
 ---
 
 ## New trend: programming by kicking off parallel AI agents

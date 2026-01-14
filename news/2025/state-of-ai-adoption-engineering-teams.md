@@ -3,7 +3,7 @@ title: "The State of AI Adoption in Engineering Teams"
 excerpt: "An analysis of AI adoption in engineering teams, covering personal vs. team use, documentation as a secret weapon, managing AI context in codebases, and the evolving UX of AI coding tools."
 publishedAt: "2025-12-05"
 slug: "state-of-ai-adoption-engineering-teams"
-hashtags: "#substack #ai #engineering #team-collaboration #developer-experience #generated #en"
+hashtags: "#substack #ai #engineering #teams #dx #generated #en"
 ---
 
 ## The State of AI Adoption 📊— with Matt McClernan

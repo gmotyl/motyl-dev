@@ -3,7 +3,7 @@ title: "Claude Project Memory: Building AI That Learns Your Taste Through Fricti
 excerpt: "Master the art of teaching AI your preferences through systematic friction detection. Learn how to transform fleeting corrections into permanent memory instructions that make Claude truly understand your creative voice."
 publishedAt: "2025-11-27"
 slug: "claude-project-memory-friction-taste-ai-personalization"
-hashtags: "#ai #claude #llm #productivity #workflow #prompting #generated #en"
+hashtags: "#ai #claude #llm #productivity #workflow #prompt-engineering #generated #en"
 ---
 
 # Claude Project Memory: Building AI That Learns Your Taste Through Friction

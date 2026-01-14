@@ -3,7 +3,7 @@ title: "The AI Skill That Actually Gets You Hired in 2026"
 excerpt: "As AI cheapens the cost of writing code, the most valuable skill is shifting from execution to judgment. Future-proof your career by combining technical skills with a deep understanding of product, business, and the ability to manage the technical debt that AI creates."
 publishedAt: "2025-12-23"
 slug: "ai-skill-hired-2026-judgment"
-hashtags: "#aiadoptersclub #substack #ai #career #jobmarket #productmanagement #generated #en"
+hashtags: "#aiadoptersclub #substack #ai #career #jobmarket #product #generated #en"
 ---
 
 ## The AI Skill That Actually Gets You Hired in 2026

@@ -3,7 +3,7 @@ title: "Powrót CSS‑in‑JS i konsekwencje React 19: Panda, StyleX, Pigment, R
 excerpt: "Przegląd najnowszych ruchów w świecie stylowania Reacta, konsekwencji React 19 dla Suspense oraz praktycznych porad dotyczących budowania wydajnych aplikacji."
 publishedAt: "2025-10-27"
 slug: "powrot-css-in-js-i-konsekwencje-react-19-panda-stylex-pigment-restyle-wydajnosc"
-hashtags: "#generated #pl #frontend #react #typescript #css-in-js #panda-css #stylex #pigment-css #restyle #react-19 #suspense #react-server-components #rsc #performance #web-performance #speedcurve #tanstack-query #architecture #ai"
+hashtags: "#generated #pl #frontend #react #typescript #css-in-js #panda-css #stylex #pigment-css #restyle #react-19 #suspense #server-components #performance #speedcurve #react-query #architecture #ai"
 ---
 
 ## Bytes #298 — CSS‑in‑JS is so back

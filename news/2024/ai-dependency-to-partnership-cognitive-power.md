@@ -3,7 +3,7 @@ title: "From AI Dependency to AI Partnership: Reclaiming Cognitive Power in the 
 excerpt: "A deep dive into how AI is rewiring our brains for dependency and the frameworks to transform it into genuine cognitive enhancement."
 publishedAt: "2024-11-06"
 slug: "ai-dependency-to-partnership-cognitive-power"
-hashtags: "#generated #en #ai #llm #claude #chatgpt #cognitive-science #productivity #decision-making #stoicism #socratic-method #prompting #thinking-frameworks"
+hashtags: "#generated #en #ai #llm #claude #chatgpt #cognitive-science #productivity #decision-making #stoicism #socratic-method #prompt-engineering #thinking-frameworks"
 ---
 
 ## I Turned My AI Into Marcus Aurelius and It Called Out My BS

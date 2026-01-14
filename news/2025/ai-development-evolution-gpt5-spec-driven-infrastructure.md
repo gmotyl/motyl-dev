@@ -3,7 +3,7 @@ title: "AI Development Evolution: From GPT-5 to Spec-Driven Development and Ente
 excerpt: "Exploring the latest advances in AI-powered development tools, enterprise security practices, and infrastructure modernization strategies."
 publishedAt: "2025-08-22"
 slug: "ai-development-evolution-gpt5-spec-driven-infrastructure"
-hashtags: "#generated #en #ai #llm #gpt #azure #aws #infrastructure #security #devops #architecture #microservices #distributed-systems #developer-experience"
+hashtags: "#generated #en #ai #llm #gpt #azure #aws #infrastructure #security #devops #architecture #microservices #distributed-systems #dx"
 ---
 
 ## OpenAI's GPT-5 Now Generally Available on Microsoft Azure AI Foundry

@@ -3,7 +3,7 @@ title: "Frictionless: Why Great Developer Experience Matters in the AI Age"
 excerpt: "An exploration of the importance of developer experience (DevEx) in the age of AI, with insights from the new book 'Frictionless' by Nicole Forsgren and Abi Noda."
 publishedAt: "2025-12-10"
 slug: "frictionless-developer-experience-ai-age"
-hashtags: "#pragmaticengineer #substack #devex #dx #ai #developer-productivity #generated #en"
+hashtags: "#pragmaticengineer #substack #dx #ai #productivity #generated #en"
 ---
 
 ## Frictionless: why great developer experience can help teams win in the ‘AI age’

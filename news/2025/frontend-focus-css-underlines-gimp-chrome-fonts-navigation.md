@@ -3,7 +3,7 @@ title: "Frontend Focus: CSS Underlines, GIMP 3.0, Chrome Font Security, and Mode
 excerpt: "A comprehensive look at CSS styling techniques, major software releases, browser security improvements, and evolving web design patterns."
 publishedAt: "2025-03-19"
 slug: "frontend-focus-css-underlines-gimp-chrome-fonts-navigation"
-hashtags: "#generated #en #css #frontend #chrome #gimp #eslint #baseline #webkit #safari #scroll-driven-animations #web-design #typography #security #accessibility"
+hashtags: "#generated #en #css #frontend #chrome #gimp #eslint #baseline #webkit #safari #animation #web-design #typography #security #accessibility"
 ---
 
 ## A Deep Dive into the Inline Background Overlap Problem

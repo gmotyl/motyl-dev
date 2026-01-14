@@ -3,7 +3,7 @@ title: "Lessons Learned from 25 Years in Tech: A Journey of Growth and Career In
 excerpt: "Exploring Umberto Nicoletti's 25-year career journey in tech, sharing valuable lessons, career insights, and the importance of finding one's ikigai."
 publishedAt: "2025-12-10"
 slug: "lessons-learned-from-25-years-in-tech-career-journey-insights"
-hashtags: "#agregate #substack #career #tech #software-engineering #personal-growth #generated #en"
+hashtags: "#agregate #substack #career #tech #engineering #generated #en"
 ---
 
 ## Lessons Learned from 25 Years in Tech: A Journey of Growth and Career Insights
