@@ -1,13 +1,11 @@
 "use client"
 
 import { useSession, signOut, signIn } from "next-auth/react"
-import { useState, useEffect } from "react"
 import Link from "next/link"
 import {
   Bookmark,
   CheckCircle2,
   LogOut,
-  LogIn,
   Download,
   User,
   ChevronRight,
@@ -17,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
+import { useInstallPrompt } from "@/hooks/use-install-prompt"
 
 interface MenuLinkProps {
   href: string
@@ -78,39 +77,7 @@ function MenuButton({ icon: Icon, label, description, onClick }: MenuButtonProps
 
 export default function MePage() {
   const { data: session, status } = useSession()
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
-  const [canInstall, setCanInstall] = useState(false)
-
-  useEffect(() => {
-    const handler = (e: Event) => {
-      e.preventDefault()
-      setDeferredPrompt(e)
-      setCanInstall(true)
-    }
-
-    window.addEventListener("beforeinstallprompt", handler)
-
-    if (window.matchMedia("(display-mode: standalone)").matches) {
-      setCanInstall(false)
-    }
-
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handler)
-    }
-  }, [])
-
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return
-
-    deferredPrompt.prompt()
-    const { outcome } = await deferredPrompt.userChoice
-
-    if (outcome === "accepted") {
-      setCanInstall(false)
-    }
-
-    setDeferredPrompt(null)
-  }
+  const { canInstall, handleInstallClick } = useInstallPrompt()
 
   const initials = session?.user?.name
     ?.split(" ")
