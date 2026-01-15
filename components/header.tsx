@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import React from "react"
 import { Code, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -13,19 +14,23 @@ import { InstallPrompt } from "@/components/install-prompt"
 
 export default function Header() {
   const { data: session, status } = useSession()
+  const pathname = usePathname()
   const [mounted, setMounted] = React.useState(false)
 
   React.useEffect(() => {
     setMounted(true)
   }, [])
 
+  const isHomePage = pathname === "/" || pathname === "/me"
+  const headerText = isHomePage ? "motyl.dev" : "Grzegorz Motyl"
+
   return (
     <header className="px-4 lg:px-6 h-16 flex items-center border-b border-border/40 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
       <div className="flex items-center gap-2 font-bold text-xl">
         <Code className="h-6 w-6 text-primary" />
-        <Link href="/">Grzegorz Motyl</Link>
+        <Link href="/">{headerText}</Link>
       </div>
-      <nav className="ml-auto hidden md:flex gap-4 sm:gap-6 items-center">
+      <nav className="ml-auto hidden lg:flex gap-4 lg:gap-6 items-center">
         <Link href="/#about" className="text-sm font-medium hover:text-primary transition-colors">
           About Me
         </Link>
@@ -62,7 +67,7 @@ export default function Header() {
         )}
       </nav>
       <Sheet>
-        <SheetTrigger asChild className="md:hidden ml-auto">
+        <SheetTrigger asChild className="hidden sm:flex lg:hidden ml-auto">
           {mounted && (
             <Button variant="ghost" size="icon">
               <Menu className="h-5 w-5" />

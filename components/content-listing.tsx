@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useTransition, useEffect, useCallback } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
-import Header from '@/components/header'
 import Footer from '@/components/footer'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -255,7 +254,6 @@ export function ContentListing({
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header />
       <main className="flex-1 container py-10">
         <h1 className="text-3xl font-bold mb-2">{title}</h1>
         {description && <p className="text-muted-foreground mb-8">{description}</p>}

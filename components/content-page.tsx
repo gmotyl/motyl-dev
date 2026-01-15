@@ -1,6 +1,5 @@
 import { promises as fs } from 'fs'
 import path from 'path'
-import Header from '@/components/header'
 import Footer from '@/components/footer'
 import { MarkdownWithCTA } from '@/components/markdown-with-cta'
 import { WakeLockToggle } from '@/components/wake-lock-toggle'
@@ -89,7 +88,6 @@ export async function ContentPage({ article, prevArticle, nextArticle }: Content
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
-      <Header />
       <ArticleViewTracker slug={article.slug} />
       <ArticleScrollHandler />
       <main className="flex-1 container py-10">

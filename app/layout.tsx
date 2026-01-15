@@ -11,6 +11,7 @@ import { InstallPrompt } from '@/components/install-prompt'
 import { UpdateNotification } from '@/components/update-notification'
 import GdprConsent from '@/components/cookie-consent'
 import AdsenseScript from '@/components/adsense-script'
+import { BottomNav } from '@/components/navigation'
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             disableTransitionOnChange
           >
             {children}
+            <BottomNav />
             <Toaster />
             <ServiceWorkerRegister />
             <InstallPrompt />
