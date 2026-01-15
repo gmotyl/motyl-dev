@@ -139,3 +139,10 @@ body {
 .unvisited-article .article-excerpt {
   color: rgb(255 255 255 / 0.7) !important;
 }
+
+/* Bottom navigation padding for mobile */
+@media (max-width: 639px) {
+  main {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom, 0px));
+  }
+}
