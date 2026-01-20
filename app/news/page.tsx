@@ -3,6 +3,7 @@ import { getContentPageData, PageFilters, getAllHashtags } from '@/lib/articles'
 import { headers } from 'next/headers'
 import { auth } from '@/lib/auth'
 import { getUserViewedArticles } from '@/lib/article-views'
+import Header from '@/components/header'
 
 export const metadata = {
   title: 'News - Motyl.dev',
@@ -47,18 +48,21 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
   ])
 
   return (
-    <ContentListing
-      initialItems={pageData.items}
-      totalPages={pageData.totalPages}
-      currentPage={pageData.currentPage}
-      totalItems={pageData.totalItems}
-      allHashtags={allHashtags}
-      hashtagCounts={pageData.hashtagCounts}
-      title="News"
-      description="Latest tech news and insights curated from newsletters"
-      contentType="news"
-      basePath="/news"
-      requireHashtags={['generated']}
-    />
+    <div className="flex min-h-screen flex-col">
+      <Header />
+      <ContentListing
+        initialItems={pageData.items}
+        totalPages={pageData.totalPages}
+        currentPage={pageData.currentPage}
+        totalItems={pageData.totalItems}
+        allHashtags={allHashtags}
+        hashtagCounts={pageData.hashtagCounts}
+        title="News"
+        description="Latest tech news and insights curated from newsletters"
+        contentType="news"
+        basePath="/news"
+        requireHashtags={['generated']}
+      />
+    </div>
   )
 }
