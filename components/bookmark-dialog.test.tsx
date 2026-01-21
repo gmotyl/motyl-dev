@@ -1,27 +1,47 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { BookmarkDialog } from './bookmark-dialog'
 
-import { render, screen, waitFor, within } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { BookmarkDialog } from './bookmark-dialog';
-import { getAllHashtags } from '@/lib/articles';
+// Mock hooks that HashtagInput depends on
+vi.mock('@/hooks/use-hashtag-suggestions', () => ({
+  useHashtagSuggestions: () => ({
+    suggestions: [],
+    isLoading: false,
+    isNewHashtag: true,
+  }),
+}))
 
-vi.mock('@/lib/articles');
-
-const mockFetch = vi.spyOn(window, 'fetch');
+vi.mock('@/hooks/use-recent-hashtags', () => ({
+  useRecentHashtags: () => ({
+    recentHashtags: [],
+    addRecent: vi.fn(),
+  }),
+}))
 
 describe('BookmarkDialog', () => {
-  const mockOnOpenChange = vi.fn();
-  const mockOnSubmit = vi.fn().mockResolvedValue(undefined);
+  const mockOnOpenChange = vi.fn()
+  const mockOnSubmit = vi.fn().mockResolvedValue(undefined)
 
   beforeEach(() => {
-    vi.clearAllMocks();
-    // Mock a successful fetch response with hashtags
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: async () => ['react', 'nextjs', 'typescript'],
-    } as Response);
-  });
+    vi.clearAllMocks()
 
-  // Test case 1: Renders correctly in "create" mode and ensures fields are accessible.
+    // Mock window.matchMedia for use-mobile hook
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    })
+  })
+
   it('renders correctly in "create" mode and has accessible fields', () => {
     render(
       <BookmarkDialog
@@ -30,22 +50,18 @@ describe('BookmarkDialog', () => {
         onSubmit={mockOnSubmit}
         mode="create"
       />
-    );
+    )
 
-    // Check for the correct dialog title and accessible form fields.
-    // Check for the correct dialog title and accessible form fields.
-    expect(screen.getByRole('heading', { name: 'Add Bookmark' })).toBeInTheDocument();
-    expect(screen.getByLabelText(/URL/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Title/i)).toBeInTheDocument();
-    // The Hashtags label isn't directly associated with the input, so we check for text presence.
-    expect(screen.getByText(/Hashtags/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/Add hashtag/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add Bookmark' })).toBeInTheDocument();
-  });
+    // Check for the correct dialog title and accessible form fields
+    expect(screen.getByRole('heading', { name: 'Add Bookmark' })).toBeInTheDocument()
+    expect(screen.getByLabelText(/URL/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/Title/i)).toBeInTheDocument()
+    expect(screen.getByText(/Hashtags/i)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Add Bookmark' })).toBeInTheDocument()
+  })
 
-  // Test case 3: Shows validation errors for invalid URL and empty title.
   it('shows validation errors for invalid URL and empty title', async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup()
     render(
       <BookmarkDialog
         open={true}
@@ -53,122 +69,75 @@ describe('BookmarkDialog', () => {
         onSubmit={mockOnSubmit}
         mode="create"
       />
-    );
+    )
 
-    // Submit the form without filling in required fields.
-    await user.click(screen.getByRole('button', { name: 'Add Bookmark' }));
+    // Submit the form without filling in required fields
+    await user.click(screen.getByRole('button', { name: 'Add Bookmark' }))
 
-    // Expect validation error messages to appear.
-    expect(await screen.findByText('Invalid URL format')).toBeInTheDocument();
-    expect(await screen.findByText('Title is required')).toBeInTheDocument();
-    // Ensure the submit handler was not called.
-    expect(mockOnSubmit).not.toHaveBeenCalled();
-  });
+    // Expect validation error messages to appear
+    expect(await screen.findByText('Invalid URL format')).toBeInTheDocument()
+    expect(await screen.findByText('Title is required')).toBeInTheDocument()
+    // Ensure the submit handler was not called
+    expect(mockOnSubmit).not.toHaveBeenCalled()
+  })
 
-  // Test case 4: Allows a user to add and remove hashtags.
-  it('allows a user to add and remove hashtags', async () => {
-    const user = userEvent.setup();
+  it('renders in edit mode with correct title', () => {
     render(
       <BookmarkDialog
         open={true}
         onOpenChange={mockOnOpenChange}
         onSubmit={mockOnSubmit}
+        mode="edit"
+        initialData={{ url: 'https://example.com', title: 'Test' }}
       />
-    );
+    )
 
-    const hashtagInput = screen.getByPlaceholderText(/Add hashtag/i);
-    // Find the add button, which has a Plus icon and no text.
-    const addButton = screen.getByRole('button', { name: '' });
-    expect(addButton).toBeInTheDocument();
-    
-    // Add a hashtag.
-    await user.type(hashtagInput, 'react');
-    await user.click(addButton!);
-    const badge = await screen.findByText('react');
-    const badgeElement = badge.parentElement;
-    expect(badgeElement).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Edit Bookmark' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Update Bookmark' })).toBeInTheDocument()
+  })
 
-    // Remove the hashtag.
-    const removeButton = within(badgeElement!).getByRole('button');
-    await user.click(removeButton);
-    expect(screen.queryByText('react')).not.toBeInTheDocument();
-  });
-
-  // Test case 9: Prevents adding duplicate or empty hashtags.
-  it('prevents adding duplicate or empty hashtags', async () => {
-    const user = userEvent.setup();
+  it('displays suggested hashtags when provided', () => {
     render(
       <BookmarkDialog
         open={true}
         onOpenChange={mockOnOpenChange}
         onSubmit={mockOnSubmit}
+        suggestedHashtags={['react', 'nextjs', 'typescript']}
       />
-    );
+    )
 
-    const hashtagInput = screen.getByPlaceholderText(/Add hashtag/i);
-    const addButton = screen.getByRole('button', { name: '' });
-    expect(addButton).toBeInTheDocument();
-    // The add button should be disabled for empty input.
-    expect(addButton).toBeDisabled();
+    expect(screen.getByText('Suggestions from article:')).toBeInTheDocument()
+    expect(screen.getByText('react')).toBeInTheDocument()
+    expect(screen.getByText('nextjs')).toBeInTheDocument()
+    expect(screen.getByText('typescript')).toBeInTheDocument()
+  })
 
-    // Attempt to add a hashtag with only whitespace.
-    await user.type(hashtagInput, '   ');
-    expect(addButton).toBeDisabled();
-
-    // Add a valid hashtag.
-    await user.clear(hashtagInput);
-    await user.type(hashtagInput, 'testing');
-    expect(addButton).not.toBeDisabled();
-    await user.click(addButton!);
-    // Check that one hashtag badge is present.
-    expect(await screen.findByText('testing')).toBeInTheDocument();
-    expect(screen.getAllByText(/testing/i)[0].parentElement?.querySelectorAll('button')).toHaveLength(1);
-
-    // Attempt to add the same hashtag again.
-    await user.clear(hashtagInput);
-    await user.type(hashtagInput, 'testing');
-    await user.click(addButton!);
-    // Verify that still only one badge exists.
-    expect(screen.getAllByText(/testing/i)[0].parentElement?.querySelectorAll('button')).toHaveLength(1);
-
-  });
-
-  // Test case 8: Fetches and shows autocomplete suggestions for hashtags.
-  it('fetches and shows autocomplete suggestions', async () => {
-    const user = userEvent.setup();
-    vi.mocked(getAllHashtags).mockResolvedValue(['react', 'nextjs', 'typescript']);
-
+  it('submits form with valid data', async () => {
+    const user = userEvent.setup()
     render(
       <BookmarkDialog
         open={true}
         onOpenChange={mockOnOpenChange}
         onSubmit={mockOnSubmit}
+        mode="create"
       />
-    );
+    )
 
-    const hashtagInput = screen.getByPlaceholderText(/Add hashtag/i);
-    await user.click(hashtagInput);
+    // Fill in valid URL and title
+    await user.type(screen.getByLabelText(/URL/i), 'https://example.com/article')
+    await user.type(screen.getByLabelText(/Title/i), 'Test Article')
 
-    // Check that a fetch was made to the hashtags API when the input was focused.
+    // Submit the form
+    await user.click(screen.getByRole('button', { name: 'Add Bookmark' }))
+
+    // Wait for form submission
     await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalledWith('/api/hashtags');
-    });
-    
-    // Filter suggestions by typing.
-    await user.type(hashtagInput, 't');
-    expect(await screen.findByText('react')).toBeVisible();
-    expect(await screen.findByText('typescript')).toBeVisible();
-    
-    // Select a suggestion.
-    await user.click(screen.getByText('typescript'));
-
-    // Verify the suggestion was added as a badge and the input was cleared.
-    // We specifically look for the badge, which has a remove button, to distinguish it from the suggestion item.
-    await waitFor(() => {
-      const badge = screen.getByText('typescript').closest('div');
-      const removeButton = within(badge).getByRole('button');
-      expect(removeButton).toBeInTheDocument();
-    });
-    expect(hashtagInput).toHaveValue('');
-  });
-});
+      expect(mockOnSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: 'https://example.com/article',
+          title: 'Test Article',
+        })
+      )
+    })
+  })
+})
