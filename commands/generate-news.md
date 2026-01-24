@@ -38,6 +38,8 @@ When preparing newsletters:
 
 **Workflow:**
 
+**IMPORTANT: Track which newsletters are actually processed (either used for article generation OR deemed useless/promotional) to avoid marking all prepared newsletters as processed/deleted**
+
 1. **Parse arguments**
 
    - Extract limit from first argument (default: 1)
@@ -108,13 +110,22 @@ When preparing newsletters:
        - **IMPORTANT**: Do NOT include any "Co-Authored-By" attribution lines - these scare readers
        - **IMPORTANT**: Do NOT include any "Generated with [Tool Name]" marketing lines - keep it clean and professional
    - Call `mcp__newsletter-ai__save_article` with generated content and newsletter name
+   - **CRITICAL: Track the newsletter UID that was used for this article generation**
    - Display: "✅ Saved article to [filepath]"
 
-6. **Mark newsletters as processed**
+   **Handle useless/promotional newsletters:**
+   - If a newsletter is detected as promotional, sponsored, or contains no substantial content suitable for article generation, track its UID separately
+   - Such newsletters should still be marked as processed to avoid double processing in future runs
 
+6. **Mark processed newsletters as read/deleted**
+
+   - Maintain a list of newsletter UIDs that were successfully used for article generation
+   - Also maintain a list of newsletter UIDs that were processed but deemed useless/promotional
+   - Combine both lists to create a comprehensive list of processed newsletter UIDs
    - Call `mcp__newsletter-ai__mark_newsletters_as_processed` with:
+     - uids: array of all newsletter UIDs that were processed (both useful and useless newsletters, but not all prepared newsletters)
      - safeMode: true if "safe" keyword was in arguments
-   - This marks emails as read and optionally deletes them (unless safe mode)
+   - This marks processed emails as read and optionally deletes them (unless safe mode)
    - Display: "✅ Marked X newsletter(s) as read [and deleted Y]"
 
 7. **Display summary**
