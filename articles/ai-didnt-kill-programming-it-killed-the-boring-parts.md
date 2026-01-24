@@ -1,6 +1,6 @@
 ---
-title: 'AI Didn't Kill Programming — It Just Killed the Boring Parts'
-excerpt: 'After 20 years of writing code by hand, I've embraced AI as my new pair-programming partner. Here's why the fundamentals haven't changed since Uncle Bob was punching tape.'
+title: "AI Didn't Kill Programming — It Just Killed the Boring Parts"
+excerpt: "After 20 years of writing code by hand, I've embraced AI as my new pair-programming partner. Here's why the fundamentals haven't changed since Uncle Bob was punching tape."
 publishedAt: '2026-01-24'
 slug: 'ai-didnt-kill-programming-it-killed-the-boring-parts'
 hashtags: '#AI #SoftwareEngineering #CleanCode #Programming #CareerAdvice'
