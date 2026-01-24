@@ -62,16 +62,16 @@ describe('Header component on content pages', () => {
     expect(articlesLink).toHaveAttribute('href', '/articles')
   })
 
-  it('shows "Grzegorz Motyl" text on non-home pages', () => {
+  it('shows "motyl.dev" text in header', () => {
     render(<Header />)
-    expect(screen.getByText('Grzegorz Motyl')).toBeInTheDocument()
+    expect(screen.getByText('motyl.dev')).toBeInTheDocument()
   })
 })
 
 describe('Header on articles page', () => {
   it('provides navigation back to home via logo link', () => {
     render(<Header />)
-    const logoLink = screen.getByRole('link', { name: /grzegorz motyl/i })
+    const logoLink = screen.getByRole('link', { name: /motyl\.dev/i })
     expect(logoLink).toHaveAttribute('href', '/')
   })
 })
