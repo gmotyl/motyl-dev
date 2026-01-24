@@ -2,7 +2,7 @@
 title: "China's AI Milestones in 2025: DeepSeek, Qwen, and the Open-Source Revolution"
 excerpt: "A comprehensive look at China's remarkable AI progress in 2025 — from DeepSeek's $6M frontier model to Qwen's ecosystem dominance, AI agents, domestic chips, and the talent flow reshaping global AI."
 publishedAt: "2026-01-21"
-slug: "china-ai-milestones-2025-deepseek-qwen-open-source"
+slug: "china-ai-milestones-2025-deepseek-qwen-open-source-comprehensive"
 hashtags: "#substack #ai #llm #open-source #china #deepseek #agents #ml #generated #en"
 ---
 
