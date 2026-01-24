@@ -1,13 +1,20 @@
 {
   "servers": {
+    "todoist": {
+      "command": "npx",
+      "args": ["@doist/todoist-ai"],
+      "env": {
+        "TODOIST_API_KEY": "cb11cc5a9d35e192d3ee1153c8ff31f0a4edb3c9"
+      }
+    },
     "newsletter-ai": {
-      "command": "node",
-      "args": ["--import", "tsx/esm", "src/mcp/index.ts"],
+      "command": "/Users/gmotyl/git/prv/newsletter-ai/node_modules/.bin/tsx",
+      "args": ["/Users/gmotyl/git/prv/newsletter-ai/src/mcp/index.ts"],
       "cwd": "/Volumes/GIT/prv/newsletter-ai",
       "env": {
-        "PROJECT_DIR": "/Volumes/GIT/prv/newsletter-ai",
-        "OUTPUT_PATH": "/Volumes/GIT/prv/motyl-dev/news/2025",
-        "NARRATOR_PERSONA": "Scott Hanselman & Martin Fowler (favor Fowler for summaries)"
+        "PROJECT_DIR": "/Users/gmotyl/git/prv/newsletter-ai",
+        "OUTPUT_PATH": "/Users/gmotyl/git/prv/motyl-dev/news/2025",
+        "NARRATOR_PERSONA": "Scott Hanselman"
       }
     }
   }
