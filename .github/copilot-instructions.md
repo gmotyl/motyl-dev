@@ -1,8 +1,8 @@
-# Gemini Code Assistant Context
+# GitHub Copilot Instructions
 
-Refer to [AGENTS.md](AGENTS.md) for complete project documentation, architecture patterns, and coding guidelines.
+Refer to [AGENTS.md](../AGENTS.md) for complete project documentation, architecture patterns, and coding guidelines.
 
-## Quick Reference
+## Quick Commands
 
 - **Package Manager**: pnpm
 - **Development**: `pnpm dev`

@@ -1,0 +1,17 @@
+# Cursor AI Rules
+
+Refer to AGENTS.md for project architecture, patterns, and coding guidelines.
+
+## When Making Changes
+
+1. Follow patterns documented in AGENTS.md
+2. If you discover new patterns or needed corrections, suggest updating AGENTS.md
+3. Use pnpm as package manager
+4. Run tests after changes: `pnpm test --run`
+5. Verify build: `pnpm build`
+
+## Conventions
+
+- TypeScript for all code
+- Tailwind CSS for styling
+- Conventional commits (feat:, fix:, chore:)
