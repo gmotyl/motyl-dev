@@ -10,6 +10,7 @@ import {
   User,
   ChevronRight,
   Github,
+  Newspaper,
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -155,6 +156,23 @@ export default function MePage() {
                 icon={CheckCircle2}
                 label="Mark All as Read"
                 description="Quickly browse through all articles"
+              />
+            </div>
+          </section>
+        )}
+
+        {/* Superadmin Section */}
+        {session?.user?.isSuperAdmin && (
+          <section className="space-y-3 mb-8">
+            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider px-1">
+              Admin
+            </h3>
+            <div className="space-y-2">
+              <MenuLink
+                href="/newsletter-generator"
+                icon={Newspaper}
+                label="Generate Newsletter"
+                description="Create newsletter from bookmarked links"
               />
             </div>
           </section>

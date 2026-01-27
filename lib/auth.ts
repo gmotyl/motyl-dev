@@ -9,6 +9,7 @@ declare module "next-auth" {
     user: {
       id: string
       githubId?: string
+      isSuperAdmin?: boolean
     } & DefaultSession["user"]
   }
 }
@@ -84,6 +85,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           session.user.id = user.id
           session.user.githubId = (user as any).githubId
         }
+
+        // Superadmin check
+        session.user.isSuperAdmin =
+          !!process.env.SUPERADMIN_EMAIL &&
+          session.user.email === process.env.SUPERADMIN_EMAIL
       }
       return session
     },

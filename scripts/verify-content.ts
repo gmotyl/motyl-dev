@@ -32,7 +32,9 @@ function getChangedFiles(): string[] {
       encoding: 'utf8',
     }).trim()
     if (staged) {
-      return staged.split('\n').filter((f) => f.endsWith('.md'))
+      return staged.split('\n').filter(
+        (f) => f.endsWith('.md') && (f.startsWith('articles/') || f.startsWith('news/'))
+      )
     }
   } catch {
     // Not in a git repo or no staged files
