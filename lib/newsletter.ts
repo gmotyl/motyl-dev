@@ -9,7 +9,7 @@ export interface ArticleExtract {
   keyTakeaways: string[] | null
 }
 
-function extractTldr(content: string): string | null {
+export function extractTldr(content: string): string | null {
   const patterns = [
     /\*\*TLDR:\*\*\s*([\s\S]*?)(?=\n\n(?:\*\*|##|---|$))/i,
     /^###?\s+TLDR:?\s*\n\n([\s\S]*?)(?=\n\n(?:\*\*|##|---|$))/im,
@@ -24,7 +24,7 @@ function extractTldr(content: string): string | null {
   return null
 }
 
-function extractKeyTakeaways(content: string): string[] | null {
+export function extractKeyTakeaways(content: string): string[] | null {
   const patterns = [
     /\*\*Key takeaways:\*\*\s*\n([\s\S]*?)(?=\n\n(?:\*\*|##|---|$))/i,
     /^##\s+Key [A-Za-z\s]+\n\n([\s\S]*?)(?=\n\n(?:\*\*|##|---|$))/im,
