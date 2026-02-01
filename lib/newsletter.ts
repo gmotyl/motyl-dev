@@ -1,5 +1,3 @@
-'use server'
-
 import { getContentItemBySlug } from './articles'
 
 export interface ArticleExtract {
@@ -44,6 +42,7 @@ export function extractKeyTakeaways(content: string): string[] | null {
 }
 
 export async function extractArticleContent(slugs: string[]): Promise<ArticleExtract[]> {
+  'use server'
   const results: ArticleExtract[] = []
 
   for (const slug of slugs) {
