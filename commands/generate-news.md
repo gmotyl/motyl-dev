@@ -36,6 +36,21 @@ When preparing newsletters:
 - `/generate-news 3 daily.dev` → Process 3 daily.dev newsletters only
 - `/generate-news all daily.dev safe` → Process all daily.dev newsletters, safe mode
 
+## Body-Only Newsletters
+
+Some newsletters use tracking URLs that cannot be resolved to actual article content. For these newsletters, skip link extraction entirely and use the newsletter body directly.
+
+**Newsletters that should use body-only mode:**
+
+- `The Batch` - All links are deeplearning.ai tracking URLs that don't resolve to article content
+
+When processing these newsletters:
+
+1. Skip calling `mcp__newsletter-ai__get_newsletter_links`
+2. Skip the article scraping step entirely
+3. Go directly to `mcp__newsletter-ai__get_newsletter_body`
+4. Use the body content for article generation
+
 **Workflow:**
 
 **IMPORTANT: Track which newsletters are actually processed (either used for article generation OR deemed useless/promotional) to avoid marking all prepared newsletters as processed/deleted**
@@ -71,24 +86,33 @@ When preparing newsletters:
 5. **For each newsletter (sequentially, automatically):**
 
    - Display: "Processing newsletter X of Y: [name]..."
+
+   **Check if newsletter uses body-only mode:**
+   - If newsletter name matches a body-only newsletter (e.g., "The Batch"):
+     - Display: "📋 [name] uses body-only mode (tracking URLs). Fetching body directly..."
+     - Skip link extraction and scraping
+     - Go directly to body retrieval (see body fallback below)
+
+   **Standard link extraction (for non-body-only newsletters):**
    - Call `mcp__newsletter-ai__get_newsletter_links` to get links
    - Display: "Scraping X articles..."
    - For each link (in parallel when possible):
      - Call `mcp__newsletter-ai__scrape_article` to get content
      - Skip if scraping fails (log error but continue)
      - Keep track of successfully scraped articles
-   - **Handle fallback scenario:**
-     - If ALL links failed to scrape OR the newsletter has 0 links:
-       - Display: "⚠️ No articles could be scraped. Attempting to use newsletter body as fallback..."
-       - Call `mcp__newsletter-ai__get_newsletter_body` with the newsletter's UID
-       - If body is available:
-         - Display: "✓ Using newsletter body content as fallback"
-         - Use the bodyText or bodyHtml as content for article generation
-         - Mark this as a "body-based" article (different prompt approach)
-         - **IMPORTANT**: Extract any URLs from the newsletter body and add them as proper `**Link:**` entries after each topic section
-       - If body is NOT available:
-         - Display: "✗ Newsletter body not available. Skipping this newsletter."
-         - Continue to next newsletter
+
+   **Handle fallback scenario (or body-only mode):**
+   - If ALL links failed to scrape OR the newsletter has 0 links OR newsletter is in body-only mode:
+     - If not body-only mode: Display: "⚠️ No articles could be scraped. Attempting to use newsletter body as fallback..."
+     - Call `mcp__newsletter-ai__get_newsletter_body` with the newsletter's UID
+     - If body is available:
+       - Display: "✓ Using newsletter body content"
+       - Use the bodyText or bodyHtml as content for article generation
+       - Mark this as a "body-based" article (different prompt approach)
+       - **IMPORTANT**: Extract any URLs from the newsletter body and add them as proper `**Link:**` entries after each topic section
+     - If body is NOT available:
+       - Display: "✗ Newsletter body not available. Skipping this newsletter."
+       - Continue to next newsletter
    - Display: "Generating article content..."
    - **Generate article content** using the prompt template:
      - Replace `{NARRATOR_PERSONA}` with config.narratorPersona
