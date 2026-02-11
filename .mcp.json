@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "newsletter-ai": {
+      "command": "/home/claw/git/prv/newsletter-ai/node_modules/.bin/tsx",
+      "args": ["/home/claw/git/prv/newsletter-ai/src/mcp/index.ts"],
+      "cwd": "/home/claw/git/prv/newsletter-ai",
+      "env": {
+        "PROJECT_DIR": "/home/claw/git/prv/newsletter-ai",
+        "OUTPUT_PATH": "/home/claw/git/prv/motyl-dev/news/2026",
+        "NARRATOR_PERSONA": "Scott Hanselman"
+      }
+    }
+  }
+}
