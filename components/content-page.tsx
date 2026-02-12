@@ -10,6 +10,7 @@ import { Breadcrumb } from '@/components/breadcrumb'
 import { ArticleViewTracker } from '@/components/article-view-tracker'
 import { ShareAIButton } from '@/components/share-ai-button'
 import { ArticleNavigation } from '@/components/article-navigation'
+import { BuyMeACoffeeButton } from '@/components/buy-me-a-coffee-button'
 import AdUnit from '@/components/ad-unit'
 import { type Content, ItemType } from '@/lib/types'
 import { getContentUrl } from '@/lib/urls'
@@ -132,6 +133,8 @@ export async function ContentPage({ article, prevArticle, nextArticle }: Content
           </header>
 
           <MarkdownWithCTA content={article.content} itemType={article.itemType} articleSlug={article.slug} />
+
+          <BuyMeACoffeeButton itemType={article.itemType} />
 
           <div className="my-6">
             <AdUnit
