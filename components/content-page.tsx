@@ -134,6 +134,8 @@ export async function ContentPage({ article, prevArticle, nextArticle }: Content
 
           <MarkdownWithCTA content={article.content} itemType={article.itemType} articleSlug={article.slug} />
 
+          <BuyMeACoffeeButton itemType={article.itemType} />
+
           <div className="my-6">
             <AdUnit
               pId="5937972178718571"
@@ -163,8 +165,6 @@ export async function ContentPage({ article, prevArticle, nextArticle }: Content
           </div>
 
           <ArticleNavigation prevArticle={prevArticle} nextArticle={nextArticle} />
-
-          <BuyMeACoffeeButton />
         </article>
       </main>
       <Footer />
