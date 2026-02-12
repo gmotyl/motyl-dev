@@ -10,6 +10,7 @@ import { Breadcrumb } from '@/components/breadcrumb'
 import { ArticleViewTracker } from '@/components/article-view-tracker'
 import { ShareAIButton } from '@/components/share-ai-button'
 import { ArticleNavigation } from '@/components/article-navigation'
+import { BuyMeACoffeeButton } from '@/components/buy-me-a-coffee-button'
 import AdUnit from '@/components/ad-unit'
 import { type Content, ItemType } from '@/lib/types'
 import { getContentUrl } from '@/lib/urls'
@@ -162,6 +163,8 @@ export async function ContentPage({ article, prevArticle, nextArticle }: Content
           </div>
 
           <ArticleNavigation prevArticle={prevArticle} nextArticle={nextArticle} />
+
+          <BuyMeACoffeeButton />
         </article>
       </main>
       <Footer />
