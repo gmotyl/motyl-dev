@@ -1,54 +1,50 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
+
+declare global {
+  interface Window {
+    bmcButton?: {
+      render: () => void
+    }
+  }
+}
 
 export function BuyMeACoffeeButton() {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const scriptLoaded = useRef(false)
-
   useEffect(() => {
-    if (scriptLoaded.current) return
-
-    const loadScript = () => {
-      const script = document.createElement('script')
-      script.src = 'https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js'
-      script.type = 'text/javascript'
-      script.async = true
-
-      const attributes = {
-        'data-name': 'bmc-button',
-        'data-slug': 'motyl.dev',
-        'data-color': '#BD5FFF',
-        'data-emoji': '',
-        'data-font': 'Cookie',
-        'data-text': 'Buy me a coffee',
-        'data-outline-color': '#000000',
-        'data-font-color': '#ffffff',
-        'data-coffee-color': '#FFDD00',
+    const loadBMCButton = () => {
+      // Check if script already exists
+      if (document.querySelector('script[data-name="bmc-button"]')) {
+        return
       }
 
-      Object.entries(attributes).forEach(([key, value]) => {
-        script.setAttribute(key, value)
-      })
+      const script = document.createElement('script')
+      script.src = 'https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js'
+      script.setAttribute('data-name', 'bmc-button')
+      script.setAttribute('data-slug', 'motyl.dev')
+      script.setAttribute('data-color', '#BD5FFF')
+      script.setAttribute('data-emoji', '')
+      script.setAttribute('data-font', 'Cookie')
+      script.setAttribute('data-text', 'Buy me a coffee')
+      script.setAttribute('data-outline-color', '#000000')
+      script.setAttribute('data-font-color', '#ffffff')
+      script.setAttribute('data-coffee-color', '#FFDD00')
+
+      script.onload = () => {
+        if (window.bmcButton) {
+          window.bmcButton.render()
+        }
+      }
 
       script.onerror = () => {
-        console.error('Failed to load Buy Me A Coffee script')
+        console.error('Failed to load Buy Me A Coffee button')
       }
 
       document.body.appendChild(script)
-      scriptLoaded.current = true
     }
 
-    loadScript()
-
-    return () => {
-      const existingScript = document.querySelector('script[data-name="bmc-button"]')
-      if (existingScript) {
-        existingScript.remove()
-        scriptLoaded.current = false
-      }
-    }
+    loadBMCButton()
   }, [])
 
-  return <div ref={containerRef} className="my-8 flex justify-center" />
+  return <div className="my-8 flex justify-center" id="bmc-button-container" />
 }
