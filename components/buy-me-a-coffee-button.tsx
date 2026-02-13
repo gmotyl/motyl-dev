@@ -9,8 +9,9 @@ interface BuyMeACoffeeButtonProps {
 export function BuyMeACoffeeButton({ itemType }: BuyMeACoffeeButtonProps) {
   const isNews = itemType === ItemType.News
   const ctaText = isNews
-    ? '☕ Knowledge costs tokens, fuel me'
+    ? '☕ Knowledge costs tokens,'
     : '☕ Buy me a coffee'
+  const ctaTextLine2 = isNews ? 'fuel me' : null
   const subtitle = isNews
     ? 'Help me keep the content flowing'
     : 'Support the effort to maintain this site'
@@ -28,7 +29,10 @@ export function BuyMeACoffeeButton({ itemType }: BuyMeACoffeeButtonProps) {
           fontSize: '1.125rem',
         }}
       >
-        <span>{ctaText}</span>
+        <span className="flex flex-col items-center">
+          <span>{ctaText}</span>
+          {ctaTextLine2 && <span>{ctaTextLine2}</span>}
+        </span>
         <span className="text-sm opacity-90 group-hover:opacity-100">{subtitle}</span>
       </a>
     </div>
