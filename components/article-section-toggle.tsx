@@ -17,8 +17,8 @@ interface SectionToggleProps {
 function SectionToggle({ section, label, checked, onChange }: SectionToggleProps) {
   return (
     <div className="flex items-center justify-between gap-3 py-2">
-      <Label 
-        htmlFor={section} 
+      <Label
+        htmlFor={section}
         className="text-sm text-gray-300 cursor-pointer"
       >
         {label}
@@ -35,23 +35,28 @@ function SectionToggle({ section, label, checked, onChange }: SectionToggleProps
 
 const STORAGE_KEY = 'article-hidden-sections'
 
+const ALL_SECTIONS: { id: SectionType; label: string }[] = [
+  { id: 'tldr', label: 'TLDR' },
+  { id: 'summary', label: 'Summary' },
+  { id: 'keyTakeaways', label: 'Key Takeaways' },
+  { id: 'tradeoffs', label: 'Tradeoffs' },
+]
+
 interface ArticleSectionToggleProps {
   onChange: (hiddenTypes: Set<SectionType>) => void
   defaultHidden?: SectionType[]
 }
 
-export function ArticleSectionToggle({ 
-  onChange, 
-  defaultHidden = ['summary', 'keyTakeaways', 'tradeoffs'] 
+export function ArticleSectionToggle({
+  onChange,
+  defaultHidden = ['summary', 'keyTakeaways', 'tradeoffs']
 }: ArticleSectionToggleProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isHydrated, setIsHydrated] = useState(false)
   const [sections, setSections] = useState<Record<SectionType, boolean>>(() => {
-    const initial: Record<SectionType, boolean> = {
-      tldr: !defaultHidden.includes('tldr'),
-      summary: !defaultHidden.includes('summary'),
-      keyTakeaways: !defaultHidden.includes('keyTakeaways'),
-      tradeoffs: !defaultHidden.includes('tradeoffs'),
+    const initial: Record<SectionType, boolean> = {}
+    for (const section of ALL_SECTIONS) {
+      initial[section.id] = !defaultHidden.includes(section.id)
     }
     return initial
   })
@@ -109,30 +114,15 @@ export function ArticleSectionToggle({
               Show Sections
             </h3>
             <div className="space-y-1">
-              <SectionToggle
-                section="tldr"
-                label="TLDR"
-                checked={sections.tldr}
-                onChange={handleChange}
-              />
-              <SectionToggle
-                section="summary"
-                label="Summary"
-                checked={sections.summary}
-                onChange={handleChange}
-              />
-              <SectionToggle
-                section="keyTakeaways"
-                label="Key Takeaways"
-                checked={sections.keyTakeaways}
-                onChange={handleChange}
-              />
-              <SectionToggle
-                section="tradeoffs"
-                label="Tradeoffs"
-                checked={sections.tradeoffs}
-                onChange={handleChange}
-              />
+              {ALL_SECTIONS.map((sectionInfo) => (
+                <SectionToggle
+                  key={sectionInfo.id}
+                  section={sectionInfo.id}
+                  label={sectionInfo.label}
+                  checked={sections[sectionInfo.id]}
+                  onChange={handleChange}
+                />
+              ))}
             </div>
             <Button
               onClick={() => setIsOpen(false)}
