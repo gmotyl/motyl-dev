@@ -70,8 +70,8 @@ describe('ArticleSectionToggle', () => {
     await user.click(tldrSwitch)
 
     expect(onChange).toHaveBeenCalled()
-    const hiddenTypes = onChange.mock.calls[0][0]
-    expect(hiddenTypes.has('tldr')).toBe(true)
+    const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1][0]
+    expect(lastCall.has('tldr')).toBe(true)
   })
 
   it('persists toggle state to localStorage', async () => {
@@ -96,5 +96,67 @@ describe('ArticleSectionToggle', () => {
     expect(saved).toBeTruthy()
     const parsed = JSON.parse(saved!)
     expect(parsed.tldr).toBe(false)
+  })
+
+  it('calls onChange on initial load with default hidden sections', async () => {
+    const onChange = vi.fn()
+    render(<ArticleSectionToggle onChange={onChange} />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Customize Sections')).toBeInTheDocument()
+    })
+
+    expect(onChange).toHaveBeenCalled()
+    const hiddenTypes = onChange.mock.calls[0][0]
+    expect(hiddenTypes.has('summary')).toBe(true)
+    expect(hiddenTypes.has('keyTakeaways')).toBe(true)
+    expect(hiddenTypes.has('tradeoffs')).toBe(true)
+    expect(hiddenTypes.has('tldr')).toBe(false)
+  })
+
+  it('calls onChange after hydrating from localStorage', async () => {
+    const initialState = {
+      tldr: true,
+      summary: false,
+      keyTakeaways: false,
+      tradeoffs: false,
+    }
+    localStorageMock.setItem('article-hidden-sections', JSON.stringify(initialState))
+
+    const onChange = vi.fn()
+    render(<ArticleSectionToggle onChange={onChange} />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Customize Sections')).toBeInTheDocument()
+    })
+
+    expect(onChange).toHaveBeenCalled()
+    const hiddenTypes = onChange.mock.calls[0][0]
+    expect(hiddenTypes.has('summary')).toBe(true)
+    expect(hiddenTypes.has('keyTakeaways')).toBe(true)
+    expect(hiddenTypes.has('tradeoffs')).toBe(true)
+    expect(hiddenTypes.has('tldr')).toBe(false)
+  })
+
+  it('propagates state changes to parent on every toggle', async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    render(<ArticleSectionToggle onChange={onChange} />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Customize Sections')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByText('Customize Sections'))
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('TLDR')).toBeInTheDocument()
+    })
+
+    const summarySwitch = screen.getByLabelText('Summary')
+    await user.click(summarySwitch)
+
+    const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1][0]
+    expect(lastCall.has('summary')).toBe(false)
   })
 })
