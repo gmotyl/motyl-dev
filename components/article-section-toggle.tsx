@@ -62,7 +62,6 @@ export function ArticleSectionToggle({
   })
 
   useEffect(() => {
-    setIsHydrated(true)
     const saved = localStorage.getItem(STORAGE_KEY)
     if (saved) {
       try {
@@ -72,20 +71,26 @@ export function ArticleSectionToggle({
         // Use defaults
       }
     }
+    setIsHydrated(true)
   }, [])
+
+  useEffect(() => {
+    if (!isHydrated) return
+
+    const hidden = new Set<SectionType>()
+    Object.entries(sections).forEach(([k, v]) => {
+      if (!v) hidden.add(k as SectionType)
+    })
+    onChange(hidden)
+  }, [sections, isHydrated, onChange])
 
   const handleChange = useCallback((section: SectionType, checked: boolean) => {
     setSections(prev => {
       const newSections = { ...prev, [section]: checked }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newSections))
-      const hidden = new Set<SectionType>()
-      Object.entries(newSections).forEach(([k, v]) => {
-        if (!v) hidden.add(k as SectionType)
-      })
-      onChange(hidden)
       return newSections
     })
-  }, [onChange])
+  }, [])
 
   if (!isHydrated) {
     return null
