@@ -48,6 +48,7 @@ export function MarkdownContent({ content, itemType }: MarkdownContentProps) {
               buttonLabel="Copy for AI"
               shareTitle="Summarize linked article with AI"
               successMessage="Copied! Paste in ChatGPT/Gemini to fetch and summarize this link 🔊"
+              iconOnly={true}
             />
           </>
         )

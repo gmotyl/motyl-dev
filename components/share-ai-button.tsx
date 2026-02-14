@@ -19,6 +19,7 @@ interface ShareAIButtonProps {
   shareTitle?: string
   successMessage?: string
   desktopSuccessMessage?: string
+  iconOnly?: boolean
 }
 
 const DEFAULT_OUTPUT_LANGUAGE = 'Polish'
@@ -31,6 +32,7 @@ export function ShareAIButton({
   url,
   title,
   successMessage = 'Copied! Paste in ChatGPT/Gemini 🔊',
+  iconOnly = false,
 }: ShareAIButtonProps) {
   const [outputLanguage, setOutputLanguage] = useState(DEFAULT_OUTPUT_LANGUAGE)
   const [editLanguage, setEditLanguage] = useState(DEFAULT_OUTPUT_LANGUAGE)
@@ -193,8 +195,9 @@ export function ShareAIButton({
   if (!isHydrated) {
     return (
     <span className="inline-flex gap-1 my-1 align-middle">
-        <Button variant="outline" size="sm" className="px-2" disabled title="Read with AI">
+        <Button variant="outline" size="sm" className={iconOnly ? "px-2" : "gap-2"} disabled title="Read with AI">
           <Share2 className="h-4 w-4" />
+          {!iconOnly && "Read with AI"}
         </Button>
         <Button variant="ghost" size="sm" className="px-2" disabled>
           <Settings className="h-4 w-4" />
@@ -205,7 +208,7 @@ export function ShareAIButton({
 
   return (
     <span className="inline-flex gap-1 my-1 align-middle">
-      <Button onClick={handleShare} variant="outline" size="sm" className="px-2" title="Read with AI" disabled={isLoadingContent}>
+      <Button onClick={handleShare} variant="outline" size="sm" className={iconOnly ? "px-2" : "gap-2"} title="Read with AI" disabled={isLoadingContent}>
         {isLoadingContent ? (
           <svg className="animate-spin h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -216,6 +219,7 @@ export function ShareAIButton({
         ) : (
           <Share2 className="h-4 w-4" />
         )}
+        {!iconOnly && (isLoadingContent ? "Loading..." : isCopied ? "Copied!" : "Read with AI")}
       </Button>
 
       <Popover open={isOpen} onOpenChange={setIsOpen}>
