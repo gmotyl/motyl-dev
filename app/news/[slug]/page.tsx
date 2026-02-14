@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { getContentItemBySlug, getAllContentMetadata } from '@/lib/articles'
-import { ContentPage } from '@/components/content-page'
+import ContentPage from '@/components/content-page'
 import { ItemType } from '@/lib/types'
 import { getContentUrl } from '@/lib/urls'
 

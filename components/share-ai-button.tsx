@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label'
 import { getContentItemBySlug } from '@/lib/articles'
 
 interface ShareAIButtonProps {
+  articleContent?: string
   prompt: string
   articleSlug?: string
   url?: string
@@ -24,6 +25,7 @@ const DEFAULT_OUTPUT_LANGUAGE = 'Polish'
 const STORAGE_KEY_LANGUAGE = 'share-ai-output-language'
 
 export function ShareAIButton({
+  articleContent: passedContent,
   prompt,
   articleSlug,
   url,
@@ -100,7 +102,7 @@ export function ShareAIButton({
 
     // Append content if provided (for content-based sharing)
     // Use passed content parameter, falling back to state
-    const contentToUse = content ?? articleContent
+    const contentToUse = content ?? passedContent ?? articleContent
     if (contentToUse) {
       const cleaned = cleanContent(contentToUse)
       filledPrompt = `${filledPrompt}\n\n${cleaned}`

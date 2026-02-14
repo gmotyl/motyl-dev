@@ -22,7 +22,7 @@ export function BuyMeACoffeeButton({ itemType }: BuyMeACoffeeButtonProps) {
         href="https://www.buymeacoffee.com/motyl.dev"
         target="_blank"
         rel="noopener noreferrer"
-        className="group inline-flex flex-col items-center gap-3 px-9 py-6 rounded-lg text-white font-medium transition-all hover:scale-105 active:scale-95"
+        className="group w-full md:w-auto md:max-w-md inline-flex flex-col items-center gap-3 px-9 py-6 rounded-lg text-white font-medium transition-all hover:scale-105 active:scale-95"
         style={{
           background: 'linear-gradient(135deg, #BD5FFF 0%, #9d3dff 100%)',
           boxShadow: '0 4px 15px rgba(189, 95, 255, 0.3)',

@@ -7,6 +7,7 @@ import { type ExternalLink, type Content, ItemType } from './types.ts'
 
 export type ContentItem = Content
 export type ContentItemMetadata = Omit<Content, 'content' | 'externalLinks'>
+export type SectionType = 'tldr' | 'summary' | 'keyTakeaways' | 'tradeoffs'
 
 interface HashtagIndex {
   [hashtag: string]: string[]

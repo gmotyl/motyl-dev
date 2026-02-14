@@ -1,16 +1,15 @@
 import { promises as fs } from 'fs'
 import path from 'path'
 import Footer from '@/components/footer'
-import { MarkdownWithCTA } from '@/components/markdown-with-cta'
 import { WakeLockToggle } from '@/components/wake-lock-toggle'
 import { ArticleExternalLinks } from '@/components/article-external-links'
 import { HashtagsList } from '@/components/hashtags-list'
 import { ArticleScrollHandler } from '@/components/article-scroll-handler'
 import { Breadcrumb } from '@/components/breadcrumb'
 import { ArticleViewTracker } from '@/components/article-view-tracker'
-import { ShareAIButton } from '@/components/share-ai-button'
 import { ArticleNavigation } from '@/components/article-navigation'
 import { BuyMeACoffeeButton } from '@/components/buy-me-a-coffee-button'
+import { ArticleWrapper } from '@/components/article-wrapper'
 import AdUnit from '@/components/ad-unit'
 import { type Content, ItemType } from '@/lib/types'
 import { getContentUrl } from '@/lib/urls'
@@ -22,7 +21,7 @@ interface ContentPageProps {
   nextArticle: ContentItemMetadata | null
 }
 
-export async function ContentPage({ article, prevArticle, nextArticle }: ContentPageProps) {
+export default async function ContentPage({ article, prevArticle, nextArticle }: ContentPageProps) {
   const translatePromptPath = path.join(process.cwd(), 'public', 'SUMMARY_PROMPT.md')
   const translatePrompt = await fs.readFile(translatePromptPath, 'utf-8')
 
@@ -112,17 +111,7 @@ export async function ContentPage({ article, prevArticle, nextArticle }: Content
                   year: 'numeric',
                 })}
               </p>
-              <div className="flex gap-2">
-                <WakeLockToggle />
-                <ShareAIButton
-                  prompt={translatePrompt}
-                  articleSlug={article.slug}
-                  buttonLabel="AI Review"
-                  shareTitle="Review article with AI"
-                  successMessage="Shared successfully! Now send the message and tap Read Aloud 🔊"
-                  desktopSuccessMessage="Copied! Open ChatGPT or Gemini, paste, and use Read Aloud 🔊"
-                />
-              </div>
+              <WakeLockToggle />
             </div>
             <HashtagsList
               hashtags={article.hashtags}
@@ -132,7 +121,7 @@ export async function ContentPage({ article, prevArticle, nextArticle }: Content
             />
           </header>
 
-          <MarkdownWithCTA content={article.content} itemType={article.itemType} articleSlug={article.slug} />
+          <ArticleWrapper article={article} translatePrompt={translatePrompt} />
 
           <BuyMeACoffeeButton itemType={article.itemType} />
 
