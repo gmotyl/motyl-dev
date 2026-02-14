@@ -9,8 +9,8 @@ export interface ArticleExtract {
 
 export function extractTldr(content: string): string | null {
   const patterns = [
-    /\*\*TLDR:\*\*\s*([\s\S]*?)(?=\n\n(?:\*\*|##|---|$))/i,
-    /^###?\s+TLDR:?\s*\n\n([\s\S]*?)(?=\n\n(?:\*\*|##|---|$))/im,
+    /\*\*TLDR:\*\*\s*([\s\S]*?)(?=\n\n(?:\*\*|##|---|$)|$)/i,
+    /^###?\s+TLDR:?\s*\n\n([\s\S]*?)(?=\n\n(?:\*\*|##|---|$)|$)/im,
   ]
 
   for (const pattern of patterns) {
@@ -24,8 +24,8 @@ export function extractTldr(content: string): string | null {
 
 export function extractKeyTakeaways(content: string): string[] | null {
   const patterns = [
-    /\*\*Key takeaways:\*\*\s*\n([\s\S]*?)(?=\n\n(?:\*\*|##|---|$))/i,
-    /^##\s+Key [A-Za-z\s]+\n\n([\s\S]*?)(?=\n\n(?:\*\*|##|---|$))/im,
+    /\*\*Key takeaways:\*\*\s*\n([\s\S]*?)(?=\n\n(?:\*\*|##|---|$)|$)/i,
+    /^##\s+Key [A-Za-z\s]+\n\n([\s\S]*?)(?=\n\n(?:\*\*|##|---|$)|$)/im,
   ]
 
   for (const pattern of patterns) {
