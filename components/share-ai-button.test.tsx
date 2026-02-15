@@ -36,12 +36,12 @@ describe('ShareAIButton', () => {
     localStorageMock.clear()
   })
 
-  it('renders the "Read with AI" button', async () => {
+  it('renders the "share" button', async () => {
     render(<ShareAIButton prompt="Test prompt" />)
 
     // Wait for hydration
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Read with AI/i })).toBeEnabled()
+      expect(screen.getByRole('button', { name: /share/i })).toBeEnabled()
     })
   })
 
@@ -51,10 +51,10 @@ describe('ShareAIButton', () => {
     render(<ShareAIButton prompt="Test prompt for AI" />)
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Read with AI/i })).toBeEnabled()
+      expect(screen.getByRole('button', { name: /share/i })).toBeEnabled()
     })
 
-    await user.click(screen.getByRole('button', { name: /Read with AI/i }))
+    await user.click(screen.getByRole('button', { name: /share/i }))
 
     // Verify the button shows "Copied!" state
     await waitFor(() => {
@@ -92,11 +92,11 @@ describe('ShareAIButton', () => {
       render(<ShareAIButton prompt="Summarize this:" articleSlug="test-article" />)
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Read with AI/i })).toBeEnabled()
+        expect(screen.getByRole('button', { name: /share/i })).toBeEnabled()
       })
 
       // First click - this is where the race condition used to occur
-      await user.click(screen.getByRole('button', { name: /Read with AI/i }))
+      await user.click(screen.getByRole('button', { name: /share/i }))
 
       // Verify content was fetched
       await waitFor(() => {
@@ -125,11 +125,11 @@ describe('ShareAIButton', () => {
       render(<ShareAIButton prompt="Summarize this:" articleSlug="test-article" />)
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Read with AI/i })).toBeEnabled()
+        expect(screen.getByRole('button', { name: /share/i })).toBeEnabled()
       })
 
       // First click
-      await user.click(screen.getByRole('button', { name: /Read with AI/i }))
+      await user.click(screen.getByRole('button', { name: /share/i }))
 
       await waitFor(() => {
         expect(screen.getByText('Copied!')).toBeInTheDocument()
@@ -138,13 +138,13 @@ describe('ShareAIButton', () => {
       // Wait for button to reset
       await waitFor(
         () => {
-          expect(screen.getByText('Read with AI')).toBeInTheDocument()
+          expect(screen.getByText('Share')).toBeInTheDocument()
         },
         { timeout: 4000 }
       )
 
       // Second click
-      await user.click(screen.getByRole('button', { name: /Read with AI/i }))
+      await user.click(screen.getByRole('button', { name: /share/i }))
 
       await waitFor(() => {
         expect(screen.getByText('Copied!')).toBeInTheDocument()
@@ -164,10 +164,10 @@ describe('ShareAIButton', () => {
       render(<ShareAIButton prompt="Read:" articleSlug="test-article" />)
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Read with AI/i })).toBeEnabled()
+        expect(screen.getByRole('button', { name: /share/i })).toBeEnabled()
       })
 
-      await user.click(screen.getByRole('button', { name: /Read with AI/i }))
+      await user.click(screen.getByRole('button', { name: /share/i }))
 
       // Button should NOT show "Copied!" state when fetch fails
       await waitFor(() => {
@@ -183,10 +183,10 @@ describe('ShareAIButton', () => {
       render(<ShareAIButton prompt="Read:" articleSlug="nonexistent" />)
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Read with AI/i })).toBeEnabled()
+        expect(screen.getByRole('button', { name: /share/i })).toBeEnabled()
       })
 
-      await user.click(screen.getByRole('button', { name: /Read with AI/i }))
+      await user.click(screen.getByRole('button', { name: /share/i }))
 
       // Button should NOT show "Copied!" state when article not found
       await waitFor(() => {
