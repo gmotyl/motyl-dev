@@ -9,6 +9,9 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  experimental: {
+    serverComponentsExternalPackages: ['edge-tts'],
+  },
   async redirects() {
     const allContent = await getAllContent();
     const newsItems = allContent.filter((item) => item.itemType === ItemType.News);
