@@ -1,5 +1,5 @@
-import { getAllContent } from './lib/articles.ts';
-import { ItemType } from './lib/types.ts';
+import { getAllContent } from './lib/articles.ts'
+import { ItemType } from './lib/types.ts'
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -9,18 +9,16 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  experimental: {
-    serverComponentsExternalPackages: ['edge-tts'],
-  },
+  serverExternalPackages: ['edge-tts'],
   async redirects() {
-    const allContent = await getAllContent();
-    const newsItems = allContent.filter((item) => item.itemType === ItemType.News);
+    const allContent = await getAllContent()
+    const newsItems = allContent.filter((item) => item.itemType === ItemType.News)
 
     return newsItems.map((item) => ({
       source: `/articles/${item.slug}`,
       destination: `/news/${item.slug}`,
       permanent: true,
-    }));
+    }))
   },
   async headers() {
     return [
@@ -37,8 +35,8 @@ const nextConfig = {
           },
         ],
       },
-    ];
+    ]
   },
-};
+}
 
-export default nextConfig;
+export default nextConfig

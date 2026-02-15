@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { detectLanguageFromContent } from '@/lib/tts'
 
 interface TTSState {
   isPlaying: boolean
@@ -25,40 +26,8 @@ interface UseTTSOptions {
   onError?: (error: Error) => void
 }
 
-// Language detection from hashtags or content
-const detectLanguage = (text: string): string => {
-  // Common Polish words detection
-  const polishPatterns = /[a-z]{1,4}(?:[a-z]*|(?:ów|ie|y|a|ego|emu|ach|ami|ami|owe|owa|owe))/i
-  const polishWords = [
-    'jest',
-    'ale',
-    'dla',
-    'tego',
-    'tego',
-    'tak',
-    'jak',
-    'to',
-    'co',
-    'na',
-    'do',
-    'za',
-    'od',
-    'po',
-    'we',
-    'we',
-    'ze',
-  ]
-
-  const words = text.toLowerCase().split(/\s+/)
-  const polishWordCount = words.filter((w) => polishWords.includes(w)).length
-
-  // If more than 10% of common words are Polish, use Polish voice
-  if (polishWordCount > words.length * 0.1) {
-    return 'pl-PL-MarekNeural'
-  }
-
-  return 'en-GB-RyanNeural'
-}
+// Language detection from content (using shared utility)
+const detectLanguage = detectLanguageFromContent
 
 // Split text into chunks suitable for TTS (max ~500 chars each)
 const splitIntoChunks = (text: string, maxLength = 450): string[] => {
@@ -276,6 +245,11 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         // All chunks played
         setState((prev) => ({ ...prev, isPlaying: false, progress: 100 }))
         onComplete?.()
+
+        // Reset for next playback
+        currentChunkIndexRef.current = 0
+        completedCharsRef.current = 0
+
         return
       }
 
@@ -376,8 +350,8 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     isPlayingRef.current = true
     setState((prev) => ({ ...prev, isPlaying: true }))
 
-    // Start from beginning or current position
-    playChunk(0)
+    // Start from the current chunk to allow resuming
+    playChunk(currentChunkIndexRef.current)
   }, [content, playChunk, state.isPlaying, voice])
 
   // Pause function

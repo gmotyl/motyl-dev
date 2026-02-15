@@ -4,6 +4,7 @@ import { spawn } from 'child_process'
 import { readFile, unlink } from 'fs/promises'
 import { join } from 'path'
 import { tmpdir } from 'os'
+import { randomUUID } from 'crypto'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
@@ -35,7 +36,7 @@ const LANGUAGE_VOICES: Record<string, string> = {
 // Helper to run uvx edge-tts command
 function generateSpeech(text: string, voice: string): Promise<Buffer> {
   return new Promise(async (resolve, reject) => {
-    const tempFile = join(tmpdir(), `tts_${Date.now()}.mp3`)
+    const tempFile = join(tmpdir(), `tts_${randomUUID()}.mp3`)
 
     try {
       // Run uvx edge-tts command

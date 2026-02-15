@@ -29,6 +29,39 @@ function formatTime(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
+// Login modal component (reused in both compact and full views)
+const LoginModal = ({
+  open,
+  onOpenChange,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) => (
+  <Dialog open={open} onOpenChange={onOpenChange}>
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Sign In Required</DialogTitle>
+        <DialogDescription>
+          You need to sign in to use the Text-to-Speech feature. This helps protect the API from
+          abuse.
+        </DialogDescription>
+      </DialogHeader>
+      <div className="flex flex-col gap-4 mt-4">
+        <Button
+          onClick={() => {
+            signIn()
+            onOpenChange(false)
+          }}
+          className="gap-2"
+        >
+          <LogIn className="h-4 w-4" />
+          Sign In with GitHub
+        </Button>
+      </div>
+    </DialogContent>
+  </Dialog>
+)
+
 export function TTSPlayer({ content, title, voice, className, compact = false }: TTSPlayerProps) {
   const { data: session } = useSession()
   const [showLoginModal, setShowLoginModal] = useState(false)
@@ -92,24 +125,7 @@ export function TTSPlayer({ content, title, voice, className, compact = false }:
           )}
         </div>
 
-        {/* Login Required Modal */}
-        <Dialog open={showLoginModal} onOpenChange={setShowLoginModal}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Sign In Required</DialogTitle>
-              <DialogDescription>
-                You need to sign in to use the Text-to-Speech feature. This helps protect the API
-                from abuse.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex flex-col gap-4 mt-4">
-              <Button onClick={handleLogin} className="gap-2">
-                <LogIn className="h-4 w-4" />
-                Sign In with GitHub
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <LoginModal open={showLoginModal} onOpenChange={setShowLoginModal} />
       </>
     )
   }
@@ -185,24 +201,7 @@ export function TTSPlayer({ content, title, voice, className, compact = false }:
         )}
       </div>
 
-      {/* Login Required Modal */}
-      <Dialog open={showLoginModal} onOpenChange={setShowLoginModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Sign In Required</DialogTitle>
-            <DialogDescription>
-              You need to sign in to use the Text-to-Speech feature. This helps protect the API from
-              abuse.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-4 mt-4">
-            <Button onClick={handleLogin} className="gap-2">
-              <LogIn className="h-4 w-4" />
-              Sign In with GitHub
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <LoginModal open={showLoginModal} onOpenChange={setShowLoginModal} />
     </>
   )
 }

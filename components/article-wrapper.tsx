@@ -7,6 +7,7 @@ import { ShareAIButton } from '@/components/share-ai-button'
 import { TTSPlayer } from '@/components/tts-player'
 import { filterHiddenSections, type SectionType } from '@/lib/section-filter'
 import { ItemType } from '@/lib/types'
+import { detectLanguageFromHashtags } from '@/lib/tts'
 
 interface ArticleWrapperProps {
   article: {
@@ -17,33 +18,6 @@ interface ArticleWrapperProps {
     hashtags?: string[]
   }
   translatePrompt: string
-}
-
-// Detect language from hashtags
-const detectLanguageFromHashtags = (hashtags: string[] = []): string => {
-  const languageMap: Record<string, string> = {
-    pl: 'pl-PL-MarekNeural',
-    en: 'en-GB-RyanNeural',
-    es: 'es-ES-ElviraNeural',
-    fr: 'fr-FR-DeniseNeural',
-    de: 'de-DE-KatjaNeural',
-    it: 'it-IT-ElsaNeural',
-    pt: 'pt-PT-RaquelNeural',
-    ru: 'ru-RU-SvetlanaNeural',
-    ja: 'ja-JP-NanamiNeural',
-    zh: 'zh-CN-XiaoxiaoNeural',
-    ko: 'ko-KR-SunHiNeural',
-  }
-
-  for (const hashtag of hashtags) {
-    const lang = hashtag.toLowerCase()
-    if (languageMap[lang]) {
-      return languageMap[lang]
-    }
-  }
-
-  // Default to English (British male voice)
-  return 'en-GB-RyanNeural'
 }
 
 export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps) {
