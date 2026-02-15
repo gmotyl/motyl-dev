@@ -202,7 +202,7 @@ export function ShareAIButton({
           disabled
           title="Read with AI"
         >
-          <Sparkles className="h-4 w-4" />
+          {iconOnly ? <Share2 className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
           {!iconOnly && 'share'}
         </Button>
         <Button variant="ghost" size="sm" className="px-2" disabled>
@@ -218,7 +218,7 @@ export function ShareAIButton({
         onClick={handleShare}
         variant="outline"
         size="sm"
-        className="gap-2"
+        className={iconOnly ? 'px-2' : 'gap-2'}
         title={title}
         disabled={isLoadingContent}
       >
@@ -250,12 +250,12 @@ export function ShareAIButton({
           ) : isCopied ? (
             <>
               <Copy className="h-4 w-4" />
-              Copied!
+              {!iconOnly && 'Copied!'}
             </>
           ) : (
             <>
-              <Share2 className="h-4 w-4" />
-              Read with AI
+              {iconOnly ? <Share2 className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+              {!iconOnly && 'Share'}
             </>
           )}
         </>

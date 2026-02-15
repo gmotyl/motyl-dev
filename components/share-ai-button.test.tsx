@@ -138,7 +138,7 @@ describe('ShareAIButton', () => {
       // Wait for button to reset
       await waitFor(
         () => {
-          expect(screen.getByText('share')).toBeInTheDocument()
+          expect(screen.getByText('Share')).toBeInTheDocument()
         },
         { timeout: 4000 }
       )
