@@ -33,10 +33,13 @@ const LANGUAGE_VOICES: Record<string, string> = {
   'ko-KR': 'ko-KR-SunHiNeural',
 }
 
+const TTS_TIMEOUT_MS = 25_000 // Kill process before Vercel's maxDuration (30s)
+
 // Helper to run uvx edge-tts command
 function generateSpeech(text: string, voice: string): Promise<Buffer> {
   return new Promise(async (resolve, reject) => {
     const tempFile = join(tmpdir(), `tts_${randomUUID()}.mp3`)
+    let settled = false
 
     try {
       // Run uvx edge-tts command
@@ -48,24 +51,40 @@ function generateSpeech(text: string, voice: string): Promise<Buffer> {
         }
       )
 
+      // Kill the process if it takes too long
+      const timeout = setTimeout(() => {
+        if (!settled) {
+          settled = true
+          proc.kill('SIGKILL')
+          unlink(tempFile).catch(() => {})
+          reject(new Error('TTS generation timed out'))
+        }
+      }, TTS_TIMEOUT_MS)
+
       let stderr = ''
       proc.stderr.on('data', (data) => {
         stderr += data.toString()
       })
 
       proc.on('close', async (code) => {
-        if (code !== 0) {
-          console.error('[TTS] uvx edge-tts failed:', stderr)
-          reject(new Error(`uvx edge-tts failed: ${stderr}`))
-          return
-        }
+        clearTimeout(timeout)
+        if (settled) return
+        settled = true
 
         try {
+          if (code !== 0) {
+            console.error('[TTS] uvx edge-tts failed:', stderr)
+            reject(new Error(`uvx edge-tts failed: ${stderr}`))
+            return
+          }
+
           const audioBuffer = await readFile(tempFile)
-          await unlink(tempFile) // Clean up temp file
           resolve(audioBuffer)
         } catch (err) {
           reject(err)
+        } finally {
+          // Always clean up temp file
+          unlink(tempFile).catch(() => {})
         }
       })
     } catch (err) {

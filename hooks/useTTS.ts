@@ -192,6 +192,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
           prefetchAbortControllerRef.current.signal
         )
         nextChunkBufferRef.current = buffer
+        prefetchAbortControllerRef.current = null
       } catch (error) {
         if ((error as Error).name !== 'AbortError') {
           console.warn('Prefetch failed:', error)
@@ -293,6 +294,12 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
           )
         } catch (error) {
           if ((error as Error).name === 'AbortError') return
+          abortControllerRef.current = null
+          if (animationFrameRef.current) {
+            cancelAnimationFrame(animationFrameRef.current)
+            animationFrameRef.current = null
+          }
+          isPlayingRef.current = false
           onError?.(error as Error)
           setState((prev) => ({ ...prev, isPlaying: false, isBuffering: false }))
           return
@@ -315,6 +322,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
       // Handle chunk end
       source.onended = () => {
+        // Disconnect completed source from audio graph
+        try { source.disconnect() } catch (e) { /* already disconnected */ }
+
         if (!isPlayingRef.current) return
 
         // Update completed characters
@@ -376,10 +386,11 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       pauseOffsetRef.current = Math.min(elapsed, currentChunkDurationRef.current)
     }
 
-    // Stop current source
+    // Stop and disconnect current source
     if (currentSourceRef.current) {
       try {
         currentSourceRef.current.stop()
+        currentSourceRef.current.disconnect()
       } catch (e) {
         // Source might already be stopped
       }
