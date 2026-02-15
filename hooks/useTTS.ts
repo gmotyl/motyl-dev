@@ -117,6 +117,8 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   const completedCharsRef = useRef<number>(0)
   const currentChunkStartTimeRef = useRef<number>(0)
   const currentChunkDurationRef = useRef<number>(0)
+  const pauseOffsetRef = useRef<number>(0) // seconds elapsed in current chunk when paused
+  const currentChunkBufferRef = useRef<AudioBuffer | null>(null) // retained for resume
   const abortControllerRef = useRef<AbortController | null>(null)
   const prefetchAbortControllerRef = useRef<AbortController | null>(null)
   const animationFrameRef = useRef<number | null>(null)
@@ -238,9 +240,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     }
   }, [onProgress, prefetchNextChunk])
 
-  // Play a single chunk
+  // Play a single chunk, optionally starting from an offset (seconds)
   const playChunk = useCallback(
-    async (index: number) => {
+    async (index: number, offset = 0) => {
       if (index >= chunksRef.current.length) {
         // All chunks played
         setState((prev) => ({ ...prev, isPlaying: false, progress: 100 }))
@@ -249,6 +251,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         // Reset for next playback
         currentChunkIndexRef.current = 0
         completedCharsRef.current = 0
+        nextChunkBufferRef.current = null
+        currentChunkBufferRef.current = null
+        pauseOffsetRef.current = 0
 
         return
       }
@@ -262,10 +267,13 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
       currentChunkIndexRef.current = index
 
-      // Check if we have a prefetched buffer
+      // Check if we have a cached/prefetched buffer
       let buffer: AudioBuffer
 
-      if (nextChunkBufferRef.current && index > 0) {
+      if (offset > 0 && currentChunkBufferRef.current) {
+        // Resuming mid-chunk: reuse the stored buffer
+        buffer = currentChunkBufferRef.current
+      } else if (nextChunkBufferRef.current && index > 0) {
         buffer = nextChunkBufferRef.current
         nextChunkBufferRef.current = null
       } else {
@@ -298,9 +306,11 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       source.buffer = buffer
       source.connect(audioContext.destination)
 
-      // Store reference for stopping
+      // Store reference for stopping/resuming
       currentSourceRef.current = source
-      currentChunkStartTimeRef.current = audioContext.currentTime
+      currentChunkBufferRef.current = buffer
+      // Adjust start time so progress calculation accounts for the offset
+      currentChunkStartTimeRef.current = audioContext.currentTime - offset
       currentChunkDurationRef.current = buffer.duration
 
       // Handle chunk end
@@ -314,8 +324,8 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         playChunk(index + 1)
       }
 
-      // Start playback
-      source.start(0)
+      // Start playback (from offset if resuming mid-chunk)
+      source.start(0, offset)
 
       // Start progress updates
       if (!animationFrameRef.current) {
@@ -350,13 +360,21 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     isPlayingRef.current = true
     setState((prev) => ({ ...prev, isPlaying: true }))
 
-    // Start from the current chunk to allow resuming
-    playChunk(currentChunkIndexRef.current)
+    // Resume from the exact position within the current chunk
+    const offset = pauseOffsetRef.current
+    pauseOffsetRef.current = 0
+    playChunk(currentChunkIndexRef.current, offset)
   }, [content, playChunk, state.isPlaying, voice])
 
   // Pause function
   const pause = useCallback(() => {
     isPlayingRef.current = false
+
+    // Record how far into the current chunk we got
+    if (audioContextRef.current && currentChunkDurationRef.current > 0) {
+      const elapsed = audioContextRef.current.currentTime - currentChunkStartTimeRef.current
+      pauseOffsetRef.current = Math.min(elapsed, currentChunkDurationRef.current)
+    }
 
     // Stop current source
     if (currentSourceRef.current) {
@@ -403,6 +421,8 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     completedCharsRef.current = 0
     currentChunkIndexRef.current = 0
     nextChunkBufferRef.current = null
+    currentChunkBufferRef.current = null
+    pauseOffsetRef.current = 0
 
     setState({
       isPlaying: false,
