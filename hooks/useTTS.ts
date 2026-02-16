@@ -14,12 +14,6 @@ interface TTSState {
   totalChunks: number
 }
 
-interface AudioBufferItem {
-  buffer: AudioBuffer
-  text: string
-  charCount: number
-}
-
 interface UseTTSOptions {
   voice?: string
   onProgress?: (progress: number) => void
@@ -27,19 +21,18 @@ interface UseTTSOptions {
   onError?: (error: Error) => void
 }
 
-// Language detection from content (using shared utility)
 const detectLanguage = detectLanguageFromContent
 
-// Split text into chunks suitable for TTS (max ~500 chars each)
-const splitIntoChunks = (text: string, maxLength = 450): string[] => {
+// Split text into chunks suitable for TTS
+const splitIntoChunks = (text: string, maxLength = 1000): string[] => {
   const chunks: string[] = []
-
-  // First, split by double newlines (paragraphs)
   const paragraphs = text.split(/\n\n+/)
 
   for (const paragraph of paragraphs) {
-    // Clean up the paragraph
-    let cleanParagraph = paragraph
+    // Skip horizontal rules (section separators)
+    if (/^-{3,}$/.test(paragraph.trim())) continue
+
+    let clean = paragraph
       .replace(/#{1,6}\s+/g, '') // Remove markdown headers
       .replace(/\*\*([^*]+)\*\*/g, '$1') // Remove bold
       .replace(/\*([^*]+)\*/g, '$1') // Remove italic
@@ -49,18 +42,16 @@ const splitIntoChunks = (text: string, maxLength = 450): string[] => {
       .replace(/>\s+/g, '') // Remove blockquotes
       .replace(/[-*+]\s+/g, '') // Remove list markers
       .replace(/\d+\.\s+/g, '') // Remove numbered list markers
-      .replace(/\n/g, ' ') // Replace single newlines with spaces
+      .replace(/\n/g, ' ') // Replace newlines with spaces
       .replace(/\s+/g, ' ') // Normalize whitespace
       .trim()
 
-    if (!cleanParagraph) continue
+    if (!clean) continue
 
-    // If paragraph fits in one chunk, add it
-    if (cleanParagraph.length <= maxLength) {
-      chunks.push(cleanParagraph)
+    if (clean.length <= maxLength) {
+      chunks.push(clean)
     } else {
-      // Split long paragraphs by sentences
-      const sentences = cleanParagraph.match(/[^.!?]+[.!?]+/g) || [cleanParagraph]
+      const sentences = clean.match(/[^.!?]+[.!?]+/g) || [clean]
       let currentChunk = ''
 
       for (const sentence of sentences) {
@@ -69,11 +60,9 @@ const splitIntoChunks = (text: string, maxLength = 450): string[] => {
         } else {
           if (currentChunk) chunks.push(currentChunk)
 
-          // If single sentence is too long, split by words
           if (sentence.length > maxLength) {
             const words = sentence.split(/\s+/)
             let wordChunk = ''
-
             for (const word of words) {
               if ((wordChunk + ' ' + word).trim().length <= maxLength) {
                 wordChunk = (wordChunk + ' ' + word).trim()
@@ -95,6 +84,9 @@ const splitIntoChunks = (text: string, maxLength = 450): string[] => {
   return chunks.filter((c) => c.length > 0)
 }
 
+// Number of chunks to keep buffered ahead of current playback
+const BUFFER_AHEAD = 2
+
 export function useTTS(content: string, options: UseTTSOptions = {}) {
   const { voice, onProgress, onComplete, onError } = options
 
@@ -110,7 +102,6 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
   // Refs for audio management
   const audioContextRef = useRef<AudioContext | null>(null)
-  const audioQueueRef = useRef<AudioBufferItem[]>([])
   const currentSourceRef = useRef<AudioBufferSourceNode | null>(null)
   const chunksRef = useRef<string[]>([])
   const charCountsRef = useRef<number[]>([])
@@ -118,17 +109,19 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   const completedCharsRef = useRef<number>(0)
   const currentChunkStartTimeRef = useRef<number>(0)
   const currentChunkDurationRef = useRef<number>(0)
-  const pauseOffsetRef = useRef<number>(0) // seconds elapsed in current chunk when paused
-  const currentChunkBufferRef = useRef<AudioBuffer | null>(null) // retained for resume
+  const pauseOffsetRef = useRef<number>(0)
+  const currentChunkBufferRef = useRef<AudioBuffer | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
-  const prefetchAbortControllerRef = useRef<AbortController | null>(null)
   const animationFrameRef = useRef<number | null>(null)
   const isPlayingRef = useRef(false)
   const currentChunkIndexRef = useRef(0)
-  const nextChunkBufferRef = useRef<AudioBuffer | null>(null)
   const voiceRef = useRef<string | null>(null)
 
-  // Initialize audio context
+  // Buffer cache: pre-fetched AudioBuffers keyed by chunk index
+  const bufferCacheRef = useRef<Map<number, AudioBuffer>>(new Map())
+  // Track in-flight fetches to avoid duplicate requests
+  const fetchingRef = useRef<Set<number>>(new Set())
+
   const getAudioContext = useCallback(() => {
     if (!audioContextRef.current) {
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
@@ -136,42 +129,27 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     return audioContextRef.current
   }, [])
 
-  // Synthesize audio buffer using client-side TTS
+  // Synthesize and decode a single chunk, returns AudioBuffer
   const fetchAudioBuffer = useCallback(
     async (text: string, signal: AbortSignal): Promise<AudioBuffer> => {
       const detectedVoice = voiceRef.current || detectLanguage(content)
-      console.log('[TTS] Synthesizing audio for voice:', detectedVoice, 'text length:', text.length)
 
-      // Check if aborted before starting
-      if (signal.aborted) {
-        throw new DOMException('Aborted', 'AbortError')
-      }
+      if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
 
-      // Use client-side TTS synthesis
       const arrayBuffer = await synthesizeSpeech(text, { voice: detectedVoice })
 
-      // Check if aborted after synthesis
-      if (signal.aborted) {
-        throw new DOMException('Aborted', 'AbortError')
-      }
+      if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
 
-      console.log('[TTS] Got audio data, size:', arrayBuffer.byteLength)
       const audioContext = getAudioContext()
 
-      // Decode the MP3 audio data
       return new Promise((resolve, reject) => {
-        // Check if aborted before decoding
         if (signal.aborted) {
           reject(new DOMException('Aborted', 'AbortError'))
           return
         }
-
         audioContext.decodeAudioData(
           arrayBuffer,
-          (buffer) => {
-            console.log('[TTS] Decoded audio, duration:', buffer.duration)
-            resolve(buffer)
-          },
+          (buffer) => resolve(buffer),
           (error) => reject(new Error(`Failed to decode audio: ${error}`))
         )
       })
@@ -179,49 +157,42 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     [content, getAudioContext]
   )
 
-  // Prefetch next chunk
-  const prefetchNextChunk = useCallback(
-    async (nextIndex: number) => {
-      if (nextIndex >= chunksRef.current.length) return
-      if (nextChunkBufferRef.current) return // Already prefetched
+  // Fill the buffer cache for chunks [startIndex .. startIndex + BUFFER_AHEAD)
+  const fillBuffer = useCallback(
+    (startIndex: number) => {
+      if (!abortControllerRef.current) return
 
-      // Cancel any existing prefetch
-      if (prefetchAbortControllerRef.current) {
-        prefetchAbortControllerRef.current.abort()
-      }
+      const end = Math.min(startIndex + BUFFER_AHEAD, chunksRef.current.length)
+      for (let i = startIndex; i < end; i++) {
+        if (bufferCacheRef.current.has(i) || fetchingRef.current.has(i)) continue
 
-      prefetchAbortControllerRef.current = new AbortController()
+        fetchingRef.current.add(i)
+        const signal = abortControllerRef.current!.signal
 
-      try {
-        const buffer = await fetchAudioBuffer(
-          chunksRef.current[nextIndex],
-          prefetchAbortControllerRef.current.signal
-        )
-        nextChunkBufferRef.current = buffer
-        prefetchAbortControllerRef.current = null
-      } catch (error) {
-        if ((error as Error).name !== 'AbortError') {
-          console.warn('Prefetch failed:', error)
-        }
+        fetchAudioBuffer(chunksRef.current[i], signal)
+          .then((buffer) => {
+            bufferCacheRef.current.set(i, buffer)
+            fetchingRef.current.delete(i)
+          })
+          .catch((err) => {
+            fetchingRef.current.delete(i)
+            if ((err as Error).name !== 'AbortError') {
+              console.warn(`[TTS] Buffer fetch failed for chunk ${i}:`, err)
+            }
+          })
       }
     },
     [fetchAudioBuffer]
   )
 
-  // Update progress
+  // Update progress via requestAnimationFrame
   const updateProgress = useCallback(() => {
     if (!isPlayingRef.current || !audioContextRef.current) return
 
     const audioContext = audioContextRef.current
-    const currentTime = audioContext.currentTime
-    const chunkStart = currentChunkStartTimeRef.current
-    const chunkDuration = currentChunkDurationRef.current
+    const elapsedInChunk = audioContext.currentTime - currentChunkStartTimeRef.current
+    const chunkProgress = Math.min(elapsedInChunk / currentChunkDurationRef.current, 1)
 
-    // Calculate elapsed time in current chunk
-    const elapsedInChunk = currentTime - chunkStart
-    const chunkProgress = Math.min(elapsedInChunk / chunkDuration, 1)
-
-    // Calculate total progress
     const completedChars = completedCharsRef.current
     const currentChunkChars = charCountsRef.current[currentChunkIndexRef.current] || 0
     const currentProgress = completedChars + currentChunkChars * chunkProgress
@@ -236,63 +207,61 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
     onProgress?.(Math.min(totalProgress, 100))
 
-    // Check if current chunk is 80% done - prefetch next
-    if (chunkProgress >= 0.8 && currentChunkIndexRef.current < chunksRef.current.length - 1) {
-      prefetchNextChunk(currentChunkIndexRef.current + 1)
-    }
-
-    // Continue animation loop
     if (isPlayingRef.current) {
       animationFrameRef.current = requestAnimationFrame(updateProgress)
     }
-  }, [onProgress, prefetchNextChunk])
+  }, [onProgress])
 
-  // Play a single chunk, optionally starting from an offset (seconds)
+  // Play a single chunk
   const playChunk = useCallback(
     async (index: number, offset = 0) => {
       if (index >= chunksRef.current.length) {
         // All chunks played
+        isPlayingRef.current = false
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current)
+          animationFrameRef.current = null
+        }
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort()
+          abortControllerRef.current = null
+        }
         setState((prev) => ({ ...prev, isPlaying: false, progress: 100 }))
         onComplete?.()
 
-        // Reset for next playback
         currentChunkIndexRef.current = 0
         completedCharsRef.current = 0
-        nextChunkBufferRef.current = null
         currentChunkBufferRef.current = null
         pauseOffsetRef.current = 0
-
+        bufferCacheRef.current.clear()
+        fetchingRef.current.clear()
         return
       }
 
       const audioContext = getAudioContext()
-
-      // Resume audio context if suspended
       if (audioContext.state === 'suspended') {
         await audioContext.resume()
       }
 
       currentChunkIndexRef.current = index
 
-      // Check if we have a cached/prefetched buffer
+      // Eagerly start buffering upcoming chunks
+      fillBuffer(index + 1)
+
       let buffer: AudioBuffer
 
       if (offset > 0 && currentChunkBufferRef.current) {
-        // Resuming mid-chunk: reuse the stored buffer
+        // Resuming mid-chunk
         buffer = currentChunkBufferRef.current
-      } else if (nextChunkBufferRef.current && index > 0) {
-        buffer = nextChunkBufferRef.current
-        nextChunkBufferRef.current = null
+      } else if (bufferCacheRef.current.has(index)) {
+        // Use cached buffer
+        buffer = bufferCacheRef.current.get(index)!
+        bufferCacheRef.current.delete(index)
       } else {
-        // Need to fetch this buffer
+        // Not buffered yet — fetch inline and show buffering state
         setState((prev) => ({ ...prev, isBuffering: true }))
 
-        // Cancel any existing fetch
-        if (abortControllerRef.current) {
-          abortControllerRef.current.abort()
-        }
-        abortControllerRef.current = new AbortController()
-
+        if (!abortControllerRef.current) return
         try {
           buffer = await fetchAudioBuffer(
             chunksRef.current[index],
@@ -300,72 +269,56 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
           )
         } catch (error) {
           if ((error as Error).name === 'AbortError') return
-          abortControllerRef.current = null
-          if (animationFrameRef.current) {
-            cancelAnimationFrame(animationFrameRef.current)
-            animationFrameRef.current = null
+          console.warn(`[TTS] Chunk ${index} failed, skipping:`, error)
+          // Skip failed chunk and continue with next
+          if (isPlayingRef.current) {
+            completedCharsRef.current += charCountsRef.current[index] || 0
+            setState((prev) => ({ ...prev, isBuffering: false }))
+            playChunk(index + 1)
           }
-          isPlayingRef.current = false
-          onError?.(error as Error)
-          setState((prev) => ({ ...prev, isPlaying: false, isBuffering: false }))
           return
         }
       }
 
+      if (!isPlayingRef.current) return // Stopped while fetching
+
       setState((prev) => ({ ...prev, isBuffering: false, currentChunkIndex: index }))
 
-      // Create and configure source
       const source = audioContext.createBufferSource()
       source.buffer = buffer
       source.connect(audioContext.destination)
 
-      // Store reference for stopping/resuming
       currentSourceRef.current = source
       currentChunkBufferRef.current = buffer
-      // Adjust start time so progress calculation accounts for the offset
       currentChunkStartTimeRef.current = audioContext.currentTime - offset
       currentChunkDurationRef.current = buffer.duration
 
-      // Handle chunk end
       source.onended = () => {
-        // Disconnect completed source from audio graph
-        try {
-          source.disconnect()
-        } catch (e) {
-          /* already disconnected */
-        }
-
+        try { source.disconnect() } catch (_) { /* already disconnected */ }
         if (!isPlayingRef.current) return
-
-        // Update completed characters
         completedCharsRef.current += charCountsRef.current[index] || 0
-
-        // Play next chunk
         playChunk(index + 1)
       }
 
-      // Start playback (from offset if resuming mid-chunk)
       source.start(0, offset)
 
-      // Start progress updates
       if (!animationFrameRef.current) {
         animationFrameRef.current = requestAnimationFrame(updateProgress)
       }
     },
-    [fetchAudioBuffer, getAudioContext, onComplete, onError, updateProgress]
+    [fetchAudioBuffer, fillBuffer, getAudioContext, onComplete, onError, updateProgress]
   )
 
-  // Play function
-  const play = useCallback(() => {
-    if (state.isPlaying) return
+  // Play / resume
+  const play = useCallback(async () => {
+    if (isPlayingRef.current) return
 
-    // Initialize chunks if not done
+    // Initialize chunks on first play or after completion reset
     if (chunksRef.current.length === 0) {
       chunksRef.current = splitIntoChunks(content)
       charCountsRef.current = chunksRef.current.map((c) => c.length)
       totalCharsRef.current = charCountsRef.current.reduce((a, b) => a + b, 0)
 
-      // Estimate total time (roughly 15 chars per second for TTS)
       const estimatedSeconds = totalCharsRef.current / 15
       setState((prev) => ({
         ...prev,
@@ -374,56 +327,78 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       }))
     }
 
-    // Set voice
     voiceRef.current = voice || null
-
     isPlayingRef.current = true
-    setState((prev) => ({ ...prev, isPlaying: true }))
+    abortControllerRef.current = new AbortController()
 
-    // Resume from the exact position within the current chunk
+    setState((prev) => ({ ...prev, isPlaying: true, isBuffering: true }))
+
+    // Pre-buffer: fetch the first few chunks before starting playback
+    const startIdx = currentChunkIndexRef.current
+    const preBufferEnd = Math.min(startIdx + BUFFER_AHEAD, chunksRef.current.length)
+    const signal = abortControllerRef.current.signal
+
+    // Fetch first chunk (must have it to start playing)
+    if (pauseOffsetRef.current === 0 && !bufferCacheRef.current.has(startIdx)) {
+      try {
+        const buf = await fetchAudioBuffer(chunksRef.current[startIdx], signal)
+        bufferCacheRef.current.set(startIdx, buf)
+      } catch (error) {
+        if ((error as Error).name === 'AbortError') return
+        isPlayingRef.current = false
+        onError?.(error as Error)
+        setState((prev) => ({ ...prev, isPlaying: false, isBuffering: false }))
+        return
+      }
+    }
+
+    // Kick off prefetch for upcoming chunks (don't await)
+    for (let i = startIdx + 1; i < preBufferEnd; i++) {
+      if (!bufferCacheRef.current.has(i) && !fetchingRef.current.has(i)) {
+        fetchingRef.current.add(i)
+        fetchAudioBuffer(chunksRef.current[i], signal)
+          .then((buf) => {
+            bufferCacheRef.current.set(i, buf)
+            fetchingRef.current.delete(i)
+          })
+          .catch(() => { fetchingRef.current.delete(i) })
+      }
+    }
+
+    setState((prev) => ({ ...prev, isBuffering: false }))
+
     const offset = pauseOffsetRef.current
     pauseOffsetRef.current = 0
-    playChunk(currentChunkIndexRef.current, offset)
-  }, [content, playChunk, state.isPlaying, voice])
+    playChunk(startIdx, offset)
+  }, [content, fetchAudioBuffer, onError, playChunk, voice])
 
-  // Pause function
+  // Pause
   const pause = useCallback(() => {
     isPlayingRef.current = false
 
-    // Record how far into the current chunk we got
     if (audioContextRef.current && currentChunkDurationRef.current > 0) {
       const elapsed = audioContextRef.current.currentTime - currentChunkStartTimeRef.current
       pauseOffsetRef.current = Math.min(elapsed, currentChunkDurationRef.current)
     }
 
-    // Stop and disconnect current source
     if (currentSourceRef.current) {
       try {
         currentSourceRef.current.stop()
         currentSourceRef.current.disconnect()
-      } catch (e) {
-        // Source might already be stopped
-      }
+      } catch (_) { /* already stopped */ }
       currentSourceRef.current = null
     }
 
-    // Cancel any pending fetches
     if (abortControllerRef.current) {
       abortControllerRef.current.abort()
       abortControllerRef.current = null
     }
-    if (prefetchAbortControllerRef.current) {
-      prefetchAbortControllerRef.current.abort()
-      prefetchAbortControllerRef.current = null
-    }
 
-    // Cancel animation frame
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current)
       animationFrameRef.current = null
     }
 
-    // Suspend audio context
     if (audioContextRef.current) {
       audioContextRef.current.suspend()
     }
@@ -431,19 +406,19 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     setState((prev) => ({ ...prev, isPlaying: false }))
   }, [])
 
-  // Stop function
+  // Stop
   const stop = useCallback(() => {
     pause()
 
-    // Reset all state
     chunksRef.current = []
     charCountsRef.current = []
     totalCharsRef.current = 0
     completedCharsRef.current = 0
     currentChunkIndexRef.current = 0
-    nextChunkBufferRef.current = null
     currentChunkBufferRef.current = null
     pauseOffsetRef.current = 0
+    bufferCacheRef.current.clear()
+    fetchingRef.current.clear()
 
     setState({
       isPlaying: false,
@@ -472,7 +447,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     play,
     pause,
     stop,
-    resume: play, // Alias for play (resumes from where it was)
+    resume: play,
   }
 }
 
