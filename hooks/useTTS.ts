@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { detectLanguageFromContent } from '@/lib/tts'
+import { synthesizeSpeech } from '@/lib/tts-client'
 
 interface TTSState {
   isPlaying: boolean
@@ -135,31 +136,36 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     return audioContextRef.current
   }, [])
 
-  // Fetch audio buffer from API
+  // Synthesize audio buffer using client-side TTS
   const fetchAudioBuffer = useCallback(
     async (text: string, signal: AbortSignal): Promise<AudioBuffer> => {
       const detectedVoice = voiceRef.current || detectLanguage(content)
-      console.log('[TTS] Fetching audio for voice:', detectedVoice, 'text length:', text.length)
+      console.log('[TTS] Synthesizing audio for voice:', detectedVoice, 'text length:', text.length)
 
-      const response = await fetch('/api/tts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, voice: detectedVoice }),
-        signal,
-      })
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('[TTS] API error:', response.status, errorText)
-        throw new Error(`TTS API error: ${response.status}`)
+      // Check if aborted before starting
+      if (signal.aborted) {
+        throw new DOMException('Aborted', 'AbortError')
       }
 
-      const arrayBuffer = await response.arrayBuffer()
+      // Use client-side TTS synthesis
+      const arrayBuffer = await synthesizeSpeech(text, { voice: detectedVoice })
+
+      // Check if aborted after synthesis
+      if (signal.aborted) {
+        throw new DOMException('Aborted', 'AbortError')
+      }
+
       console.log('[TTS] Got audio data, size:', arrayBuffer.byteLength)
       const audioContext = getAudioContext()
 
       // Decode the MP3 audio data
       return new Promise((resolve, reject) => {
+        // Check if aborted before decoding
+        if (signal.aborted) {
+          reject(new DOMException('Aborted', 'AbortError'))
+          return
+        }
+
         audioContext.decodeAudioData(
           arrayBuffer,
           (buffer) => {
@@ -323,7 +329,11 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       // Handle chunk end
       source.onended = () => {
         // Disconnect completed source from audio graph
-        try { source.disconnect() } catch (e) { /* already disconnected */ }
+        try {
+          source.disconnect()
+        } catch (e) {
+          /* already disconnected */
+        }
 
         if (!isPlayingRef.current) return
 
