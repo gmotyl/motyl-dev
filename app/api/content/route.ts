@@ -15,7 +15,12 @@ export async function GET(request: NextRequest) {
   // Get visited articles from cookie header
   const headersList = await headers()
   const visitedArticlesHeader = headersList.get('x-visited-articles')
-  const visitedSlugs = new Set<string>(JSON.parse(visitedArticlesHeader || '[]'))
+  let visitedSlugs = new Set<string>()
+  try {
+    visitedSlugs = new Set<string>(JSON.parse(visitedArticlesHeader || '[]'))
+  } catch (e) {
+    console.error('Failed to parse visited articles header:', e)
+  }
 
   const pageData = await getContentPageData({
     page,

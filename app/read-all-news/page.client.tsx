@@ -76,7 +76,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
       if (data.items && data.items.length > 0) {
         setItems(prev => [...prev, ...data.items])
         setPage(nextPage)
-        setHasMore(data.items.length > 0 && (nextPage * 20) < data.totalItems)
+        setHasMore(data.currentPage < data.totalPages)
       } else {
         setHasMore(false)
       }
