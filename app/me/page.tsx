@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Github,
   Newspaper,
+  BookOpen,
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -145,6 +146,12 @@ export default function MePage() {
               Your Content
             </h3>
             <div className="space-y-2">
+              <MenuLink
+                href="/read-all-news"
+                icon={BookOpen}
+                label="Read all news"
+                description="Browse through unvisited news articles"
+              />
               <MenuLink
                 href="/bookmarks"
                 icon={Bookmark}

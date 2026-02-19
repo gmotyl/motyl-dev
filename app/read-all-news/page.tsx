@@ -1,0 +1,43 @@
+import { getContentPageData, getAllHashtags } from '@/lib/articles'
+import { headers } from 'next/headers'
+import { auth } from '@/lib/auth'
+import { getUserViewedArticles } from '@/lib/article-views'
+import ReadAllNewsPageClient from './page.client'
+
+export const metadata = {
+  title: 'Read All News - Motyl.dev',
+  description: 'Browse through all unvisited news articles',
+}
+
+export default async function ReadAllNewsPage() {
+  // Get visited articles
+  const session = await auth()
+  let visitedSlugs: Set<string>
+
+  if (session?.user?.id) {
+    const dbSlugs = await getUserViewedArticles()
+    visitedSlugs = new Set(dbSlugs)
+  } else {
+    const headersList = await headers()
+    const visitedArticlesHeader = headersList.get('x-visited-articles')
+    visitedSlugs = new Set<string>(JSON.parse(visitedArticlesHeader || '[]'))
+  }
+
+  // Fetch first page of unvisited news articles
+  const pageData = await getContentPageData({
+    page: 1,
+    filters: {
+      showUnseen: true,
+      requireHashtags: ['generated'],
+    },
+    visitedSlugs,
+    contentType: 'news',
+  })
+
+  return (
+    <ReadAllNewsPageClient 
+      initialItems={pageData.items}
+      totalItems={pageData.totalItems}
+    />
+  )
+}
