@@ -20,7 +20,12 @@ export default async function ReadAllNewsPage() {
   } else {
     const headersList = await headers()
     const visitedArticlesHeader = headersList.get('x-visited-articles')
-    visitedSlugs = new Set<string>(JSON.parse(visitedArticlesHeader || '[]'))
+    try {
+      visitedSlugs = new Set<string>(JSON.parse(visitedArticlesHeader || '[]'))
+    } catch (e) {
+      console.error('Failed to parse visited articles header:', e)
+      visitedSlugs = new Set<string>()
+    }
   }
 
   // Fetch first page of unvisited news articles
