@@ -263,7 +263,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
           >
             <BookCheck className="h-5 w-5" />
             <span className="font-medium">Mark read ({scrolledPastSlugs.size})</span>
-          </button>
+          </Button>
           </Button>
       </div>
 
