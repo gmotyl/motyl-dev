@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
   const showUnseen = searchParams.get('unseen') === 'true'
   const hashtags = searchParams.get('hashtags')?.split(',').filter(Boolean) || []
   const mode = searchParams.get('mode') as 'AND' | 'OR' | 'EXCLUDE' || 'AND'
+  const includeContent = searchParams.get('includeContent') === 'true'
 
   // Get visited articles from cookie header
   const headersList = await headers()
@@ -33,6 +34,7 @@ export async function GET(request: NextRequest) {
     },
     visitedSlugs,
     contentType,
+    includeContent,
   })
 
   return NextResponse.json({

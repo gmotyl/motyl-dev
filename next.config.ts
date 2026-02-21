@@ -1,8 +1,8 @@
-import { getAllContent } from './lib/articles.ts'
-import { ItemType } from './lib/types.ts'
+import type { NextConfig } from 'next'
+import { getAllContent } from './lib/articles'
+import { ItemType } from './lib/types'
 
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },

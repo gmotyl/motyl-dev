@@ -1,4 +1,4 @@
-import { getContentPageData, getAllHashtags } from '@/lib/articles'
+import { getContentPageData, ContentItem } from '@/lib/articles'
 import { headers } from 'next/headers'
 import { auth } from '@/lib/auth'
 import { getUserViewedArticles } from '@/lib/article-views'
@@ -10,7 +10,6 @@ export const metadata = {
 }
 
 export default async function ReadAllNewsPage() {
-  // Get visited articles
   const session = await auth()
   let visitedSlugs: Set<string>
 
@@ -28,20 +27,21 @@ export default async function ReadAllNewsPage() {
     }
   }
 
-  // Fetch first page of unvisited news articles
   const pageData = await getContentPageData({
     page: 1,
+    limit: 5,
     filters: {
       showUnseen: true,
       requireHashtags: ['generated'],
     },
     visitedSlugs,
     contentType: 'news',
+    includeContent: true,
   })
 
   return (
-    <ReadAllNewsPageClient 
-      initialItems={pageData.items}
+    <ReadAllNewsPageClient
+      initialItems={pageData.items as ContentItem[]}
       totalItems={pageData.totalItems}
     />
   )
