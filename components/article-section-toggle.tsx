@@ -1,46 +1,18 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Settings } from 'lucide-react'
-import type { SectionType } from '@/lib/articles'
-
-interface SectionToggleProps {
-  section: SectionType
-  label: string
-  checked: boolean
-  onChange: (section: SectionType, checked: boolean) => void
-}
-
-function SectionToggle({ section, label, checked, onChange }: SectionToggleProps) {
-  return (
-    <div className="flex items-center justify-between gap-3 py-2">
-      <Label
-        htmlFor={section}
-        className="text-sm text-gray-300 cursor-pointer"
-      >
-        {label}
-      </Label>
-      <Switch
-        id={section}
-        checked={checked}
-        onCheckedChange={(checked) => onChange(section, checked)}
-        className="data-[state=checked]:bg-purple-500 data-[state=unchecked]:bg-gray-600"
-      />
-    </div>
-  )
-}
-
-const STORAGE_KEY = 'article-hidden-sections'
-
-const ALL_SECTIONS: { id: SectionType; label: string }[] = [
-  { id: 'tldr', label: 'TLDR' },
-  { id: 'summary', label: 'Summary' },
-  { id: 'keyTakeaways', label: 'Key Takeaways' },
-  { id: 'tradeoffs', label: 'Tradeoffs' },
-]
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { useSectionVisibility, ALL_SECTIONS } from '@/hooks/use-section-visibility'
+import type { SectionType } from '@/lib/section-filter'
 
 interface ArticleSectionToggleProps {
   onChange: (hiddenTypes: Set<SectionType>) => void
@@ -52,45 +24,14 @@ export function ArticleSectionToggle({
   defaultHidden = ['summary', 'keyTakeaways', 'tradeoffs']
 }: ArticleSectionToggleProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const [isHydrated, setIsHydrated] = useState(false)
-  const [sections, setSections] = useState<Record<SectionType, boolean>>(() => {
-    const initial: Record<SectionType, boolean> = {}
-    for (const section of ALL_SECTIONS) {
-      initial[section.id] = !defaultHidden.includes(section.id)
-    }
-    return initial
-  })
+  const { hiddenSections, toggleSection, isHydrated } = useSectionVisibility(defaultHidden)
 
+  // Sync to parent whenever hiddenSections changes
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved) as Record<SectionType, boolean>
-        setSections(parsed)
-      } catch {
-        // Use defaults
-      }
+    if (isHydrated) {
+      onChange(hiddenSections)
     }
-    setIsHydrated(true)
-  }, [])
-
-  useEffect(() => {
-    if (!isHydrated) return
-
-    const hidden = new Set<SectionType>()
-    Object.entries(sections).forEach(([k, v]) => {
-      if (!v) hidden.add(k as SectionType)
-    })
-    onChange(hidden)
-  }, [sections, isHydrated, onChange])
-
-  const handleChange = useCallback((section: SectionType, checked: boolean) => {
-    setSections(prev => {
-      const newSections = { ...prev, [section]: checked }
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newSections))
-      return newSections
-    })
-  }, [])
+  }, [hiddenSections, isHydrated, onChange])
 
   if (!isHydrated) {
     return null
@@ -108,36 +49,53 @@ export function ArticleSectionToggle({
         Customize Sections
       </Button>
 
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div 
-            className="absolute inset-0 bg-black/60" 
-            onClick={() => setIsOpen(false)}
-          />
-          <div className="relative z-10 w-full max-w-sm p-5 rounded-lg bg-gray-900 border border-gray-800 shadow-xl">
-            <h3 className="text-base font-medium text-white mb-4">
-              Show Sections
-            </h3>
-            <div className="space-y-1">
-              {ALL_SECTIONS.map((sectionInfo) => (
-                <SectionToggle
-                  key={sectionInfo.id}
-                  section={sectionInfo.id}
-                  label={sectionInfo.label}
-                  checked={sections[sectionInfo.id]}
-                  onChange={handleChange}
-                />
-              ))}
-            </div>
-            <Button
-              onClick={() => setIsOpen(false)}
-              className="w-full mt-5"
-            >
-              Done
-            </Button>
-          </div>
-        </div>
-      )}
+      <SectionVisibilityDialog
+        open={isOpen}
+        onOpenChange={setIsOpen}
+        hiddenSections={hiddenSections}
+        onToggle={toggleSection}
+      />
     </div>
+  )
+}
+
+// Shared dialog component used by both ArticleSectionToggle and read-all-news page
+export function SectionVisibilityDialog({
+  open,
+  onOpenChange,
+  hiddenSections,
+  onToggle,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  hiddenSections: Set<SectionType>
+  onToggle: (sectionId: SectionType, visible: boolean) => void
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Show Sections</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-1">
+          {ALL_SECTIONS.map((section) => (
+            <div key={section.id} className="flex items-center justify-between gap-3 py-2">
+              <Label htmlFor={`section-${section.id}`} className="text-sm cursor-pointer">
+                {section.label}
+              </Label>
+              <Switch
+                id={`section-${section.id}`}
+                checked={!hiddenSections.has(section.id)}
+                onCheckedChange={(checked) => onToggle(section.id, checked)}
+                className="data-[state=checked]:bg-purple-500 data-[state=unchecked]:bg-gray-600"
+              />
+            </div>
+          ))}
+        </div>
+        <Button onClick={() => onOpenChange(false)} className="w-full mt-2">
+          Done
+        </Button>
+      </DialogContent>
+    </Dialog>
   )
 }

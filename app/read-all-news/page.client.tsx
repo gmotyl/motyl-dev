@@ -11,9 +11,9 @@ import { filterHiddenSections, type SectionType } from '@/lib/section-filter'
 import { ItemType } from '@/lib/types'
 import { ContentItem } from '@/lib/articles'
 import { MarkReadDialog } from '@/components/mark-read-dialog'
-import { BookCheck } from 'lucide-react'
-
-const DEFAULT_HIDDEN_SECTIONS = new Set<SectionType>(['summary', 'keyTakeaways', 'tradeoffs'])
+import { SectionVisibilityDialog } from '@/components/article-section-toggle'
+import { useSectionVisibility } from '@/hooks/use-section-visibility'
+import { BookCheck, Settings } from 'lucide-react'
 
 interface ReadAllNewsPageProps {
   initialItems: ContentItem[]
@@ -29,6 +29,9 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
   const [page, setPage] = useState(1)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [pendingNavUrl, setPendingNavUrl] = useState<string | null>(null)
+  const [sectionToggleOpen, setSectionToggleOpen] = useState(false)
+
+  const { hiddenSections, toggleSection } = useSectionVisibility()
 
   const loadMoreRef = useRef<HTMLDivElement>(null)
 
@@ -198,6 +201,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
                   item={item}
                   onScrolledPast={handleScrolledPast}
                   isLast={index === items.length - 1}
+                  hiddenSections={hiddenSections}
                 />
               ))}
             </div>
@@ -216,16 +220,35 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
       </main>
       <Footer />
 
-      {/* Floating mark-read button */}
-      {scrolledPastSlugs.size > 0 && (
+      {/* Floating buttons */}
+      <div className="fixed bottom-20 sm:bottom-6 right-4 z-40 flex flex-col items-end gap-3">
+        {/* Settings button */}
         <button
-          onClick={() => { setPendingNavUrl(null); setDialogOpen(true) }}
-          className="fixed bottom-20 sm:bottom-6 right-4 z-40 flex items-center gap-2 bg-primary text-primary-foreground px-4 py-3 rounded-full shadow-lg hover:bg-primary/90 transition-colors"
+          onClick={() => setSectionToggleOpen(true)}
+          className="flex items-center justify-center w-12 h-12 bg-muted text-muted-foreground rounded-full shadow-lg hover:bg-muted/80 transition-colors"
         >
-          <BookCheck className="h-5 w-5" />
-          <span className="font-medium">Mark read ({scrolledPastSlugs.size})</span>
+          <Settings className="h-5 w-5" />
         </button>
-      )}
+
+        {/* Mark-read button */}
+        {scrolledPastSlugs.size > 0 && (
+          <button
+            onClick={() => { setPendingNavUrl(null); setDialogOpen(true) }}
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-3 rounded-full shadow-lg hover:bg-primary/90 transition-colors"
+          >
+            <BookCheck className="h-5 w-5" />
+            <span className="font-medium">Mark read ({scrolledPastSlugs.size})</span>
+          </button>
+        )}
+      </div>
+
+      {/* Section visibility dialog */}
+      <SectionVisibilityDialog
+        open={sectionToggleOpen}
+        onOpenChange={setSectionToggleOpen}
+        hiddenSections={hiddenSections}
+        onToggle={toggleSection}
+      />
 
       {/* Mark-read dialog */}
       <MarkReadDialog
@@ -244,16 +267,17 @@ function FullArticle({
   item,
   onScrolledPast,
   isLast,
+  hiddenSections,
 }: {
   item: ContentItem
   onScrolledPast: (slug: string) => void
   isLast: boolean
+  hiddenSections: Set<SectionType>
 }) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const hasTriggeredRef = useRef(false)
 
-  // Apply default section filtering (same as single article view)
-  const filteredContent = filterHiddenSections(item.content, DEFAULT_HIDDEN_SECTIONS)
+  const filteredContent = filterHiddenSections(item.content, hiddenSections)
 
   useEffect(() => {
     if (hasTriggeredRef.current || !bottomRef.current) return
