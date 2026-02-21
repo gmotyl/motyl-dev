@@ -253,7 +253,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
           className="flex items-center justify-center w-12 h-12 bg-muted text-muted-foreground rounded-full shadow-lg hover:bg-muted/80 transition-colors"
         >
           <Settings className="h-5 w-5" />
-        </button>
+        </Button>
 
         {/* Mark-read button */}
         {scrolledPastSlugs.size > 0 && (
