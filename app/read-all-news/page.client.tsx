@@ -94,7 +94,12 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
   const handleMarkRead = useCallback((slugs: string[]) => {
     // Update localStorage
     const stored = localStorage.getItem('visitedArticles')
-    const existing: string[] = stored ? JSON.parse(stored) : []
+    let existing: string[] = []
+    try {
+      existing = stored ? JSON.parse(stored) : []
+    } catch {
+      // ignore corrupt localStorage
+    }
     const merged = [...new Set([...existing, ...slugs])]
     localStorage.setItem('visitedArticles', JSON.stringify(merged))
     document.cookie = `visitedArticles=${JSON.stringify(merged)};path=/;max-age=31536000;samesite=lax`
