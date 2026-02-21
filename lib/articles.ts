@@ -118,7 +118,7 @@ export interface PageFilters {
 }
 
 export interface PaginatedContent {
-  items: ContentItemMetadata[]
+  items: (ContentItemMetadata | ContentItem)[]
   currentPage: number
   totalPages: number
   totalItems: number
@@ -164,12 +164,14 @@ export async function getContentPageData({
   filters = {},
   visitedSlugs = new Set(),
   contentType = 'all',
+  includeContent = false,
 }: {
   page?: number
   limit?: number
   filters?: PageFilters
   visitedSlugs?: Set<string>
   contentType?: ItemType | 'all'
+  includeContent?: boolean
 }): Promise<PaginatedContent> {
   const allArticles = await getAllContentMetadata()
 
@@ -211,7 +213,18 @@ export async function getContentPageData({
   const totalItems = filtered.length
   const totalPages = Math.ceil(totalItems / limit)
   const startIndex = (page - 1) * limit
-  const paginatedArticles = filtered.slice(startIndex, startIndex + limit)
+  const paginatedSlice = filtered.slice(startIndex, startIndex + limit)
+
+  let paginatedArticles: (ContentItemMetadata | ContentItem)[]
+  if (includeContent) {
+    const contentMap = await getCachedContentMap()
+    paginatedArticles = paginatedSlice.map(meta => {
+      const full = contentMap.get(meta.slug)
+      return full || meta
+    })
+  } else {
+    paginatedArticles = paginatedSlice
+  }
 
   return {
     items: paginatedArticles,

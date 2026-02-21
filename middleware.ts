@@ -31,5 +31,7 @@ export const config = {
     '/articles/:path*',
     '/news/:path*',
     '/bookmarks/:path*',
+    '/read-all-news/:path*',
+    '/api/content',
   ],
 }
