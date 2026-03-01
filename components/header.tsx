@@ -17,7 +17,7 @@ const SUPPORT_URL = 'https://www.buymeacoffee.com/motyl.dev'
 const NAV_LINKS = [
   { label: 'Trending', href: '/' },
   { label: 'Articles', href: '/articles' },
-  { label: 'About Me', href: '/#about' },
+  { label: 'About Me', href: '/about' },
   { label: 'Newsletter', href: '/#newsletter' },
   { label: 'News', href: '/news?unseen=true' },
 ] as const
@@ -38,8 +38,9 @@ export default function Header() {
   }, [pathname])
 
   const isActive = (href: string) => {
-    if (href === '/') return pathname === '/'
-    return pathname.startsWith(href.split('#')[0]) && href.split('#')[0] !== ''
+    const path = href.split('#')[0] || '/'
+    if (path === '/') return pathname === '/'
+    return pathname.startsWith(path)
   }
 
   return (
@@ -142,11 +143,11 @@ export default function Header() {
       {mounted && (
         <div
           id="mobile-menu"
+          {...(!mobileOpen ? { inert: true } : {})}
           className={cn(
             'lg:hidden overflow-hidden transition-all duration-300 ease-in-out border-b border-border/40',
             mobileOpen ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'
           )}
-          aria-hidden={!mobileOpen}
         >
           <nav
             className="flex flex-col gap-1 px-4 py-3"
@@ -162,7 +163,6 @@ export default function Header() {
                     ? 'bg-primary/10 text-primary'
                     : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                 )}
-                tabIndex={mobileOpen ? 0 : -1}
               >
                 {label}
               </Link>
@@ -172,14 +172,12 @@ export default function Header() {
                 <Link
                   href="/bookmarks"
                   className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  tabIndex={mobileOpen ? 0 : -1}
                 >
                   My Bookmarks
                 </Link>
                 <Link
                   href="/visit-all"
                   className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  tabIndex={mobileOpen ? 0 : -1}
                 >
                   Visit All
                 </Link>
@@ -195,7 +193,6 @@ export default function Header() {
               style={{
                 background: 'linear-gradient(135deg, #BD5FFF 0%, #9d3dff 100%)',
               }}
-              tabIndex={mobileOpen ? 0 : -1}
               aria-label="Support on Buy Me a Coffee"
             >
               <Coffee className="h-3.5 w-3.5" aria-hidden="true" />
