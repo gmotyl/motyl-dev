@@ -9,6 +9,9 @@ interface VoteButtonProps {
   title: string
   description?: string
   category?: 'frontend' | 'ai' | 'tools' | 'other'
+  /**
+   * @param sourceDomain - Full URL of the source (e.g. "https://example.com"). Must be a valid URL.
+   */
   sourceDomain?: string
   initialVoteCount: number
   onVote?: () => void
@@ -32,6 +35,7 @@ export function VoteButton({
 
     // Optimistic update
     setVoteCount(prev => prev + 1)
+    setVoted(true)
     setIsLoading(true)
 
     try {
@@ -44,14 +48,15 @@ export function VoteButton({
       if (!res.ok) {
         // Rollback on failure
         setVoteCount(prev => prev - 1)
+        setVoted(false)
         return
       }
 
-      setVoted(true)
       onVote?.()
     } catch {
       // Rollback on error
       setVoteCount(prev => prev - 1)
+      setVoted(false)
     } finally {
       setIsLoading(false)
     }
@@ -59,18 +64,22 @@ export function VoteButton({
 
   return (
     <button
+      type="button"
       onClick={handleVote}
       disabled={voted || isLoading}
+      aria-pressed={voted}
+      aria-label={`Upvote — ${voteCount} vote${voteCount !== 1 ? 's' : ''}`}
       className={cn(
-        'flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium',
+        'flex items-center justify-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium',
+        'min-h-[44px] min-w-[44px]',
         'border transition-all duration-200',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
         voted
-          ? 'bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-400 cursor-default'
+          ? 'bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-400'
           : 'border-primary/20 text-muted-foreground hover:border-primary/40 hover:bg-primary/5 hover:text-primary',
-        isLoading && 'opacity-70 cursor-wait'
+        isLoading ? 'cursor-wait' : voted ? 'cursor-default' : 'cursor-pointer',
+        isLoading && 'opacity-70'
       )}
-      aria-label={`Upvote — ${voteCount} vote${voteCount !== 1 ? 's' : ''}`}
     >
       <ThumbsUp className={cn('h-3.5 w-3.5 transition-all', voted && 'fill-current')} />
       <span>{voteCount}</span>
