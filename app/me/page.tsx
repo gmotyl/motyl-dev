@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button"
 import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { useInstallPrompt } from "@/hooks/use-install-prompt"
+import { TrendsResetPanel } from "@/components/trends-reset-panel"
 
 interface MenuLinkProps {
   href: string
@@ -181,6 +182,7 @@ export default function MePage() {
                 label="Generate Newsletter"
                 description="Create newsletter from bookmarked links"
               />
+              <TrendsResetPanel />
             </div>
           </section>
         )}
