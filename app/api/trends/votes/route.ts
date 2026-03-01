@@ -7,7 +7,7 @@ const voteSchema = z.object({
   title: z.string().min(1, 'Title required'),
   description: z.string().optional().default(''),
   category: z.enum(['frontend', 'ai', 'tools', 'other']).default('other'),
-  sourceDomain: z.string().optional(),
+  sourceDomain: z.string().url().optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -34,9 +34,11 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+    // Database/server errors should return 500
+    console.error('Failed to cast vote:', error)
     return NextResponse.json(
-      { error: 'Invalid request', details: error instanceof Error ? error.message : '' },
-      { status: 400 }
+      { error: 'Failed to cast vote' },
+      { status: 500 }
     )
   }
 }
@@ -47,10 +49,10 @@ export async function GET(request: NextRequest) {
   try {
     const week = weekParam || (await getCurrentWeek())
 
-    // Validate week format (e.g., "2026-w10")
-    if (!/^\d{4}-w\d{2}$/.test(week)) {
+    // Validate week format (e.g., "2026-w10") - weeks must be 01-53
+    if (!/^\d{4}-w(0[1-9]|[1-4]\d|5[0-3])$/.test(week)) {
       return NextResponse.json(
-        { error: 'Invalid week format. Use format: YYYY-wWW' },
+        { error: 'Invalid week format. Use format: YYYY-wWW (weeks 01-53)' },
         { status: 400 }
       )
     }
