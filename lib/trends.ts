@@ -3,23 +3,33 @@ import { prisma } from '@/lib/prisma'
 export async function getCurrentWeek(): Promise<string> {
   const now = new Date()
 
-  // Get the Thursday of this week
+  // Get the day of the week (0=Sunday, 1=Monday, ..., 6=Saturday)
+  const dayOfWeek = now.getDay()
+
+  // Calculate the date of the Thursday in this week
+  // If today is Thursday (4), offset is 0
+  // If today is Friday (5), offset is -1
+  // If today is Sunday (0), offset is 4
+  // If today is Monday (1), offset is 3
+  const thursOffset = 4 - dayOfWeek
   const thursday = new Date(now)
-  thursday.setDate(now.getDate() - now.getDay() + 4)
+  thursday.setDate(now.getDate() + thursOffset)
 
-  // Get the year of that Thursday (determines which year owns this week)
-  const year = thursday.getFullYear()
+  // The week belongs to the year of that Thursday
+  const weekYear = thursday.getFullYear()
 
-  // Find Thursday of week 1
-  const jan4 = new Date(year, 0, 4)
-  const thu1 = new Date(jan4)
-  thu1.setDate(jan4.getDate() - jan4.getDay() + 4)
+  // Find the date of Monday of week 1 in this year
+  // Week 1 is the first week with a Thursday (or equivalently, contains Jan 4)
+  const jan4 = new Date(weekYear, 0, 4)
+  const jan4DayOfWeek = jan4.getDay()
+  const week1Monday = new Date(jan4)
+  week1Monday.setDate(jan4.getDate() - jan4DayOfWeek + 1) // +1 to get Monday (1)
 
-  // Calculate week number
-  const msPerWeek = 7 * 24 * 60 * 60 * 1000
-  const weekNum = Math.floor((thursday.getTime() - thu1.getTime()) / msPerWeek) + 1
+  // Calculate the week number
+  const timeDiff = thursday.getTime() - week1Monday.getTime()
+  const weekNumber = Math.floor(timeDiff / (7 * 24 * 60 * 60 * 1000)) + 1
 
-  return `${year}-w${String(weekNum).padStart(2, '0')}`
+  return `${weekYear}-w${String(weekNumber).padStart(2, '0')}`
 }
 
 export async function castVote(
