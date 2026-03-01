@@ -117,3 +117,14 @@ model TrendsVotes {
   @@index([voteCount])
   @@map("trends_votes")
 }
+
+model TrendsArchive {
+  id               String   @id @default(cuid())
+  week             String   @unique
+  summaryMarkdown  String   @db.Text @map("summary_markdown")
+  totalVotes       Int      @map("total_votes")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@index([week])
+  @@map("trends_votes_archive")
+}
