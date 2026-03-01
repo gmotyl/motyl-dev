@@ -1,21 +1,18 @@
 import Link from 'next/link'
 import { ExternalLink } from 'lucide-react'
 import { VoteButton } from '@/components/vote-button'
-import { cn } from '@/lib/utils'
 
 interface TrendingCardProps {
-  id: string
   title: string
   description?: string
   linkUrl: string
   voteCount: number
-  category: string
+  category: 'frontend' | 'ai' | 'tools' | 'other'
   sourceDomain?: string
   rank?: number
 }
 
 export function TrendingCard({
-  id,
   title,
   description,
   linkUrl,
@@ -27,7 +24,7 @@ export function TrendingCard({
   return (
     <div className="group rounded-lg border border-primary/20 bg-background/50 backdrop-blur-sm p-4 hover:border-primary/40 hover:shadow-md hover:shadow-primary/10 transition-all duration-200">
       <div className="flex items-start gap-3">
-        {rank && (
+        {rank != null && (
           <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
             {rank}
           </span>
@@ -59,7 +56,7 @@ export function TrendingCard({
             linkUrl={linkUrl}
             title={title}
             description={description}
-            category={category as 'frontend' | 'ai' | 'tools' | 'other'}
+            category={category}
             sourceDomain={sourceDomain}
             initialVoteCount={voteCount}
           />
