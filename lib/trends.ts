@@ -3,33 +3,49 @@ import { prisma } from '@/lib/prisma'
 export async function getCurrentWeek(): Promise<string> {
   const now = new Date()
 
-  // Get the day of the week (0=Sunday, 1=Monday, ..., 6=Saturday)
+  // Get Thursday of the current week
   const dayOfWeek = now.getDay()
-
-  // Calculate the date of the Thursday in this week
-  // If today is Thursday (4), offset is 0
-  // If today is Friday (5), offset is -1
-  // If today is Sunday (0), offset is 4
-  // If today is Monday (1), offset is 3
-  const thursOffset = 4 - dayOfWeek
+  const thursdayOffset = 4 - dayOfWeek
   const thursday = new Date(now)
-  thursday.setDate(now.getDate() + thursOffset)
+  thursday.setDate(now.getDate() + thursdayOffset)
 
   // The week belongs to the year of that Thursday
   const weekYear = thursday.getFullYear()
 
-  // Find the date of Monday of week 1 in this year
-  // Week 1 is the first week with a Thursday (or equivalently, contains Jan 4)
+  // Find January 4 of the week's year (guaranteed to be in week 1)
   const jan4 = new Date(weekYear, 0, 4)
   const jan4DayOfWeek = jan4.getDay()
-  const week1Monday = new Date(jan4)
-  week1Monday.setDate(jan4.getDate() - jan4DayOfWeek + 1) // +1 to get Monday (1)
 
-  // Calculate the week number
+  // Find Monday of the week containing January 4
+  // If Jan 4 is Sunday (0), Monday is Jan 5
+  // If Jan 4 is Monday (1), Monday is Jan 4
+  // If Jan 4 is Tuesday (2), Monday is Jan 3
+  const jan4MonthDate = jan4.getDate()
+  const daysToMonday = jan4DayOfWeek === 0 ? 1 : jan4DayOfWeek - 1
+  const week1MondayDate = jan4MonthDate - daysToMonday
+
+  const week1Monday = new Date(weekYear, 0, week1MondayDate)
+
+  // Calculate week number
   const timeDiff = thursday.getTime() - week1Monday.getTime()
-  const weekNumber = Math.floor(timeDiff / (7 * 24 * 60 * 60 * 1000)) + 1
+  const msPerWeek = 7 * 24 * 60 * 60 * 1000
+  let weekNum = Math.floor(timeDiff / msPerWeek) + 1
 
-  return `${weekYear}-w${String(weekNumber).padStart(2, '0')}`
+  // If week number is <= 0, the date belongs to the last week of the previous year
+  if (weekNum <= 0) {
+    const prevYear = weekYear - 1
+    const prevYearJan4 = new Date(prevYear, 0, 4)
+    const prevYearJan4DayOfWeek = prevYearJan4.getDay()
+    const prevWeek1MondayDate =
+      prevYearJan4.getDate() - (prevYearJan4DayOfWeek === 0 ? 1 : prevYearJan4DayOfWeek - 1)
+    const prevWeek1Monday = new Date(prevYear, 0, prevWeek1MondayDate)
+
+    const prevTimeDiff = thursday.getTime() - prevWeek1Monday.getTime()
+    weekNum = Math.floor(prevTimeDiff / msPerWeek) + 1
+    return `${prevYear}-w${String(weekNum).padStart(2, '0')}`
+  }
+
+  return `${weekYear}-w${String(weekNum).padStart(2, '0')}`
 }
 
 export async function castVote(
