@@ -46,10 +46,19 @@ export async function GET(request: NextRequest) {
 
   try {
     const week = weekParam || (await getCurrentWeek())
-    const votes = await getWeekVotes(week)
 
+    // Validate week format (e.g., "2026-w10")
+    if (!/^\d{4}-w\d{2}$/.test(week)) {
+      return NextResponse.json(
+        { error: 'Invalid week format. Use format: YYYY-wWW' },
+        { status: 400 }
+      )
+    }
+
+    const votes = await getWeekVotes(week)
     return NextResponse.json({ week, votes }, { status: 200 })
   } catch (error) {
+    console.error('Failed to fetch votes:', error)
     return NextResponse.json(
       { error: 'Failed to fetch votes' },
       { status: 500 }

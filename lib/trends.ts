@@ -2,11 +2,15 @@ import { prisma } from '@/lib/prisma'
 
 export async function getCurrentWeek(): Promise<string> {
   const now = new Date()
-  const year = now.getFullYear()
+
+  // ISO 8601 week calculation
+  const weekDate = new Date(now.getTime() + (4 - now.getDay()) * 24 * 60 * 60 * 1000)
+  const weekYear = weekDate.getFullYear()
   const weekNum = Math.ceil(
-    (now.getTime() - new Date(year, 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000)
+    (weekDate.getTime() - new Date(weekYear, 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000)
   )
-  return `${year}-w${String(weekNum).padStart(2, '0')}`
+
+  return `${weekYear}-w${String(weekNum).padStart(2, '0')}`
 }
 
 export async function castVote(
@@ -18,33 +22,23 @@ export async function castVote(
 ) {
   const week = await getCurrentWeek()
 
-  // Check if this link already has votes this week
-  const existing = await prisma.trendsVotes.findFirst({
+  return await prisma.trendsVotes.upsert({
     where: {
+      week_linkUrl: { week, linkUrl },
+    },
+    update: {
+      voteCount: { increment: 1 },
+    },
+    create: {
       week,
       linkUrl,
+      title,
+      description,
+      category,
+      sourceDomain,
+      voteCount: 1,
     },
   })
-
-  if (existing) {
-    // Increment vote count
-    return await prisma.trendsVotes.update({
-      where: { id: existing.id },
-      data: { voteCount: existing.voteCount + 1 },
-    })
-  } else {
-    // Create new vote entry
-    return await prisma.trendsVotes.create({
-      data: {
-        week,
-        linkUrl,
-        title,
-        description,
-        category,
-        sourceDomain,
-      },
-    })
-  }
 }
 
 export async function getWeekVotes(week: string) {
