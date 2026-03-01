@@ -72,6 +72,28 @@ export function getPreviousWeek(week: string): string {
   return `${year}-w${String(weekNum - 1).padStart(2, '0')}`
 }
 
+export async function resetWeeklyVotes() {
+  const week = await getCurrentWeek()
+  const votes = await getWeekVotes(week)
+  const totalVotes = votes.reduce((sum, v) => sum + v.voteCount, 0)
+
+  // Upsert archive record for this week (may already exist if trends:generate ran first)
+  await prisma.trendsArchive.upsert({
+    where: { week },
+    update: { totalVotes },
+    create: {
+      week,
+      summaryMarkdown: '',
+      totalVotes,
+    },
+  })
+
+  // Delete current week votes
+  await prisma.trendsVotes.deleteMany({ where: { week } })
+
+  return { week, archivedCount: votes.length, totalVotes }
+}
+
 export async function getHomepageFeed() {
   const week = await getCurrentWeek()
   const previousWeek = getPreviousWeek(week)
