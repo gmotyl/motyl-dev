@@ -61,3 +61,35 @@ export async function getWeekVotes(week: string) {
     orderBy: [{ voteCount: 'desc' }, { createdAt: 'asc' }],
   })
 }
+
+export function getPreviousWeek(week: string): string {
+  const [yearStr, weekStr] = week.split('-w')
+  const year = parseInt(yearStr)
+  const weekNum = parseInt(weekStr)
+  if (weekNum === 1) {
+    return `${year - 1}-w52`
+  }
+  return `${year}-w${String(weekNum - 1).padStart(2, '0')}`
+}
+
+export async function getHomepageFeed() {
+  const week = await getCurrentWeek()
+  const previousWeek = getPreviousWeek(week)
+
+  const [currentWeekVotes, lastWeekArchive] = await Promise.all([
+    prisma.trendsVotes.findMany({
+      where: { week },
+      orderBy: [{ voteCount: 'desc' }, { createdAt: 'asc' }],
+      take: 20,
+    }),
+    prisma.trendsArchive.findFirst({
+      where: { week: previousWeek },
+    }),
+  ])
+
+  return {
+    currentWeek: week,
+    trendings: currentWeekVotes,
+    lastWeekSummary: lastWeekArchive ?? null,
+  }
+}
