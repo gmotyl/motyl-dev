@@ -31,7 +31,7 @@ interface HashtagFiltersProps<T extends ItemWithHashtags> {
  * - Mode selector (HAS/ANY/EXCLUDE)
  * - Hashtag buttons with counts
  * - Show more/less functionality
- * - Optional UNSEEN filter button
+ * - Optional NEW filter button
  * - URL state synchronization
  *
  * Usage:
@@ -161,7 +161,7 @@ export function HashtagFilters<T extends ItemWithHashtags>({
         </div>
 
         <div className="flex items-center gap-4 flex-wrap">
-          {/* UNSEEN Filter */}
+          {/* NEW Filter */}
           {showUnseenButton && onToggleUnseen && (
             <Button
               onClick={onToggleUnseen}
@@ -169,7 +169,7 @@ export function HashtagFilters<T extends ItemWithHashtags>({
               size="sm"
               className="font-semibold"
             >
-              {showUnseenOnly ? '✓ ' : ''}UNSEEN
+              {showUnseenOnly ? '✓ ' : ''}NEW
             </Button>
           )}
 

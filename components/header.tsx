@@ -17,7 +17,7 @@ const SUPPORT_URL = 'https://www.buymeacoffee.com/motyl.dev'
 const NAV_LINKS = [
   { label: 'Trending', href: '/' },
   { label: 'Articles', href: '/articles' },
-  { label: 'About Me', href: '/about' },
+  { label: 'about', href: '/about' },
   { label: 'Newsletter', href: '/#newsletter' },
   { label: 'News', href: '/news?unseen=true' },
 ] as const
@@ -75,14 +75,6 @@ export default function Header() {
               {label}
             </Link>
           ))}
-          {session && (
-            <Link
-              href="/visit-all"
-              className="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            >
-              Visit All
-            </Link>
-          )}
         </nav>
 
         {/* Right side */}
@@ -168,20 +160,12 @@ export default function Header() {
               </Link>
             ))}
             {session && (
-              <>
-                <Link
-                  href="/bookmarks"
-                  className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  My Bookmarks
-                </Link>
-                <Link
-                  href="/visit-all"
-                  className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  Visit All
-                </Link>
-              </>
+              <Link
+                href="/bookmarks"
+                className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                My Bookmarks
+              </Link>
             )}
 
             {/* Support CTA in mobile */}

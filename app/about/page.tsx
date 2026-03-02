@@ -56,39 +56,17 @@ export default function AboutPage() {
       <main className="flex-1">
         <div className="container max-w-3xl mx-auto px-4 py-12 md:py-16 space-y-14">
 
-          {/* Bio */}
-          <section className="space-y-5">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-11 h-11 rounded-full bg-primary/10 shrink-0">
-                <Code2 className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                  Grzegorz Motyl
-                </h1>
-                <p className="text-muted-foreground text-sm mt-0.5">
-                  Frontend &amp; AI Developer
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-4 text-base leading-relaxed text-foreground/80">
-              <p>
-                Hi, I&apos;m Greg — a frontend developer with a deep interest in AI tooling,
-                functional programming, and building software that actually lasts. I&apos;ve been
-                writing code professionally for over a decade, mostly in TypeScript and React,
-                with a particular focus on architecture and developer experience.
-              </p>
-              <p>
-                I started motyl.dev as a place to share what I learn — curated trends in
-                Frontend &amp; AI, practical articles on fp-ts and clean architecture, and honest
-                takes on the tools I use every day. No ads, no paywalls, no fluff.
-              </p>
-              <p>
-                Outside of coding I&apos;m a father, occasional runner, and someone who takes
-                coffee quality very seriously.
-              </p>
-            </div>
+          {/* Motyl.dev Platform Description */}
+          <section className="space-y-4">
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
+              Curated trends. Honest takes.
+            </h1>
+            <p className="text-lg text-foreground/80 leading-relaxed">
+              motyl.dev is a place for developers who care about quality. Weekly curated trends in Frontend &amp; AI, practical deep-dives on functional programming and architecture, and real-world perspectives on the tools we build with.
+            </p>
+            <p className="text-base text-muted-foreground leading-relaxed">
+              No ads. No paywalls. No algorithm deciding what you see. Just thoughtful writing and community-voted trends that matter.
+            </p>
           </section>
 
           {/* Expertise Cards */}
@@ -119,6 +97,19 @@ export default function AboutPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </section>
+
+          {/* About Grzegorz — less prominent */}
+          <section className="space-y-4 pt-4 border-t border-border/50">
+            <h2 className="text-lg font-semibold text-foreground/80">About Grzegorz</h2>
+            <div className="space-y-3 text-sm text-foreground/70 leading-relaxed">
+              <p>
+                I&apos;m Greg, a frontend developer with over a decade of experience in TypeScript and React. I care obsessively about architecture, functional programming, and clean code.
+              </p>
+              <p>
+                Outside of coding, I&apos;m a father, occasional runner, and someone who takes coffee quality way too seriously.
+              </p>
             </div>
           </section>
 
