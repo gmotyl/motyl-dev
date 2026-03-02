@@ -1,4 +1,7 @@
 import { prisma } from '@/lib/prisma'
+import { mockGetHomepageFeed, mockCastVote } from '@/lib/trends-mock'
+
+const isDevMock = process.env.DATABASE_URL?.includes('dummy') ?? false
 
 export async function getCurrentWeek(): Promise<string> {
   const date = new Date()
@@ -35,6 +38,10 @@ export async function castVote(
   sourceDomain?: string
 ) {
   const week = await getCurrentWeek()
+
+  if (isDevMock) {
+    return mockCastVote(week, linkUrl, title, description, category, sourceDomain)
+  }
 
   return await prisma.trendsVotes.upsert({
     where: {
@@ -96,6 +103,9 @@ export async function resetWeeklyVotes() {
 
 export async function getHomepageFeed() {
   const week = await getCurrentWeek()
+
+  if (isDevMock) return mockGetHomepageFeed(week)
+
   const previousWeek = getPreviousWeek(week)
 
   const [currentWeekVotes, lastWeekArchive] = await Promise.all([
