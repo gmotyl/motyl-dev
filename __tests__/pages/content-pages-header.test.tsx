@@ -41,22 +41,23 @@ describe('Header component on content pages', () => {
   it('renders desktop navigation links', () => {
     render(<Header />)
 
-    // Check for navigation links in the desktop nav (use exact text to avoid regex collisions)
-    expect(screen.getByRole('link', { name: 'About Me' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Newsletter' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'News' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Articles' })).toBeInTheDocument()
+    // Both desktop and mobile menus render the same links; use getAllByRole since
+    // jsdom does not implement the inert attribute (which hides the mobile copies).
+    expect(screen.getAllByRole('link', { name: 'About Me' })[0]).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: 'Newsletter' })[0]).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: 'News' })[0]).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: 'Articles' })[0]).toBeInTheDocument()
   })
 
   it('renders correct hrefs for navigation links', () => {
     render(<Header />)
 
-    const aboutLink = screen.getByRole('link', { name: 'About Me' })
-    const newsletterLink = screen.getByRole('link', { name: 'Newsletter' })
-    const newsLink = screen.getByRole('link', { name: 'News' })
-    const articlesLink = screen.getByRole('link', { name: 'Articles' })
+    const aboutLink = screen.getAllByRole('link', { name: 'About Me' })[0]
+    const newsletterLink = screen.getAllByRole('link', { name: 'Newsletter' })[0]
+    const newsLink = screen.getAllByRole('link', { name: 'News' })[0]
+    const articlesLink = screen.getAllByRole('link', { name: 'Articles' })[0]
 
-    expect(aboutLink).toHaveAttribute('href', '/#about')
+    expect(aboutLink).toHaveAttribute('href', '/about')
     expect(newsletterLink).toHaveAttribute('href', '/#newsletter')
     expect(newsLink).toHaveAttribute('href', '/news?unseen=true')
     expect(articlesLink).toHaveAttribute('href', '/articles')

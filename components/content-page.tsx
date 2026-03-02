@@ -14,6 +14,13 @@ import AdUnit from '@/components/ad-unit'
 import { type Content, ItemType } from '@/lib/types'
 import { getContentUrl } from '@/lib/urls'
 import { ContentItemMetadata } from '@/lib/articles'
+function inferCategory(hashtags: string[]): 'frontend' | 'ai' | 'tools' | 'other' {
+  const tags = hashtags.map(t => t.toLowerCase())
+  if (tags.some(t => t.includes('ai') || t.includes('llm') || t.includes('gpt') || t.includes('claude') || t.includes('ml'))) return 'ai'
+  if (tags.some(t => t.includes('react') || t.includes('frontend') || t.includes('css') || t.includes('javascript') || t.includes('typescript') || t.includes('nextjs') || t.includes('vue') || t.includes('angular'))) return 'frontend'
+  if (tags.some(t => t.includes('tools') || t.includes('cli') || t.includes('vscode') || t.includes('devtools') || t.includes('tooling'))) return 'tools'
+  return 'other'
+}
 
 interface ContentPageProps {
   article: Content
@@ -99,8 +106,8 @@ export default async function ContentPage({ article, prevArticle, nextArticle }:
             ]}
           />
           <header className="mb-8">
-            <div className="flex justify-between items-start mb-4">
-              <h1 className="text-4xl font-bold flex-1">{article.title}</h1>
+            <div className="mb-4">
+              <h1 className="text-4xl font-bold leading-tight">{article.title}</h1>
             </div>
             <div className="flex justify-between items-center mb-2">
               <p className="text-muted-foreground">
@@ -140,6 +147,7 @@ export default async function ContentPage({ article, prevArticle, nextArticle }:
               links={article.externalLinks}
               articleHashtags={article.hashtags}
               articleSlug={article.slug}
+              voteCategory={inferCategory(article.hashtags)}
             />
           )}
 

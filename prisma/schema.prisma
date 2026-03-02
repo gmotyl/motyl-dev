@@ -98,3 +98,33 @@ model ArticleView {
   @@index([userId])
   @@index([articleSlug])
 }
+
+// Trends Voting System
+model TrendsVotes {
+  id            String   @id @default(cuid())
+  week          String
+  linkUrl       String   @map("link_url")
+  title         String
+  description   String?
+  category      String   @default("other")
+  voteCount     Int      @default(0) @map("vote_count")
+  sourceDomain  String?  @map("source_domain")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@unique([week, linkUrl])
+  @@index([week])
+  @@index([voteCount])
+  @@map("trends_votes")
+}
+
+model TrendsArchive {
+  id               String   @id @default(cuid())
+  week             String   @unique
+  summaryMarkdown  String   @db.Text @map("summary_markdown")
+  totalVotes       Int      @map("total_votes")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("trends_votes_archive")
+}

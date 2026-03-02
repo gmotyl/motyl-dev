@@ -7,12 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BookmarkButton } from '@/components/bookmark-button';
 import { BookmarkDialog } from '@/components/bookmark-dialog';
 import { useBookmarks } from '@/hooks/use-bookmarks';
+import { VoteButton } from '@/components/vote-button';
 import type { ExternalLink } from '@/lib/types';
 
 interface ArticleExternalLinksProps {
   links: ExternalLink[];
   articleHashtags: string[];
   articleSlug: string;
+  voteCategory?: 'frontend' | 'ai' | 'tools' | 'other';
 }
 
 /**
@@ -24,7 +26,7 @@ interface ArticleExternalLinksProps {
  * - Quick bookmark with dialog for hashtags
  * - Suggest article hashtags for new bookmarks
  */
-export function ArticleExternalLinks({ links, articleHashtags, articleSlug }: ArticleExternalLinksProps) {
+export function ArticleExternalLinks({ links, articleHashtags, articleSlug, voteCategory = 'other' }: ArticleExternalLinksProps) {
   const { data: session } = useSession();
   const { bookmarks, addBookmark, removeBookmark, isLoading } = useBookmarks();
 
@@ -112,17 +114,26 @@ export function ArticleExternalLinks({ links, articleHashtags, articleSlug }: Ar
                     </a>
                   </div>
 
-                  {session && (
-                    <div className="md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                      <BookmarkButton
-                        url={link.url}
-                        title={link.title}
-                        isBookmarked={isBookmarked}
-                        onToggle={() => handleToggleBookmark(link)}
-                        loading={isLoading}
-                      />
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <VoteButton
+                      linkUrl={link.url}
+                      title={link.title}
+                      category={voteCategory}
+                      sourceDomain={link.url}
+                      initialVoteCount={0}
+                    />
+                    {session && (
+                      <div className="md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                        <BookmarkButton
+                          url={link.url}
+                          title={link.title}
+                          isBookmarked={isBookmarked}
+                          onToggle={() => handleToggleBookmark(link)}
+                          loading={isLoading}
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })}

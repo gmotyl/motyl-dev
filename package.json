@@ -11,6 +11,8 @@
     "lint": "eslint .",
     "test": "vitest",
     "verify": "tsx scripts/verify-content.ts",
+    "generate:trends": "tsx scripts/trends-fetch-input.ts",
+    "trends:reset": "tsx scripts/trends-reset.ts",
     "postinstall": "prisma generate",
     "prepare": "husky",
     "init:claude": "mkdir -p .claude/commands && cp commands/*.md .claude/commands/"

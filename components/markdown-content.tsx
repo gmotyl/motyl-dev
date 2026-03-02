@@ -5,9 +5,18 @@ import rehypeSlug from 'rehype-slug'
 import remarkGfm from 'remark-gfm'
 import * as emoji from 'node-emoji'
 import { ShareAIButton } from '@/components/share-ai-button'
+import { VoteButton } from '@/components/vote-button'
 import { useEffect, useState } from 'react'
 import type { Components } from 'react-markdown'
 import { ItemType, type ItemTypeValue } from '@/lib/types'
+
+function inferCategory(href: string): 'frontend' | 'ai' | 'tools' | 'other' {
+  const url = href.toLowerCase()
+  if (url.includes('ai') || url.includes('openai') || url.includes('anthropic') || url.includes('claude') || url.includes('gemini') || url.includes('deepmind')) return 'ai'
+  if (url.includes('react') || url.includes('tailwind') || url.includes('next') || url.includes('vue') || url.includes('angular') || url.includes('svelte') || url.includes('css') || url.includes('js') || url.includes('github')) return 'frontend'
+  if (url.includes('tool') || url.includes('cli') || url.includes('dev')) return 'tools'
+  return 'other'
+}
 
 interface MarkdownContentProps {
   content: string
@@ -36,21 +45,29 @@ export function MarkdownContent({ content, itemType }: MarkdownContentProps) {
 
       if (isExternal && summaryPrompt && isNews) {
         return (
-          <>
+          <span className="inline-flex items-center gap-2">
             <a href={href} {...props} target="_blank" rel="noopener noreferrer">
               {children}
             </a>
-            {' '}
-            <ShareAIButton
-              prompt={summaryPrompt}
-              url={href}
-              title={title}
-              buttonLabel="Copy for AI"
-              shareTitle="Summarize linked article with AI"
-              successMessage="Copied! Paste in ChatGPT/Gemini to fetch and summarize this link 🔊"
-              iconOnly={true}
-            />
-          </>
+            <div className="inline-flex gap-1">
+              <VoteButton
+                linkUrl={href}
+                title={title}
+                category={inferCategory(href)}
+                sourceDomain={href}
+                initialVoteCount={0}
+              />
+              <ShareAIButton
+                prompt={summaryPrompt}
+                url={href}
+                title={title}
+                buttonLabel="Copy for AI"
+                shareTitle="Summarize linked article with AI"
+                successMessage="Copied! Paste in ChatGPT/Gemini to fetch and summarize this link 🔊"
+                iconOnly={true}
+              />
+            </div>
+          </span>
         )
       }
 

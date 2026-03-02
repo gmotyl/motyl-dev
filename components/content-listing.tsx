@@ -281,7 +281,7 @@ export function ContentListing({
                   size="sm"
                   className="font-semibold"
                 >
-                  {showUnseenOnly ? '✓ ' : ''}UNSEEN
+                  {showUnseenOnly ? '✓ ' : ''}NEW
                 </Button>
 
                 {selectedHashtags.size > 0 && (
