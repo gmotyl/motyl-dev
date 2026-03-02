@@ -4,6 +4,7 @@ import Header from '@/components/header'
 import Footer from '@/components/footer'
 import NewsletterForm from '@/components/newsletter-form'
 import Link from 'next/link'
+import ReactMarkdown from 'react-markdown'
 import { Button } from '@/components/ui/button'
 import { getAllContentMetadata } from '@/lib/articles'
 import { getHomepageFeed } from '@/lib/trends'
@@ -111,7 +112,7 @@ export default async function Home() {
             <section className="space-y-3">
               <h2 className="text-xl font-semibold">📚 From Last Week</h2>
               <div className="rounded-lg border border-border bg-muted/30 p-4 prose prose-sm dark:prose-invert max-w-none">
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{feed.lastWeekSummary.summaryMarkdown}</p>
+                <ReactMarkdown>{feed.lastWeekSummary.summaryMarkdown}</ReactMarkdown>
               </div>
             </section>
           )}
