@@ -14,8 +14,6 @@ import AdUnit from '@/components/ad-unit'
 import { type Content, ItemType } from '@/lib/types'
 import { getContentUrl } from '@/lib/urls'
 import { ContentItemMetadata } from '@/lib/articles'
-import { VoteButton } from '@/components/vote-button'
-
 function inferCategory(hashtags: string[]): 'frontend' | 'ai' | 'tools' | 'other' {
   const tags = hashtags.map(t => t.toLowerCase())
   if (tags.some(t => t.includes('ai') || t.includes('llm') || t.includes('gpt') || t.includes('claude') || t.includes('ml'))) return 'ai'
@@ -108,20 +106,8 @@ export default async function ContentPage({ article, prevArticle, nextArticle }:
             ]}
           />
           <header className="mb-8">
-            <div className="flex items-start gap-3 mb-4">
-              <h1 className="text-4xl font-bold flex-1 leading-tight">{article.title}</h1>
-              {isNewsArticle && (
-                <div className="flex-shrink-0">
-                  <VoteButton
-                    linkUrl={getContentUrl(article, true)}
-                    title={article.title}
-                    description={article.excerpt}
-                    category={inferCategory(article.hashtags)}
-                    sourceDomain="https://motyl.dev"
-                    initialVoteCount={0}
-                  />
-                </div>
-              )}
+            <div className="mb-4">
+              <h1 className="text-4xl font-bold leading-tight">{article.title}</h1>
             </div>
             <div className="flex justify-between items-center mb-2">
               <p className="text-muted-foreground">
