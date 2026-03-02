@@ -108,10 +108,10 @@ export default async function ContentPage({ article, prevArticle, nextArticle }:
             ]}
           />
           <header className="mb-8">
-            <div className="flex justify-between items-start gap-4 mb-4">
-              <h1 className="text-4xl font-bold flex-1">{article.title}</h1>
+            <div className="flex items-start gap-3 mb-4">
+              <h1 className="text-4xl font-bold flex-1 leading-tight">{article.title}</h1>
               {isNewsArticle && (
-                <div className="flex-shrink-0 pt-1">
+                <div className="flex-shrink-0">
                   <VoteButton
                     linkUrl={getContentUrl(article, true)}
                     title={article.title}
