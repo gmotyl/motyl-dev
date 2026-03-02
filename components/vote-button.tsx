@@ -81,8 +81,8 @@ export function VoteButton({
         isLoading && 'opacity-70'
       )}
     >
-      <ThumbsUp className={cn('h-3.5 w-3.5 transition-all', voted && 'fill-current')} />
-      <span>{voteCount}</span>
+      <ThumbsUp className={cn('h-4 w-4 transition-all', voted && 'fill-current')} />
+      <span className="text-sm">{voteCount}</span>
     </button>
   )
 }
