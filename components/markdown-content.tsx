@@ -35,8 +35,11 @@ export function MarkdownContent({ content, itemType }: MarkdownContentProps) {
       .catch((err) => console.error('Failed to load TRANSLATE_PROMPT.md:', err))
   }, [])
 
+  // Strip "**Link:**" labels (redundant with inline vote buttons)
+  const contentCleaned = content.replace(/\*\*Link:\*\*\s*/g, '')
+
   // Process emojis
-  const contentWithEmojis = emoji.emojify(content)
+  const contentWithEmojis = emoji.emojify(contentCleaned)
 
   const components: Components = {
     a: ({ href, children, ...props }) => {
@@ -46,27 +49,25 @@ export function MarkdownContent({ content, itemType }: MarkdownContentProps) {
       if (isExternal && summaryPrompt && isNews) {
         return (
           <span className="inline-flex items-center gap-2">
+            <VoteButton
+              linkUrl={href}
+              title={title}
+              category={inferCategory(href)}
+              sourceDomain={href}
+              initialVoteCount={0}
+            />
             <a href={href} {...props} target="_blank" rel="noopener noreferrer">
               {children}
             </a>
-            <div className="inline-flex gap-1">
-              <VoteButton
-                linkUrl={href}
-                title={title}
-                category={inferCategory(href)}
-                sourceDomain={href}
-                initialVoteCount={0}
-              />
-              <ShareAIButton
-                prompt={summaryPrompt}
-                url={href}
-                title={title}
-                buttonLabel="Copy for AI"
-                shareTitle="Summarize linked article with AI"
-                successMessage="Copied! Paste in ChatGPT/Gemini to fetch and summarize this link 🔊"
-                iconOnly={true}
-              />
-            </div>
+            <ShareAIButton
+              prompt={summaryPrompt}
+              url={href}
+              title={title}
+              buttonLabel="Copy for AI"
+              shareTitle="Summarize linked article with AI"
+              successMessage="Copied! Paste in ChatGPT/Gemini to fetch and summarize this link 🔊"
+              iconOnly={true}
+            />
           </span>
         )
       }
