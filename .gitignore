@@ -34,3 +34,5 @@ next-env.d.ts
 
 # Generated content cache (built at build time)
 /data/content-cache.json
+.gitnexus
+.trends-input.json
