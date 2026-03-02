@@ -6,7 +6,7 @@ import { getUserViewedArticles } from '@/lib/article-views'
 import Header from '@/components/header'
 
 export const metadata = {
-  title: 'Articles - Motyl.dev',
+  title: 'Blog - Motyl.dev',
   description: 'Original articles about web development, architecture, and software craftsmanship',
 }
 
@@ -57,7 +57,7 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
         totalItems={pageData.totalItems}
         allHashtags={allHashtags}
         hashtagCounts={pageData.hashtagCounts}
-        title="Articles"
+        title="Blog"
         description="Original articles about web development, architecture, and software craftsmanship"
         contentType="article"
         basePath="/articles"

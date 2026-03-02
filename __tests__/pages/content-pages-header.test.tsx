@@ -43,24 +43,21 @@ describe('Header component on content pages', () => {
 
     // Both desktop and mobile menus render the same links; use getAllByRole since
     // jsdom does not implement the inert attribute (which hides the mobile copies).
-    expect(screen.getAllByRole('link', { name: 'About Me' })[0]).toBeInTheDocument()
-    expect(screen.getAllByRole('link', { name: 'Newsletter' })[0]).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: 'About' })[0]).toBeInTheDocument()
     expect(screen.getAllByRole('link', { name: 'News' })[0]).toBeInTheDocument()
-    expect(screen.getAllByRole('link', { name: 'Articles' })[0]).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: 'Blog' })[0]).toBeInTheDocument()
   })
 
   it('renders correct hrefs for navigation links', () => {
     render(<Header />)
 
-    const aboutLink = screen.getAllByRole('link', { name: 'About Me' })[0]
-    const newsletterLink = screen.getAllByRole('link', { name: 'Newsletter' })[0]
+    const aboutLink = screen.getAllByRole('link', { name: 'About' })[0]
     const newsLink = screen.getAllByRole('link', { name: 'News' })[0]
-    const articlesLink = screen.getAllByRole('link', { name: 'Articles' })[0]
+    const blogLink = screen.getAllByRole('link', { name: 'Blog' })[0]
 
     expect(aboutLink).toHaveAttribute('href', '/about')
-    expect(newsletterLink).toHaveAttribute('href', '/#newsletter')
     expect(newsLink).toHaveAttribute('href', '/news?unseen=true')
-    expect(articlesLink).toHaveAttribute('href', '/articles')
+    expect(blogLink).toHaveAttribute('href', '/articles')
   })
 
   it('shows "motyl.dev" text in header', () => {

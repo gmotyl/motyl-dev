@@ -1,7 +1,7 @@
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import NewsletterForm from '@/components/newsletter-form'
-import { Code2, Layers, FlaskConical, Wrench } from 'lucide-react'
+import { Monitor, Layers, Sparkles } from 'lucide-react'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -13,24 +13,21 @@ export const metadata: Metadata = {
 const EXPERTISE = [
   {
     icon: Layers,
-    title: 'Architecture Expert',
+    title: 'Architecture',
     description:
-      'Designing scalable, maintainable systems is where I thrive. From micro-frontends to modular monoliths, I focus on clear boundaries, well-defined contracts, and structures that let teams move fast without breaking things.',
-    tags: ['System Design', 'Scalability', 'Micro-frontends', 'Domain Modeling'],
+      'Modern software engineering has shifted strongly towards architecture and design. Read curated articles that will help you guide your coding agent to build systems that are maintainable.',
   },
   {
-    icon: FlaskConical,
-    title: 'FP Advocate',
+    icon: Monitor,
+    title: 'Frontend',
     description:
-      'Functional programming changed how I think about code. I use fp-ts daily — composing pipelines with pipe and flow, modeling errors with Either and TaskEither, and eliminating mutation wherever it causes pain.',
-    tags: ['fp-ts', 'Immutable Data', 'Function Composition', 'Type-safe Errors'],
+      'Frontend development is my bread and butter. I track and share insights on React, TypeScript, state management, and the evolving frontend ecosystem.',
   },
   {
-    icon: Wrench,
-    title: 'Software Craftsman',
+    icon: Sparkles,
+    title: 'AI',
     description:
-      'I care deeply about code quality: meaningful names, small functions, tests that document intent, and refactoring as a routine discipline — not a project. Good software is built incrementally, with intention.',
-    tags: ['TDD', 'Clean Code', 'Refactoring', 'Code Review'],
+      'AI is the most exciting frontier in software development. I focus on practical applications of AI in coding & architecture, AI tools and AI driven development.',
   },
 ]
 
@@ -62,7 +59,7 @@ export default function AboutPage() {
               Curated trends. Honest takes.
             </h1>
             <p className="text-lg text-foreground/80 leading-relaxed">
-              motyl.dev is a place for developers who care about quality. Weekly curated trends in Frontend &amp; AI, practical deep-dives on functional programming and architecture, and real-world perspectives on the tools we build with.
+              motyl.dev keeps you up to date with the latest trends in Frontend &amp; AI. Every week, I curate the most important developments, dive deep into practical solutions for functional programming and architecture, and share real-world perspectives on the tools shaping our industry.
             </p>
             <p className="text-base text-muted-foreground leading-relaxed">
               No ads. No paywalls. No algorithm deciding what you see. Just thoughtful writing and community-voted trends that matter.
@@ -73,7 +70,7 @@ export default function AboutPage() {
           <section className="space-y-4">
             <h2 className="text-xl font-semibold">What I care about</h2>
             <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-3">
-              {EXPERTISE.map(({ icon: Icon, title, description, tags }) => (
+              {EXPERTISE.map(({ icon: Icon, title, description }) => (
                 <div
                   key={title}
                   className="rounded-lg border border-border bg-background/50 p-5 space-y-3 hover:border-primary/30 hover:shadow-sm transition-all duration-200"
@@ -85,16 +82,6 @@ export default function AboutPage() {
                     <h3 className="font-semibold text-sm leading-tight">{title}</h3>
                   </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
-                  <div className="flex flex-wrap gap-1.5 pt-1">
-                    {tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="text-xs px-2 py-0.5 rounded-full border border-primary/20 text-primary/70 bg-primary/5"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
                 </div>
               ))}
             </div>
@@ -102,10 +89,10 @@ export default function AboutPage() {
 
           {/* About Grzegorz — less prominent */}
           <section className="space-y-4 pt-4 border-t border-border/50">
-            <h2 className="text-lg font-semibold text-foreground/80">About Grzegorz</h2>
+            <h2 className="text-lg font-semibold text-foreground/80">motyl.dev by Grzegorz (Greg) Motyl</h2>
             <div className="space-y-3 text-sm text-foreground/70 leading-relaxed">
               <p>
-                I&apos;m Greg, a frontend developer with over a decade of experience in TypeScript and React. I care obsessively about architecture, functional programming, and clean code.
+                I&apos;m Greg, a frontend developer with over two decades of experience in TypeScript and React. I care obsessively about architecture, functional programming, and clean code.
               </p>
               <p>
                 Outside of coding, I&apos;m a father, occasional runner, and someone who takes coffee quality way too seriously.

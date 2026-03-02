@@ -37,6 +37,17 @@ export default async function Home() {
       <main className="flex-1">
         <div className="container max-w-3xl mx-auto px-4 py-12 md:py-16 space-y-12">
 
+          {/* Newsletter */}
+          <section id="newsletter" className="rounded-lg border border-primary/20 bg-primary/5 p-6 md:p-8 space-y-4 text-center">
+            <h2 className="text-2xl font-bold">📬 Weekly Newsletter</h2>
+            <p className="text-muted-foreground max-w-sm mx-auto text-sm">
+              Get the best frontend & AI links delivered to your inbox every week. No spam, unsubscribe anytime.
+            </p>
+            <div className="max-w-sm mx-auto">
+              <NewsletterForm />
+            </div>
+          </section>
+
           {/* Hero */}
           <section className="space-y-3">
             <div className="flex items-center gap-2 flex-wrap">
@@ -117,16 +128,13 @@ export default async function Home() {
             </section>
           )}
 
-          {/* Newsletter + Donation CTA */}
-          <section id="newsletter" className="rounded-lg border border-primary/20 bg-primary/5 p-6 md:p-8 space-y-4 text-center">
+          {/* Support CTA */}
+          <section className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-6 md:p-8 space-y-4 text-center">
             <h2 className="text-2xl font-bold">☕ Fuel Quality Content</h2>
             <p className="text-muted-foreground max-w-sm mx-auto text-sm">
-              Help me keep sharing high-quality insights without ads or paywalls. Subscribe for weekly summaries.
+              Help me keep sharing high-quality insights without ads or paywalls.
             </p>
-            <div className="max-w-sm mx-auto">
-              <NewsletterForm />
-            </div>
-            <div className="pt-2">
+            <div>
               <a
                 href="https://www.buymeacoffee.com/motyl.dev"
                 target="_blank"

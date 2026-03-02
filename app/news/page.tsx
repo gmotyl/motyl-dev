@@ -7,7 +7,7 @@ import Header from '@/components/header'
 
 export const metadata = {
   title: 'News - Motyl.dev',
-  description: 'Latest tech news and insights curated from newsletters',
+  description: 'Handpicked frontend, AI, and dev-tools reads — freshly curated from the best newsletters every week.',
 }
 
 interface NewsPageProps {
@@ -58,7 +58,7 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
         allHashtags={allHashtags}
         hashtagCounts={pageData.hashtagCounts}
         title="News"
-        description="Latest tech news and insights curated from newsletters"
+        description="Handpicked frontend, AI, and dev-tools reads — freshly curated from the best newsletters every week."
         contentType="news"
         basePath="/news"
         requireHashtags={['generated']}

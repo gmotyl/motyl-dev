@@ -16,10 +16,9 @@ const SUPPORT_URL = 'https://www.buymeacoffee.com/motyl.dev'
 
 const NAV_LINKS = [
   { label: 'Trending', href: '/' },
-  { label: 'Articles', href: '/articles' },
-  { label: 'about', href: '/about' },
-  { label: 'Newsletter', href: '/#newsletter' },
+  { label: 'Blog', href: '/articles' },
   { label: 'News', href: '/news?unseen=true' },
+  { label: 'About', href: '/about' },
 ] as const
 
 export default function Header() {
