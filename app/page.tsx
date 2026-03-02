@@ -11,9 +11,11 @@ import { getContentUrl } from '@/lib/urls'
 
 export const dynamic = 'force-dynamic' // votes change frequently
 
+const emptyFeed = { currentWeek: '—', trendings: [], lastWeekSummary: null }
+
 export default async function Home() {
   const [feed, articles] = await Promise.all([
-    getHomepageFeed(),
+    getHomepageFeed().catch(() => emptyFeed),
     getAllContentMetadata(),
   ])
   const latestArticles = articles.slice(0, 3)
