@@ -7,7 +7,7 @@ import Header from '@/components/header'
 
 export const metadata = {
   title: 'Blog - Motyl.dev',
-  description: 'Original articles about web development, architecture, and software craftsmanship',
+  description: 'Original insights on web architecture and the future of AI-driven development',
 }
 
 interface ArticlesPageProps {
@@ -58,7 +58,7 @@ export default async function ArticlesPage({ searchParams }: ArticlesPageProps) 
         allHashtags={allHashtags}
         hashtagCounts={pageData.hashtagCounts}
         title="Blog"
-        description="Original articles about web development, architecture, and software craftsmanship"
+        description="Original insights on web architecture and the future of AI-driven development"
         contentType="article"
         basePath="/articles"
         excludeHashtags={['generated']}
