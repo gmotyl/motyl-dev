@@ -37,7 +37,7 @@ for (const migration of migrations) {
     .replace(/CREATE INDEX /gi, 'CREATE INDEX IF NOT EXISTS ')
 
   console.log(`  → ${migration}`)
-  const result = run('npx prisma db execute --stdin', safeSql)
+  const result = run('npx prisma db execute --schema prisma/schema.prisma --stdin', safeSql)
   if (!result.ok) {
     console.error(`  ❌ SQL failed: ${result.output}`)
     process.exit(1)
