@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "pnpm prebuild && next dev",
     "prebuild": "tsx scripts/build-content-cache.ts",
-    "build": "prisma generate && tsx scripts/prisma-baseline.ts && next build",
+    "build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest",
