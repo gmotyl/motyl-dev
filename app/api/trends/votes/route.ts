@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { castVote, getCurrentWeek, getWeekVotes } from '@/lib/trends'
+import { auth } from '@/lib/auth'
 import { z } from 'zod'
 
 const voteSchema = z.object({
@@ -23,8 +24,11 @@ export async function POST(request: NextRequest) {
       data.sourceDomain
     )
 
+    const session = await auth()
+    const isSuperAdmin = session?.user?.isSuperAdmin ?? false
+
     return NextResponse.json(
-      { success: true, vote: result },
+      { success: true, vote: result, isSuperAdmin },
       { status: 201 }
     )
   } catch (error) {

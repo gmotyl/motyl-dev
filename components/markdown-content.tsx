@@ -48,7 +48,7 @@ export function MarkdownContent({ content, itemType }: MarkdownContentProps) {
 
       if (isExternal && summaryPrompt && isNews) {
         return (
-          <span className="inline-flex items-center gap-2">
+          <span className="inline-flex items-center gap-2 not-prose">
             <VoteButton
               linkUrl={href}
               title={title}

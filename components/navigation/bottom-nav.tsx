@@ -7,7 +7,7 @@ import { BottomNavItem } from "./bottom-nav-item"
 const navItems = [
   { href: "/", icon: Home, label: "Home" },
   { href: "/news?unseen=true", icon: Newspaper, label: "News" },
-  { href: "/articles", icon: BookOpen, label: "Articles" },
+  { href: "/articles", icon: BookOpen, label: "Blog" },
   { href: "/me", icon: User, label: "Me" },
 ]
 

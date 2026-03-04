@@ -29,13 +29,14 @@ export function VoteButton({
   const [voted, setVoted] = useState(false)
   const [voteCount, setVoteCount] = useState(initialVoteCount)
   const [isLoading, setIsLoading] = useState(false)
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false)
 
   const handleVote = async () => {
-    if (voted || isLoading) return
+    if ((!isSuperAdmin && voted) || isLoading) return
 
     // Optimistic update
     setVoteCount(prev => prev + 1)
-    setVoted(true)
+    if (!isSuperAdmin) setVoted(true)
     setIsLoading(true)
 
     try {
@@ -48,15 +49,18 @@ export function VoteButton({
       if (!res.ok) {
         // Rollback on failure
         setVoteCount(prev => prev - 1)
-        setVoted(false)
+        if (!isSuperAdmin) setVoted(false)
         return
       }
+
+      const data = await res.json()
+      if (data.isSuperAdmin) setIsSuperAdmin(true)
 
       onVote?.()
     } catch {
       // Rollback on error
       setVoteCount(prev => prev - 1)
-      setVoted(false)
+      if (!isSuperAdmin) setVoted(false)
     } finally {
       setIsLoading(false)
     }
@@ -66,7 +70,7 @@ export function VoteButton({
     <button
       type="button"
       onClick={handleVote}
-      disabled={voted || isLoading}
+      disabled={(!isSuperAdmin && voted) || isLoading}
       aria-pressed={voted}
       aria-label={`Upvote — ${voteCount} vote${voteCount !== 1 ? 's' : ''}`}
       className={cn(
@@ -77,11 +81,11 @@ export function VoteButton({
         voted
           ? 'bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-400'
           : 'border-primary/20 text-muted-foreground hover:border-primary/40 hover:bg-primary/5 hover:text-primary',
-        isLoading ? 'cursor-wait' : voted ? 'cursor-default' : 'cursor-pointer',
+        isLoading ? 'cursor-wait' : (!isSuperAdmin && voted) ? 'cursor-default' : 'cursor-pointer',
         isLoading && 'opacity-70'
       )}
     >
-      <ThumbsUp className={cn('h-4 w-4 transition-all', voted && 'fill-current')} />
+      <ThumbsUp className={cn('h-5 w-5 transition-all', voted && 'fill-current')} />
       <span className="text-sm">{voteCount}</span>
     </button>
   )
