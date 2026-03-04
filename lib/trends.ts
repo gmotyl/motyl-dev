@@ -40,10 +40,16 @@ export async function castVote(
   const week = await getCurrentWeek()
 
   if (isDevMock) {
-    return mockCastVote(week, linkUrl, title, description, category, sourceDomain)
+    const vote = await mockCastVote(week, linkUrl, title, description, category, sourceDomain)
+    return { vote, isNew: vote.voteCount === 1, newRank: 1 }
   }
 
-  return await prisma.trendsVotes.upsert({
+  const existing = await prisma.trendsVotes.findUnique({
+    where: { week_linkUrl: { week, linkUrl } },
+  })
+  const isNew = !existing
+
+  const vote = await prisma.trendsVotes.upsert({
     where: {
       week_linkUrl: { week, linkUrl },
     },
@@ -60,6 +66,14 @@ export async function castVote(
       voteCount: 1,
     },
   })
+
+  // Calculate new rank (1-based position by vote count)
+  const higherCount = await prisma.trendsVotes.count({
+    where: { week, voteCount: { gt: vote.voteCount } },
+  })
+  const newRank = higherCount + 1
+
+  return { vote, isNew, newRank }
 }
 
 export async function getWeekVotes(week: string) {

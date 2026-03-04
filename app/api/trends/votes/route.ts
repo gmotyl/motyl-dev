@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const data = voteSchema.parse(body)
 
-    const result = await castVote(
+    const { vote, isNew, newRank } = await castVote(
       data.linkUrl,
       data.title,
       data.description,
@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     const isSuperAdmin = session?.user?.isSuperAdmin ?? false
 
     return NextResponse.json(
-      { success: true, vote: result, isSuperAdmin },
+      { success: true, vote, isNew, newRank, isSuperAdmin },
       { status: 201 }
     )
   } catch (error) {
