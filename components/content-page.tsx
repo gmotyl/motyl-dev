@@ -142,7 +142,7 @@ export default async function ContentPage({ article, prevArticle, nextArticle }:
             />
           </div>
 
-          {article.externalLinks && article.externalLinks.length > 0 && (
+          {isNewsArticle && article.externalLinks && article.externalLinks.length > 0 && (
             <ArticleExternalLinks
               links={article.externalLinks}
               articleHashtags={article.hashtags}
