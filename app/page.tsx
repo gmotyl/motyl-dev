@@ -7,6 +7,7 @@ import Link from 'next/link'
 import ReactMarkdown from 'react-markdown'
 import { Button } from '@/components/ui/button'
 import { getAllContentMetadata } from '@/lib/articles'
+import { ItemType } from '@/lib/types'
 import { getHomepageFeed } from '@/lib/trends'
 import { getContentUrl } from '@/lib/urls'
 
@@ -19,7 +20,7 @@ export default async function Home() {
     getHomepageFeed().catch(() => emptyFeed),
     getAllContentMetadata(),
   ])
-  const latestArticles = articles.slice(0, 3)
+  const latestArticles = articles.filter(a => a.itemType === ItemType.Article).slice(0, 3)
   const totalVotes = feed.trendings.reduce((sum, t) => sum + t.voteCount, 0)
 
   const jsonLd = {
