@@ -1,0 +1,42 @@
+---
+title: "Scaling 120+ AI Agents: Two-Tier Orchestration, Hybrid Retrieval, and the Architecture That Holds It Together"
+excerpt: "A deep dive into building a multi-agent system with intelligent routing, hybrid retrieval pipelines, and temporal knowledge graphs — and the real tradeoffs behind each decision."
+publishedAt: "2026-03-05"
+slug: "scaling-120-ai-agents-two-tier-orchestration-hybrid-retrieval"
+hashtags: "#substack #ai #agents #architecture #typescript #nodejs #rag #performance #engineering #generated #en"
+---
+
+## Scaling to 120+ AI Agents Without Losing Control
+
+**TLDR:** A solutions architect shares the full architecture behind Screech, a personal multi-agent system with 128 specialized subagents, a two-tier orchestration layer, and a hybrid retrieval pipeline backed by a single database. The core lesson: the problem with AI agents that try to do everything is not the model — it is the architecture.
+
+**Summary:**
+
+There is a moment every builder of AI agents hits. You have one agent doing a handful of things well, then you keep bolting on capabilities — code generation, security audits, research synthesis, documentation — and suddenly the whole thing collapses under its own weight. Context windows bloat, tool selection becomes noisy, and the agent starts returning confidently wrong answers. The instinct is to reach for better prompts or a bigger model. This article argues convincingly that the real fix is structural. The author built Screech, a personal agent that grew from a simple notes search tool into a 128-subagent system, and the journey from single-agent to multi-agent is documented with unusual honesty about what worked and what hurt.
+
+The architecture is a three-layer stack. At the top is an orchestration layer centered around a primary agent (running Claude Sonnet 4) that handles 60-70% of requests directly. It is not a dumb router — it is a full agent with its own tools and retrieval capabilities. Below that sit 128 specialist subagents organized into 10 categories (core development, language specialists, testing, security, research, and so on), each with a dedicated system prompt, model tier, and constrained tool profile. The critical insight here is that different domains actively conflict — a security auditor's "assume everything is dangerous" mindset would poison a code generator's prompt if they shared the same context window. Separate agents mean separate prompts and no cross-contamination. At the bottom is a hybrid retrieval layer combining vector search (weighted at 0.6), knowledge graph traversal (0.2), and keyword matching (0.2), all backed by SurrealDB as a single unified store for documents, embeddings, graph relationships, temporal events, and conversation memory.
+
+The cost engineering is where this gets practical. Before any expensive model call, a cheap classification step (Claude Haiku at roughly $0.0025 per call) labels the request by complexity and domain, then routes it to the appropriate model tier. Simple formatting tasks go to Haiku (90% cheaper). Security audits go to a reasoning tier. If 30% of tasks land on the cheaper tier, you save roughly $8-10 per thousand tasks. The router pays for itself fast. Tool profiles add another layer of efficiency — research agents get 7 tools, development agents get 15, security agents get 17. Fewer tools means less token waste and better tool selection accuracy. This is a pattern that transfers directly to any team building agent systems, regardless of scale.
+
+What I find most thought-provoking is the hybrid retrieval pipeline and especially "Path 3" — a document-scoped retrieval approach that skips vector search entirely. When someone asks "what are the conclusions?" of a long document, the conclusion section often is not the most semantically similar to the word "conclusions." The introduction restating the thesis can score higher on cosine similarity. So Path 3 builds a section tree from chunks, asks the LLM to reason about document structure (like scanning a table of contents), and fetches only the relevant sections. This is a fundamentally different approach to retrieval that acknowledges similarity is not the same as relevance. The temporal knowledge graph layer, inspired by Graphiti, adds another dimension: every piece of ingested knowledge is timestamped as an immutable episode, so conflicting facts (like "Bun is experimental" from six months ago versus "Bun is production-ready" from last month) can be resolved by recency rather than embedding distance.
+
+For architects and teams considering multi-agent systems: the article is refreshingly honest about the costs. 128 subagents is admittedly "ridiculous" — roughly 20 do 80% of the work. SurrealDB is described as "elegant but young," with the author acknowledging that PostgreSQL plus pgvector would be the safer production bet. The Haiku routing layer adds about 500ms of latency, which is noticeable in interactive chat. Workflow suspend/resume creates stale state. And the fundamental oversight tax remains: more agents means more time reviewing and redirecting, with PR review times reportedly increasing by 91% in high-adoption teams. The honest framing here is valuable — this is not a "look how amazing my setup is" post but rather a "here is exactly where it works and where it hurts" post. The transferable patterns (route cheap before expensive, constrain tool profiles per agent, use hybrid retrieval instead of pure vector search) are solid regardless of whether you ever build 128 agents.
+
+That said, there are some gaps worth noting. The article does not deeply address testing strategies for multi-agent systems — how do you regression-test 128 agents? How do you validate that routing decisions remain correct as you add new specialists? The evaluation story (moderation on 20% of requests, relevance scoring on 10%) is mentioned in passing but deserves its own deep dive. And while the in-memory event bus is acknowledged as insufficient for production, the transition path from side-project architecture to production-grade infrastructure is left as an exercise for the reader. The author also avoids confronting the elephant in the room: if you need 128 agents because domains conflict, at what point does the coordination overhead exceed the quality gains from specialization? The Pareto observation (20 agents do 80% of the work) suggests the answer might be "much sooner than 128."
+
+**Key takeaways:**
+- A single agent with 40+ tools and a massive system prompt across multiple domains degrades in quality — the fix is architectural, not better prompts or bigger context windows
+- A cheap classification call ($0.0025 via Haiku) before expensive model invocations can route 30% of tasks to a 90% cheaper tier, paying for itself immediately
+- Tool profiles (7-18 tools per agent instead of the full set) reduce token waste and improve tool selection accuracy significantly
+- Hybrid retrieval (vector 0.6 + graph 0.2 + keyword 0.2) covers failure modes that any single retrieval method misses — structural queries, exact-match lookups, and relationship questions all need different approaches
+- For long-document questions where location matters more than similarity, reasoning over document structure beats embedding search
+- Temporal knowledge tracking (when the system learned something, not just what) resolves conflicting facts by recency rather than semantic similarity
+
+**Tradeoffs:**
+- Multi-agent specialization increases per-task quality but adds orchestration complexity, coordination overhead, and a higher oversight tax
+- Unified database (SurrealDB) simplifies schema and connection management but sacrifices ecosystem maturity and production SLA confidence compared to PostgreSQL + pgvector
+- Cheap routing via Haiku saves cost on model selection but adds ~500ms latency to every interactive request
+- Separate agent contexts prevent cross-domain prompt contamination but make shared learning and finding propagation harder, requiring explicit mechanisms like event buses and findings caches
+- 128 specialized agents provide deep domain expertise but create a maintenance burden where ~80% of agents are rarely used
+
+**Link:** [Scaling to 120+ AI Agents Without Losing Control](https://www.decodingai.com/p/scaling-120-ai-agents-two-tier-orchestration)

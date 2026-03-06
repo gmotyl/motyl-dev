@@ -1,37 +1,39 @@
 ---
-title: "Running LLMs Locally with LM Studio: A Practical Guide for the Rest of Us"
-excerpt: "A hands-on walkthrough of running large language models on your own machine using LM Studio, covering installation, model selection, and hardware considerations."
+title: "Running LLMs Locally with LM Studio: A Practical Guide to Model Selection, Quantization, and Thinking Models"
+excerpt: "A hands-on walkthrough of running language models on your own hardware using LM Studio, covering memory math, GGUF quantization tradeoffs, and when to use thinking models."
 publishedAt: "2026-02-12"
 slug: "running-llms-locally-lm-studio-practical-guide"
-hashtags: "#ai #llm #lmstudio #opensource #localai #gguf #ollama #diy #machinelearning #generated #en"
+hashtags: "#substack #ai #llm #ml #ollama #performance #architecture #devtools #generated #en"
 ---
 
 ## Run Language Models on Your Computer with LM Studio
 
-**TLDR:** This article from AI Supremacy, featuring the work of independent AI researcher Benjamin Marie, walks through running large language models locally using LM Studio. It covers everything from installation to understanding the hardware math behind model performance, making local AI accessible to non-engineers.
+**TLDR:** LM Studio makes running large language models on consumer hardware surprisingly approachable. The article walks through installation, model selection based on your available VRAM, understanding GGUF quantization tradeoffs, and when to reach for a "thinking" model versus a fast instruct model. The core insight: "can I run this model?" is fundamentally a memory question.
 
 **Summary:**
 
-Look, there is something deeply satisfying about running an AI model on your own hardware. No cloud dependency, no API keys, no sending your prompts to someone else's server. This article, published on AI Supremacy and drawing heavily on the expertise of independent researcher Benjamin Marie, is essentially a beginner's on-ramp to that experience. And honestly, it is about time someone wrote this up properly.
+This is one of those pieces that quietly delivers more value than its title suggests. Written by Benjamin Marie, an independent AI researcher with serious hands-on chops, it starts with the basics of installing LM Studio and quickly escalates into the practical engineering knowledge that most tutorials skip entirely. The key contribution here is not the step-by-step screenshots but the mental model it builds for reasoning about local LLM deployment. If you have ever stared at a list of GGUF variants wondering what Q4_K_S actually means for your workflow, this is the article that finally connects the dots.
 
-The piece starts by introducing Benjamin Marie, who runs two newsletters, The Kaitchup and The Salt, both focused on practical, hands-on AI work. The Kaitchup in particular publishes weekly tutorials on adapting language models to your own tasks and hardware, with over 160 AI notebooks available. The Salt takes a more research-oriented angle, distilling bleeding-edge AI papers into digestible summaries. The author clearly has enormous respect for Marie's work, and positions him as someone whose opinions on new models carry real weight because they come from direct, hands-on experience rather than armchair speculation.
+The memory math section is particularly well done. The formula is dead simple: each parameter in 16-bit precision occupies roughly 2 bytes, so a 4B parameter model needs about 8 GB just to load, plus roughly 20 percent overhead for the KV cache and runtime buffers. That means your RTX 3060 with 12 GB of VRAM can comfortably run a quantized 4B model but will struggle with anything much larger at full precision. The article does a good job of emphasizing that VRAM is the bottleneck, not storage, and that running on CPU RAM works but is dramatically slower. The Mac unified memory architecture gets a deserved mention as a genuine advantage for local inference.
 
-The core of the article is a practical walkthrough of getting LLMs running locally using LM Studio. What used to require wrestling with CUDA, dealing with scattered model formats, and a whole lot of trial-and-error is now surprisingly approachable. Tools like LM Studio and Ollama have abstracted away the painful parts. You download the app, pick a model, click a few buttons, and you are chatting with an AI running entirely on your machine. The article covers the memory math behind model sizes, which is actually simpler than most people think, how to pick trustworthy GGUF builds and compression levels, and how to sanity-check whether a model is actually giving you reasonable output.
+Where the article gets really interesting is the discussion of GGUF builds and quantization. The author is careful to point out that most GGUF files are community conversions, not official releases from the model provider. This is a critical distinction that many people miss. Aggressive quantization can quietly degrade output quality or even break a model entirely, and if your only experience of a model is through a poorly quantized GGUF, you might dismiss an otherwise excellent model. The practical advice is sound: stick with known publishers like bartowski, unsloth, or ggml-org, start with Q4_K_S as a balanced default, and move to Q5 if you have headroom.
 
-What I appreciate about this piece is that it does not try to turn you into a machine learning engineer. It explicitly states that the goal is to give you enough intuition to choose models confidently and understand what LM Studio is telling you. That is exactly the right framing. Too many tutorials in this space either oversimplify to the point of uselessness or drown you in implementation details that only matter if you are fine-tuning models for production.
+The thinking models section is where the article could have gone deeper but still delivers useful framing. The comparison between Gemma 3 4B (instruct) and Qwen3 4B (thinking) illustrates the fundamental tradeoff: thinking models spend extra compute on internal reasoning chains, which can dramatically improve accuracy on multi-step, constraint-heavy, or ambiguous tasks, but at the cost of significant latency. The author's example of 50,000 internal tokens at 100 tokens per second translating to an 8-minute wait is the kind of back-of-napkin math that makes these tradeoffs concrete. However, the article somewhat glosses over the question of when the quality improvement actually justifies that wait. For architects evaluating local LLM deployment for team use, the decision matrix is more nuanced than "hard tasks use thinking, easy tasks use instruct."
 
-There is one area the article touches on that deserves more scrutiny though. It mentions that "thinking" models can be dramatically better on hard prompts but noticeably slower. This is true, but the article does not really dig into when you actually need a thinking model versus when a faster, smaller model would serve you just as well. For most local use cases, people are doing summarization, drafting, and simple Q&A, where the smaller, faster models are more than adequate. The article could have spent more time helping readers understand that running the biggest model your hardware can handle is not always the right answer. Sometimes the right model is the one that responds in two seconds instead of thirty.
+For teams and architects considering local LLM deployment, the real takeaway is that this is no longer a hobbyist endeavor. The tooling has matured to the point where a developer with a mid-range GPU can run useful models for code review, translation, summarization, and lightweight reasoning tasks without sending any data to a cloud service. The privacy and latency benefits are real. But the article does not adequately address the operational complexity of maintaining local model deployments across a team: version management, consistent quantization choices, system prompt standardization, and the inevitable support burden when someone's hardware does not quite meet the requirements. These are the problems that turn a fun experiment into a maintenance headache.
 
 **Key takeaways:**
-- Running LLMs locally is now genuinely accessible through tools like LM Studio and Ollama, no deep technical expertise required
-- Understanding the memory math behind model sizes is key to picking models that will actually run well on your hardware
-- GGUF format and compression levels matter for performance; picking trustworthy builds saves headaches
-- "Thinking" models offer better quality on complex prompts but come with a significant speed penalty
-- Benjamin Marie's newsletters (The Kaitchup and The Salt) are solid resources for anyone wanting to go deeper into DIY AI
+
+- Local LLM viability is primarily a memory question: parameter count times 2 bytes, plus 20 percent overhead for KV cache and buffers, gives you the minimum VRAM requirement
+- GGUF files are typically community conversions, not official releases, and aggressive quantization can silently degrade quality; stick with Q4_K_S as a starting point from trusted publishers
+- Thinking models trade latency for accuracy on multi-step and constraint-heavy tasks, but for simple chat and summarization, instruct models are faster and sufficient
+- Mac unified memory gives a genuine advantage for local inference by allowing GPU and CPU to share a large high-bandwidth memory pool
+- LM Studio supports Windows, macOS, and Linux and provides visual indicators for whether a model variant will fit your available VRAM
 
 **Tradeoffs:**
-- Running models locally means full privacy and no API costs, but you are constrained by your hardware and will not match the quality of frontier cloud models
-- Higher compression (quantization) makes models fit in less memory but degrades output quality; finding the sweet spot for your use case matters
-- "Thinking" models trade speed for accuracy, a tradeoff that only pays off on genuinely complex tasks
 
-**Link:** [Run Language Models on Your Computer with LM Studio](https://www.ai-supremacy.com/p/run-language-models-on-your-computer-llms-diy)
+- Higher quantization precision preserves model quality but demands more VRAM, limiting which hardware can run the model
+- Thinking models deliver significantly better accuracy on complex reasoning tasks but sacrifice response speed, sometimes taking minutes instead of seconds
+- Running models locally gains complete data privacy and eliminates API costs but sacrifices access to the largest frontier models that require data-center hardware
+
+**Link:** [Run Language Models on Your Computer with LM-Studio](https://www.ai-supremacy.com/p/run-language-models-on-your-computer-llms-diy)
