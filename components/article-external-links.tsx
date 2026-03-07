@@ -8,13 +8,18 @@ import { BookmarkButton } from '@/components/bookmark-button';
 import { BookmarkDialog } from '@/components/bookmark-dialog';
 import { useBookmarks } from '@/hooks/use-bookmarks';
 import { VoteButton } from '@/components/vote-button';
-import type { ExternalLink } from '@/lib/types';
+import { type Content, type ExternalLink, ItemType } from '@/lib/types';
+
+function inferCategory(hashtags: string[]): 'frontend' | 'ai' | 'tools' | 'other' {
+  const tags = hashtags.map(t => t.toLowerCase())
+  if (tags.some(t => t.includes('ai') || t.includes('llm') || t.includes('gpt') || t.includes('claude') || t.includes('ml'))) return 'ai'
+  if (tags.some(t => t.includes('react') || t.includes('frontend') || t.includes('css') || t.includes('javascript') || t.includes('typescript') || t.includes('nextjs') || t.includes('vue') || t.includes('angular'))) return 'frontend'
+  if (tags.some(t => t.includes('tools') || t.includes('cli') || t.includes('vscode') || t.includes('devtools') || t.includes('tooling'))) return 'tools'
+  return 'other'
+}
 
 interface ArticleExternalLinksProps {
-  links: ExternalLink[];
-  articleHashtags: string[];
-  articleSlug: string;
-  voteCategory?: 'frontend' | 'ai' | 'tools' | 'other';
+  article: Content;
 }
 
 /**
@@ -26,16 +31,21 @@ interface ArticleExternalLinksProps {
  * - Quick bookmark with dialog for hashtags
  * - Suggest article hashtags for new bookmarks
  */
-export function ArticleExternalLinks({ links, articleHashtags, articleSlug, voteCategory = 'other' }: ArticleExternalLinksProps) {
+export function ArticleExternalLinks({ article }: ArticleExternalLinksProps) {
   const { data: session } = useSession();
   const { bookmarks, addBookmark, removeBookmark, isLoading } = useBookmarks();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedLink, setSelectedLink] = useState<ExternalLink | null>(null);
 
-  if (links.length === 0) {
+  const links = article.externalLinks;
+  if (article.itemType !== ItemType.News || !links || links.length === 0) {
     return null;
   }
+
+  const articleSlug = article.slug;
+  const articleHashtags = article.hashtags;
+  const voteCategory = inferCategory(articleHashtags);
 
   const handleToggleBookmark = (link: ExternalLink) => {
     if (!session) {

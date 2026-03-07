@@ -50,10 +50,10 @@ export function MarkdownContent({ content, itemType }: MarkdownContentProps) {
         return (
           <span className="inline-flex items-center gap-2 not-prose">
             <VoteButton
-              linkUrl={href}
+              linkUrl={href!}
               title={title}
-              category={inferCategory(href)}
-              sourceDomain={href}
+              category={inferCategory(href!)}
+              sourceDomain={href!}
               initialVoteCount={0}
             />
             <a href={href} {...props} target="_blank" rel="noopener noreferrer">

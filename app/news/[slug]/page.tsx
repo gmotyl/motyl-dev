@@ -3,6 +3,7 @@ import { getContentItemBySlug, getAllContentMetadata } from '@/lib/articles'
 import ContentPage from '@/components/content-page'
 import { ItemType } from '@/lib/types'
 import { getContentUrl } from '@/lib/urls'
+import { getOgImage } from '@/lib/og'
 
 // Force static generation at build time
 export const dynamic = 'force-static'
@@ -50,6 +51,7 @@ export async function generateMetadata({ params: paramsPromise }: { params: Prom
         authors: ['Grzegorz Motyl'],
         tags: article.hashtags,
         locale: 'en_US',
+        images: [{ url: getOgImage(article), width: 1200, height: 630, alt: article.title }],
       },
       twitter: {
         card: 'summary_large_image',
@@ -57,6 +59,7 @@ export async function generateMetadata({ params: paramsPromise }: { params: Prom
         description: article.excerpt,
         creator: '@motyldev',
         site: '@motyldev',
+        images: [getOgImage(article)],
       },
       robots: {
         index: true,

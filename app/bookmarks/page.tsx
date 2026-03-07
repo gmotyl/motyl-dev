@@ -7,7 +7,8 @@ import { BookmarkCard } from '@/components/bookmark-card';
 import { BookmarksExport } from '@/components/bookmarks-export';
 import { HashtagFilters } from '@/components/hashtag-filters';
 import { Input } from '@/components/ui/input';
-import { Search, X, Loader2 } from 'lucide-react';
+import { Search, X, Loader2, Hash } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import Header from '@/components/header';
 import Footer from '@/components/footer';
 

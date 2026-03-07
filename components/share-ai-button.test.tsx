@@ -87,6 +87,7 @@ describe('ShareAIButton', () => {
         publishedAt: '2025-01-01',
         content: mockContent,
         hashtags: ['test'],
+        itemType: 'article' as const,
       })
 
       render(<ShareAIButton prompt="Summarize this:" articleSlug="test-article" />)
@@ -120,6 +121,7 @@ describe('ShareAIButton', () => {
         publishedAt: '2025-01-01',
         content: mockContent,
         hashtags: ['test'],
+        itemType: 'article' as const,
       })
 
       render(<ShareAIButton prompt="Summarize this:" articleSlug="test-article" />)

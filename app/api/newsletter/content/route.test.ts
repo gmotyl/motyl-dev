@@ -29,7 +29,7 @@ describe('GET /api/newsletter/content', () => {
 
   describe('authentication', () => {
     it('should return 401 when user is not authenticated', async () => {
-      mockAuth.mockResolvedValue(null)
+      mockAuth.mockResolvedValue(null as any)
 
       const request = createRequest('/api/newsletter/content?slugs=test-article')
       const response = await GET(request)
