@@ -9,16 +9,34 @@ const CATEGORY_HASHTAGS: Record<string, string[]> = {
 
 export type ContentCategory = 'frontend' | 'architecture' | 'coding' | 'productivity' | 'tools' | 'ai' | 'general'
 
+const HASHTAG_TO_CATEGORIES: Record<string, string[]> = {}
+for (const [category, keywords] of Object.entries(CATEGORY_HASHTAGS)) {
+  for (const kw of keywords) {
+    (HASHTAG_TO_CATEGORIES[kw] ??= []).push(category)
+  }
+}
+
+const CATEGORY_PRIORITY: ContentCategory[] = ['ai', 'frontend', 'architecture', 'coding', 'tools', 'productivity']
 
 const IMG_BASE = 'https://img.motyl.dev'
 const GENERIC_FALLBACK = `${IMG_BASE}/greg-stanczyk.jpg`
 
 export function getContentCategory(hashtags: string[]): ContentCategory {
   const normalized = hashtags.map((h) => h.toLowerCase().replace(/^#/, ''))
-  for (const [category, keywords] of Object.entries(CATEGORY_HASHTAGS)) {
-    if (normalized.some((h) => keywords.includes(h))) return category as ContentCategory
+  const scores: Record<string, number> = {}
+  for (const h of normalized) {
+    const categories = HASHTAG_TO_CATEGORIES[h]
+    if (categories) {
+      for (const cat of categories) {
+        scores[cat] = (scores[cat] ?? 0) + 1
+      }
+    }
   }
-  return 'general'
+  const maxScore = Math.max(0, ...Object.values(scores))
+  if (maxScore === 0) return 'general'
+  const winners = Object.keys(scores).filter((cat) => scores[cat] === maxScore)
+  if (winners.length === 1) return winners[0] as ContentCategory
+  return (CATEGORY_PRIORITY.find((cat) => winners.includes(cat)) ?? 'general') as ContentCategory
 }
 
 export function getOgImage(article: { image?: string; hashtags: string[] }): string {

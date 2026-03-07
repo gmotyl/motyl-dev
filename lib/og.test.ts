@@ -55,9 +55,21 @@ describe('getContentCategory', () => {
     expect(getContentCategory(['VSCODE'])).toBe('tools')
   })
 
-  it('returns first matching category when multiple match', () => {
-    // "frontend" comes before "coding" in CATEGORY_HASHTAGS
-    expect(getContentCategory(['frontend', 'react'])).toBe('frontend')
+  it('majority wins over first-match', () => {
+    // 3 architecture hashtags vs 1 tools hashtag → architecture wins
+    expect(getContentCategory(['architecture', 'microservices', 'cloud', 'tools'])).toBe('architecture')
+  })
+
+  it('breaks ties using priority order', () => {
+    // 1 frontend vs 1 coding → frontend is higher priority
+    expect(getContentCategory(['react', 'css'])).toBe('frontend')
+    // 1 ai vs 1 tools → ai is higher priority
+    expect(getContentCategory(['ai', 'vscode'])).toBe('ai')
+  })
+
+  it('single hashtag still works', () => {
+    expect(getContentCategory(['frontend'])).toBe('frontend')
+    expect(getContentCategory(['react'])).toBe('coding')
   })
 })
 
