@@ -21,7 +21,7 @@ interface VoteButtonProps {
   linkUrl: string
   title: string
   description?: string
-  category?: 'frontend' | 'ai' | 'tools' | 'other'
+  category?: import('@/lib/og').ContentCategory
   /**
    * @param sourceDomain - Full URL of the source (e.g. "https://example.com"). Must be a valid URL.
    */
@@ -34,7 +34,7 @@ export function VoteButton({
   linkUrl,
   title,
   description = '',
-  category = 'other',
+  category = 'general',
   sourceDomain,
   initialVoteCount,
   onVote,

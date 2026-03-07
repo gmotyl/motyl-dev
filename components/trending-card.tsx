@@ -7,7 +7,7 @@ interface TrendingCardProps {
   description?: string
   linkUrl: string
   voteCount: number
-  category: 'frontend' | 'ai' | 'tools' | 'other'
+  category: import('@/lib/og').ContentCategory
   sourceDomain?: string
   rank?: number
 }

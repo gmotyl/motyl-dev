@@ -76,7 +76,7 @@ export default async function Home() {
                     description={item.description ?? undefined}
                     linkUrl={item.linkUrl}
                     voteCount={item.voteCount}
-                    category={item.category as 'frontend' | 'ai' | 'tools' | 'other'}
+                    category={item.category as import('@/lib/og').ContentCategory}
                     sourceDomain={item.sourceDomain ?? undefined}
                     rank={index + 1}
                   />

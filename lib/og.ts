@@ -7,13 +7,16 @@ const CATEGORY_HASHTAGS: Record<string, string[]> = {
   ai: ['ai', 'agents', 'llm', 'claude', 'openai', 'anthropic', 'chatgpt', 'prompt-engineering', 'promptengineering', 'mcp', 'rag', 'deepseek', 'gemini', 'gpt', 'claude-code', 'claudecode', 'vibecoding', 'vibe-coding'],
 }
 
+export type ContentCategory = 'frontend' | 'architecture' | 'coding' | 'productivity' | 'tools' | 'ai' | 'general'
+
+
 const IMG_BASE = 'https://img.motyl.dev'
 const GENERIC_FALLBACK = `${IMG_BASE}/greg-stanczyk.jpg`
 
-export function getContentCategory(hashtags: string[]): string {
+export function getContentCategory(hashtags: string[]): ContentCategory {
   const normalized = hashtags.map((h) => h.toLowerCase().replace(/^#/, ''))
   for (const [category, keywords] of Object.entries(CATEGORY_HASHTAGS)) {
-    if (normalized.some((h) => keywords.includes(h))) return category
+    if (normalized.some((h) => keywords.includes(h))) return category as ContentCategory
   }
   return 'general'
 }
