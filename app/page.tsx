@@ -10,6 +10,8 @@ import { getAllContentMetadata } from '@/lib/articles'
 import { ItemType } from '@/lib/types'
 import { getHomepageFeed } from '@/lib/trends'
 import { getContentUrl } from '@/lib/urls'
+import { getOgImage } from '@/lib/og'
+import Image from 'next/image'
 
 export const dynamic = 'force-dynamic' // votes change frequently
 
@@ -74,7 +76,7 @@ export default async function Home() {
                     description={item.description ?? undefined}
                     linkUrl={item.linkUrl}
                     voteCount={item.voteCount}
-                    category={item.category as 'frontend' | 'ai' | 'tools' | 'other'}
+                    category={item.category as import('@/lib/og').ContentCategory}
                     sourceDomain={item.sourceDomain ?? undefined}
                     rank={index + 1}
                   />
@@ -99,15 +101,26 @@ export default async function Home() {
                   <Link
                     key={article.slug}
                     href={getContentUrl(article)}
-                    className="block rounded-lg border border-muted bg-background/50 p-4 hover:border-primary/30 hover:shadow-sm transition-all duration-200"
+                    className="flex gap-4 rounded-lg border border-muted bg-background/50 p-4 hover:border-primary/30 hover:shadow-sm transition-all duration-200"
                   >
-                    <h3 className="font-semibold hover:text-primary transition-colors">{article.title}</h3>
-                    {article.excerpt && (
-                      <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{article.excerpt}</p>
-                    )}
-                    <p className="mt-2 text-xs text-primary/60">
-                      {new Date(article.publishedAt).toLocaleDateString()}
-                    </p>
+                    <div className="flex-shrink-0 w-40 h-24 rounded overflow-hidden">
+                      <Image
+                        src={getOgImage(article as { image?: string; hashtags: string[] })}
+                        alt={article.title}
+                        width={160}
+                        height={96}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold hover:text-primary transition-colors">{article.title}</h3>
+                      {article.excerpt && (
+                        <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{article.excerpt}</p>
+                      )}
+                      <p className="mt-2 text-xs text-primary/60">
+                        {new Date(article.publishedAt).toLocaleDateString()}
+                      </p>
+                    </div>
                   </Link>
                 ))}
               </div>

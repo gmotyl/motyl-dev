@@ -7,7 +7,7 @@ const voteSchema = z.object({
   linkUrl: z.string().url('Invalid URL'),
   title: z.string().min(1, 'Title required'),
   description: z.string().optional().default(''),
-  category: z.enum(['frontend', 'ai', 'tools', 'other']).default('other'),
+  category: z.enum(['frontend', 'architecture', 'coding', 'productivity', 'tools', 'ai', 'general']).default('general'),
   sourceDomain: z.string().url().optional(),
 })
 

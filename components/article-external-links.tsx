@@ -8,13 +8,11 @@ import { BookmarkButton } from '@/components/bookmark-button';
 import { BookmarkDialog } from '@/components/bookmark-dialog';
 import { useBookmarks } from '@/hooks/use-bookmarks';
 import { VoteButton } from '@/components/vote-button';
-import type { ExternalLink } from '@/lib/types';
+import { type Content, type ExternalLink, ItemType } from '@/lib/types';
+import { getContentCategory } from '@/lib/og';
 
 interface ArticleExternalLinksProps {
-  links: ExternalLink[];
-  articleHashtags: string[];
-  articleSlug: string;
-  voteCategory?: 'frontend' | 'ai' | 'tools' | 'other';
+  article: Content;
 }
 
 /**
@@ -26,16 +24,21 @@ interface ArticleExternalLinksProps {
  * - Quick bookmark with dialog for hashtags
  * - Suggest article hashtags for new bookmarks
  */
-export function ArticleExternalLinks({ links, articleHashtags, articleSlug, voteCategory = 'other' }: ArticleExternalLinksProps) {
+export function ArticleExternalLinks({ article }: ArticleExternalLinksProps) {
   const { data: session } = useSession();
   const { bookmarks, addBookmark, removeBookmark, isLoading } = useBookmarks();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedLink, setSelectedLink] = useState<ExternalLink | null>(null);
 
-  if (links.length === 0) {
+  const links = article.externalLinks;
+  if (article.itemType !== ItemType.News || !links || links.length === 0) {
     return null;
   }
+
+  const articleSlug = article.slug;
+  const articleHashtags = article.hashtags;
+  const voteCategory = getContentCategory(articleHashtags);
 
   const handleToggleBookmark = (link: ExternalLink) => {
     if (!session) {
@@ -89,7 +92,7 @@ export function ArticleExternalLinks({ links, articleHashtags, articleSlug, vote
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {links.map((link, index) => {
+            {links.map((link: ExternalLink, index: number) => {
               const isBookmarked = bookmarks.some((b) => b.url === link.url);
 
               return (

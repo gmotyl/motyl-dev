@@ -34,7 +34,7 @@ describe('useVisitedArticles', () => {
 
   beforeEach(() => {
     localStorageMock.clear();
-    mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated' });
+    mockUseSession.mockReturnValue({ data: null, status: 'unauthenticated', update: vi.fn() });
   });
 
   afterAll(() => {

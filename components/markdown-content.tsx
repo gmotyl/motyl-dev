@@ -9,21 +9,15 @@ import { VoteButton } from '@/components/vote-button'
 import { useEffect, useState } from 'react'
 import type { Components } from 'react-markdown'
 import { ItemType, type ItemTypeValue } from '@/lib/types'
-
-function inferCategory(href: string): 'frontend' | 'ai' | 'tools' | 'other' {
-  const url = href.toLowerCase()
-  if (url.includes('ai') || url.includes('openai') || url.includes('anthropic') || url.includes('claude') || url.includes('gemini') || url.includes('deepmind')) return 'ai'
-  if (url.includes('react') || url.includes('tailwind') || url.includes('next') || url.includes('vue') || url.includes('angular') || url.includes('svelte') || url.includes('css') || url.includes('js') || url.includes('github')) return 'frontend'
-  if (url.includes('tool') || url.includes('cli') || url.includes('dev')) return 'tools'
-  return 'other'
-}
+import type { ContentCategory } from '@/lib/og'
 
 interface MarkdownContentProps {
   content: string
   itemType?: ItemTypeValue
+  category?: ContentCategory
 }
 
-export function MarkdownContent({ content, itemType }: MarkdownContentProps) {
+export function MarkdownContent({ content, itemType, category }: MarkdownContentProps) {
   const isNews = itemType === ItemType.News
   const [summaryPrompt, setSummaryPrompt] = useState<string>('')
 
@@ -50,10 +44,10 @@ export function MarkdownContent({ content, itemType }: MarkdownContentProps) {
         return (
           <span className="inline-flex items-center gap-2 not-prose">
             <VoteButton
-              linkUrl={href}
+              linkUrl={href!}
               title={title}
-              category={inferCategory(href)}
-              sourceDomain={href}
+              category={category}
+              sourceDomain={href!}
               initialVoteCount={0}
             />
             <a href={href} {...props} target="_blank" rel="noopener noreferrer">

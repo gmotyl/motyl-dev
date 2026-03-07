@@ -4,6 +4,7 @@ export const ItemType = {
 } as const;
 
 export type ItemType = (typeof ItemType)[keyof typeof ItemType];
+export type ItemTypeValue = ItemType;
 
 export interface Content {
   slug: string;
@@ -13,6 +14,7 @@ export interface Content {
   hashtags: string[];
   itemType: ItemType;
   content: string;
+  image?: string;
   [key: string]: any;
 }
 

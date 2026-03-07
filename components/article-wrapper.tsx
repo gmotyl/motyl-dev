@@ -8,6 +8,7 @@ import { TTSPlayer } from '@/components/tts-player'
 import { filterHiddenSections, type SectionType } from '@/lib/section-filter'
 import { ItemType } from '@/lib/types'
 import { detectLanguageFromHashtags } from '@/lib/tts'
+import { getContentCategory } from '@/lib/og'
 
 interface ArticleWrapperProps {
   article: {
@@ -59,6 +60,7 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
         content={filteredContent}
         itemType={article.itemType}
         articleSlug={article.slug}
+        category={getContentCategory(article.hashtags ?? [])}
       />
     </>
   )

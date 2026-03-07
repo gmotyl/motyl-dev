@@ -33,6 +33,7 @@ interface ContentItem {
   hashtags: string[]
   itemType: ItemTypeValue
   content: string
+  image?: string
   externalLinks: ExternalLink[]
 }
 
@@ -142,6 +143,7 @@ async function parseArticleFile(
     publishedAt: normalizePublishedAt(data.publishedAt, fallbackDate),
     content,
     hashtags,
+    image: data.image ?? undefined,
     externalLinks: extractExternalLinks(content),
     itemType,
   }

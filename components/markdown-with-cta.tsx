@@ -4,19 +4,21 @@ import { MarkdownContent } from '@/components/markdown-content'
 import { NewsletterCTA } from '@/components/newsletter-cta'
 import { extractInlineCTAs } from '@/lib/extract-inline-cta'
 import { ItemTypeValue } from '@/lib/types'
+import type { ContentCategory } from '@/lib/og'
 
 interface MarkdownWithCTAProps {
   content: string
   itemType?: ItemTypeValue
   articleSlug?: string
+  category?: ContentCategory
 }
 
-export function MarkdownWithCTA({ content, itemType, articleSlug }: MarkdownWithCTAProps) {
+export function MarkdownWithCTA({ content, itemType, articleSlug, category }: MarkdownWithCTAProps) {
   const { content: cleanedContent, ctas } = extractInlineCTAs(content)
 
   // If no CTAs, just render the content normally
   if (ctas.length === 0) {
-    return <MarkdownContent content={content} itemType={itemType} />
+    return <MarkdownContent content={content} itemType={itemType} category={category} />
   }
 
   // Split content by CTA placeholders (format: <!-- NEWSLETTER_CTA:base64string -->)
@@ -28,7 +30,7 @@ export function MarkdownWithCTA({ content, itemType, articleSlug }: MarkdownWith
       {parts.map((part, index) => (
         <div key={index}>
           {part.trim() && (
-            <MarkdownContent content={part} itemType={itemType} />
+            <MarkdownContent content={part} itemType={itemType} category={category} />
           )}
           {ctas[index] && (
             <NewsletterCTA

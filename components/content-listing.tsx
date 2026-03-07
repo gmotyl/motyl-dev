@@ -19,6 +19,9 @@ import {
 import { type ContentItemMetadata } from '@/lib/articles'
 import AdUnit from '@/components/ad-unit'
 import { getFilteredContent } from '@/app/actions'
+import { getOgImage } from '@/lib/og'
+import Image from 'next/image'
+import { CategoryIcon } from '@/components/category-icon'
 
 interface ContentListingProps {
   title: string
@@ -427,19 +430,36 @@ export function ContentListing({
                     href={`${basePath}/${item.slug}`}
                     prefetch={false}
                     onClick={() => markAsVisited(item.slug)}
-                    className={`rounded-lg border backdrop-blur-sm p-6 transition-all hover:shadow-md hover:border-primary/50 flex flex-col ${
+                    className={`rounded-lg border backdrop-blur-sm transition-all hover:shadow-md hover:border-primary/50 flex flex-col overflow-hidden ${
                       isVisited(item.slug) ? 'visited-article' : 'unvisited-article'
                     }`}
                   >
-                    <h2 className="article-title text-xl font-bold mb-2">{item.title}</h2>
-                    <p className="article-excerpt flex-grow line-clamp-3">{item.excerpt}</p>
-                    <p className="text-xs text-muted-foreground mt-auto">
-                      {new Date(item.publishedAt).toLocaleDateString('pl-PL', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                      })}
-                    </p>
+                    <div className="relative w-full overflow-hidden rounded-t-lg" style={{ aspectRatio: '16/7' }}>
+                      {contentType === 'news' ? (
+                        <CategoryIcon
+                          hashtags={(item as { hashtags: string[] }).hashtags ?? []}
+                          className="w-full h-full"
+                        />
+                      ) : (
+                        <Image
+                          src={getOgImage(item as { image?: string; hashtags: string[] })}
+                          alt={item.title}
+                          fill
+                          className="object-cover"
+                        />
+                      )}
+                    </div>
+                    <div className="p-6 flex flex-col flex-grow">
+                      <h2 className="article-title text-xl font-bold mb-2">{item.title}</h2>
+                      <p className="article-excerpt flex-grow line-clamp-3">{item.excerpt}</p>
+                      <p className="text-xs text-muted-foreground mt-auto">
+                        {new Date(item.publishedAt).toLocaleDateString('pl-PL', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                        })}
+                      </p>
+                    </div>
                   </Link>
                 ))}
               </div>

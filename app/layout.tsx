@@ -99,6 +99,14 @@ export const metadata: Metadata = {
     title: 'Motyl.dev - Tech News & Insights',
     description:
       'Stay up to date with the latest tech news, development insights, and industry trends.',
+    images: [
+      {
+        url: 'https://img.motyl.dev/og/categories/og-coding.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'Motyl.dev',
+      },
+    ],
   },
   twitter: {
     card: 'summary_large_image',
@@ -107,6 +115,7 @@ export const metadata: Metadata = {
       'Stay up to date with the latest tech news, development insights, and industry trends.',
     creator: '@motyldev',
     site: '@motyldev',
+    images: ['https://img.motyl.dev/og/categories/og-coding.jpg'],
   },
   robots: {
     index: true,

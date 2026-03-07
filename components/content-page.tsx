@@ -14,13 +14,7 @@ import AdUnit from '@/components/ad-unit'
 import { type Content, ItemType } from '@/lib/types'
 import { getContentUrl } from '@/lib/urls'
 import { ContentItemMetadata } from '@/lib/articles'
-function inferCategory(hashtags: string[]): 'frontend' | 'ai' | 'tools' | 'other' {
-  const tags = hashtags.map(t => t.toLowerCase())
-  if (tags.some(t => t.includes('ai') || t.includes('llm') || t.includes('gpt') || t.includes('claude') || t.includes('ml'))) return 'ai'
-  if (tags.some(t => t.includes('react') || t.includes('frontend') || t.includes('css') || t.includes('javascript') || t.includes('typescript') || t.includes('nextjs') || t.includes('vue') || t.includes('angular'))) return 'frontend'
-  if (tags.some(t => t.includes('tools') || t.includes('cli') || t.includes('vscode') || t.includes('devtools') || t.includes('tooling'))) return 'tools'
-  return 'other'
-}
+import { HeroImage } from '@/components/hero-image'
 
 interface ContentPageProps {
   article: Content
@@ -128,6 +122,8 @@ export default async function ContentPage({ article, prevArticle, nextArticle }:
             />
           </header>
 
+          <HeroImage article={article} />
+
           <ArticleWrapper article={article} translatePrompt={translatePrompt} />
 
           <BuyMeACoffeeButton itemType={article.itemType} />
@@ -142,14 +138,7 @@ export default async function ContentPage({ article, prevArticle, nextArticle }:
             />
           </div>
 
-          {isNewsArticle && article.externalLinks && article.externalLinks.length > 0 && (
-            <ArticleExternalLinks
-              links={article.externalLinks}
-              articleHashtags={article.hashtags}
-              articleSlug={article.slug}
-              voteCategory={inferCategory(article.hashtags)}
-            />
-          )}
+          <ArticleExternalLinks article={article} />
 
           <div className="my-6">
             <AdUnit
