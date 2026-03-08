@@ -1,15 +1,14 @@
 /**
- * Fetch current week's trend votes from the database and write to .trends-input.json.
+ * Fetch current week's trend votes from production API and write to .trends-input.json.
  *
- * Standalone script — no server-side imports.
+ * Standalone script — no database or server-side imports needed.
  * Run with: tsx scripts/trends-fetch-input.ts
  */
 
 import path from 'node:path'
 import fs from 'node:fs/promises'
-import { PrismaClient } from '@prisma/client'
 
-const prisma = new PrismaClient()
+const PRODUCTION_API = 'https://motyl.dev/api/trends/votes'
 
 // --- ISO 8601 week logic (copied inline to avoid server imports) ---
 
@@ -44,7 +43,6 @@ function getWeekLabel(week: string): string {
   const weekNum = parseInt(weekStr)
 
   // Compute Monday of that ISO week
-  // ISO week 1 contains Jan 4; Monday of week 1 = Jan 4 minus its weekday offset
   const jan4 = new Date(year, 0, 4)
   const jan4Day = jan4.getDay() === 0 ? 7 : jan4.getDay() // Mon=1..Sun=7
   const monday = new Date(jan4.getTime() - (jan4Day - 1) * 86400_000 + (weekNum - 1) * 7 * 86400_000)
@@ -66,11 +64,26 @@ async function main() {
   const trendsDir = path.join(process.cwd(), 'content', 'trends')
   await fs.mkdir(trendsDir, { recursive: true })
 
-  // Query votes for current week
-  const votes = await prisma.trendsVotes.findMany({
-    where: { week },
-    orderBy: [{ voteCount: 'desc' }, { createdAt: 'asc' }],
-  })
+  // Fetch votes from production API
+  const res = await fetch(`${PRODUCTION_API}?week=${week}`)
+  if (!res.ok) {
+    throw new Error(`API request failed: ${res.status} ${res.statusText}`)
+  }
+
+  const data = await res.json()
+  const votes: Array<{
+    title: string
+    linkUrl: string
+    description: string
+    category: string
+    voteCount: number
+    sourceDomain?: string | null
+  }> = data.votes ?? []
+
+  if (votes.length === 0) {
+    console.log(`No votes found for ${week}. Nothing to generate.`)
+    process.exit(0)
+  }
 
   const totalVotes = votes.reduce((sum, v) => sum + v.voteCount, 0)
 
@@ -107,9 +120,7 @@ async function main() {
   console.log(`✅ Fetched ${totalVotes} votes for ${week}. Input saved to .trends-input.json`)
 }
 
-main()
-  .catch((err) => {
-    console.error('Error fetching trends input:', err)
-    process.exit(1)
-  })
-  .finally(() => prisma.$disconnect())
+main().catch((err) => {
+  console.error('Error fetching trends input:', err)
+  process.exit(1)
+})
