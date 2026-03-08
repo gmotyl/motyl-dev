@@ -54,6 +54,75 @@ function getWeekLabel(week: string): string {
   return `Week ${weekNum} (${fmt(monday)} – ${fmt(sunday)}, ${year})`
 }
 
+// --- URL normalization ---
+
+function normalizeUrl(url: string): string {
+  try {
+    const u = new URL(url)
+    u.search = ''
+    u.hash = ''
+    const pathname = u.pathname.replace(/\/+$/, '') || '/'
+    return `${u.protocol}//${u.hostname.toLowerCase()}${pathname}`
+  } catch {
+    return url.toLowerCase().replace(/[?#].*$/, '').replace(/\/+$/, '')
+  }
+}
+
+// --- Issue numbering ---
+
+async function getNextIssueNumber(): Promise<number> {
+  const trendsDir = path.join(process.cwd(), 'content', 'trends')
+  let files: string[]
+  try {
+    files = await fs.readdir(trendsDir)
+  } catch {
+    return 1
+  }
+
+  const numbers = files
+    .map((f) => {
+      const match = f.match(/motyl-dev-#(\d+)\.md/)
+      return match ? parseInt(match[1]) : 0
+    })
+    .filter((n) => n > 0)
+
+  if (numbers.length === 0) return 1
+  return Math.max(...numbers) + 1
+}
+
+// --- Content cache loading ---
+
+interface ContentCacheItem {
+  slug: string
+  title: string
+  content: string
+  publishedAt: string
+  itemType: string
+  externalLinks: Array<{ title: string; url: string; order: number }>
+}
+
+async function loadContentUrlMap(): Promise<Map<string, { slug: string; itemType: string; publishedAt: string }>> {
+  const cachePath = path.join(process.cwd(), 'data', 'content-cache.json')
+  const raw = await fs.readFile(cachePath, 'utf8')
+  const cache = JSON.parse(raw) as { items: ContentCacheItem[] }
+
+  const map = new Map<string, { slug: string; itemType: string; publishedAt: string }>()
+  for (const item of cache.items) {
+    for (const link of item.externalLinks ?? []) {
+      const normalized = normalizeUrl(link.url)
+      // First match wins (don't overwrite)
+      if (!map.has(normalized)) {
+        map.set(normalized, {
+          slug: item.slug,
+          itemType: item.itemType,
+          publishedAt: item.publishedAt,
+        })
+      }
+    }
+  }
+  return map
+}
+
 // --- Main ---
 
 async function main() {
@@ -63,6 +132,12 @@ async function main() {
   // Ensure content/trends/ directory exists
   const trendsDir = path.join(process.cwd(), 'content', 'trends')
   await fs.mkdir(trendsDir, { recursive: true })
+
+  // Load content cache URL map
+  const urlMap = await loadContentUrlMap()
+
+  // Determine next issue number
+  const issueNumber = await getNextIssueNumber()
 
   // Fetch votes from production API
   const res = await fetch(`${PRODUCTION_API}?week=${week}`)
@@ -85,17 +160,17 @@ async function main() {
     process.exit(0)
   }
 
-  const totalVotes = votes.reduce((sum, v) => sum + v.voteCount, 0)
-
-  // Build flat items array
-  const items = votes.map((v) => ({
-    title: v.title,
-    linkUrl: v.linkUrl,
-    description: v.description,
-    category: v.category,
-    voteCount: v.voteCount,
-    sourceDomain: v.sourceDomain ?? null,
-  }))
+  // Build flat items array — match URLs to content cache
+  const items = votes.map((v) => {
+    const normalized = normalizeUrl(v.linkUrl)
+    const match = urlMap.get(normalized)
+    return {
+      title: v.title,
+      linkUrl: v.linkUrl,
+      category: v.category,
+      contentSlug: match?.slug ?? null,
+    }
+  })
 
   // Group by category
   const byCategory: Record<string, typeof items> = {}
@@ -108,8 +183,8 @@ async function main() {
   const output = {
     week,
     weekLabel,
+    issueNumber,
     generatedAt: new Date().toISOString(),
-    totalVotes,
     items,
     byCategory,
   }
@@ -117,7 +192,8 @@ async function main() {
   const outputPath = path.join(process.cwd(), '.trends-input.json')
   await fs.writeFile(outputPath, JSON.stringify(output, null, 2), 'utf8')
 
-  console.log(`✅ Fetched ${totalVotes} votes for ${week}. Input saved to .trends-input.json`)
+  const matched = items.filter((i) => i.contentSlug).length
+  console.log(`✅ Fetched ${items.length} items for ${week} (issue #${issueNumber}). ${matched}/${items.length} matched to content cache. Input saved to .trends-input.json`)
 }
 
 main().catch((err) => {
