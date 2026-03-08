@@ -99,6 +99,26 @@ body {
   border-color: rgb(255 255 255 / 0.1) !important;
 }
 
+/* Category-colored news cards override default bg/border */
+.category-ai           { --cat-bg: #1e0b4a; --cat-accent: #8B5CF6; }
+.category-frontend     { --cat-bg: #0c1a2e; --cat-accent: #60a5fa; }
+.category-architecture { --cat-bg: #0a1628; --cat-accent: #22c55e; }
+.category-coding       { --cat-bg: #0a0a0a; --cat-accent: #a78bfa; }
+.category-productivity { --cat-bg: #1c1209; --cat-accent: #fbbf24; }
+.category-tools        { --cat-bg: #0f1218; --cat-accent: #8B5CF6; }
+.category-general      { --cat-bg: #0d1f33; --cat-accent: #38bdf8; }
+
+.visited-article[class*="category-"] {
+  background-color: var(--cat-bg) !important;
+  border-color: transparent !important;
+  opacity: 0.7;
+}
+
+.unvisited-article[class*="category-"] {
+  background-color: var(--cat-bg) !important;
+  border-color: var(--cat-accent) !important;
+}
+
 /* Highlight section when navigating from bookmark */
 .highlight-section {
   animation: highlight-pulse 2s ease-out;

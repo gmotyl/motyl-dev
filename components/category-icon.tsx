@@ -448,3 +448,4 @@ export function CategoryIconMini({ hashtags, className }: CategoryIconProps) {
     </div>
   )
 }
+

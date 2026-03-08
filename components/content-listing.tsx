@@ -22,6 +22,7 @@ import { getFilteredContent } from '@/app/actions'
 import { getOgImage } from '@/lib/og'
 import Image from 'next/image'
 import { CategoryIcon, CategoryIconMini } from '@/components/category-icon'
+import { getContentCategory } from '@/lib/og'
 
 interface ContentListingProps {
   title: string
@@ -175,6 +176,7 @@ export function ContentListing({
   }, [initialItems, initialCurrentPage, initialTotalPages, initialTotalItems, initialHashtagCounts])
 
   // State for hashtag visibility UI
+  const [showHashtagGrid, setShowHashtagGrid] = useState(false)
   const [showAllHashtags, setShowAllHashtags] = useState(false)
   const [showZeroCountHashtags, setShowZeroCountHashtags] = useState(false)
 
@@ -263,145 +265,164 @@ export function ContentListing({
 
         {allHashtags.length > 0 && (
           <div className="mb-8">
-            <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
-              <div className="flex items-center gap-4 flex-wrap">
-                <h2 className="text-lg font-semibold">Filter by hashtags:</h2>
-                {/* Hashtag Search Input */}
-                <HashtagInput
-                  selectedHashtags={Array.from(selectedHashtags)}
-                  onHashtagAdd={handleHashtagToggle}
-                  onHashtagRemove={handleHashtagToggle}
-                  placeholder="Search hashtags..."
-                  allowNewHashtags={false}
-                  showSelectedBadges={false}
-                />
-              </div>
-
-              <div className="flex items-center gap-4 flex-wrap">
-                <Button
-                  onClick={handleToggleUnseen}
-                  variant={showUnseenOnly ? 'default' : 'outline'}
-                  size="sm"
-                  className="font-semibold"
-                >
-                  {showUnseenOnly ? '✓ ' : ''}NEW
-                </Button>
-
-                {selectedHashtags.size > 0 && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">Match:</span>
-                    <div className="flex gap-1 border rounded-md overflow-hidden">
-                      <button
-                        onClick={() => handleFilterModeChange('AND')}
-                        className={`px-3 py-1 text-sm font-medium transition-colors ${
-                          filterMode === 'AND'
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-background hover:bg-muted'
-                        }`}
-                      >
-                        HAS
-                      </button>
-                      <button
-                        onClick={() => handleFilterModeChange('OR')}
-                        className={`px-3 py-1 text-sm font-medium transition-colors ${
-                          filterMode === 'OR'
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-background hover:bg-muted'
-                        }`}
-                      >
-                        ANY
-                      </button>
-                      <button
-                        onClick={() => handleFilterModeChange('EXCLUDE')}
-                        className={`px-3 py-1 text-sm font-medium transition-colors ${
-                          filterMode === 'EXCLUDE'
-                            ? 'bg-destructive text-destructive-foreground'
-                            : 'bg-background hover:bg-muted'
-                        }`}
-                      >
-                        EXCLUDE
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {(selectedHashtags.size > 0 || showUnseenOnly) && (
-                  <Button onClick={handleClearFilters} variant="destructive" size="sm">
-                    Clear filters
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
+            {/* Compact filter bar */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <HashtagInput
+                selectedHashtags={Array.from(selectedHashtags)}
+                onHashtagAdd={handleHashtagToggle}
+                onHashtagRemove={handleHashtagToggle}
+                placeholder="Search hashtags..."
+                allowNewHashtags={false}
+                showSelectedBadges={false}
+              />
               <Button
-                variant={selectedHashtags.size === 0 && !showUnseenOnly ? 'default' : 'outline'}
+                onClick={handleToggleUnseen}
+                variant={showUnseenOnly ? 'default' : 'outline'}
                 size="sm"
-                onClick={handleClearFilters}
+                className="font-semibold"
               >
-                All ({totalItems})
+                {showUnseenOnly ? '✓ ' : ''}NEW
+              </Button>
+              <Button
+                onClick={() => setShowHashtagGrid(!showHashtagGrid)}
+                variant={showHashtagGrid ? 'secondary' : 'outline'}
+                size="sm"
+              >
+                Filter
               </Button>
 
-              {visibleHashtags.map((hashtag) => {
-                const count = hashtagCounts[hashtag] || 0
-                const isSelected = selectedHashtags.has(hashtag)
+              {selectedHashtags.size > 0 && (
+                <div className="flex items-center gap-2">
+                  <div className="flex gap-1 border rounded-md overflow-hidden">
+                    <button
+                      onClick={() => handleFilterModeChange('AND')}
+                      className={`px-2 py-1 text-xs font-medium transition-colors ${
+                        filterMode === 'AND'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-background hover:bg-muted'
+                      }`}
+                    >
+                      HAS
+                    </button>
+                    <button
+                      onClick={() => handleFilterModeChange('OR')}
+                      className={`px-2 py-1 text-xs font-medium transition-colors ${
+                        filterMode === 'OR'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-background hover:bg-muted'
+                      }`}
+                    >
+                      ANY
+                    </button>
+                    <button
+                      onClick={() => handleFilterModeChange('EXCLUDE')}
+                      className={`px-2 py-1 text-xs font-medium transition-colors ${
+                        filterMode === 'EXCLUDE'
+                          ? 'bg-destructive text-destructive-foreground'
+                          : 'bg-background hover:bg-muted'
+                      }`}
+                    >
+                      EXCLUDE
+                    </button>
+                  </div>
+                </div>
+              )}
 
-                return (
-                  <Button
+              {(selectedHashtags.size > 0 || showUnseenOnly) && (
+                <Button onClick={handleClearFilters} variant="destructive" size="sm">
+                  Clear
+                </Button>
+              )}
+            </div>
+
+            {/* Active filter badges */}
+            {selectedHashtags.size > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-3">
+                {Array.from(selectedHashtags).map((hashtag) => (
+                  <button
                     key={hashtag}
-                    variant={isSelected ? 'default' : 'outline'}
-                    size="sm"
                     onClick={() => handleHashtagToggle(hashtag)}
-                    className={
-                      count === 0 && !isSelected ? 'text-muted-foreground line-through' : ''
-                    }
+                    className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-primary text-primary-foreground hover:bg-primary/80 transition-colors"
                   >
                     #{hashtag}
-                    {count > 0 && ` (${count})`}
-                  </Button>
-                )
-              })}
+                    <span className="text-primary-foreground/60">×</span>
+                  </button>
+                ))}
+              </div>
+            )}
 
-              {!showAllHashtags &&
-                (hiddenHashtagsWithCounts.length > 0 || hiddenHashtagsWithoutCounts.length > 0) && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowAllHashtags(true)}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    more...
-                  </Button>
-                )}
+            {/* Expandable hashtag grid */}
+            {showHashtagGrid && (
+              <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border/50">
+                <Button
+                  variant={selectedHashtags.size === 0 && !showUnseenOnly ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={handleClearFilters}
+                >
+                  All ({totalItems})
+                </Button>
 
-              {showAllHashtags &&
-                !showZeroCountHashtags &&
-                hiddenHashtagsWithoutCounts.length > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowZeroCountHashtags(true)}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    more...
-                  </Button>
-                )}
+                {visibleHashtags.map((hashtag) => {
+                  const count = hashtagCounts[hashtag] || 0
+                  const isSelected = selectedHashtags.has(hashtag)
 
-              {showAllHashtags &&
-                (showZeroCountHashtags || hiddenHashtagsWithoutCounts.length === 0) && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setShowAllHashtags(false)
-                      setShowZeroCountHashtags(false)
-                    }}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    less...
-                  </Button>
-                )}
-            </div>
+                  return (
+                    <Button
+                      key={hashtag}
+                      variant={isSelected ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => handleHashtagToggle(hashtag)}
+                      className={
+                        count === 0 && !isSelected ? 'text-muted-foreground line-through' : ''
+                      }
+                    >
+                      #{hashtag}
+                      {count > 0 && ` (${count})`}
+                    </Button>
+                  )
+                })}
+
+                {!showAllHashtags &&
+                  (hiddenHashtagsWithCounts.length > 0 || hiddenHashtagsWithoutCounts.length > 0) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowAllHashtags(true)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      more...
+                    </Button>
+                  )}
+
+                {showAllHashtags &&
+                  !showZeroCountHashtags &&
+                  hiddenHashtagsWithoutCounts.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowZeroCountHashtags(true)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      more...
+                    </Button>
+                  )}
+
+                {showAllHashtags &&
+                  (showZeroCountHashtags || hiddenHashtagsWithoutCounts.length === 0) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setShowAllHashtags(false)
+                        setShowZeroCountHashtags(false)
+                      }}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      less...
+                    </Button>
+                  )}
+              </div>
+            )}
           </div>
         )}
         <div className={`transition-opacity ${isPending ? 'opacity-50' : 'opacity-100'}`}>
@@ -424,43 +445,37 @@ export function ContentListing({
               </div>
 
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {items.map((item) => (
+                {items.map((item) => {
+                  const hashtags = (item as { hashtags: string[] }).hashtags ?? []
+                  const category = contentType === 'news' ? getContentCategory(hashtags) : null
+                  const visited = isVisited(item.slug)
+
+                  const isNews = contentType === 'news'
+
+                  return isNews ? (
                   <Link
                     key={item.slug}
                     href={`${basePath}/${item.slug}`}
                     prefetch={false}
                     onClick={() => markAsVisited(item.slug)}
-                    className={`rounded-lg border backdrop-blur-sm transition-all hover:shadow-md hover:border-primary/50 flex flex-row md:flex-col overflow-hidden ${
-                      isVisited(item.slug) ? 'visited-article' : 'unvisited-article'
-                    }`}
+                    className={`rounded-lg border transition-all hover:shadow-md flex flex-row md:flex-col overflow-hidden ${
+                      visited ? 'visited-article' : 'unvisited-article'
+                    } ${category ? `category-${category}` : ''}`}
                   >
-                    {contentType === 'news' ? (
-                      <>
-                        {/* Mobile: mini icon on the left */}
-                        <div className="flex-shrink-0 w-16 flex items-center justify-center p-2 md:hidden">
-                          <CategoryIconMini
-                            hashtags={(item as { hashtags: string[] }).hashtags ?? []}
-                            className="w-12 h-12"
-                          />
-                        </div>
-                        {/* Desktop: full icon on top */}
-                        <div className="relative w-full overflow-hidden rounded-t-lg hidden md:block" style={{ aspectRatio: '16/7' }}>
-                          <CategoryIcon
-                            hashtags={(item as { hashtags: string[] }).hashtags ?? []}
-                            className="w-full h-full"
-                          />
-                        </div>
-                      </>
-                    ) : (
-                      <div className="relative w-full overflow-hidden rounded-t-lg" style={{ aspectRatio: '16/7' }}>
-                        <Image
-                          src={getOgImage(item as { image?: string; hashtags: string[] })}
-                          alt={item.title}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                    )}
+                    {/* Mobile: mini icon on the left */}
+                    <div className="flex-shrink-0 w-16 flex items-center justify-center p-2 md:hidden">
+                      <CategoryIconMini
+                        hashtags={hashtags}
+                        className="w-12 h-12"
+                      />
+                    </div>
+                    {/* Desktop: full icon on top */}
+                    <div className="relative w-full overflow-hidden rounded-t-lg hidden md:block" style={{ aspectRatio: '16/7' }}>
+                      <CategoryIcon
+                        hashtags={hashtags}
+                        className="w-full h-full"
+                      />
+                    </div>
                     <div className="p-4 md:p-6 flex flex-col flex-grow min-w-0">
                       <h2 className="article-title text-base md:text-xl font-bold mb-1 md:mb-2">{item.title}</h2>
                       <p className="article-excerpt flex-grow line-clamp-2 md:line-clamp-3">{item.excerpt}</p>
@@ -473,7 +488,38 @@ export function ContentListing({
                       </p>
                     </div>
                   </Link>
-                ))}
+                  ) : (
+                  <Link
+                    key={item.slug}
+                    href={`${basePath}/${item.slug}`}
+                    prefetch={false}
+                    onClick={() => markAsVisited(item.slug)}
+                    className={`rounded-lg border backdrop-blur-sm transition-all hover:shadow-md hover:border-primary/50 flex flex-col overflow-hidden ${
+                      visited ? 'visited-article' : 'unvisited-article'
+                    }`}
+                  >
+                    <div className="relative w-full overflow-hidden rounded-t-lg" style={{ aspectRatio: '16/7' }}>
+                      <Image
+                        src={getOgImage(item as { image?: string; hashtags: string[] })}
+                        alt={item.title}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="p-6 flex flex-col flex-grow">
+                      <h2 className="article-title text-xl font-bold mb-2">{item.title}</h2>
+                      <p className="article-excerpt flex-grow line-clamp-3">{item.excerpt}</p>
+                      <p className="text-xs text-muted-foreground mt-auto">
+                        {new Date(item.publishedAt).toLocaleDateString('pl-PL', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                        })}
+                      </p>
+                    </div>
+                  </Link>
+                  )
+                })}
               </div>
 
               {totalPages > 1 && (
