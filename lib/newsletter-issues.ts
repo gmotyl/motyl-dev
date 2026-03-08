@@ -40,11 +40,17 @@ export const getAllNewsletters = cache(async (): Promise<NewsletterIssue[]> => {
 
     const raw = await fs.readFile(path.join(TRENDS_DIR, file), 'utf8')
     const { data, content } = parseFrontmatter(raw)
+
+    if (!data.week || !data.weekLabel || !data.publishedAt) {
+      console.warn(`Skipping newsletter file "${file}" due to missing required frontmatter fields.`)
+      continue
+    }
+
     newsletters.push({
-      issueNumber: (data.issueNumber as number) ?? parseInt(match[1]),
-      week: (data.week as string) ?? '',
-      weekLabel: (data.weekLabel as string) ?? '',
-      publishedAt: (data.publishedAt as string) ?? '',
+      issueNumber: (data.issueNumber as number) ?? parseInt(match[1], 10),
+      week: data.week as string,
+      weekLabel: data.weekLabel as string,
+      publishedAt: data.publishedAt as string,
       image: (data.image as string) ?? DEFAULT_IMAGE,
       content,
     })
@@ -57,9 +63,4 @@ export const getAllNewsletters = cache(async (): Promise<NewsletterIssue[]> => {
 export const getAllNewsletterMeta = cache(async (): Promise<NewsletterMeta[]> => {
   const all = await getAllNewsletters()
   return all.map(({ content, ...meta }) => meta)
-})
-
-export const getNewsletterByIssue = cache(async (issueNumber: number): Promise<NewsletterIssue | null> => {
-  const all = await getAllNewsletters()
-  return all.find((n) => n.issueNumber === issueNumber) ?? null
 })

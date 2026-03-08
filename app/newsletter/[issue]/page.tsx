@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import ReactMarkdown from 'react-markdown'
-import { getAllNewsletters, getNewsletterByIssue } from '@/lib/newsletter-issues'
+import { getAllNewsletters } from '@/lib/newsletter-issues'
 
 export async function generateStaticParams() {
   const all = await getAllNewsletters()
@@ -17,8 +17,9 @@ export async function generateMetadata({
   params: Promise<{ issue: string }>
 }) {
   const { issue: issueStr } = await paramsPromise
-  const issueNumber = parseInt(issueStr)
-  const newsletter = await getNewsletterByIssue(issueNumber)
+  const issueNumber = parseInt(issueStr, 10)
+  const allNewsletters = await getAllNewsletters()
+  const newsletter = allNewsletters.find((n) => n.issueNumber === issueNumber)
 
   if (!newsletter) {
     return { title: 'Newsletter Not Found' }
@@ -53,10 +54,8 @@ export default async function NewsletterIssuePage({
   const issueNumber = parseInt(issueStr, 10)
   if (isNaN(issueNumber) || issueNumber < 1) notFound()
 
-  const [newsletter, allNewsletters] = await Promise.all([
-    getNewsletterByIssue(issueNumber),
-    getAllNewsletters(),
-  ])
+  const allNewsletters = await getAllNewsletters()
+  const newsletter = allNewsletters.find((n) => n.issueNumber === issueNumber)
 
   if (!newsletter) notFound()
 
