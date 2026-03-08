@@ -81,7 +81,7 @@ async function getNextIssueNumber(): Promise<number> {
 
   const numbers = files
     .map((f) => {
-      const match = f.match(/motyl-dev-#(\d+)\.md/)
+      const match = f.match(/motyl-dev-(\d+)\.md/)
       return match ? parseInt(match[1]) : 0
     })
     .filter((n) => n > 0)

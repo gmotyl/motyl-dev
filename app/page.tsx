@@ -4,13 +4,13 @@ import Header from '@/components/header'
 import Footer from '@/components/footer'
 import NewsletterForm from '@/components/newsletter-form'
 import Link from 'next/link'
-import ReactMarkdown from 'react-markdown'
 import { Button } from '@/components/ui/button'
 import { getAllContentMetadata } from '@/lib/articles'
 import { ItemType } from '@/lib/types'
 import { getHomepageFeed } from '@/lib/trends'
 import { getContentUrl } from '@/lib/urls'
 import { getOgImage } from '@/lib/og'
+import { getAllNewsletterMeta } from '@/lib/newsletter-issues'
 import Image from 'next/image'
 
 export const dynamic = 'force-dynamic' // votes change frequently
@@ -18,9 +18,10 @@ export const dynamic = 'force-dynamic' // votes change frequently
 const emptyFeed = { currentWeek: '—', trendings: [], lastWeekSummary: null }
 
 export default async function Home() {
-  const [feed, articles] = await Promise.all([
+  const [feed, articles, newsletters] = await Promise.all([
     getHomepageFeed().catch(() => emptyFeed),
     getAllContentMetadata(),
+    getAllNewsletterMeta(),
   ])
   const latestArticles = articles.filter(a => a.itemType === ItemType.Article).slice(0, 3)
   const totalVotes = feed.trendings.reduce((sum, t) => sum + t.voteCount, 0)
@@ -40,6 +41,31 @@ export default async function Home() {
       <main className="flex-1">
         <div className="container max-w-3xl mx-auto px-4 py-12 md:py-16 space-y-12">
 
+          {/* Latest newsletter banner */}
+          {newsletters.length > 0 && (
+            <Link
+              href={`/newsletter/${newsletters[0].issueNumber}`}
+              className="flex items-center gap-4 rounded-lg border border-primary/30 bg-primary/5 p-3 hover:border-primary/50 hover:bg-primary/10 transition-all duration-200"
+            >
+              <div className="flex-shrink-0 w-20 h-14 rounded overflow-hidden">
+                <Image
+                  src={newsletters[0].image}
+                  alt={`Weekly #${newsletters[0].issueNumber}`}
+                  width={80}
+                  height={56}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="text-xs font-medium text-primary uppercase tracking-wide">Latest Issue</span>
+                <p className="font-semibold truncate">
+                  motyl.dev Weekly #{newsletters[0].issueNumber}: {newsletters[0].weekLabel}
+                </p>
+              </div>
+              <span className="text-primary text-sm whitespace-nowrap">&rarr;</span>
+            </Link>
+          )}
+
           {/* Newsletter */}
           <section id="newsletter" className="rounded-lg border border-primary/20 bg-primary/5 p-6 md:p-8 space-y-4 text-center">
             <h2 className="text-2xl font-bold">📬 Weekly Newsletter</h2>
@@ -55,7 +81,7 @@ export default async function Home() {
           <section className="space-y-3">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                🔥 What&apos;s Hot in Frontend &amp; AI
+                🔥 What&apos;s Hot in FE &amp; AI
               </h1>
               <InfoTooltip text="Upvote any link from our news section to surface trends. Top links form the weekly summary." />
             </div>
@@ -135,13 +161,42 @@ export default async function Home() {
             </section>
           )}
 
-          {/* Last week summary */}
-          {feed.lastWeekSummary && (
+          {/* Newsletter archive (last 5) */}
+          {newsletters.length > 0 && (
             <section className="space-y-3">
-              <h2 className="text-xl font-semibold">📚 From Last Week</h2>
-              <div className="rounded-lg border border-border bg-muted/30 p-4 prose prose-sm dark:prose-invert max-w-none">
-                <ReactMarkdown>{feed.lastWeekSummary.summaryMarkdown}</ReactMarkdown>
+              <h2 className="text-xl font-semibold">Past Issues</h2>
+              <div className="space-y-2">
+                {newsletters.slice(0, 5).map((issue) => (
+                  <Link
+                    key={issue.issueNumber}
+                    href={`/newsletter/${issue.issueNumber}`}
+                    className="flex items-center gap-4 rounded-lg border border-muted bg-background/50 p-3 hover:border-primary/30 hover:shadow-sm transition-all duration-200"
+                  >
+                    <div className="flex-shrink-0 w-16 h-11 rounded overflow-hidden">
+                      <Image
+                        src={issue.image}
+                        alt={`Weekly #${issue.issueNumber}`}
+                        width={64}
+                        height={44}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <span className="flex-1 font-medium">
+                      Weekly #{issue.issueNumber}
+                    </span>
+                    <span className="text-sm text-muted-foreground whitespace-nowrap">
+                      {issue.weekLabel}
+                    </span>
+                  </Link>
+                ))}
               </div>
+              {newsletters.length > 5 && (
+                <div className="text-right">
+                  <Button asChild variant="ghost" size="sm">
+                    <Link href="/newsletter">View all issues &rarr;</Link>
+                  </Button>
+                </div>
+              )}
             </section>
           )}
 
