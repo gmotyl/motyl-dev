@@ -50,9 +50,8 @@ export default async function NewsletterIssuePage({
   params: Promise<{ issue: string }>
 }) {
   const { issue: issueStr } = await paramsPromise
-  const issueNumber = parseInt(issueStr)
-
-  if (isNaN(issueNumber)) notFound()
+  const issueNumber = parseInt(issueStr, 10)
+  if (isNaN(issueNumber) || issueNumber < 1) notFound()
 
   const [newsletter, allNewsletters] = await Promise.all([
     getNewsletterByIssue(issueNumber),
