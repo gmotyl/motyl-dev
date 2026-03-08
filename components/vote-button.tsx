@@ -111,7 +111,7 @@ export function VoteButton({
         aria-pressed={voted}
         aria-label={`Upvote — ${voteCount} vote${voteCount !== 1 ? 's' : ''}`}
         className={cn(
-          'flex items-center justify-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium',
+          'flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-1.5 rounded-full px-2 md:px-3 py-1 text-sm font-medium',
           'min-h-[44px] min-w-[44px]',
           'border transition-all duration-200',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',

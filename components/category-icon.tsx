@@ -3,7 +3,8 @@
 import { getContentCategory } from '@/lib/og'
 
 interface CategoryIconProps {
-  hashtags: string[]
+  hashtags?: string[]
+  category?: string
   className?: string
 }
 
@@ -257,38 +258,21 @@ function ToolsIcon() {
           <stop offset="0%" stopColor="#0f1218" />
           <stop offset="100%" stopColor="#14101e" />
         </linearGradient>
-        <linearGradient id="gear-fill" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.25" />
-          <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0.05" />
-        </linearGradient>
+        <radialGradient id="tools-glow" cx="50%" cy="45%" r="40%">
+          <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.2" />
+          <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0" />
+        </radialGradient>
       </defs>
       <rect width="400" height="220" fill="url(#tools-bg)" />
-      {/* Big gear bg */}
-      {[0,30,60,90,120,150,180,210,240,270,300,330].map((angle, i) => {
-        const rad = (angle * Math.PI) / 180
-        const x1 = 200 + 72 * Math.cos(rad)
-        const y1 = 105 + 72 * Math.sin(rad)
-        const x2 = 200 + 90 * Math.cos(rad)
-        const y2 = 105 + 90 * Math.sin(rad)
-        return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#8B5CF6" strokeWidth="8" strokeLinecap="round" strokeOpacity="0.5" />
-      })}
-      <circle cx="200" cy="105" r="72" fill="url(#gear-fill)" stroke="#8B5CF6" strokeWidth="1.5" strokeOpacity="0.4" />
-      <circle cx="200" cy="105" r="28" fill="#0f1218" stroke="#8B5CF6" strokeWidth="2" strokeOpacity="0.6" />
-      {/* Small gear top-right */}
-      {[0,45,90,135,180,225,270,315].map((angle, i) => {
-        const rad = (angle * Math.PI) / 180
-        const x1 = 312 + 24 * Math.cos(rad)
-        const y1 = 46 + 24 * Math.sin(rad)
-        const x2 = 312 + 32 * Math.cos(rad)
-        const y2 = 46 + 32 * Math.sin(rad)
-        return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#a78bfa" strokeWidth="5" strokeLinecap="round" strokeOpacity="0.4" />
-      })}
-      <circle cx="312" cy="46" r="24" fill="none" stroke="#a78bfa" strokeWidth="1" strokeOpacity="0.3" />
-      <circle cx="312" cy="46" r="10" fill="#0f1218" stroke="#a78bfa" strokeWidth="1.5" strokeOpacity="0.5" />
-      {/* Wrench icon inside big gear */}
-      <path d="M192 88 L208 104 L204 108 L188 92 Z" fill="#8B5CF6" fillOpacity="0.8" />
-      <circle cx="186" cy="90" r="8" stroke="#8B5CF6" strokeWidth="2" fill="none" fillOpacity="0" strokeOpacity="0.7" />
-      <path d="M206 106 L212 112 L208 116 L202 110 Z" fill="#a78bfa" fillOpacity="0.7" />
+      <circle cx="200" cy="100" r="110" fill="url(#tools-glow)" />
+      {/* Wrench + screwdriver from SVG reference */}
+      <g transform="translate(150, 48) scale(1.2)">
+        <path d="M66.958,54.602c-1.821-1.821-4.786-1.821-6.608,0l-0.066,0.066l-1.298-1.298l12.849-12.848c6.649,2.043,13.76,0.297,18.692-4.635c4.337-4.337,6.27-10.528,5.17-16.56c-0.067-0.366-0.331-0.665-0.686-0.775c-0.354-0.111-0.741-0.015-1.005,0.248l-8.954,8.953l-11.038-1.767l-1.767-11.038L81.2,5.994c0.263-0.263,0.358-0.65,0.248-1.005s-0.409-0.619-0.775-0.686c-6.031-1.098-12.223,0.833-16.56,5.17c-4.932,4.932-6.679,12.042-4.635,18.692L46.63,41.015L19.821,14.206c-0.101-0.101-0.223-0.179-0.356-0.229l-6.717-2.516c-0.368-0.137-0.781-0.048-1.058,0.229c-0.277,0.277-0.367,0.691-0.229,1.058l2.516,6.717c0.05,0.134,0.128,0.255,0.229,0.356L41.015,46.63L28.166,59.478c-6.65-2.044-13.761-0.296-18.692,4.635c-4.338,4.337-6.271,10.528-5.171,16.56c0.067,0.366,0.331,0.665,0.686,0.775c0.355,0.112,0.742,0.016,1.005-0.248l8.954-8.953l11.038,1.767l1.767,11.038L18.8,94.006c-0.263,0.263-0.358,0.65-0.248,1.005s0.409,0.619,0.775,0.686C20.442,95.9,21.563,96,22.676,96c4.909,0,9.676-1.938,13.211-5.474c4.932-4.931,6.679-12.042,4.635-18.692L53.37,58.985l1.298,1.298l-0.066,0.066c-1.822,1.822-1.822,4.786,0,6.608L78.84,91.195c0.906,0.906,2.096,1.358,3.288,1.358c1.197,0,2.396-0.457,3.309-1.37l5.748-5.748c1.822-1.822,1.827-4.781,0.011-6.596L66.958,54.602z" fill="#8B5CF6" fillOpacity="0.85" />
+      </g>
+      {/* Dots */}
+      {[[60, 35], [345, 40], [55, 175], [350, 170]].map(([x, y], i) => (
+        <circle key={i} cx={x} cy={y} r="2" fill="#8B5CF6" fillOpacity="0.25" />
+      ))}
       <text x="200" y="213" textAnchor="middle" fill="#8B5CF6" fontSize="11" fontFamily="monospace" fillOpacity="0.4" letterSpacing="3">TOOLS</text>
     </svg>
   )
@@ -386,16 +370,10 @@ function MiniToolsIcon() {
   return (
     <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
       <rect width="48" height="48" rx="8" fill="#0f1218" />
-      {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => {
-        const rad = (angle * Math.PI) / 180
-        const x1 = 24 + 13 * Math.cos(rad)
-        const y1 = 24 + 13 * Math.sin(rad)
-        const x2 = 24 + 17 * Math.cos(rad)
-        const y2 = 24 + 17 * Math.sin(rad)
-        return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#8B5CF6" strokeWidth="3" strokeLinecap="round" strokeOpacity="0.6" />
-      })}
-      <circle cx="24" cy="24" r="13" stroke="#8B5CF6" strokeWidth="1.5" fill="none" strokeOpacity="0.5" />
-      <circle cx="24" cy="24" r="5" fill="#0f1218" stroke="#8B5CF6" strokeWidth="1.5" strokeOpacity="0.6" />
+      {/* Wrench */}
+      <path d="M14 34 L26 22" stroke="#8B5CF6" strokeWidth="3" strokeLinecap="round" strokeOpacity="0.9" />
+      <path d="M26 22 C24 17 27 12 32 12 L29 17 L30 20 L33 21 L36 16 C36 22 31 25 26 22Z" fill="#8B5CF6" fillOpacity="0.8" />
+      <rect x="11" y="31" width="6" height="6" rx="1" transform="rotate(-45 14 34)" fill="#8B5CF6" fillOpacity="0.6" />
     </svg>
   )
 }
@@ -431,8 +409,8 @@ const miniIconMap: Record<string, React.ReactNode> = {
   general: <MiniGeneralIcon />,
 }
 
-export function CategoryIcon({ hashtags, className }: CategoryIconProps) {
-  const category = getContentCategory(hashtags)
+export function CategoryIcon({ hashtags, category: catProp, className }: CategoryIconProps) {
+  const category = catProp ?? getContentCategory(hashtags ?? [])
   return (
     <div className={className}>
       {iconMap[category] ?? iconMap.general}
@@ -440,8 +418,8 @@ export function CategoryIcon({ hashtags, className }: CategoryIconProps) {
   )
 }
 
-export function CategoryIconMini({ hashtags, className }: CategoryIconProps) {
-  const category = getContentCategory(hashtags)
+export function CategoryIconMini({ hashtags, category: catProp, className }: CategoryIconProps) {
+  const category = catProp ?? getContentCategory(hashtags ?? [])
   return (
     <div className={className}>
       {miniIconMap[category] ?? miniIconMap.general}

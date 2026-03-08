@@ -78,7 +78,6 @@ export default async function Home() {
                     voteCount={item.voteCount}
                     category={item.category as import('@/lib/og').ContentCategory}
                     sourceDomain={item.sourceDomain ?? undefined}
-                    rank={index + 1}
                   />
                 ))}
               </div>

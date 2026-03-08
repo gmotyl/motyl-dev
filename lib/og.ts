@@ -1,9 +1,9 @@
 const CATEGORY_HASHTAGS: Record<string, string[]> = {
   frontend: ['frontend', 'css', 'html', 'animation', 'accessibility', 'uidev', 'browser', 'web-components', 'webcomponents', 'svg', 'tailwind', 'ux', 'performance', 'webdev'],
   architecture: ['architecture', 'backend', 'devops', 'infrastructure', 'cloud', 'distributed-systems', 'microservices', 'serverless', 'database', 'postgresql'],
-  coding: ['react', 'typescript', 'javascript', 'nodejs', 'python', 'testing', 'nextjs', 'refactoring', 'frameworks', 'softwareengineering', 'software-engineering', 'cleancode', 'clean-code', 'programming', 'development', 'dev'],
+  coding: ['react', 'typescript', 'javascript', 'nodejs', 'python', 'testing', 'nextjs', 'refactoring', 'frameworks', 'softwareengineering', 'software-engineering', 'cleancode', 'clean-code', 'programming', 'development', 'dev', 'code-review', 'open-source', 'opensource'],
   productivity: ['productivity', 'career', 'careeradvice', 'career-advice', 'workflow', 'automation', 'leadership', 'management', 'engineering-culture', 'dx', 'techwriting', 'technicalwriting', 'technical-writing', 'contentcreation', 'content-creation'],
-  tools: ['devtools', 'vscode', 'cursor', 'ide', 'github', 'ci-cd', 'tooling', 'observability', 'monitoring', 'security'],
+  tools: ['devtools', 'developer-tools', 'vscode', 'cursor', 'ide', 'github', 'ci-cd', 'tooling', 'observability', 'monitoring', 'security', 'open-source', 'opensource'],
   ai: ['ai', 'agents', 'llm', 'claude', 'openai', 'anthropic', 'chatgpt', 'prompt-engineering', 'promptengineering', 'mcp', 'rag', 'deepseek', 'gemini', 'gpt', 'claude-code', 'claudecode', 'vibecoding', 'vibe-coding'],
 }
 
