@@ -331,6 +331,86 @@ function GeneralIcon() {
   )
 }
 
+function MiniAiIcon() {
+  return (
+    <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      <rect width="48" height="48" rx="8" fill="#1e0b4a" />
+      <path d="M24,8 C25,22 25,22 40,24 C25,25 25,25 24,40 C23,25 23,25 8,24 C23,22 23,22 24,8 Z" fill="#a78bfa" fillOpacity="0.9" />
+    </svg>
+  )
+}
+
+function MiniFrontendIcon() {
+  return (
+    <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      <rect width="48" height="48" rx="8" fill="#0c1a2e" />
+      <text x="24" y="30" textAnchor="middle" fill="#60a5fa" fontSize="20" fontFamily="monospace" fontWeight="bold">&lt;/&gt;</text>
+    </svg>
+  )
+}
+
+function MiniArchitectureIcon() {
+  return (
+    <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      <rect width="48" height="48" rx="8" fill="#0a1628" />
+      {[12, 22, 32].map((y) => (
+        <g key={y}>
+          <rect x="10" y={y} width="28" height="8" rx="2" fill="#0f2318" stroke="#22c55e" strokeWidth="1" strokeOpacity="0.6" />
+          <circle cx="16" cy={y + 4} r="2" fill="#22c55e" fillOpacity="0.7" />
+        </g>
+      ))}
+    </svg>
+  )
+}
+
+function MiniCodingIcon() {
+  return (
+    <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      <rect width="48" height="48" rx="8" fill="#0a0a0a" />
+      <text x="10" y="28" fill="#6b7280" fontSize="14" fontFamily="monospace">$</text>
+      <rect x="20" y="21" width="6" height="10" rx="1" fill="#8B5CF6" fillOpacity="0.9" />
+    </svg>
+  )
+}
+
+function MiniProductivityIcon() {
+  return (
+    <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      <rect width="48" height="48" rx="8" fill="#1c1209" />
+      <path d="M28 6 L18 24 H25 L20 42 L32 22 H24 Z" fill="#fbbf24" stroke="#d97706" strokeWidth="0.5" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function MiniToolsIcon() {
+  return (
+    <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      <rect width="48" height="48" rx="8" fill="#0f1218" />
+      {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => {
+        const rad = (angle * Math.PI) / 180
+        const x1 = 24 + 13 * Math.cos(rad)
+        const y1 = 24 + 13 * Math.sin(rad)
+        const x2 = 24 + 17 * Math.cos(rad)
+        const y2 = 24 + 17 * Math.sin(rad)
+        return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#8B5CF6" strokeWidth="3" strokeLinecap="round" strokeOpacity="0.6" />
+      })}
+      <circle cx="24" cy="24" r="13" stroke="#8B5CF6" strokeWidth="1.5" fill="none" strokeOpacity="0.5" />
+      <circle cx="24" cy="24" r="5" fill="#0f1218" stroke="#8B5CF6" strokeWidth="1.5" strokeOpacity="0.6" />
+    </svg>
+  )
+}
+
+function MiniGeneralIcon() {
+  return (
+    <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      <rect width="48" height="48" rx="8" fill="#0d1f33" />
+      <circle cx="24" cy="24" r="14" stroke="#38bdf8" strokeWidth="1.5" fill="none" strokeOpacity="0.5" />
+      <ellipse cx="24" cy="24" rx="14" ry="5" stroke="#38bdf8" strokeWidth="0.75" fill="none" strokeOpacity="0.3" />
+      <ellipse cx="24" cy="24" rx="6" ry="14" stroke="#38bdf8" strokeWidth="0.75" fill="none" strokeOpacity="0.3" />
+    </svg>
+  )
+}
+
 const iconMap: Record<string, React.ReactNode> = {
   ai: <AiIcon />,
   frontend: <FrontendIcon />,
@@ -341,11 +421,30 @@ const iconMap: Record<string, React.ReactNode> = {
   general: <GeneralIcon />,
 }
 
+const miniIconMap: Record<string, React.ReactNode> = {
+  ai: <MiniAiIcon />,
+  frontend: <MiniFrontendIcon />,
+  architecture: <MiniArchitectureIcon />,
+  coding: <MiniCodingIcon />,
+  productivity: <MiniProductivityIcon />,
+  tools: <MiniToolsIcon />,
+  general: <MiniGeneralIcon />,
+}
+
 export function CategoryIcon({ hashtags, className }: CategoryIconProps) {
   const category = getContentCategory(hashtags)
   return (
     <div className={className}>
       {iconMap[category] ?? iconMap.general}
+    </div>
+  )
+}
+
+export function CategoryIconMini({ hashtags, className }: CategoryIconProps) {
+  const category = getContentCategory(hashtags)
+  return (
+    <div className={className}>
+      {miniIconMap[category] ?? miniIconMap.general}
     </div>
   )
 }

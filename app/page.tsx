@@ -118,7 +118,11 @@ export default async function Home() {
                         <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{article.excerpt}</p>
                       )}
                       <p className="mt-2 text-xs text-primary/60">
-                        {new Date(article.publishedAt).toLocaleDateString()}
+                        {new Date(article.publishedAt).toLocaleDateString('pl-PL', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                        })}
                       </p>
                     </div>
                   </Link>

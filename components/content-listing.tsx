@@ -21,7 +21,7 @@ import AdUnit from '@/components/ad-unit'
 import { getFilteredContent } from '@/app/actions'
 import { getOgImage } from '@/lib/og'
 import Image from 'next/image'
-import { CategoryIcon } from '@/components/category-icon'
+import { CategoryIcon, CategoryIconMini } from '@/components/category-icon'
 
 interface ContentListingProps {
   title: string
@@ -430,28 +430,40 @@ export function ContentListing({
                     href={`${basePath}/${item.slug}`}
                     prefetch={false}
                     onClick={() => markAsVisited(item.slug)}
-                    className={`rounded-lg border backdrop-blur-sm transition-all hover:shadow-md hover:border-primary/50 flex flex-col overflow-hidden ${
+                    className={`rounded-lg border backdrop-blur-sm transition-all hover:shadow-md hover:border-primary/50 flex flex-row md:flex-col overflow-hidden ${
                       isVisited(item.slug) ? 'visited-article' : 'unvisited-article'
                     }`}
                   >
-                    <div className="relative w-full overflow-hidden rounded-t-lg" style={{ aspectRatio: '16/7' }}>
-                      {contentType === 'news' ? (
-                        <CategoryIcon
-                          hashtags={(item as { hashtags: string[] }).hashtags ?? []}
-                          className="w-full h-full"
-                        />
-                      ) : (
+                    {contentType === 'news' ? (
+                      <>
+                        {/* Mobile: mini icon on the left */}
+                        <div className="flex-shrink-0 w-16 flex items-center justify-center p-2 md:hidden">
+                          <CategoryIconMini
+                            hashtags={(item as { hashtags: string[] }).hashtags ?? []}
+                            className="w-12 h-12"
+                          />
+                        </div>
+                        {/* Desktop: full icon on top */}
+                        <div className="relative w-full overflow-hidden rounded-t-lg hidden md:block" style={{ aspectRatio: '16/7' }}>
+                          <CategoryIcon
+                            hashtags={(item as { hashtags: string[] }).hashtags ?? []}
+                            className="w-full h-full"
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="relative w-full overflow-hidden rounded-t-lg" style={{ aspectRatio: '16/7' }}>
                         <Image
                           src={getOgImage(item as { image?: string; hashtags: string[] })}
                           alt={item.title}
                           fill
                           className="object-cover"
                         />
-                      )}
-                    </div>
-                    <div className="p-6 flex flex-col flex-grow">
-                      <h2 className="article-title text-xl font-bold mb-2">{item.title}</h2>
-                      <p className="article-excerpt flex-grow line-clamp-3">{item.excerpt}</p>
+                      </div>
+                    )}
+                    <div className="p-4 md:p-6 flex flex-col flex-grow min-w-0">
+                      <h2 className="article-title text-base md:text-xl font-bold mb-1 md:mb-2">{item.title}</h2>
+                      <p className="article-excerpt flex-grow line-clamp-2 md:line-clamp-3">{item.excerpt}</p>
                       <p className="text-xs text-muted-foreground mt-auto">
                         {new Date(item.publishedAt).toLocaleDateString('pl-PL', {
                           day: '2-digit',
