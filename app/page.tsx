@@ -15,7 +15,7 @@ import Image from 'next/image'
 
 export const dynamic = 'force-dynamic' // votes change frequently
 
-const emptyFeed = { currentWeek: '—', trendings: [], lastWeekSummary: null }
+const emptyFeed = { trendings: [], lastWeekSummary: null }
 
 export default async function Home() {
   const [feed, articles, newsletters] = await Promise.all([
@@ -86,7 +86,7 @@ export default async function Home() {
               <InfoTooltip text="Upvote any link from our news section to surface trends. Top links form the weekly summary." />
             </div>
             <p className="text-muted-foreground">
-              Week {feed.currentWeek} &middot; {totalVotes} votes cast
+              Trending to next weekly issue &middot; {totalVotes} votes cast
             </p>
           </section>
 

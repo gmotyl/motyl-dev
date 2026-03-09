@@ -150,7 +150,7 @@ export function mockGetHomepageFeed(week: string) {
     updatedAt: new Date(),
   }
 
-  return { currentWeek: week, trendings, lastWeekSummary }
+  return { trendings, lastWeekSummary }
 }
 
 export function mockCastVote(

@@ -25,11 +25,8 @@ export function TrendingCard({
       className={`group rounded-lg border transition-all duration-200 hover:shadow-md flex flex-row overflow-hidden category-${category} unvisited-article`}
     >
       {/* Left column: icon + vote */}
-      <div className="flex-shrink-0 w-16 flex flex-col items-center gap-2 py-3 px-2">
-        <CategoryIconMini
-          category={category}
-          className="w-10 h-10"
-        />
+      <div className="flex-shrink-0 w-16 md:w-24 flex flex-col items-center gap-4 py-3 px-2">
+        <CategoryIconMini category={category} className="w-10 h-10" />
         <VoteButton
           linkUrl={linkUrl}
           title={title}
@@ -42,14 +39,6 @@ export function TrendingCard({
 
       {/* Right column: content */}
       <div className="p-3 pl-2 flex flex-col flex-grow min-w-0 justify-center">
-        <div className="flex flex-wrap items-center gap-2 mb-1">
-          <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-medium text-white/70">
-            {category}
-          </span>
-          {sourceDomain && (
-            <span className="text-xs text-white/50">{sourceDomain}</span>
-          )}
-        </div>
         <Link
           href={linkUrl}
           target="_blank"
@@ -59,9 +48,7 @@ export function TrendingCard({
           <span className="line-clamp-2">{title}</span>
           <ExternalLink className="h-3.5 w-3.5 shrink-0 mt-0.5 opacity-0 group-hover/link:opacity-100 transition-opacity" />
         </Link>
-        {description && (
-          <p className="mt-1 text-sm text-white/60 line-clamp-2">{description}</p>
-        )}
+        {description && <p className="mt-1 text-sm text-white/60 line-clamp-2">{description}</p>}
       </div>
     </div>
   )

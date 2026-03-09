@@ -95,8 +95,10 @@ export function getPreviousWeek(week: string): string {
 
 export async function resetWeeklyVotes() {
   const week = await getCurrentWeek()
-  const votes = await getWeekVotes(week)
-  const totalVotes = votes.reduce((sum, v) => sum + v.voteCount, 0)
+  const allVotes = await prisma.trendsVotes.findMany({
+    orderBy: [{ voteCount: 'desc' }, { createdAt: 'asc' }],
+  })
+  const totalVotes = allVotes.reduce((sum, v) => sum + v.voteCount, 0)
 
   // Upsert archive record for this week (may already exist if trends:generate ran first)
   await prisma.trendsArchive.upsert({
@@ -109,10 +111,10 @@ export async function resetWeeklyVotes() {
     },
   })
 
-  // Delete current week votes
-  await prisma.trendsVotes.deleteMany({ where: { week } })
+  // Delete all current votes (period length varies between resets)
+  await prisma.trendsVotes.deleteMany({})
 
-  return { week, archivedCount: votes.length, totalVotes }
+  return { week, archivedCount: allVotes.length, totalVotes }
 }
 
 export async function getHomepageFeed() {
@@ -120,22 +122,18 @@ export async function getHomepageFeed() {
 
   if (isDevMock) return mockGetHomepageFeed(week)
 
-  const previousWeek = getPreviousWeek(week)
-
-  const [currentWeekVotes, lastWeekArchive] = await Promise.all([
+  const [trendings, lastWeekArchive] = await Promise.all([
     prisma.trendsVotes.findMany({
-      where: { week },
       orderBy: [{ voteCount: 'desc' }, { createdAt: 'asc' }],
       take: 20,
     }),
     prisma.trendsArchive.findFirst({
-      where: { week: previousWeek },
+      orderBy: { createdAt: 'desc' },
     }),
   ])
 
   return {
-    currentWeek: week,
-    trendings: currentWeekVotes,
+    trendings,
     lastWeekSummary: lastWeekArchive ?? null,
   }
 }

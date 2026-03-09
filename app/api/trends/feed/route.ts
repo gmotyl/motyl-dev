@@ -13,7 +13,6 @@ export async function GET() {
 
     return NextResponse.json(
       {
-        currentWeek: feed.currentWeek,
         trendings: feed.trendings,
         articles: latestArticles,
         lastWeekSummary: feed.lastWeekSummary,
