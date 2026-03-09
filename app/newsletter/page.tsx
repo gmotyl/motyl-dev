@@ -8,14 +8,19 @@ import NewsletterForm from '@/components/newsletter-form'
 const title = 'Newsletter Archive - Motyl.dev'
 const description = 'Weekly curated digest of frontend & AI trends by Grzegorz Motyl.'
 
-export const metadata = {
-  title,
-  description,
-  openGraph: {
+export async function generateMetadata() {
+  const allMeta = await getAllNewsletterMeta()
+  const latestImage = allMeta.length > 0 ? allMeta[0].image : 'https://img.motyl.dev/greg-stanczyk.jpg'
+
+  return {
     title,
     description,
-    images: [{ url: 'https://img.motyl.dev/greg-stanczyk.jpg', width: 1200, height: 630 }],
-  },
+    openGraph: {
+      title,
+      description,
+      images: [{ url: latestImage, width: 1200, height: 630 }],
+    },
+  }
 }
 
 const ITEMS_PER_PAGE = 10
