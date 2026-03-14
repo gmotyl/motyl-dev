@@ -128,9 +128,8 @@ When processing these newsletters:
        - Include TLDR section
        - Include detailed summary for each article (or sections from body)
        - Include key takeaways
-       - Include "Why do I care" commentary (senior frontend dev perspective)
+       - Include "Why do I care" commentary (senior frontend dev perspective) — LAST section before the link, per article
        - **Each topic section MUST end with `**Link:** [Title](URL)` line**
-       - Include disclaimer at the end
        - **IMPORTANT**: Do NOT include any "Co-Authored-By" attribution lines - these scare readers
        - **IMPORTANT**: Do NOT include any "Generated with [Tool Name]" marketing lines - keep it clean and professional
    - Call `mcp__newsletter-ai__save_article` with generated content and newsletter name
