@@ -3,6 +3,7 @@ import '@/app/globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
 import { SessionProvider } from '@/components/session-provider'
 import { Toaster } from '@/components/ui/toaster'
+import { Toaster as SonnerToaster } from '@/components/ui/sonner'
 import { Analytics } from '@vercel/analytics/next'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
             <BottomNav />
             <Toaster />
+            <SonnerToaster position="top-center" richColors duration={3000} />
             <ServiceWorkerRegister />
             <InstallPrompt />
             <UpdateNotification />
