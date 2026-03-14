@@ -9,7 +9,7 @@ const ALL_SECTIONS: { id: SectionType; label: string }[] = [
   { id: 'tldr', label: 'TLDR' },
   { id: 'summary', label: 'Summary' },
   { id: 'keyTakeaways', label: 'Key Takeaways' },
-  { id: 'tradeoffs', label: 'Tradeoffs' },
+  { id: 'tradeoffs', label: 'Why Do I Care' },
 ]
 
 const DEFAULT_HIDDEN: SectionType[] = ['summary', 'keyTakeaways', 'tradeoffs']

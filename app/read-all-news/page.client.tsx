@@ -118,6 +118,11 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
     setItems(prev => prev.filter(item => !slugs.includes(item.slug)))
     setScrolledPastSlugs(new Set())
 
+    // Scroll to top so the user sees the next unread article (skip if navigating away)
+    if (!pendingNavUrl) {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
     // Navigate if there was a pending URL
     if (pendingNavUrl) {
       window.location.href = pendingNavUrl

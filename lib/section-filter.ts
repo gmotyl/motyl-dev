@@ -3,10 +3,10 @@ import type { SectionType } from './articles'
 export type { SectionType }
 
 const SECTION_PATTERNS: Record<SectionType, RegExp> = {
-  tldr: /\*\*TLDR:\*\*[\s\S]*?(?=\n\n\*\*|$)/gi,
+  tldr: /(?<=## .+\n\n)(?:(?:\*\*TLDR:?\*\*\s*)?[\s\S]*?)(?=\n\n\*\*|$)/gi,
   summary: /\*\*Summary:\*\*[\s\S]*?(?=\n\n\*\*|$)/gi,
   keyTakeaways: /\*\*Key takeaways:\*\*[\s\S]*?(?=\n\n\*\*|$)/gi,
-  tradeoffs: /\*\*Tradeoffs:\*\*[\s\S]*?(?=\n\n\*\*|$)/gi,
+  tradeoffs: /\*\*(Tradeoffs|Why do I care):\*\*[\s\S]*?(?=\n\n\*\*|$)/gi,
 }
 
 export function filterHiddenSections(content: string, hiddenTypes: Set<SectionType>): string {

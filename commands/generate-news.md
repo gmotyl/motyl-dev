@@ -128,7 +128,7 @@ When processing these newsletters:
        - Include TLDR section
        - Include detailed summary for each article (or sections from body)
        - Include key takeaways
-       - Include tradeoffs/considerations
+       - Include "Why do I care" commentary (senior frontend dev perspective)
        - **Each topic section MUST end with `**Link:** [Title](URL)` line**
        - Include disclaimer at the end
        - **IMPORTANT**: Do NOT include any "Co-Authored-By" attribution lines - these scare readers

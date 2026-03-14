@@ -120,7 +120,7 @@ When processing these newsletters:
            - TLDR section
            - Detailed summaries per topic
            - Key takeaways
-           - Tradeoffs/considerations
+           - "Why do I care" commentary (senior frontend dev perspective)
            - Each topic ends with `**Link:** [Title](URL)`
            - NO Co-Authored-By lines
            - NO Generated-with lines

@@ -195,9 +195,7 @@ describe('getAllHashtags', () => {
 describe('filterHiddenSections', () => {
   const sampleContent = `## Article Title
 
-Some intro text here.
-
-**TLDR:** This is the TLDR content that should be hidden.
+This is the TLDR content that should be hidden.
 
 **Summary:** This is the summary content that should be hidden.
 
@@ -217,18 +215,29 @@ More article content here.
 
 More content after the sections.`
 
-  it('should remove TLDR section when hidden', () => {
+  it('should remove TLDR section when hidden (first paragraph after heading)', () => {
     const result = filterHiddenSections(sampleContent, new Set(['tldr']))
-    expect(result).not.toContain('**TLDR:**')
+    expect(result).not.toContain('TLDR content')
     expect(result).toContain('**Summary:**')
     expect(result).toContain('**Key takeaways:**')
     expect(result).toContain('**Tradeoffs:**')
   })
 
+  it('should remove TLDR with explicit prefix when hidden', () => {
+    const contentWithPrefix = `## Article Title
+
+**TLDR:** This is the TLDR with an explicit prefix.
+
+**Summary:** Summary content here.`
+    const result = filterHiddenSections(contentWithPrefix, new Set(['tldr']))
+    expect(result).not.toContain('TLDR')
+    expect(result).toContain('**Summary:**')
+  })
+
   it('should remove Summary section when hidden', () => {
     const result = filterHiddenSections(sampleContent, new Set(['summary']))
     expect(result).not.toContain('**Summary:**')
-    expect(result).toContain('**TLDR:**')
+    expect(result).toContain('TLDR content')
     expect(result).toContain('**Key takeaways:**')
     expect(result).toContain('**Tradeoffs:**')
   })
@@ -236,7 +245,7 @@ More content after the sections.`
   it('should remove Key Takeaways section when hidden', () => {
     const result = filterHiddenSections(sampleContent, new Set(['keyTakeaways']))
     expect(result).not.toContain('**Key takeaways:**')
-    expect(result).toContain('**TLDR:**')
+    expect(result).toContain('TLDR content')
     expect(result).toContain('**Summary:**')
     expect(result).toContain('**Tradeoffs:**')
   })
@@ -244,14 +253,29 @@ More content after the sections.`
   it('should remove Tradeoffs section when hidden', () => {
     const result = filterHiddenSections(sampleContent, new Set(['tradeoffs']))
     expect(result).not.toContain('**Tradeoffs:**')
-    expect(result).toContain('**TLDR:**')
+    expect(result).toContain('TLDR content')
     expect(result).toContain('**Summary:**')
     expect(result).toContain('**Key takeaways:**')
   })
 
+  it('should remove Why Do I Care section when hidden (backward compat)', () => {
+    const contentWithNewSection = `## Article Title
+
+First paragraph TLDR.
+
+**Summary:** Summary here.
+
+**Why do I care:** This matters because of architecture decisions.
+
+**Link:** [Title](url)`
+    const result = filterHiddenSections(contentWithNewSection, new Set(['tradeoffs']))
+    expect(result).not.toContain('**Why do I care:**')
+    expect(result).toContain('**Summary:**')
+  })
+
   it('should remove multiple sections when multiple are hidden', () => {
     const result = filterHiddenSections(sampleContent, new Set(['tldr', 'summary', 'tradeoffs']))
-    expect(result).not.toContain('**TLDR:**')
+    expect(result).not.toContain('TLDR content')
     expect(result).not.toContain('**Summary:**')
     expect(result).not.toContain('**Tradeoffs:**')
     expect(result).toContain('**Key takeaways:**')
@@ -259,23 +283,20 @@ More content after the sections.`
 
   it('should keep all content when no sections are hidden', () => {
     const result = filterHiddenSections(sampleContent, new Set())
-    expect(result).toContain('**TLDR:**')
+    expect(result).toContain('TLDR content')
     expect(result).toContain('**Summary:**')
     expect(result).toContain('**Key takeaways:**')
     expect(result).toContain('**Tradeoffs:**')
   })
 
-  it('should handle missing sections gracefully', () => {
-    const contentWithoutSections = `## Article Title
-
-Just some regular content without special sections.`
-    const result = filterHiddenSections(contentWithoutSections, new Set(['tldr', 'summary']))
+  it('should handle content without any heading gracefully', () => {
+    const contentWithoutHeading = `Just some regular content without special sections.`
+    const result = filterHiddenSections(contentWithoutHeading, new Set(['tldr', 'summary']))
     expect(result).toContain('regular content')
   })
 
-  it('should preserve content before and after removed sections', () => {
+  it('should preserve content after removed sections', () => {
     const result = filterHiddenSections(sampleContent, new Set(['summary']))
-    expect(result).toContain('Some intro text here.')
     expect(result).toContain('More article content here.')
     expect(result).toContain('More content after the sections.')
   })
