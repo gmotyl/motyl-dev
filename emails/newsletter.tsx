@@ -4,6 +4,7 @@ import {
   Head,
   Hr,
   Html,
+  Img,
   Preview,
   Section,
   Text,
@@ -15,12 +16,14 @@ interface NewsletterEmailProps {
   issueNumber: number
   weekLabel: string
   htmlContent: string
+  image?: string
 }
 
 export default function NewsletterEmail({
   issueNumber = 1,
   weekLabel = 'Week 1',
   htmlContent = '<p>Newsletter content goes here.</p>',
+  image = 'https://img.motyl.dev/greg-stanczyk.jpg',
 }: NewsletterEmailProps) {
   return (
     <Html lang="en">
@@ -45,6 +48,16 @@ export default function NewsletterEmail({
               <Text className="m-0 mt-1 text-sm text-gray-500">
                 Issue #{issueNumber} · {weekLabel}
               </Text>
+            </Section>
+
+            {/* Hero image */}
+            <Section className="mb-6">
+              <Img
+                src={image}
+                alt={`motyl.dev Weekly #${String(issueNumber)}`}
+                width={600}
+                style={{ width: '100%', borderRadius: '8px' }}
+              />
             </Section>
 
             {/* Body — pre-rendered HTML from markdown-it */}

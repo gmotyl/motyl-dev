@@ -147,6 +147,7 @@ async function main() {
   const { data, content } = parseFrontmatter(raw)
 
   const weekLabel = (data.weekLabel as string | undefined) ?? `Issue #${issueNumber}`
+  const image = (data.image as string | undefined) ?? 'https://img.motyl.dev/greg-stanczyk.jpg'
   const subject = `motyl.dev Weekly #${issueNumber} — ${weekLabel}`
 
   // --- Render markdown to HTML ---
@@ -154,11 +155,12 @@ async function main() {
   const htmlContent = md.render(content)
 
   // --- Render React Email template to HTML ---
+  const props = { issueNumber, weekLabel, htmlContent, image }
   const emailHtml = await render(
-    React.createElement(NewsletterEmail, { issueNumber, weekLabel, htmlContent }),
+    React.createElement(NewsletterEmail, props),
   )
   const emailText = await render(
-    React.createElement(NewsletterEmail, { issueNumber, weekLabel, htmlContent }),
+    React.createElement(NewsletterEmail, props),
     { plainText: true },
   )
 
