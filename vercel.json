@@ -4,6 +4,32 @@
   },
   "headers": [
     {
+      "source": "/news",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, s-maxage=3600, max-age=300, stale-while-revalidate=60"
+        },
+        {
+          "key": "CDN-Cache-Control",
+          "value": "max-age=3600"
+        }
+      ]
+    },
+    {
+      "source": "/articles",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, s-maxage=3600, max-age=300, stale-while-revalidate=60"
+        },
+        {
+          "key": "CDN-Cache-Control",
+          "value": "max-age=3600"
+        }
+      ]
+    },
+    {
       "source": "/news/:slug*",
       "headers": [
         {
