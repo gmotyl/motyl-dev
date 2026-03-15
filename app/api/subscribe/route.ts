@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server"
 import { Resend } from "resend"
+import fs from 'node:fs/promises'
+import path from 'node:path'
+import { buildEmailMarkdownRenderer, wrapInEmailShell } from '@/lib/email-markdown'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://motyl.dev'
 
@@ -24,6 +27,15 @@ export async function POST(request: Request) {
         await resend.contacts.create({ audienceId, email })
       } catch (contactError) {
         console.error("Failed to add contact to audience:", contactError)
+      }
+    }
+
+    // Send welcome email to subscriber
+    if (apiKey) {
+      try {
+        await sendWelcomeEmail(apiKey, email)
+      } catch (welcomeError) {
+        console.error("Failed to send welcome email:", welcomeError)
       }
     }
 
@@ -134,6 +146,31 @@ Next steps:
     logEmailNotification(subscriberEmail, articleSlug)
     throw error
   }
+}
+
+async function sendWelcomeEmail(apiKey: string, subscriberEmail: string) {
+  const resend = new Resend(apiKey)
+  const md = buildEmailMarkdownRenderer()
+
+  const welcomeMd = await fs.readFile(
+    path.join(process.cwd(), 'content', 'emails', 'welcome.md'),
+    'utf8',
+  )
+  const htmlContent = md.render(welcomeMd)
+  const html = wrapInEmailShell(htmlContent)
+
+  const { error } = await resend.emails.send({
+    from: 'Greg from motyl.dev <greg@motyl.dev>',
+    to: subscriberEmail,
+    subject: 'Welcome to motyl.dev Weekly!',
+    html,
+  })
+
+  if (error) {
+    throw new Error(`Welcome email error: ${error.message}`)
+  }
+
+  console.log(`Welcome email sent to ${subscriberEmail}`)
 }
 
 function logEmailNotification(subscriberEmail: string, articleSlug?: string) {

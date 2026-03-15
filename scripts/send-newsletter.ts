@@ -19,84 +19,12 @@ import fs from 'node:fs/promises'
 config({ path: path.join(process.cwd(), '.env') })
 config({ path: path.join(process.cwd(), '.env.local'), override: true })
 
-import MarkdownIt from 'markdown-it'
 import { render } from '@react-email/components'
 import * as React from 'react'
 import { Resend } from 'resend'
 import NewsletterEmail from '../emails/newsletter.js'
 import { parseFrontmatter } from '../lib/newsletter-issues.js'
-
-// ---------------------------------------------------------------------------
-// Inline-styled markdown renderer (email clients ignore <style> tags)
-// ---------------------------------------------------------------------------
-
-function buildMarkdownRenderer(): MarkdownIt {
-  const md = new MarkdownIt({ html: true, linkify: true, typographer: true })
-
-  // Override default rules with inline styles
-  const defaultRules = { ...md.renderer.rules }
-
-  md.renderer.rules.link_open = (tokens, idx, options, _env, self) => {
-    const token = tokens[idx]
-    token.attrSet(
-      'style',
-      'color: #8B5CF6; text-decoration: none; font-weight: 600;',
-    )
-    return defaultRules.link_open
-      ? defaultRules.link_open(tokens, idx, options, _env, self)
-      : self.renderToken(tokens, idx, options)
-  }
-
-  md.renderer.rules.heading_open = (tokens, idx, options, _env, self) => {
-    const token = tokens[idx]
-    const tag = token.tag // h1, h2, h3, …
-
-    if (tag === 'h1') {
-      token.attrSet(
-        'style',
-        'font-size: 24px; font-weight: bold; color: #111827; margin-top: 32px; margin-bottom: 8px;',
-      )
-    } else if (tag === 'h2') {
-      token.attrSet(
-        'style',
-        'font-size: 20px; font-weight: bold; color: #111827; margin-top: 28px; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #e5e7eb;',
-      )
-    } else if (tag === 'h3') {
-      token.attrSet(
-        'style',
-        'font-size: 16px; font-weight: 600; color: #111827; margin-top: 20px; margin-bottom: 4px;',
-      )
-    }
-
-    return defaultRules.heading_open
-      ? defaultRules.heading_open(tokens, idx, options, _env, self)
-      : self.renderToken(tokens, idx, options)
-  }
-
-  md.renderer.rules.paragraph_open = (tokens, idx, options, _env, self) => {
-    const token = tokens[idx]
-    token.attrSet(
-      'style',
-      'font-size: 15px; line-height: 1.6; color: #374151; margin-top: 0; margin-bottom: 12px;',
-    )
-    return defaultRules.paragraph_open
-      ? defaultRules.paragraph_open(tokens, idx, options, _env, self)
-      : self.renderToken(tokens, idx, options)
-  }
-
-  md.renderer.rules.blockquote_open = (tokens, idx, options, _env, self) => {
-    const token = tokens[idx]
-    token.attrSet(
-      'style',
-      'border-left: 3px solid #8B5CF6; margin: 16px 0; padding: 8px 16px; font-style: italic; color: #6b7280;',
-    )
-    return defaultRules.blockquote_open
-      ? defaultRules.blockquote_open(tokens, idx, options, _env, self)
-      : self.renderToken(tokens, idx, options)
-  }
-
-  return md
-}
+import { buildEmailMarkdownRenderer } from '../lib/email-markdown.js'
 
 // ---------------------------------------------------------------------------
 // Main
@@ -151,7 +79,7 @@ async function main() {
   const subject = `motyl.dev Weekly #${issueNumber} — ${weekLabel}`
 
   // --- Render markdown to HTML ---
-  const md = buildMarkdownRenderer()
+  const md = buildEmailMarkdownRenderer()
   const htmlContent = md.render(content)
 
   // --- Render React Email template to HTML ---
