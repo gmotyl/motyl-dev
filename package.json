@@ -15,7 +15,8 @@
     "trends:reset": "tsx scripts/trends-reset.ts",
     "postinstall": "prisma generate",
     "prepare": "husky",
-    "init:claude": "mkdir -p .claude/commands && cp commands/*.md .claude/commands/"
+    "init:claude": "mkdir -p .claude/commands && cp commands/*.md .claude/commands/",
+    "init:mcp": "cp .mcp.json.example .mcp.json && echo '✅ .mcp.json created — update paths for your machine'"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",

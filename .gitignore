@@ -28,6 +28,9 @@ yarn-error.log*
 next-env.d.ts
 /lib/generated/prisma
 
+# MCP config (machine-specific paths)
+.mcp.json
+
 # MCP ouput
 /processed-uids.json
 .env*
