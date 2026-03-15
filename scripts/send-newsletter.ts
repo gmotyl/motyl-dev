@@ -166,7 +166,7 @@ async function main() {
 
   // --- Send ---
   const resend = new Resend(RESEND_API_KEY)
-  const FROM = 'Greg from motyl.dev <onboarding@resend.dev>'
+  const FROM = 'Greg from motyl.dev <greg@motyl.dev>'
 
   if (sendFlag) {
     console.log(`Sending newsletter #${issueNumber} to Audience ${RESEND_AUDIENCE_ID}…`)
