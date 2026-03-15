@@ -10,7 +10,6 @@ import {
   Link,
   Tailwind,
 } from '@react-email/components'
-import * as React from 'react'
 
 interface NewsletterEmailProps {
   issueNumber: number
@@ -26,7 +25,7 @@ export default function NewsletterEmail({
   return (
     <Html>
       <Head />
-      <Preview>motyl.dev Weekly #{issueNumber} — {weekLabel}</Preview>
+      <Preview>{`motyl.dev Weekly #${String(issueNumber)} — ${weekLabel}`}</Preview>
       <Tailwind>
         <Body className="bg-white font-sans">
           <Container className="mx-auto max-w-[600px] px-4 py-8">
