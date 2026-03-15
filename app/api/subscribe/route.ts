@@ -15,18 +15,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid email address" }, { status: 400 })
     }
 
+    // Add subscriber to Resend Audience
+    const apiKey = process.env.RESEND_API_KEY
+    const audienceId = process.env.RESEND_AUDIENCE_ID
+    if (apiKey && audienceId) {
+      try {
+        const resend = new Resend(apiKey)
+        await resend.contacts.create({ audienceId, email })
+      } catch (contactError) {
+        console.error("Failed to add contact to audience:", contactError)
+      }
+    }
+
     // Send notification email to Greg
     try {
       await sendNotificationEmail(email, articleSlug)
     } catch (emailError) {
       console.error("Failed to send notification email:", emailError)
-      // Continue with subscription even if email fails
     }
-
-    // In a real application, you would also:
-    // 1. Store this email in your database
-    // 2. Send it to your newsletter service (Mailchimp, ConvertKit, etc.)
-    // 3. Send a welcome email to the subscriber
 
     console.log(`New subscriber: ${email}${articleSlug ? ` from article: ${articleSlug}` : ''}`)
 
