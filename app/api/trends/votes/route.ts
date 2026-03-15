@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { castVote, getCurrentWeek, getWeekVotes } from '@/lib/trends'
+import { castVote, getWeekVotes } from '@/lib/trends'
 import { auth } from '@/lib/auth'
 import { z } from 'zod'
 
@@ -51,12 +51,12 @@ export async function GET(request: NextRequest) {
   const weekParam = request.nextUrl.searchParams.get('week')
 
   try {
-    const week = weekParam || (await getCurrentWeek())
+    const week = weekParam || 'current'
 
-    // Validate week format (e.g., "2026-w10") - weeks must be 01-53
-    if (!/^\d{4}-w(0[1-9]|[1-4]\d|5[0-3])$/.test(week)) {
+    // Validate week format: "current" or "YYYY-wWW" (weeks 01-53)
+    if (week !== 'current' && !/^\d{4}-w(0[1-9]|[1-4]\d|5[0-3])$/.test(week)) {
       return NextResponse.json(
-        { error: 'Invalid week format. Use format: YYYY-wWW (weeks 01-53)' },
+        { error: 'Invalid week format. Use "current" or format: YYYY-wWW (weeks 01-53)' },
         { status: 400 }
       )
     }

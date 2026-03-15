@@ -139,8 +139,8 @@ async function main() {
   // Determine next issue number
   const issueNumber = await getNextIssueNumber()
 
-  // Fetch votes from production API
-  const res = await fetch(`${PRODUCTION_API}?week=${week}`)
+  // Fetch all active votes (stored with week='current', reset manually)
+  const res = await fetch(`${PRODUCTION_API}?week=current`)
   if (!res.ok) {
     throw new Error(`API request failed: ${res.status} ${res.statusText}`)
   }
@@ -156,7 +156,7 @@ async function main() {
   }> = data.votes ?? []
 
   if (votes.length === 0) {
-    console.log(`No votes found for ${week}. Nothing to generate.`)
+    console.log(`No active votes found. Nothing to generate.`)
     process.exit(0)
   }
 
