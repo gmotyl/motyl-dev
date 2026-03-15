@@ -18,7 +18,7 @@ export type NewsletterMeta = Omit<NewsletterIssue, 'content'>
 
 const TRENDS_DIR = path.join(process.cwd(), 'content', 'trends')
 
-function parseFrontmatter(raw: string): { data: Record<string, unknown>; content: string } {
+export function parseFrontmatter(raw: string): { data: Record<string, unknown>; content: string } {
   const fmMatch = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/)
   if (!fmMatch) return { data: {}, content: raw }
   const data = (yaml.load(fmMatch[1]) as Record<string, unknown>) ?? {}

@@ -23,7 +23,7 @@ export default function NewsletterEmail({
   htmlContent = '<p>Newsletter content goes here.</p>',
 }: NewsletterEmailProps) {
   return (
-    <Html>
+    <Html lang="en">
       <Head />
       <Preview>{`motyl.dev Weekly #${String(issueNumber)} — ${weekLabel}`}</Preview>
       <Tailwind>

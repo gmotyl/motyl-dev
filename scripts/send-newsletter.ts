@@ -23,8 +23,8 @@ import MarkdownIt from 'markdown-it'
 import { render } from '@react-email/components'
 import * as React from 'react'
 import { Resend } from 'resend'
-import yaml from 'js-yaml'
 import NewsletterEmail from '../emails/newsletter.js'
+import { parseFrontmatter } from '../lib/newsletter-issues.js'
 
 // ---------------------------------------------------------------------------
 // Inline-styled markdown renderer (email clients ignore <style> tags)
@@ -99,17 +99,6 @@ function buildMarkdownRenderer(): MarkdownIt {
 }
 
 // ---------------------------------------------------------------------------
-// Frontmatter parsing (mirrors lib/newsletter-issues.ts)
-// ---------------------------------------------------------------------------
-
-function parseFrontmatter(raw: string): { data: Record<string, unknown>; content: string } {
-  const fmMatch = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/)
-  if (!fmMatch) return { data: {}, content: raw }
-  const data = (yaml.load(fmMatch[1]) as Record<string, unknown>) ?? {}
-  return { data, content: fmMatch[2] }
-}
-
-// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -168,6 +157,10 @@ async function main() {
   const emailHtml = await render(
     React.createElement(NewsletterEmail, { issueNumber, weekLabel, htmlContent }),
   )
+  const emailText = await render(
+    React.createElement(NewsletterEmail, { issueNumber, weekLabel, htmlContent }),
+    { plainText: true },
+  )
 
   // --- Send ---
   const resend = new Resend(RESEND_API_KEY)
@@ -181,6 +174,7 @@ async function main() {
       from: FROM,
       subject,
       html: emailHtml,
+      text: emailText,
     })
 
     if (response.error) {
@@ -206,6 +200,7 @@ async function main() {
       to: SUPERADMIN_EMAIL!,
       subject: previewSubject,
       html: emailHtml,
+      text: emailText,
     })
 
     if (response.error) {
