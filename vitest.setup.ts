@@ -10,4 +10,6 @@ class ResizeObserver {
 vi.stubGlobal('ResizeObserver', ResizeObserver);
 
 // Mock scrollIntoView for Vitest/JSDOM environment
-window.HTMLElement.prototype.scrollIntoView = vi.fn();
+if (typeof window !== 'undefined') {
+  window.HTMLElement.prototype.scrollIntoView = vi.fn();
+}

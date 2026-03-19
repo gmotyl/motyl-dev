@@ -98,11 +98,15 @@ When processing these newsletters:
    - Display: "Scraping X articles..."
    - For each link (in parallel when possible):
      - Call `mcp__newsletter-ai__scrape_article` to get content
-     - Skip if scraping fails (log error but continue)
-     - Keep track of successfully scraped articles
+     - If scraping fails, attempt **agent-browser fallback** for that link:
+       - Display: "⚠️ Scrape failed for [url], trying agent-browser..."
+       - Run: `agent-browser open <url> && agent-browser wait --load networkidle && agent-browser get text body`
+       - If agent-browser succeeds: use the extracted text as article content, display "✓ agent-browser fallback succeeded for [url]"
+       - If agent-browser also fails: log error and skip the link, continue
+     - Keep track of successfully scraped articles (via either method)
 
    **Handle fallback scenario (or body-only mode):**
-   - If ALL links failed to scrape OR the newsletter has 0 links OR newsletter is in body-only mode:
+   - If ALL links failed to scrape (including agent-browser fallback) OR the newsletter has 0 links OR newsletter is in body-only mode:
      - If not body-only mode: Display: "⚠️ No articles could be scraped. Attempting to use newsletter body as fallback..."
      - Call `mcp__newsletter-ai__get_newsletter_body` with the newsletter's UID
      - If body is available:

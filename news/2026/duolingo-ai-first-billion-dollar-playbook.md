@@ -1,7 +1,7 @@
 ---
-title: 'Duolingo's AI-First Playbook: How Cutting Humans Crossed $1 Billion'
-excerpt: 'Duolingo went all-in on AI, scaled to 50M daily users and $1B in bookings, but the margins shrank and the internet exploded.'
-publishedAt: '2026-03-19'
+title: "Duolingo's AI-First Playbook: How Cutting Humans Crossed $1 Billion"
+excerpt: "Duolingo went all-in on AI, scaled to 50M daily users and $1B in bookings, but the margins shrank and the internet exploded."
+publishedAt: "2026-03-19"
 slug: 'duolingo-ai-first-billion-dollar-playbook'
 hashtags: '#substack #ai #llm #engineering #architecture #product #generated #en'
 ---
