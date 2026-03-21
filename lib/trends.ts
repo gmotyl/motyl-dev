@@ -117,6 +117,19 @@ export async function resetWeeklyVotes() {
   return { week, archivedCount: allVotes.length, totalVotes }
 }
 
+export async function deleteTrendingItem(linkUrl: string) {
+  return await prisma.trendsVotes.delete({
+    where: { week_linkUrl: { week: ACTIVE_WEEK, linkUrl } },
+  })
+}
+
+export async function updateTrendingCategory(linkUrl: string, category: string) {
+  return await prisma.trendsVotes.update({
+    where: { week_linkUrl: { week: ACTIVE_WEEK, linkUrl } },
+    data: { category },
+  })
+}
+
 export async function getHomepageFeed() {
   if (isDevMock) return mockGetHomepageFeed(ACTIVE_WEEK)
 

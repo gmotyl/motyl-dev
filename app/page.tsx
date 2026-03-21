@@ -1,4 +1,4 @@
-import { TrendingCard } from '@/components/trending-card'
+import { TrendingList } from '@/components/trending-list'
 import { InfoTooltip } from '@/components/info-tooltip'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
@@ -11,6 +11,7 @@ import { getHomepageFeed } from '@/lib/trends'
 import { getContentUrl } from '@/lib/urls'
 import { getOgImage } from '@/lib/og'
 import { getAllNewsletterMeta } from '@/lib/newsletter-issues'
+import { auth } from '@/lib/auth'
 import Image from 'next/image'
 
 export const dynamic = 'force-dynamic' // votes change frequently
@@ -18,11 +19,13 @@ export const dynamic = 'force-dynamic' // votes change frequently
 const emptyFeed = { trendings: [], lastWeekSummary: null }
 
 export default async function Home() {
-  const [feed, articles, newsletters] = await Promise.all([
+  const [feed, articles, newsletters, session] = await Promise.all([
     getHomepageFeed().catch(() => emptyFeed),
     getAllContentMetadata(),
     getAllNewsletterMeta(),
+    auth().catch(() => null),
   ])
+  const isSuperAdmin = session?.user?.isSuperAdmin ?? false
   const latestArticles = articles.filter(a => a.itemType === ItemType.Article).slice(0, 3)
   const totalVotes = feed.trendings.reduce((sum, t) => sum + t.voteCount, 0)
 
@@ -94,19 +97,7 @@ export default async function Home() {
           {feed.trendings.length > 0 ? (
             <section className="space-y-3">
               <h2 className="text-xl font-semibold">🎯 Trending Now</h2>
-              <div className="space-y-3">
-                {feed.trendings.map((item, index) => (
-                  <TrendingCard
-                    key={item.id}
-                    title={item.title}
-                    description={item.description ?? undefined}
-                    linkUrl={item.linkUrl}
-                    voteCount={item.voteCount}
-                    category={item.category as import('@/lib/og').ContentCategory}
-                    sourceDomain={item.sourceDomain ?? undefined}
-                  />
-                ))}
-              </div>
+              <TrendingList items={feed.trendings} isSuperAdmin={isSuperAdmin} />
             </section>
           ) : (
             <section className="rounded-lg border border-dashed border-primary/30 p-8 text-center text-muted-foreground">
