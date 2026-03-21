@@ -21,16 +21,11 @@ const patchSchema = z.object({
   category: z.enum(CONTENT_CATEGORIES),
 })
 
-/** Verify superadmin session + CSRF custom header + Origin */
+/** Verify superadmin session + CSRF custom header */
 async function requireSuperAdmin(request: NextRequest) {
+  // Custom header prevents cross-origin requests (browsers require CORS preflight for custom headers)
   if (request.headers.get('x-requested-with') !== 'motyl-admin') {
     return { error: NextResponse.json({ error: 'Missing CSRF header' }, { status: 403 }) }
-  }
-  // Verify Origin header in production
-  const origin = request.headers.get('origin')
-  const allowedOrigin = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL
-  if (origin && allowedOrigin && origin !== `https://${allowedOrigin}` && origin !== allowedOrigin) {
-    return { error: NextResponse.json({ error: 'Invalid origin' }, { status: 403 }) }
   }
   const session = await auth()
   if (!session?.user?.id) {
