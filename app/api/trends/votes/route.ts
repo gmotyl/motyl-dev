@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { castVote, getWeekVotes } from '@/lib/trends'
+import { castVote, getWeekVotes, deleteTrendingItem, updateTrendingCategory } from '@/lib/trends'
+import { CONTENT_CATEGORIES } from '@/lib/og'
 import { auth } from '@/lib/auth'
 import { z } from 'zod'
 
@@ -7,9 +8,39 @@ const voteSchema = z.object({
   linkUrl: z.string().url('Invalid URL'),
   title: z.string().min(1, 'Title required'),
   description: z.string().optional().default(''),
-  category: z.enum(['frontend', 'architecture', 'coding', 'productivity', 'tools', 'ai', 'general']).default('general'),
+  category: z.enum(CONTENT_CATEGORIES).default('general'),
   sourceDomain: z.string().url().optional(),
 })
+
+const deleteSchema = z.object({
+  linkUrl: z.string().url('Invalid URL'),
+})
+
+const patchSchema = z.object({
+  linkUrl: z.string().url(),
+  category: z.enum(CONTENT_CATEGORIES),
+})
+
+/** Verify superadmin session + CSRF custom header + Origin */
+async function requireSuperAdmin(request: NextRequest) {
+  if (request.headers.get('x-requested-with') !== 'motyl-admin') {
+    return { error: NextResponse.json({ error: 'Missing CSRF header' }, { status: 403 }) }
+  }
+  // Verify Origin header in production
+  const origin = request.headers.get('origin')
+  const allowedOrigin = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL
+  if (origin && allowedOrigin && origin !== `https://${allowedOrigin}` && origin !== allowedOrigin) {
+    return { error: NextResponse.json({ error: 'Invalid origin' }, { status: 403 }) }
+  }
+  const session = await auth()
+  if (!session?.user?.id) {
+    return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+  }
+  if (!session.user.isSuperAdmin) {
+    return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
+  }
+  return { session }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,6 +75,44 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to cast vote' },
       { status: 500 }
     )
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { error } = await requireSuperAdmin(request)
+    if (error) return error
+
+    const body = await request.json()
+    const data = deleteSchema.parse(body)
+
+    await deleteTrendingItem(data.linkUrl)
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: 'Validation failed', details: error.errors }, { status: 400 })
+    }
+    console.error('Failed to delete trending item:', error)
+    return NextResponse.json({ error: 'Failed to delete trending item' }, { status: 500 })
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const { error } = await requireSuperAdmin(request)
+    if (error) return error
+
+    const body = await request.json()
+    const data = patchSchema.parse(body)
+
+    const updated = await updateTrendingCategory(data.linkUrl, data.category)
+    return NextResponse.json({ success: true, vote: updated })
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: 'Validation failed', details: error.errors }, { status: 400 })
+    }
+    console.error('Failed to update category:', error)
+    return NextResponse.json({ error: 'Failed to update category' }, { status: 500 })
   }
 }
 

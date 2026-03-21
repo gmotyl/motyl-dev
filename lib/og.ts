@@ -7,7 +7,8 @@ const CATEGORY_HASHTAGS: Record<string, string[]> = {
   ai: ['ai', 'agents', 'llm', 'claude', 'openai', 'anthropic', 'chatgpt', 'prompt-engineering', 'promptengineering', 'mcp', 'rag', 'deepseek', 'gemini', 'gpt', 'claude-code', 'claudecode', 'vibecoding', 'vibe-coding'],
 }
 
-export type ContentCategory = 'frontend' | 'architecture' | 'coding' | 'productivity' | 'tools' | 'ai' | 'general'
+export const CONTENT_CATEGORIES = ['frontend', 'architecture', 'coding', 'productivity', 'tools', 'ai', 'general'] as const
+export type ContentCategory = (typeof CONTENT_CATEGORIES)[number]
 
 const HASHTAG_TO_CATEGORIES: Record<string, string[]> = {}
 for (const [category, keywords] of Object.entries(CATEGORY_HASHTAGS)) {
