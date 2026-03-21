@@ -1,12 +1,12 @@
 {
   "mcpServers": {
     "newsletter-ai": {
-      "command": "__PROJECT_DIR__/node_modules/.bin/tsx",
-      "args": ["__PROJECT_DIR__/src/mcp/index.ts"],
-      "cwd": "__PROJECT_DIR__",
+      "command": "/absolute/path/to/newsletter-ai/node_modules/.bin/tsx",
+      "args": ["/absolute/path/to/newsletter-ai/src/mcp/index.ts"],
+      "cwd": "/absolute/path/to/newsletter-ai",
       "env": {
-        "PROJECT_DIR": "__PROJECT_DIR__",
-        "OUTPUT_PATH": "__MOTYL_DEV_DIR__/news/2026",
+        "PROJECT_DIR": "/absolute/path/to/newsletter-ai",
+        "OUTPUT_PATH": "/absolute/path/to/motyl-dev/news/2026",
         "NARRATOR_PERSONA": "Scott Hanselman"
       }
     }
