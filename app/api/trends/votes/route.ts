@@ -29,7 +29,7 @@ async function requireSuperAdmin(request: NextRequest) {
   // Verify Origin header in production
   const origin = request.headers.get('origin')
   const allowedOrigin = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL
-  if (origin && allowedOrigin && !origin.includes(allowedOrigin)) {
+  if (origin && allowedOrigin && origin !== `https://${allowedOrigin}` && origin !== allowedOrigin) {
     return { error: NextResponse.json({ error: 'Invalid origin' }, { status: 403 }) }
   }
   const session = await auth()
