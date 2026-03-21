@@ -45,7 +45,7 @@ async function main() {
     const shouldClone = await askYesNo("Clone from GitHub?");
     if (shouldClone) {
       console.log(`\nCloning newsletter-ai into ${newsletterAiPath}...`);
-      execSync(`git clone git@github.com:nicekid1/newsletter-ai.git "${newsletterAiPath}"`, {
+      execSync(`git clone https://github.com/gmotyl/newsletter-ai.git "${newsletterAiPath}"`, {
         stdio: "inherit",
       });
       console.log("Installing dependencies...");
