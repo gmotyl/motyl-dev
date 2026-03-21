@@ -16,7 +16,7 @@
     "postinstall": "prisma generate",
     "prepare": "husky",
     "init:claude": "mkdir -p .claude/commands && cp commands/*.md .claude/commands/",
-    "init:mcp": "cp .mcp.json.example .mcp.json && echo '✅ .mcp.json created — update paths for your machine'",
+    "init:mcp": "tsx scripts/init-mcp.ts",
     "newsletter:preview": "tsx scripts/send-newsletter.ts",
     "newsletter:send": "tsx scripts/send-newsletter.ts --send"
   },
