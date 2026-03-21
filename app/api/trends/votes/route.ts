@@ -1,23 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { castVote, getWeekVotes, deleteTrendingItem, updateTrendingCategory } from '@/lib/trends'
+import { CONTENT_CATEGORIES } from '@/lib/og'
 import { auth } from '@/lib/auth'
 import { z } from 'zod'
-
-const CATEGORIES = ['frontend', 'architecture', 'coding', 'productivity', 'tools', 'ai', 'general'] as const
 
 const voteSchema = z.object({
   linkUrl: z.string().url('Invalid URL'),
   title: z.string().min(1, 'Title required'),
   description: z.string().optional().default(''),
-  category: z.enum(CATEGORIES).default('general'),
+  category: z.enum(CONTENT_CATEGORIES).default('general'),
   sourceDomain: z.string().url().optional(),
 })
 
-/** Verify superadmin session + CSRF custom header */
+const deleteSchema = z.object({
+  linkUrl: z.string().url('Invalid URL'),
+})
+
+const patchSchema = z.object({
+  linkUrl: z.string().url(),
+  category: z.enum(CONTENT_CATEGORIES),
+})
+
+/** Verify superadmin session + CSRF custom header + Origin */
 async function requireSuperAdmin(request: NextRequest) {
-  // Custom header check prevents cross-origin requests (CSRF protection)
   if (request.headers.get('x-requested-with') !== 'motyl-admin') {
     return { error: NextResponse.json({ error: 'Missing CSRF header' }, { status: 403 }) }
+  }
+  // Verify Origin header in production
+  const origin = request.headers.get('origin')
+  const allowedOrigin = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL
+  if (origin && allowedOrigin && !origin.includes(allowedOrigin)) {
+    return { error: NextResponse.json({ error: 'Invalid origin' }, { status: 403 }) }
   }
   const session = await auth()
   if (!session?.user?.id) {
@@ -70,14 +83,15 @@ export async function DELETE(request: NextRequest) {
     const { error } = await requireSuperAdmin(request)
     if (error) return error
 
-    const { linkUrl } = await request.json()
-    if (!linkUrl || typeof linkUrl !== 'string') {
-      return NextResponse.json({ error: 'linkUrl required' }, { status: 400 })
-    }
+    const body = await request.json()
+    const data = deleteSchema.parse(body)
 
-    await deleteTrendingItem(linkUrl)
+    await deleteTrendingItem(data.linkUrl)
     return NextResponse.json({ success: true })
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: 'Validation failed', details: error.errors }, { status: 400 })
+    }
     console.error('Failed to delete trending item:', error)
     return NextResponse.json({ error: 'Failed to delete trending item' }, { status: 500 })
   }
@@ -89,11 +103,7 @@ export async function PATCH(request: NextRequest) {
     if (error) return error
 
     const body = await request.json()
-    const schema = z.object({
-      linkUrl: z.string().url(),
-      category: z.enum(CATEGORIES),
-    })
-    const data = schema.parse(body)
+    const data = patchSchema.parse(body)
 
     const updated = await updateTrendingCategory(data.linkUrl, data.category)
     return NextResponse.json({ success: true, vote: updated })

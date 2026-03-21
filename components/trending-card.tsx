@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { VoteButton } from '@/components/vote-button'
 import { CategoryIconMini } from '@/components/category-icon'
 import { cn } from '@/lib/utils'
-import type { ContentCategory } from '@/lib/og'
+import { CONTENT_CATEGORIES, type ContentCategory } from '@/lib/og'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,8 +26,9 @@ import {
 } from '@/components/ui/dialog'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 
-const CATEGORIES: ContentCategory[] = ['ai', 'frontend', 'architecture', 'coding', 'productivity', 'tools', 'general']
 const ADMIN_HEADERS = { 'Content-Type': 'application/json', 'x-requested-with': 'motyl-admin' }
+const SWIPE_MAX_PX = -100
+const SWIPE_THRESHOLD_PX = -80
 
 interface TrendingCardProps {
   title: string
@@ -74,7 +75,8 @@ export function TrendingCard({
       if (!res.ok) throw new Error('Failed to remove')
       toast.success('Removed from trending')
       onRemoved?.(linkUrl)
-    } catch {
+    } catch (error) {
+      console.error('Failed to remove item:', error)
       toast.error('Failed to remove item')
     } finally {
       setIsRemoving(false)
@@ -97,7 +99,8 @@ export function TrendingCard({
       setCurrentCategory(selectedCategory)
       toast.success(`Category changed to ${selectedCategory}`)
       onCategoryChanged?.(linkUrl, selectedCategory)
-    } catch {
+    } catch (error) {
+      console.error('Failed to change category:', error)
       toast.error('Failed to change category')
       setSelectedCategory(currentCategory)
     } finally {
@@ -118,7 +121,7 @@ export function TrendingCard({
     // Only allow swiping left
     if (delta < 0) {
       touchDeltaX.current = delta
-      cardRef.current.style.transform = `translateX(${Math.max(delta, -100)}px)`
+      cardRef.current.style.transform = `translateX(${Math.max(delta, SWIPE_MAX_PX)}px)`
       cardRef.current.style.transition = 'none'
     }
   }, [isSuperAdmin])
@@ -127,8 +130,7 @@ export function TrendingCard({
     if (!isSuperAdmin || !cardRef.current) return
     cardRef.current.style.transition = 'transform 0.2s ease-out'
     cardRef.current.style.transform = 'translateX(0)'
-    // Threshold: swiped more than 80px left
-    if (touchDeltaX.current < -80) {
+    if (touchDeltaX.current < SWIPE_THRESHOLD_PX) {
       setConfirmRemoveOpen(true)
     }
   }, [isSuperAdmin])
@@ -239,7 +241,7 @@ export function TrendingCard({
             onValueChange={(v) => setSelectedCategory(v as ContentCategory)}
             className="gap-3 py-2"
           >
-            {CATEGORIES.map((cat) => (
+            {CONTENT_CATEGORIES.map((cat) => (
               <label
                 key={cat}
                 className="flex items-center gap-3 cursor-pointer rounded-md px-2 py-1.5 hover:bg-muted/50 transition-colors"
