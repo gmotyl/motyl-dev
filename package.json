@@ -18,7 +18,8 @@
     "init:claude": "mkdir -p .claude/commands && cp commands/*.md .claude/commands/",
     "init:mcp": "tsx scripts/init-mcp.ts",
     "newsletter:preview": "tsx scripts/send-newsletter.ts",
-    "newsletter:send": "tsx scripts/send-newsletter.ts --send"
+    "newsletter:send": "tsx scripts/send-newsletter.ts --send",
+    "image:optimize": "tsx scripts/image-optimize.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
@@ -101,6 +102,7 @@
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/sharp": "^0.32.0",
     "@typescript-eslint/eslint-plugin": "^8.49.0",
     "@typescript-eslint/parser": "^8.49.0",
     "@vitejs/plugin-react": "^5.1.2",
@@ -115,6 +117,7 @@
     "prettier": "^3.5.3",
     "prisma": "^6.19.0",
     "react-email": "^5.2.9",
+    "sharp": "^0.34.5",
     "tailwindcss": "^3.4.17",
     "tsx": "^4.19.0",
     "typescript": "^5.7.2",
