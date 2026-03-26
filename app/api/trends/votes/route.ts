@@ -10,6 +10,7 @@ const voteSchema = z.object({
   description: z.string().optional().default(''),
   category: z.enum(CONTENT_CATEGORIES).default('general'),
   sourceDomain: z.string().url().optional(),
+  patternName: z.string().optional(),
 })
 
 const deleteSchema = z.object({
@@ -47,7 +48,8 @@ export async function POST(request: NextRequest) {
       data.title,
       data.description,
       data.category,
-      data.sourceDomain
+      data.sourceDomain,
+      data.patternName
     )
 
     const session = await auth()
