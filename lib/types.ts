@@ -15,6 +15,7 @@ export interface Content {
   itemType: ItemType;
   content: string;
   image?: string;
+  sourcePattern?: string;
   [key: string]: any;
 }
 
