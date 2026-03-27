@@ -31,7 +31,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
   const [pendingNavUrl, setPendingNavUrl] = useState<string | null>(null)
   const [sectionToggleOpen, setSectionToggleOpen] = useState(false)
 
-  const { hiddenSections, toggleSection } = useSectionVisibility()
+  const { hiddenSections, toggleSection, isHydrated } = useSectionVisibility()
 
   const loadMoreRef = useRef<HTMLDivElement>(null)
 
@@ -201,7 +201,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
             </div>
 
             <div className="space-y-0">
-              {items.map((item, index) => (
+              {isHydrated && items.map((item, index) => (
                 <FullArticle
                   key={item.slug}
                   item={item}
