@@ -1,6 +1,6 @@
 "use client"
 
-import { LogOut, User, Bookmark, Newspaper, CheckSquare } from "lucide-react"
+import { LogOut, User, Bookmark, BarChart2 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -66,16 +66,16 @@ export function UserMenu({ user, bookmarkCount = 0 }: UserMenuProps) {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/news" className="cursor-pointer">
-            <CheckSquare className="mr-2 h-4 w-4" />
-            <span>Mark all news as read</span>
+          <Link href="/me" className="cursor-pointer">
+            <User className="mr-2 h-4 w-4" />
+            <span>My Profile</span>
           </Link>
         </DropdownMenuItem>
         {user.isSuperAdmin && (
           <DropdownMenuItem asChild>
-            <Link href="/newsletter-generator" className="cursor-pointer">
-              <Newspaper className="mr-2 h-4 w-4" />
-              <span>Generate Newsletter</span>
+            <Link href="/admin/stats" className="cursor-pointer">
+              <BarChart2 className="mr-2 h-4 w-4" />
+              <span>Pattern Stats</span>
             </Link>
           </DropdownMenuItem>
         )}
