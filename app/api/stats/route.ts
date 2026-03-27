@@ -8,15 +8,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const weeksParam = request.nextUrl.searchParams.get('weeks')
-  const weeks = weeksParam ? parseInt(weeksParam, 10) : 8
+  const daysParam = request.nextUrl.searchParams.get('days')
+  const days = daysParam ? parseInt(daysParam, 10) : 56
 
-  if (isNaN(weeks) || weeks < 1 || weeks > 52) {
-    return NextResponse.json({ error: 'weeks must be 1-52' }, { status: 400 })
+  if (isNaN(days) || days < 1 || days > 365) {
+    return NextResponse.json({ error: 'days must be 1-365' }, { status: 400 })
   }
 
   try {
-    const stats = await getPatternStats(weeks)
+    const stats = await getPatternStats(days)
     return NextResponse.json({ stats })
   } catch (error) {
     console.error('Failed to fetch pattern stats:', error)

@@ -1,16 +1,20 @@
 import { prisma } from '@/lib/prisma'
-import { getCurrentWeek } from '@/lib/trends'
+
+function today(): Date {
+  const now = new Date()
+  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()))
+}
 
 export async function recordProcessingStats(
   entries: { patternName: string; processed: number; extracted: number }[]
 ) {
-  const week = await getCurrentWeek()
+  const date = today()
 
   const results = await Promise.all(
     entries.map((entry) =>
       prisma.patternStats.upsert({
         where: {
-          patternName_week: { patternName: entry.patternName, week },
+          patternName_date: { patternName: entry.patternName, date },
         },
         update: {
           processed: { increment: entry.processed },
@@ -18,7 +22,7 @@ export async function recordProcessingStats(
         },
         create: {
           patternName: entry.patternName,
-          week,
+          date,
           processed: entry.processed,
           extracted: entry.extracted,
         },
@@ -30,45 +34,30 @@ export async function recordProcessingStats(
 }
 
 export async function recordInclusion(patternName: string) {
-  const week = await getCurrentWeek()
+  const date = today()
 
   return prisma.patternStats.upsert({
     where: {
-      patternName_week: { patternName, week },
+      patternName_date: { patternName, date },
     },
     update: {
       included: { increment: 1 },
     },
     create: {
       patternName,
-      week,
+      date,
       included: 1,
     },
   })
 }
 
-export async function getPatternStats(weeks: number = 8) {
-  const currentWeek = await getCurrentWeek()
-
-  const weekList: string[] = []
-  let week = currentWeek
-  for (let i = 0; i < weeks; i++) {
-    weekList.push(week)
-    week = getPreviousWeekString(week)
-  }
+export async function getPatternStats(days: number = 56) {
+  const since = new Date()
+  since.setDate(since.getDate() - days)
+  const sinceDate = new Date(Date.UTC(since.getFullYear(), since.getMonth(), since.getDate()))
 
   return prisma.patternStats.findMany({
-    where: { week: { in: weekList } },
-    orderBy: [{ week: 'desc' }, { patternName: 'asc' }],
+    where: { date: { gte: sinceDate } },
+    orderBy: [{ date: 'desc' }, { patternName: 'asc' }],
   })
-}
-
-function getPreviousWeekString(week: string): string {
-  const [yearStr, weekStr] = week.split('-w')
-  const year = parseInt(yearStr)
-  const weekNum = parseInt(weekStr)
-  if (weekNum === 1) {
-    return `${year - 1}-w52`
-  }
-  return `${year}-w${String(weekNum - 1).padStart(2, '0')}`
 }

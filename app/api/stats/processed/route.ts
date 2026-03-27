@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { recordProcessingStats } from '@/lib/pattern-stats'
@@ -14,7 +15,13 @@ const statsSchema = z.object({
 
 export async function POST(request: NextRequest) {
   const apiKey = request.headers.get('x-api-key')
-  if (!apiKey || apiKey !== process.env.MOTYL_STATS_API_KEY) {
+  const expectedKey = process.env.MOTYL_STATS_API_KEY
+  if (
+    !apiKey ||
+    !expectedKey ||
+    apiKey.length !== expectedKey.length ||
+    !timingSafeEqual(Buffer.from(apiKey), Buffer.from(expectedKey))
+  ) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

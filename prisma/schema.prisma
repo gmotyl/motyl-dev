@@ -133,13 +133,13 @@ model TrendsArchive {
 model PatternStats {
   id          String   @id @default(cuid())
   patternName String   @map("pattern_name")
-  week        String
+  date        DateTime @db.Date
   processed   Int      @default(0)
   extracted   Int      @default(0)
   included    Int      @default(0)
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  @@unique([patternName, week])
-  @@index([week])
+  @@unique([patternName, date])
+  @@index([date])
   @@map("pattern_stats")
 }

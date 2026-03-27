@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { mockGetHomepageFeed, mockCastVote } from '@/lib/trends-mock'
+import { recordInclusion } from '@/lib/pattern-stats'
 
 const isDevMock = process.env.DATABASE_URL?.includes('dummy') ?? false
 
@@ -76,7 +77,6 @@ export async function castVote(
 
   // Record pattern inclusion stat if pattern is known
   if (patternName) {
-    const { recordInclusion } = await import('@/lib/pattern-stats')
     await recordInclusion(patternName).catch((err) =>
       console.error('Failed to record pattern stat:', err)
     )

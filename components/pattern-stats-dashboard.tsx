@@ -1,6 +1,9 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+
+const TREND_UP_THRESHOLD = 1.1
+const TREND_DOWN_THRESHOLD = 0.9
 import {
   BarChart,
   Bar,
@@ -15,7 +18,7 @@ import {
 interface PatternStatRow {
   id: string
   patternName: string
-  week: string
+  date: Date | string
   processed: number
   extracted: number
   included: number
@@ -24,68 +27,80 @@ interface PatternStatRow {
 
 interface PatternStatsDashboardProps {
   stats: PatternStatRow[]
-  currentWeek: string
 }
 
 type SortKey = 'patternName' | 'processed' | 'extracted' | 'included' | 'conversion' | 'trend'
 type SortDir = 'asc' | 'desc'
 
-export function PatternStatsDashboard({ stats, currentWeek }: PatternStatsDashboardProps) {
+function toDateStr(d: string | Date): string {
+  return new Date(d).toISOString().slice(0, 10)
+}
+
+function isToday(d: string | Date): boolean {
+  return toDateStr(d) === toDateStr(new Date())
+}
+
+function daysAgo(n: number): Date {
+  const d = new Date()
+  d.setDate(d.getDate() - n)
+  return d
+}
+
+export function PatternStatsDashboard({ stats }: PatternStatsDashboardProps) {
   const [sortKey, setSortKey] = useState<SortKey>('included')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [chartView, setChartView] = useState<'all' | 'per-pattern'>('all')
 
-  // Current week stats
-  const currentWeekStats = useMemo(
-    () => stats.filter((s) => s.week === currentWeek),
-    [stats, currentWeek]
+  // Today's stats (summary cards + table)
+  const todayStats = useMemo(
+    () => stats.filter((s) => isToday(s.date)),
+    [stats]
   )
 
-  // Summary cards
   const summary = useMemo(() => {
-    const totalPatterns = new Set(currentWeekStats.map((s) => s.patternName)).size
-    const totalProcessed = currentWeekStats.reduce((sum, s) => sum + s.processed, 0)
-    const totalExtracted = currentWeekStats.reduce((sum, s) => sum + s.extracted, 0)
-    const totalIncluded = currentWeekStats.reduce((sum, s) => sum + s.included, 0)
+    const totalPatterns = new Set(todayStats.map((s) => s.patternName)).size
+    const totalProcessed = todayStats.reduce((sum, s) => sum + s.processed, 0)
+    const totalExtracted = todayStats.reduce((sum, s) => sum + s.extracted, 0)
+    const totalIncluded = todayStats.reduce((sum, s) => sum + s.included, 0)
     const conversionRate = totalExtracted > 0 ? (totalIncluded / totalExtracted) * 100 : 0
     return { totalPatterns, totalProcessed, totalExtracted, totalIncluded, conversionRate }
-  }, [currentWeekStats])
+  }, [todayStats])
 
-  // 4-week average per pattern (excluding current week)
-  const fourWeekAvg = useMemo(() => {
-    const past = stats.filter((s) => s.week !== currentWeek)
-    const byPattern: Record<string, { total: number; weeks: Set<string> }> = {}
+  // 7-day average per pattern (excluding today)
+  const recentAvg = useMemo(() => {
+    const cutoff = daysAgo(7)
+    const past = stats.filter((s) => !isToday(s.date) && new Date(s.date) >= cutoff)
+    const byPattern: Record<string, { total: number; days: Set<string> }> = {}
     for (const s of past) {
       if (!byPattern[s.patternName]) {
-        byPattern[s.patternName] = { total: 0, weeks: new Set() }
+        byPattern[s.patternName] = { total: 0, days: new Set() }
       }
       byPattern[s.patternName].total += s.included
-      byPattern[s.patternName].weeks.add(s.week)
+      byPattern[s.patternName].days.add(toDateStr(s.date))
     }
     const avg: Record<string, number> = {}
     for (const [name, data] of Object.entries(byPattern)) {
-      avg[name] = data.weeks.size > 0 ? data.total / data.weeks.size : 0
+      avg[name] = data.days.size > 0 ? data.total / data.days.size : 0
     }
     return avg
-  }, [stats, currentWeek])
+  }, [stats])
 
   // Table rows with computed fields
   const tableRows = useMemo(() => {
-    return currentWeekStats.map((s) => {
+    return todayStats.map((s) => {
       const conversion = s.extracted > 0 ? (s.included / s.extracted) * 100 : 0
-      const avg = fourWeekAvg[s.patternName] ?? 0
+      const avg = recentAvg[s.patternName] ?? 0
       let trend: 'up' | 'down' | 'flat' = 'flat'
       if (avg > 0) {
-        if (s.included > avg * 1.1) trend = 'up'
-        else if (s.included < avg * 0.9) trend = 'down'
+        if (s.included > avg * TREND_UP_THRESHOLD) trend = 'up'
+        else if (s.included < avg * TREND_DOWN_THRESHOLD) trend = 'down'
       } else if (s.included > 0) {
         trend = 'up'
       }
       return { ...s, conversion, trend }
     })
-  }, [currentWeekStats, fourWeekAvg])
+  }, [todayStats, recentAvg])
 
-  // Sorted rows
   const sortedRows = useMemo(() => {
     const rows = [...tableRows]
     rows.sort((a, b) => {
@@ -117,28 +132,27 @@ export function PatternStatsDashboard({ stats, currentWeek }: PatternStatsDashbo
     return rows
   }, [tableRows, sortKey, sortDir])
 
-  // Chart data
+  // Chart data — one bar per date
   const chartData = useMemo(() => {
-    const weeks = [...new Set(stats.map((s) => s.week))].sort()
+    const dates = [...new Set(stats.map((s) => toDateStr(s.date)))].sort()
 
     if (chartView === 'all') {
-      return weeks.map((week) => {
-        const weekStats = stats.filter((s) => s.week === week)
+      return dates.map((date) => {
+        const dayStats = stats.filter((s) => toDateStr(s.date) === date)
         return {
-          week,
-          processed: weekStats.reduce((sum, s) => sum + s.processed, 0),
-          extracted: weekStats.reduce((sum, s) => sum + s.extracted, 0),
-          included: weekStats.reduce((sum, s) => sum + s.included, 0),
+          date,
+          processed: dayStats.reduce((sum, s) => sum + s.processed, 0),
+          extracted: dayStats.reduce((sum, s) => sum + s.extracted, 0),
+          included: dayStats.reduce((sum, s) => sum + s.included, 0),
         }
       })
     }
 
-    // Per-pattern: one series per pattern
     const patterns = [...new Set(stats.map((s) => s.patternName))].sort()
-    return weeks.map((week) => {
-      const row: Record<string, string | number> = { week }
+    return dates.map((date) => {
+      const row: Record<string, string | number> = { date }
       for (const p of patterns) {
-        const s = stats.find((s) => s.week === week && s.patternName === p)
+        const s = stats.find((s) => toDateStr(s.date) === date && s.patternName === p)
         row[`${p}_included`] = s?.included ?? 0
       }
       return row
@@ -150,7 +164,6 @@ export function PatternStatsDashboard({ stats, currentWeek }: PatternStatsDashbo
     [stats]
   )
 
-  // Per-pattern color palette
   const patternColors = useMemo(() => {
     const palette = [
       '#3b82f6', '#f59e0b', '#22c55e', '#ef4444', '#8b5cf6',
@@ -186,11 +199,11 @@ export function PatternStatsDashboard({ stats, currentWeek }: PatternStatsDashbo
   function trendArrow(trend: 'up' | 'down' | 'flat') {
     switch (trend) {
       case 'up':
-        return <span className="text-green-400" title="Above 4-week average">{'\u2191'}</span>
+        return <span className="text-green-400" title="Above 7-day average">{'\u2191'}</span>
       case 'down':
-        return <span className="text-red-400" title="Below 4-week average">{'\u2193'}</span>
+        return <span className="text-red-400" title="Below 7-day average">{'\u2193'}</span>
       default:
-        return <span className="text-muted-foreground" title="Near 4-week average">{'\u2192'}</span>
+        return <span className="text-muted-foreground" title="Near 7-day average">{'\u2192'}</span>
     }
   }
 
@@ -245,7 +258,7 @@ export function PatternStatsDashboard({ stats, currentWeek }: PatternStatsDashbo
             {sortedRows.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                  No pattern data for the current week.
+                  No pattern data for today.
                 </td>
               </tr>
             ) : (
@@ -300,7 +313,7 @@ export function PatternStatsDashboard({ stats, currentWeek }: PatternStatsDashbo
             {chartView === 'all' ? (
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
-                <XAxis dataKey="week" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
                 <Tooltip
                   contentStyle={{
@@ -318,7 +331,7 @@ export function PatternStatsDashboard({ stats, currentWeek }: PatternStatsDashbo
             ) : (
               <BarChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
-                <XAxis dataKey="week" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
                 <Tooltip
                   contentStyle={{
