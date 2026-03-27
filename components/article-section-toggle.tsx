@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
@@ -11,31 +11,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { useSectionVisibility, ALL_SECTIONS } from '@/hooks/use-section-visibility'
+import { ALL_SECTIONS } from '@/hooks/use-section-visibility'
 import type { SectionType } from '@/lib/section-filter'
 
 interface ArticleSectionToggleProps {
-  onChange: (hiddenTypes: Set<SectionType>) => void
-  defaultHidden?: SectionType[]
+  hiddenSections: Set<SectionType>
+  onToggle: (sectionId: SectionType, visible: boolean) => void
 }
 
 export function ArticleSectionToggle({
-  onChange,
-  defaultHidden = ['summary', 'keyTakeaways', 'tradeoffs']
+  hiddenSections,
+  onToggle,
 }: ArticleSectionToggleProps) {
   const [isOpen, setIsOpen] = useState(false)
-  const { hiddenSections, toggleSection, isHydrated } = useSectionVisibility(defaultHidden)
-
-  // Sync to parent whenever hiddenSections changes
-  useEffect(() => {
-    if (isHydrated) {
-      onChange(hiddenSections)
-    }
-  }, [hiddenSections, isHydrated, onChange])
-
-  if (!isHydrated) {
-    return null
-  }
 
   return (
     <div className="my-4">
@@ -53,7 +41,7 @@ export function ArticleSectionToggle({
         open={isOpen}
         onOpenChange={setIsOpen}
         hiddenSections={hiddenSections}
-        onToggle={toggleSection}
+        onToggle={onToggle}
       />
     </div>
   )
