@@ -128,3 +128,18 @@ model TrendsArchive {
 
   @@map("trends_votes_archive")
 }
+
+// Newsletter Pattern Statistics
+model PatternStats {
+  id          String   @id @default(cuid())
+  patternName String   @map("pattern_name")
+  date        DateTime @db.Date
+  processed   Int      @default(0)
+  extracted   Int      @default(0)
+  included    Int      @default(0)
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@unique([patternName, date])
+  @@index([date])
+  @@map("pattern_stats")
+}

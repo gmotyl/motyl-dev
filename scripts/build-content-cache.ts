@@ -34,6 +34,7 @@ interface ContentItem {
   itemType: ItemTypeValue
   content: string
   image?: string
+  sourcePattern?: string
   externalLinks: ExternalLink[]
 }
 
@@ -146,6 +147,7 @@ async function parseArticleFile(
     image: data.image ?? undefined,
     externalLinks: extractExternalLinks(content),
     itemType,
+    sourcePattern: data.source_pattern || undefined,
   }
 }
 

@@ -37,6 +37,7 @@ interface TrendingCardProps {
   voteCount: number
   category: ContentCategory
   sourceDomain?: string
+  patternName?: string
   isSuperAdmin?: boolean
   onRemoved?: (linkUrl: string) => void
   onCategoryChanged?: (linkUrl: string, category: ContentCategory) => void
@@ -49,6 +50,7 @@ export function TrendingCard({
   voteCount,
   category,
   sourceDomain,
+  patternName,
   isSuperAdmin,
   onRemoved,
   onCategoryChanged,
@@ -177,6 +179,7 @@ export function TrendingCard({
             description={description}
             category={currentCategory}
             sourceDomain={sourceDomain}
+            patternName={patternName}
             initialVoteCount={voteCount}
           />
         </div>

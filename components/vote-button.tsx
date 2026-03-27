@@ -27,6 +27,7 @@ interface VoteButtonProps {
    * @param sourceDomain - Full URL of the source (e.g. "https://example.com"). Must be a valid URL.
    */
   sourceDomain?: string
+  patternName?: string
   initialVoteCount: number
   onVote?: () => void
 }
@@ -37,6 +38,7 @@ export function VoteButton({
   description = '',
   category = 'general',
   sourceDomain,
+  patternName,
   initialVoteCount,
   onVote,
 }: VoteButtonProps) {
@@ -57,7 +59,7 @@ export function VoteButton({
       const res = await fetch('/api/trends/votes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ linkUrl, title, description, category, sourceDomain }),
+        body: JSON.stringify({ linkUrl, title, description, category, sourceDomain, patternName }),
       })
 
       if (!res.ok) {
