@@ -1,0 +1,34 @@
+---
+title: "How I Built a Skill That Makes All My Other Skills Better (Using Karpathy's Autoresearch)"
+excerpt: "Applying Andrej Karpathy's autonomous optimization loop to Claude Code skills — mutate, score, keep or discard — turning 70% good outputs into consistently better ones."
+publishedAt: "2026-03-27"
+slug: "karpathy-loop-skill-improvement-autoresearch-claude-code"
+hashtags: "#substack #ai-maker #karpathy #autoresearch #claude-code #ai-agents #self-improvement #generated #en"
+---
+
+## How I Built a Skill That Makes All My Other Skills Better (Using Karpathy's Autoresearch)
+
+**TLDR:** The author runs 20+ Claude Code skills for their newsletter pipeline and noticed 70-80% of outputs were good but the rest missed the mark. They adapted Andrej Karpathy's open-source "autoresearch" pattern — give an AI something editable, a way to measure improvement, and a time box — into a meta-skill that autonomously improves all their other skills. The key innovation is converting subjective 1-5 rubric scores into binary yes/no checks so the loop can run without human judgment in the middle.
+
+**Summary:**
+
+This is one of those articles that makes you sit up straight because it takes a genuinely powerful idea from one domain and transplants it into another in a way that actually works. The author has built over 20 Claude Code skills — little compressed AI brains, each handling a specific task like writing social notes, LinkedIn posts, SEO optimization, and so on. The problem is familiar to anyone who has worked with AI-generated content at scale: most of the output is fine, but a stubborn 20-30% misses the mark. And here is the insidious part — when you are testing your own prompts, you are confirmation-biased. You see what you want to see. You round up. The outputs that are "close enough" get shipped, and quality slowly drifts.
+
+Enter Andrej Karpathy's "autoresearch" project. The concept is elegantly simple: give an AI agent some code to optimize, define a metric to minimize, and let it run autonomously. Karpathy himself pointed it at his neural network training code, went to sleep for two days, and woke up to find the agent had tried roughly 700 changes, identified about 20 genuine improvements, and stacked them into an 11% efficiency gain on code that was already well-tuned. Shopify CEO Tobi Lutke ran the same pattern and got a 19% improvement after 37 overnight experiments — his 0.8B parameter model ended up outperforming a 1.6B model. That last detail is the one that should make you pause. A smaller model, autonomously tuned, beating a model twice its size. That is not incremental. That is the kind of result that changes how you think about optimization entirely.
+
+The author calls this "The Karpathy Loop" and boils it down to three requirements: something editable, a way to measure whether a change made things better, and a time-boxed way to test. For Claude Code skills, the editable thing is the SKILL.md instruction file. The measurement is an evaluation rubric that scores outputs across 6-10 dimensions on a 1-5 scale. The time box is a single skill execution — run the skill once, score the output, decide whether to keep the mutation or discard it. But here is where the author made a genuinely clever adaptation: they converted the 1-5 rubric scores into binary yes/no checks. Did the output include a clear call to action? Yes or no. Did it stay under the word limit? Yes or no. This removes the subjective squishiness that would require a human in the loop and lets the entire optimization cycle run autonomously. The resulting meta-skill has three phases: Setup where a human defines what to improve, the Autonomous Loop where the system mutates, runs, scores, and keeps or discards without any human involvement, and a Debrief where a human reviews the before-and-after to approve changes.
+
+Now, here is what I think deserves more scrutiny. The Karpathy Loop is powerful, but it is fundamentally a local search algorithm. It finds nearby improvements to your current approach. It is not going to discover that your entire skill architecture is wrong, or that you should be using a completely different prompting strategy. The 11% gain Karpathy got and the 19% Lutke got are impressive, but they were on systems that were already fundamentally sound. If your starting point is a poorly designed skill, autonomously tweaking it 700 times might just give you a highly optimized version of a bad idea. The article does not address this limitation at all. There is also no discussion of overfitting to the eval rubric — if your binary checks do not capture what actually makes an output good, you will optimize for the checks and not for quality. That is Goodhart's Law in a trench coat, and it is the most predictable failure mode of any automated optimization system.
+
+**Key takeaways:**
+
+- The Karpathy Loop requires three things: something editable, a measurable improvement signal, and a time-boxed test cycle
+- Converting subjective 1-5 scores to binary yes/no checks is the key to removing humans from the optimization loop
+- Karpathy's original run: 700 attempts, 20 improvements, 11% gain on already well-tuned code
+- Tobi Lutke's run: 37 experiments overnight, 19% improvement, 0.8B model outperforming 1.6B
+- The three-phase meta-skill pattern (Setup, Autonomous Loop, Debrief) balances automation with human oversight
+- This pattern applies to any AI workflow where you have editable instructions and a way to score outputs
+
+**Why do I care:** If you are running any kind of AI-powered pipeline — content generation, code review, data processing, anything — you should be thinking about how to apply this pattern. The insight is not just "let AI optimize itself," which is vague and hand-wavy. The insight is that you can build a concrete, repeatable system where the AI mutates its own instructions, tests the results against an objective rubric, and keeps only the improvements. That is not science fiction. That is a for-loop with an eval function. The hard part, and the part this article helps with, is designing the eval rubric so it actually captures quality rather than just giving you a higher score on metrics that do not matter. Get that right and you have a compound improvement engine that works while you sleep. Get it wrong and you have an automated way to make your outputs confidently worse. The difference is entirely in the quality of your evaluation criteria.
+
+**Link:** [How I Built a Skill That Makes All My Other Skills Better (Using Karpathy's Autoresearch)](https://aimaker.substack.com/p/how-i-built-skill-improves-all-skills-karpathy-autoresearch-loop)
