@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useMemo } from 'react'
 import { ArticleSectionToggle } from '@/components/article-section-toggle'
 import { MarkdownWithCTA } from '@/components/markdown-with-cta'
 import { ShareAIButton } from '@/components/share-ai-button'
@@ -9,6 +9,7 @@ import { filterHiddenSections, type SectionType } from '@/lib/section-filter'
 import { ItemType } from '@/lib/types'
 import { detectLanguageFromHashtags } from '@/lib/tts'
 import { getContentCategory } from '@/lib/og'
+import { useSectionVisibility } from '@/hooks/use-section-visibility'
 
 interface ArticleWrapperProps {
   article: {
@@ -23,24 +24,21 @@ interface ArticleWrapperProps {
 
 export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps) {
   const isNews = article.itemType === ItemType.News
-  const [hiddenSections, setHiddenSections] = useState<Set<SectionType>>(
-    isNews ? new Set(['summary', 'keyTakeaways', 'tradeoffs']) : new Set()
+  const { hiddenSections, toggleSection, isHydrated } = useSectionVisibility(
+    isNews ? ['summary', 'keyTakeaways', 'tradeoffs'] : []
   )
 
   const filteredContent = useMemo(() => {
     return isNews ? filterHiddenSections(article.content, hiddenSections) : article.content
   }, [article.content, hiddenSections, isNews])
 
-  const handleToggleChange = useCallback((newHidden: Set<SectionType>) => {
-    setHiddenSections(newHidden)
-  }, [])
-
-  // Detect voice from hashtags
   const voice = detectLanguageFromHashtags(article.hashtags)
 
   return (
     <>
-      {isNews && <ArticleSectionToggle onChange={handleToggleChange} />}
+      {isNews && isHydrated && (
+        <ArticleSectionToggle hiddenSections={hiddenSections} onToggle={toggleSection} />
+      )}
 
       <div className="flex flex-wrap items-center gap-4 mb-6">
         <ShareAIButton
