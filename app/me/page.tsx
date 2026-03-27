@@ -10,7 +10,7 @@ import {
   User,
   ChevronRight,
   Github,
-  Newspaper,
+  BarChart2,
   BookOpen,
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -177,10 +177,10 @@ export default function MePage() {
             </h3>
             <div className="space-y-2">
               <MenuLink
-                href="/newsletter-generator"
-                icon={Newspaper}
-                label="Generate Newsletter"
-                description="Create newsletter from bookmarked links"
+                href="/admin/stats"
+                icon={BarChart2}
+                label="Pattern Stats"
+                description="Newsletter pattern processing statistics"
               />
               <TrendsResetPanel />
             </div>

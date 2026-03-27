@@ -50,6 +50,17 @@ export default async function NewsletterArchive({ searchParams }: NewsletterArch
             </p>
           </section>
 
+          {/* Subscribe CTA */}
+          <section className="rounded-lg border border-primary/20 bg-primary/5 p-6 space-y-4 text-center">
+            <h2 className="text-xl font-bold">Get it in your inbox</h2>
+            <p className="text-muted-foreground text-sm max-w-sm mx-auto">
+              No spam, unsubscribe anytime.
+            </p>
+            <div className="max-w-sm mx-auto">
+              <NewsletterForm />
+            </div>
+          </section>
+
           {items.length === 0 ? (
             <p className="text-muted-foreground">No newsletters published yet.</p>
           ) : (
@@ -118,16 +129,6 @@ export default async function NewsletterArchive({ searchParams }: NewsletterArch
             </nav>
           )}
 
-          {/* Subscribe CTA */}
-          <section className="rounded-lg border border-primary/20 bg-primary/5 p-6 space-y-4 text-center">
-            <h2 className="text-xl font-bold">Get it in your inbox</h2>
-            <p className="text-muted-foreground text-sm max-w-sm mx-auto">
-              No spam, unsubscribe anytime.
-            </p>
-            <div className="max-w-sm mx-auto">
-              <NewsletterForm />
-            </div>
-          </section>
         </div>
       </main>
       <Footer />
