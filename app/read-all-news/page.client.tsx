@@ -201,7 +201,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
             </div>
 
             <div className="space-y-0">
-              {isHydrated && items.map((item, index) => (
+              {items.map((item, index) => (
                 <FullArticle
                   key={item.slug}
                   item={item}
@@ -228,13 +228,15 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
 
       {/* Floating buttons */}
       <div className="fixed bottom-20 sm:bottom-6 right-4 z-40 flex flex-col items-end gap-3">
-        {/* Settings button */}
-        <button
-          onClick={() => setSectionToggleOpen(true)}
-          className="flex items-center justify-center w-12 h-12 bg-muted text-muted-foreground rounded-full shadow-lg hover:bg-muted/80 transition-colors"
-        >
-          <Settings className="h-5 w-5" />
-        </button>
+        {/* Settings button — wait for hydration so toggle has localStorage state */}
+        {isHydrated && (
+          <button
+            onClick={() => setSectionToggleOpen(true)}
+            className="flex items-center justify-center w-12 h-12 bg-muted text-muted-foreground rounded-full shadow-lg hover:bg-muted/80 transition-colors"
+          >
+            <Settings className="h-5 w-5" />
+          </button>
+        )}
 
         {/* Mark-read button */}
         {scrolledPastSlugs.size > 0 && (
