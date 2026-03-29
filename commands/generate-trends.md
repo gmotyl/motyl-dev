@@ -88,7 +88,51 @@ gh pr create \
   --body "Weekly trends summary for {weekLabel}. Review and edit before merging — the markdown is fully editable.\n\nAfter merging, run \`pnpm trends:reset\` to archive votes and start the new week."
 ```
 
-### 6. Report
+### 6. Generate social media snippets
+
+Based on the newsletter content, generate **3 short teaser proposals for each platform**: LinkedIn and Twitter/X.
+
+Output them directly in the chat (do NOT write to a file).
+
+**LinkedIn (aim for ~150–200 words each):**
+- Professional tone, but conversational — not corporate-speak
+- Lead with the most interesting insight or a provocative question
+- Mention 2–3 specific topics from the newsletter
+- End with a CTA linking to the newsletter: `https://motyl.dev/newsletter`
+- Use line breaks for readability, 2–4 relevant hashtags at the end
+
+**Twitter/X (aim for ~240 characters each, hard limit 280):**
+- Sharp, punchy — one key idea per tweet
+- Can highlight a surprising stat, a counterintuitive take, or a "did you know"
+- End with the newsletter link: `https://motyl.dev/newsletter`
+- 1–2 hashtags max
+
+**Format the output as:**
+```
+## LinkedIn
+
+### Option 1
+[post text]
+
+### Option 2
+[post text]
+
+### Option 3
+[post text]
+
+## Twitter/X
+
+### Option 1
+[tweet text]
+
+### Option 2
+[tweet text]
+
+### Option 3
+[tweet text]
+```
+
+### 7. Report
 
 Show the PR URL and remind the user:
 
