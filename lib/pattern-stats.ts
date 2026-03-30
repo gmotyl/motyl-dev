@@ -75,7 +75,7 @@ export async function getMonthlyPatternStats(months: number = 12) {
 
   const monthMap: Record<string, Record<string, number>> = {}
   for (const row of rows) {
-    const month = new Date(row.date).toISOString().slice(0, 7)
+    const month = row.date.toISOString().slice(0, 7)
     if (!monthMap[month]) monthMap[month] = {}
     monthMap[month][row.patternName] = (monthMap[month][row.patternName] ?? 0) + row.included
   }

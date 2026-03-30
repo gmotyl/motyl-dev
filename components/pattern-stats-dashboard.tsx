@@ -4,6 +4,13 @@ import { useMemo, useState, ReactNode } from 'react'
 
 const TREND_UP_THRESHOLD = 1.1
 const TREND_DOWN_THRESHOLD = 0.9
+
+const PATTERN_PALETTE = [
+  '#3b82f6', '#f59e0b', '#22c55e', '#ef4444', '#8b5cf6',
+  '#06b6d4', '#ec4899', '#f97316', '#14b8a6', '#6366f1',
+  '#a3e635', '#fb7185', '#38bdf8', '#fbbf24', '#a78bfa',
+  '#34d399', '#f43f5e', '#60a5fa', '#fb923c', '#4ade80',
+]
 import {
   BarChart,
   Bar,
@@ -187,13 +194,9 @@ export function PatternStatsDashboard({ stats, allTime, monthlyPatterns }: Patte
   )
 
   const patternColors = useMemo(() => {
-    const palette = [
-      '#3b82f6', '#f59e0b', '#22c55e', '#ef4444', '#8b5cf6',
-      '#06b6d4', '#ec4899', '#f97316', '#14b8a6', '#6366f1',
-    ]
     const map: Record<string, string> = {}
     patternNames.forEach((name, i) => {
-      map[name] = palette[i % palette.length]
+      map[name] = PATTERN_PALETTE[i % PATTERN_PALETTE.length]
     })
     return map
   }, [patternNames])
@@ -276,13 +279,6 @@ function SummaryCard({ label, value }: { label: string; value: string | number }
   )
 }
 
-const PATTERN_PALETTE = [
-  '#3b82f6', '#f59e0b', '#22c55e', '#ef4444', '#8b5cf6',
-  '#06b6d4', '#ec4899', '#f97316', '#14b8a6', '#6366f1',
-  '#a3e635', '#fb7185', '#38bdf8', '#fbbf24', '#a78bfa',
-  '#34d399', '#f43f5e', '#60a5fa', '#fb923c', '#4ade80',
-]
-
 type MonthRange = 2 | 3 | 6 | 12
 
 function AllTimeView({ allTime, monthlyPatterns }: { allTime: AllTimeData; monthlyPatterns: MonthlyPatternEntry[] }) {
@@ -298,7 +294,8 @@ function AllTimeView({ allTime, monthlyPatterns }: { allTime: AllTimeData; month
 
   const filteredMonths = useMemo(() => {
     const cutoff = new Date()
-    cutoff.setMonth(cutoff.getMonth() - monthRange)
+    cutoff.setDate(1)
+    cutoff.setMonth(cutoff.getMonth() - (monthRange - 1))
     const cutoffStr = cutoff.toISOString().slice(0, 7)
     return monthlyPatterns.filter((m) => m.month >= cutoffStr)
   }, [monthlyPatterns, monthRange])
@@ -314,12 +311,13 @@ function AllTimeView({ allTime, monthlyPatterns }: { allTime: AllTimeData; month
   }, [filteredMonths])
 
   const patternColors = useMemo(() => {
+    const allNames = [...new Set(monthlyPatterns.flatMap((m) => Object.keys(m.patterns)))].sort()
     const map: Record<string, string> = {}
-    activePatterns.forEach((name, i) => {
+    allNames.forEach((name, i) => {
       map[name] = PATTERN_PALETTE[i % PATTERN_PALETTE.length]
     })
     return map
-  }, [activePatterns])
+  }, [monthlyPatterns])
 
   const chartData = useMemo(() => {
     return filteredMonths.map((m) => {
