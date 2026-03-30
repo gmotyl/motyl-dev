@@ -151,22 +151,17 @@ export function PatternStatsDashboard({ stats, allTime }: PatternStatsDashboardP
     return rows
   }, [tableRows, sortKey, sortDir])
 
-  // Chart data — one bar per date
+  // Chart data — ranking (all patterns view) or per-date trend (per-pattern view)
+  const patternRankingData = useMemo(() => {
+    return [...todayStats]
+      .sort((a, b) => b.included - a.included)
+      .map((s) => ({ patternName: s.patternName, included: s.included }))
+  }, [todayStats])
+
   const chartData = useMemo(() => {
+    if (chartView === 'all') return patternRankingData
+
     const dates = [...new Set(stats.map((s) => toDateStr(s.date)))].sort()
-
-    if (chartView === 'all') {
-      return dates.map((date) => {
-        const dayStats = stats.filter((s) => toDateStr(s.date) === date)
-        return {
-          date,
-          processed: dayStats.reduce((sum, s) => sum + s.processed, 0),
-          extracted: dayStats.reduce((sum, s) => sum + s.extracted, 0),
-          included: dayStats.reduce((sum, s) => sum + s.included, 0),
-        }
-      })
-    }
-
     const patterns = [...new Set(stats.map((s) => s.patternName))].sort()
     return dates.map((date) => {
       const row: Record<string, string | number> = { date }
@@ -176,7 +171,7 @@ export function PatternStatsDashboard({ stats, allTime }: PatternStatsDashboardP
       }
       return row
     })
-  }, [stats, chartView])
+  }, [stats, chartView, patternRankingData])
 
   const patternNames = useMemo(
     () => [...new Set(stats.map((s) => s.patternName))].sort(),
@@ -306,7 +301,6 @@ function AllTimeView({ allTime }: { allTime: AllTimeData }) {
               />
               <Legend />
               <Bar dataKey="processed" fill="#3b82f6" name="Processed" />
-              <Bar dataKey="extracted" fill="#f59e0b" name="Extracted" />
               <Bar dataKey="included" fill="#22c55e" name="Included" />
             </BarChart>
           </ResponsiveContainer>
@@ -456,7 +450,7 @@ function TodayView({
             }`}
             onClick={() => setChartView('all')}
           >
-            All Patterns
+            Ranking
           </button>
           <button
             className={`px-3 py-1 text-sm rounded-md transition-colors ${
@@ -466,17 +460,17 @@ function TodayView({
             }`}
             onClick={() => setChartView('per-pattern')}
           >
-            Per Pattern
+            Trend
           </button>
         </div>
 
         <div className="rounded-lg border border-muted bg-background/50 p-4">
           <ResponsiveContainer width="100%" height={300}>
             {chartView === 'all' ? (
-              <BarChart data={chartData}>
+              <BarChart data={chartData} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
-                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis type="category" dataKey="patternName" stroke="hsl(var(--muted-foreground))" fontSize={11} width={120} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: 'hsl(var(--background))',
@@ -485,10 +479,7 @@ function TodayView({
                     color: 'hsl(var(--foreground))',
                   }}
                 />
-                <Legend />
-                <Bar dataKey="processed" stackId="a" fill="#3b82f6" name="Processed" />
-                <Bar dataKey="extracted" stackId="a" fill="#f59e0b" name="Extracted" />
-                <Bar dataKey="included" stackId="a" fill="#22c55e" name="Included" />
+                <Bar dataKey="included" fill="#22c55e" name="Included" />
               </BarChart>
             ) : (
               <BarChart data={chartData}>
