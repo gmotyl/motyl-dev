@@ -62,6 +62,29 @@ export async function getPatternStats(days: number = 56) {
   })
 }
 
+export async function getMonthlyPatternStats(months: number = 12) {
+  const since = new Date()
+  since.setMonth(since.getMonth() - months)
+  const sinceDate = new Date(Date.UTC(since.getFullYear(), since.getMonth(), 1))
+
+  const rows = await prisma.patternStats.findMany({
+    where: { date: { gte: sinceDate } },
+    orderBy: [{ date: 'asc' }],
+    select: { patternName: true, date: true, included: true },
+  })
+
+  const monthMap: Record<string, Record<string, number>> = {}
+  for (const row of rows) {
+    const month = new Date(row.date).toISOString().slice(0, 7)
+    if (!monthMap[month]) monthMap[month] = {}
+    monthMap[month][row.patternName] = (monthMap[month][row.patternName] ?? 0) + row.included
+  }
+
+  return Object.entries(monthMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([month, patterns]) => ({ month, patterns }))
+}
+
 export async function getAllTimeStats() {
   const all: Array<{ patternName: string; date: Date; processed: number; extracted: number; included: number }> =
     await prisma.patternStats.findMany({
