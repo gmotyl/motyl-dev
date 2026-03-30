@@ -333,6 +333,7 @@ function FullArticle({
         content={filteredContent}
         itemType={ItemType.News}
         articleSlug={item.slug}
+        patternName={item.sourcePattern}
       />
 
       {/* Bottom boundary marker for scroll tracking */}

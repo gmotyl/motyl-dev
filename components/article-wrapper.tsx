@@ -18,6 +18,7 @@ interface ArticleWrapperProps {
     title: string
     itemType: ItemType
     hashtags?: string[]
+    sourcePattern?: string
   }
   translatePrompt: string
 }
@@ -59,6 +60,7 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
         itemType={article.itemType}
         articleSlug={article.slug}
         category={getContentCategory(article.hashtags ?? [])}
+        patternName={article.sourcePattern}
       />
     </>
   )

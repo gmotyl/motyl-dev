@@ -124,6 +124,7 @@ export function ArticleExternalLinks({ article }: ArticleExternalLinksProps) {
                       category={voteCategory}
                       sourceDomain={link.url}
                       initialVoteCount={0}
+                      patternName={article.sourcePattern}
                     />
                     {session && (
                       <div className="md:opacity-0 md:group-hover:opacity-100 transition-opacity">

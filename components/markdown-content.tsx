@@ -15,9 +15,10 @@ interface MarkdownContentProps {
   content: string
   itemType?: ItemTypeValue
   category?: ContentCategory
+  patternName?: string
 }
 
-export function MarkdownContent({ content, itemType, category }: MarkdownContentProps) {
+export function MarkdownContent({ content, itemType, category, patternName }: MarkdownContentProps) {
   const isNews = itemType === ItemType.News
   const [summaryPrompt, setSummaryPrompt] = useState<string>('')
 
@@ -49,6 +50,7 @@ export function MarkdownContent({ content, itemType, category }: MarkdownContent
               category={category}
               sourceDomain={href!}
               initialVoteCount={0}
+              patternName={patternName}
             />
             <a href={href} {...props} target="_blank" rel="noopener noreferrer">
               {children}
