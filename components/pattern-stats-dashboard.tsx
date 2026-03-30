@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, ReactNode } from 'react'
 
 const TREND_UP_THRESHOLD = 1.1
 const TREND_DOWN_THRESHOLD = 0.9
@@ -25,8 +25,26 @@ interface PatternStatRow {
   updatedAt: Date
 }
 
+interface AllTimeData {
+  totals: {
+    totalProcessed: number
+    totalExtracted: number
+    totalIncluded: number
+    conversionRate: number
+    uniquePatterns: number
+    daysTracked: number
+  }
+  monthly: Array<{
+    month: string
+    processed: number
+    extracted: number
+    included: number
+  }>
+}
+
 interface PatternStatsDashboardProps {
   stats: PatternStatRow[]
+  allTime: AllTimeData
 }
 
 type SortKey = 'patternName' | 'processed' | 'extracted' | 'included' | 'conversion' | 'trend'
@@ -46,10 +64,11 @@ function daysAgo(n: number): Date {
   return d
 }
 
-export function PatternStatsDashboard({ stats }: PatternStatsDashboardProps) {
+export function PatternStatsDashboard({ stats, allTime }: PatternStatsDashboardProps) {
   const [sortKey, setSortKey] = useState<SortKey>('included')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [chartView, setChartView] = useState<'all' | 'per-pattern'>('all')
+  const [view, setView] = useState<'today' | 'alltime'>('today')
 
   // Today's stats (summary cards + table)
   const todayStats = useMemo(
@@ -207,6 +226,149 @@ export function PatternStatsDashboard({ stats }: PatternStatsDashboardProps) {
     }
   }
 
+  return (
+    <div className="space-y-8">
+      {/* View tabs */}
+      <div className="flex gap-2">
+        {(['today', 'alltime'] as const).map((v) => (
+          <button
+            key={v}
+            onClick={() => setView(v)}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+              view === v ? 'bg-primary text-primary-foreground' : 'bg-muted/50 hover:bg-muted'
+            }`}
+          >
+            {v === 'today' ? 'Today' : 'All Time'}
+          </button>
+        ))}
+      </div>
+
+      {view === 'alltime' ? (
+        <AllTimeView allTime={allTime} />
+      ) : (
+        <TodayView
+          summary={summary}
+          sortedRows={sortedRows}
+          chartData={chartData}
+          patternNames={patternNames}
+          patternColors={patternColors}
+          chartView={chartView}
+          setChartView={setChartView}
+          handleSort={handleSort}
+          sortIndicator={sortIndicator}
+          conversionColor={conversionColor}
+          trendArrow={trendArrow}
+        />
+      )}
+    </div>
+  )
+}
+
+function SummaryCard({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-lg border border-muted bg-background/50 p-4 space-y-1">
+      <p className="text-xs text-muted-foreground uppercase tracking-wide">{label}</p>
+      <p className="text-2xl font-bold">{value}</p>
+    </div>
+  )
+}
+
+function AllTimeView({ allTime }: { allTime: AllTimeData }) {
+  const { totals, monthly } = allTime
+  return (
+    <div className="space-y-8">
+      {/* Global summary cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        <SummaryCard label="Patterns" value={totals.uniquePatterns} />
+        <SummaryCard label="Days Tracked" value={totals.daysTracked} />
+        <SummaryCard label="Total Processed" value={totals.totalProcessed.toLocaleString()} />
+        <SummaryCard label="Total Extracted" value={totals.totalExtracted.toLocaleString()} />
+        <SummaryCard label="Total Included" value={totals.totalIncluded.toLocaleString()} />
+        <SummaryCard label="Avg Conversion" value={`${totals.conversionRate.toFixed(1)}%`} />
+      </div>
+
+      {/* Monthly trend chart */}
+      <div className="space-y-3">
+        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Monthly Trends</h2>
+        <div className="rounded-lg border border-muted bg-background/50 p-4">
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={monthly}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
+              <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+              <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'hsl(var(--background))',
+                  border: '1px solid hsl(var(--muted))',
+                  borderRadius: '0.5rem',
+                  color: 'hsl(var(--foreground))',
+                }}
+              />
+              <Legend />
+              <Bar dataKey="processed" fill="#3b82f6" name="Processed" />
+              <Bar dataKey="extracted" fill="#f59e0b" name="Extracted" />
+              <Bar dataKey="included" fill="#22c55e" name="Included" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Monthly table */}
+      <div className="rounded-lg border border-muted overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-muted bg-muted/30">
+              <th className="px-4 py-2 text-left font-medium">Month</th>
+              <th className="px-4 py-2 text-left font-medium">Processed</th>
+              <th className="px-4 py-2 text-left font-medium">Extracted</th>
+              <th className="px-4 py-2 text-left font-medium">Included</th>
+              <th className="px-4 py-2 text-left font-medium">Conversion %</th>
+            </tr>
+          </thead>
+          <tbody>
+            {monthly.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">No data yet.</td>
+              </tr>
+            ) : (
+              [...monthly].reverse().map((row) => {
+                const conv = row.extracted > 0 ? (row.included / row.extracted) * 100 : 0
+                return (
+                  <tr key={row.month} className="border-b border-muted/50 hover:bg-muted/20 transition-colors">
+                    <td className="px-4 py-2 font-medium">{row.month}</td>
+                    <td className="px-4 py-2">{row.processed.toLocaleString()}</td>
+                    <td className="px-4 py-2">{row.extracted.toLocaleString()}</td>
+                    <td className="px-4 py-2">{row.included.toLocaleString()}</td>
+                    <td className={`px-4 py-2 ${conv > 15 ? 'text-green-400' : conv >= 5 ? 'text-yellow-400' : 'text-red-400'}`}>
+                      {conv.toFixed(1)}%
+                    </td>
+                  </tr>
+                )
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function TodayView({
+  summary, sortedRows, chartData, patternNames, patternColors, chartView, setChartView,
+  handleSort, sortIndicator, conversionColor, trendArrow,
+}: {
+  summary: { totalPatterns: number; totalProcessed: number; totalExtracted: number; totalIncluded: number; conversionRate: number }
+  sortedRows: Array<{ id: string; patternName: string; processed: number; extracted: number; included: number; conversion: number; trend: 'up' | 'down' | 'flat' }>
+  chartData: Array<Record<string, string | number>>
+  patternNames: string[]
+  patternColors: Record<string, string>
+  chartView: 'all' | 'per-pattern'
+  setChartView: (v: 'all' | 'per-pattern') => void
+  handleSort: (key: SortKey) => void
+  sortIndicator: (key: SortKey) => string
+  conversionColor: (rate: number) => string
+  trendArrow: (trend: 'up' | 'down' | 'flat') => ReactNode
+}) {
   return (
     <div className="space-y-8">
       {/* Summary cards */}
