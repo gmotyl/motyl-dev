@@ -4,9 +4,18 @@ import { useMemo, useState, ReactNode } from 'react'
 
 const TREND_UP_THRESHOLD = 1.1
 const TREND_DOWN_THRESHOLD = 0.9
+
+const PATTERN_PALETTE = [
+  '#3b82f6', '#f59e0b', '#22c55e', '#ef4444', '#8b5cf6',
+  '#06b6d4', '#ec4899', '#f97316', '#14b8a6', '#6366f1',
+  '#a3e635', '#fb7185', '#38bdf8', '#fbbf24', '#a78bfa',
+  '#34d399', '#f43f5e', '#60a5fa', '#fb923c', '#4ade80',
+]
 import {
   BarChart,
   Bar,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -42,9 +51,15 @@ interface AllTimeData {
   }>
 }
 
+interface MonthlyPatternEntry {
+  month: string
+  patterns: Record<string, number>
+}
+
 interface PatternStatsDashboardProps {
   stats: PatternStatRow[]
   allTime: AllTimeData
+  monthlyPatterns: MonthlyPatternEntry[]
 }
 
 type SortKey = 'patternName' | 'processed' | 'extracted' | 'included' | 'conversion' | 'trend'
@@ -64,7 +79,7 @@ function daysAgo(n: number): Date {
   return d
 }
 
-export function PatternStatsDashboard({ stats, allTime }: PatternStatsDashboardProps) {
+export function PatternStatsDashboard({ stats, allTime, monthlyPatterns }: PatternStatsDashboardProps) {
   const [sortKey, setSortKey] = useState<SortKey>('included')
   const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [chartView, setChartView] = useState<'all' | 'per-pattern'>('all')
@@ -179,13 +194,9 @@ export function PatternStatsDashboard({ stats, allTime }: PatternStatsDashboardP
   )
 
   const patternColors = useMemo(() => {
-    const palette = [
-      '#3b82f6', '#f59e0b', '#22c55e', '#ef4444', '#8b5cf6',
-      '#06b6d4', '#ec4899', '#f97316', '#14b8a6', '#6366f1',
-    ]
     const map: Record<string, string> = {}
     patternNames.forEach((name, i) => {
-      map[name] = palette[i % palette.length]
+      map[name] = PATTERN_PALETTE[i % PATTERN_PALETTE.length]
     })
     return map
   }, [patternNames])
@@ -239,7 +250,7 @@ export function PatternStatsDashboard({ stats, allTime }: PatternStatsDashboardP
       </div>
 
       {view === 'alltime' ? (
-        <AllTimeView allTime={allTime} />
+        <AllTimeView allTime={allTime} monthlyPatterns={monthlyPatterns} />
       ) : (
         <TodayView
           summary={summary}
@@ -268,8 +279,56 @@ function SummaryCard({ label, value }: { label: string; value: string | number }
   )
 }
 
-function AllTimeView({ allTime }: { allTime: AllTimeData }) {
-  const { totals, monthly } = allTime
+type MonthRange = 2 | 3 | 6 | 12
+
+function AllTimeView({ allTime, monthlyPatterns }: { allTime: AllTimeData; monthlyPatterns: MonthlyPatternEntry[] }) {
+  const { totals } = allTime
+  const [monthRange, setMonthRange] = useState<MonthRange>(6)
+
+  const tooltipStyle = {
+    backgroundColor: 'hsl(var(--background))',
+    border: '1px solid hsl(var(--muted))',
+    borderRadius: '0.5rem',
+    color: 'hsl(var(--foreground))',
+  }
+
+  const filteredMonths = useMemo(() => {
+    const cutoff = new Date()
+    cutoff.setDate(1)
+    cutoff.setMonth(cutoff.getMonth() - (monthRange - 1))
+    const cutoffStr = cutoff.toISOString().slice(0, 7)
+    return monthlyPatterns.filter((m) => m.month >= cutoffStr)
+  }, [monthlyPatterns, monthRange])
+
+  const activePatterns = useMemo(() => {
+    const names = new Set<string>()
+    for (const m of filteredMonths) {
+      for (const [name, count] of Object.entries(m.patterns)) {
+        if (count > 0) names.add(name)
+      }
+    }
+    return [...names].sort()
+  }, [filteredMonths])
+
+  const patternColors = useMemo(() => {
+    const allNames = [...new Set(monthlyPatterns.flatMap((m) => Object.keys(m.patterns)))].sort()
+    const map: Record<string, string> = {}
+    allNames.forEach((name, i) => {
+      map[name] = PATTERN_PALETTE[i % PATTERN_PALETTE.length]
+    })
+    return map
+  }, [monthlyPatterns])
+
+  const chartData = useMemo(() => {
+    return filteredMonths.map((m) => {
+      const row: Record<string, string | number> = { month: m.month }
+      for (const name of activePatterns) {
+        row[name] = m.patterns[name] ?? 0
+      }
+      return row
+    })
+  }, [filteredMonths, activePatterns])
+
   return (
     <div className="space-y-8">
       {/* Global summary cards */}
@@ -282,66 +341,70 @@ function AllTimeView({ allTime }: { allTime: AllTimeData }) {
         <SummaryCard label="Avg Conversion" value={`${totals.conversionRate.toFixed(1)}%`} />
       </div>
 
-      {/* Monthly trend chart */}
-      <div className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Monthly Trends</h2>
-        <div className="rounded-lg border border-muted bg-background/50 p-4">
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={monthly}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
-              <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-              <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: 'hsl(var(--background))',
-                  border: '1px solid hsl(var(--muted))',
-                  borderRadius: '0.5rem',
-                  color: 'hsl(var(--foreground))',
-                }}
-              />
-              <Legend />
-              <Bar dataKey="processed" fill="#3b82f6" name="Processed" />
-              <Bar dataKey="included" fill="#22c55e" name="Included" />
-            </BarChart>
-          </ResponsiveContainer>
+      {/* Monthly Trends */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Monthly Trends — Included by Pattern</h2>
+          <div className="flex gap-1">
+            {([2, 3, 6, 12] as MonthRange[]).map((r) => (
+              <button
+                key={r}
+                onClick={() => setMonthRange(r)}
+                className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                  monthRange === r ? 'bg-primary text-primary-foreground' : 'bg-muted/50 hover:bg-muted'
+                }`}
+              >
+                {r}m
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Monthly table */}
-      <div className="rounded-lg border border-muted overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-muted bg-muted/30">
-              <th className="px-4 py-2 text-left font-medium">Month</th>
-              <th className="px-4 py-2 text-left font-medium">Processed</th>
-              <th className="px-4 py-2 text-left font-medium">Extracted</th>
-              <th className="px-4 py-2 text-left font-medium">Included</th>
-              <th className="px-4 py-2 text-left font-medium">Conversion %</th>
-            </tr>
-          </thead>
-          <tbody>
-            {monthly.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">No data yet.</td>
-              </tr>
-            ) : (
-              [...monthly].reverse().map((row) => {
-                const conv = row.extracted > 0 ? (row.included / row.extracted) * 100 : 0
-                return (
-                  <tr key={row.month} className="border-b border-muted/50 hover:bg-muted/20 transition-colors">
-                    <td className="px-4 py-2 font-medium">{row.month}</td>
-                    <td className="px-4 py-2">{row.processed.toLocaleString()}</td>
-                    <td className="px-4 py-2">{row.extracted.toLocaleString()}</td>
-                    <td className="px-4 py-2">{row.included.toLocaleString()}</td>
-                    <td className={`px-4 py-2 ${conv > 15 ? 'text-green-400' : conv >= 5 ? 'text-yellow-400' : 'text-red-400'}`}>
-                      {conv.toFixed(1)}%
-                    </td>
-                  </tr>
-                )
-              })
-            )}
-          </tbody>
-        </table>
+        {/* Stacked bar — which patterns contribute per month */}
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">Articles included per month by pattern</p>
+          <div className="rounded-lg border border-muted bg-background/50 p-4">
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
+                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                {activePatterns.map((name) => (
+                  <Bar key={name} dataKey={name} stackId="a" fill={patternColors[name]} name={name} />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Line chart — trend per pattern */}
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">Trend per pattern over time</p>
+          <div className="rounded-lg border border-muted bg-background/50 p-4">
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted))" />
+                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <Tooltip contentStyle={tooltipStyle} />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                {activePatterns.map((name) => (
+                  <Line
+                    key={name}
+                    type="monotone"
+                    dataKey={name}
+                    stroke={patternColors[name]}
+                    dot={false}
+                    strokeWidth={2}
+                    name={name}
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
     </div>
   )
