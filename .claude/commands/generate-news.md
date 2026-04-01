@@ -124,6 +124,19 @@ When processing these newsletters:
            - Each topic ends with `**Link:** [Title](URL)`
            - NO Co-Authored-By lines
            - NO Generated-with lines
+           - Write like a human from the start — apply these rules during generation:
+             - No em dashes (—); use commas or separate sentences instead
+             - No "rule of three" (avoid listing exactly three items just to seem thorough)
+             - No AI vocabulary: additionally, crucial, delve, highlight, landscape, pivotal, showcase, testament, underscore, vibrant, key (as adjective), foster, enhance
+             - No inflated significance: "marks a turning point", "reflects broader trends", "serves as a reminder"
+             - No promotional language: groundbreaking, stunning, breathtaking, boasts, nestled, renowned
+             - No vague attributions: "experts say", "industry observers note", "some argue"
+             - No negative parallelisms: "It's not just X, it's Y"
+             - No inline-header bullet lists (**Key:** description) — write in prose instead
+             - Vary sentence length: mix short punchy sentences with longer ones
+             - Have opinions — react to the content, don't just neutrally report it
+             - Use "I" when it fits naturally ("I keep thinking about...", "Here's what gets me...")
+             - Be specific: concrete details beat vague claims every time
       5. **Save article**:
          - Call `mcp__newsletter-ai__save_article(content, newsletterName)`
          - Return filepath
