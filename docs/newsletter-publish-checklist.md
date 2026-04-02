@@ -16,7 +16,7 @@ Workflow do publikacji każdego wydania newslettera motyl.dev.
 ## Faza 2 — Obrazek okładkowy
 
 - [ ] Uruchom `/image-prompt` → Claude generuje prompt do NanoBanana (EN, abstract, dark bg, 16:9)
-- [ ] Wygeneruj obrazek w NanoBanana (nanobanna.com) używając wygenerowanego promptu
+- [ ] Wygeneruj obrazek w NanoBanana (nanobanana.com) używając wygenerowanego promptu
 - [ ] Pobierz obrazek `.webp` lokalnie
 - [ ] Uruchom `/publish-image <ścieżka>` → optymalizacja + upload do Cloudflare R2 + URL wstawiony do frontmatter `image:`
 
