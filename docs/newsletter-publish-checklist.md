@@ -6,8 +6,7 @@ Workflow do publikacji każdego wydania newslettera motyl.dev.
 
 ## Faza 1 — Przygotowanie treści
 
-- [ ] Zebranie linków źródłowych
-- [ ] Uruchom `/generate-news` → wygenerowanie draftu newslettera
+- [ ] Uruchom `/generate-news` → generuje artykuły na podstawie newsletterów ze skrzynki odbiorczej
 - [ ] Manualna edycja: headline, lead, komentarze do linków
 - [ ] Sprawdź, że treść jest gotowa i zaakceptowana
 
@@ -49,7 +48,7 @@ Workflow do publikacji każdego wydania newslettera motyl.dev.
 
 | Komenda | Co robi |
 |---|---|
-| `/generate-news` | Generuje draft newslettera z linków |
+| `/generate-news` | Generuje artykuły na podstawie newsletterów ze skrzynki odbiorczej |
 | `/image-prompt [N]` | Prompt do NanoBanana na podstawie treści |
 | `/publish-image <path>` | Optimize → R2 upload → URL do frontmatter |
 | `/repurpose [N]` | Content atoms → posty social media |
