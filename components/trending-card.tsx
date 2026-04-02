@@ -41,6 +41,7 @@ interface TrendingCardProps {
   isSuperAdmin?: boolean
   onRemoved?: (linkUrl: string) => void
   onCategoryChanged?: (linkUrl: string, category: ContentCategory) => void
+  onVote?: (linkUrl: string, newCount: number) => void
 }
 
 export function TrendingCard({
@@ -54,6 +55,7 @@ export function TrendingCard({
   isSuperAdmin,
   onRemoved,
   onCategoryChanged,
+  onVote,
 }: TrendingCardProps) {
   const [confirmRemoveOpen, setConfirmRemoveOpen] = useState(false)
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false)
@@ -151,6 +153,7 @@ export function TrendingCard({
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
+        style={isSuperAdmin ? { touchAction: 'pan-y' } : undefined}
         className={cn(
           'group relative rounded-lg border transition-all duration-200 hover:shadow-md flex flex-row overflow-hidden bg-background',
           `category-${currentCategory} unvisited-article`
@@ -181,6 +184,7 @@ export function TrendingCard({
             sourceDomain={sourceDomain}
             patternName={patternName}
             initialVoteCount={voteCount}
+            onVote={(newCount) => onVote?.(linkUrl, newCount)}
           />
         </div>
 

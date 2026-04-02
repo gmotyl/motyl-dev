@@ -29,7 +29,7 @@ interface VoteButtonProps {
   sourceDomain?: string
   patternName?: string
   initialVoteCount: number
-  onVote?: () => void
+  onVote?: (newCount: number) => void
 }
 
 export function VoteButton({
@@ -71,6 +71,9 @@ export function VoteButton({
       const data = await res.json()
       if (data.isSuperAdmin) setIsSuperAdmin(true)
 
+      const serverCount = data.vote?.voteCount ?? (voteCount + 1)
+      setVoteCount(serverCount)
+
       const contributions = incrementContributions()
 
       // Build impact message
@@ -88,7 +91,7 @@ export function VoteButton({
         })
       }
 
-      onVote?.()
+      onVote?.(serverCount)
     } catch {
       setVoteCount(prev => prev - 1)
       if (!isSuperAdmin) setVoted(false)
