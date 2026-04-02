@@ -25,6 +25,7 @@ export function TrendingList({ items: initialItems, isSuperAdmin }: TrendingList
   const { listRef, snapshot } = useFLIP(items)
 
   const handleRemoved = (linkUrl: string) => {
+    snapshot()
     setItems(prev => prev.filter(item => item.linkUrl !== linkUrl))
   }
 

@@ -71,7 +71,7 @@ export function VoteButton({
       const data = await res.json()
       if (data.isSuperAdmin) setIsSuperAdmin(true)
 
-      const serverCount = data.vote?.voteCount ?? voteCount
+      const serverCount = data.vote?.voteCount ?? (voteCount + 1)
       setVoteCount(serverCount)
 
       const contributions = incrementContributions()
