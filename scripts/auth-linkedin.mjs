@@ -62,7 +62,7 @@ if (!CLIENT_ID || !CLIENT_SECRET) {
   process.exit(1);
 }
 
-const scope = 'profile w_member_social';
+const scope = 'openid profile w_member_social';
 const state = Math.random().toString(36).slice(2);
 
 const authUrl =
@@ -128,20 +128,39 @@ const server = createServer(async (req, res) => {
   const tokenData = await tokenRes.json();
   const accessToken = tokenData.access_token;
 
-  // Extract person URN from JWT token (works without profile scope)
   let personUrn = '';
-  try {
-    const payload = JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64url').toString());
-    const sub = payload.sub || payload.id || '';
-    if (sub) {
-      personUrn = sub.startsWith('urn:li:') ? sub : `urn:li:person:${sub}`;
-      console.log(`Zalogowano (URN z tokena): ${personUrn}`);
+
+  // Try id_token from OpenID Connect (JWT, contains sub)
+  if (tokenData.id_token) {
+    try {
+      const parts = tokenData.id_token.split('.');
+      const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+      const sub = payload.sub || '';
+      if (sub) {
+        personUrn = sub.startsWith('urn:li:') ? sub : `urn:li:person:${sub}`;
+        console.log(`Zalogowano (URN z id_token): ${personUrn}`);
+      }
+    } catch {
+      // ignore
     }
-  } catch {
-    // token not JWT — ignore
   }
 
-  // Fallback: try /v2/me (may fail without profile scope)
+  // Fallback: /v2/userinfo (OpenID Connect endpoint)
+  if (!personUrn) {
+    const userinfoRes = await fetch('https://api.linkedin.com/v2/userinfo', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (userinfoRes.ok) {
+      const userinfo = await userinfoRes.json();
+      const sub = userinfo.sub || '';
+      if (sub) {
+        personUrn = sub.startsWith('urn:li:') ? sub : `urn:li:person:${sub}`;
+        console.log(`Zalogowano jako: ${sub}`);
+      }
+    }
+  }
+
+  // Fallback: /v2/me
   if (!personUrn) {
     const profileRes = await fetch('https://api.linkedin.com/v2/me', {
       headers: { Authorization: `Bearer ${accessToken}` },
