@@ -128,19 +128,31 @@ const server = createServer(async (req, res) => {
   const tokenData = await tokenRes.json();
   const accessToken = tokenData.access_token;
 
-  // Get person URN via /v2/me
-  const profileRes = await fetch('https://api.linkedin.com/v2/me', {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-
+  // Extract person URN from JWT token (works without profile scope)
   let personUrn = '';
-  if (profileRes.ok) {
-    const profile = await profileRes.json();
-    personUrn = profile.id ? `urn:li:person:${profile.id}` : '';
-    const name = [profile.localizedFirstName, profile.localizedLastName].filter(Boolean).join(' ');
-    console.log(`Zalogowano jako: ${name || profile.id}`);
-  } else {
-    console.warn('Nie udało się pobrać profilu — LINKEDIN_PERSON_URN będzie pusty');
+  try {
+    const payload = JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64url').toString());
+    const sub = payload.sub || payload.id || '';
+    if (sub) {
+      personUrn = sub.startsWith('urn:li:') ? sub : `urn:li:person:${sub}`;
+      console.log(`Zalogowano (URN z tokena): ${personUrn}`);
+    }
+  } catch {
+    // token not JWT — ignore
+  }
+
+  // Fallback: try /v2/me (may fail without profile scope)
+  if (!personUrn) {
+    const profileRes = await fetch('https://api.linkedin.com/v2/me', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (profileRes.ok) {
+      const profile = await profileRes.json();
+      personUrn = profile.id ? `urn:li:person:${profile.id}` : '';
+      if (personUrn) console.log(`Zalogowano jako: ${profile.id}`);
+    } else {
+      console.warn('Nie udało się pobrać profilu — ustaw LINKEDIN_PERSON_URN ręcznie w .env');
+    }
   }
 
   updateEnv({
