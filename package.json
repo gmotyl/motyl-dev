@@ -19,7 +19,8 @@
     "init:mcp": "tsx scripts/init-mcp.ts",
     "newsletter:preview": "tsx scripts/send-newsletter.ts",
     "newsletter:send": "tsx scripts/send-newsletter.ts --send",
-    "image:optimize": "tsx scripts/image-optimize.ts"
+    "image:optimize": "tsx scripts/image-optimize.ts",
+    "auth:linkedin": "node scripts/auth-linkedin.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
