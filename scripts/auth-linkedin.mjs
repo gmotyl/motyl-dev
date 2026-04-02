@@ -126,6 +126,11 @@ const server = createServer(async (req, res) => {
   }
 
   const tokenData = await tokenRes.json();
+  console.log('\n[DEBUG] Token response keys:', Object.keys(tokenData));
+  console.log('[DEBUG] token_type:', tokenData.token_type);
+  console.log('[DEBUG] scope:', tokenData.scope);
+  console.log('[DEBUG] expires_in:', tokenData.expires_in);
+  console.log('[DEBUG] has id_token:', !!tokenData.id_token);
   const accessToken = tokenData.access_token;
 
   let personUrn = '';
@@ -134,42 +139,55 @@ const server = createServer(async (req, res) => {
   if (tokenData.id_token) {
     try {
       const parts = tokenData.id_token.split('.');
+      console.log('[DEBUG] id_token parts count:', parts.length);
       const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+      console.log('[DEBUG] id_token payload:', JSON.stringify(payload));
       const sub = payload.sub || '';
       if (sub) {
         personUrn = sub.startsWith('urn:li:') ? sub : `urn:li:person:${sub}`;
         console.log(`Zalogowano (URN z id_token): ${personUrn}`);
       }
-    } catch {
-      // ignore
+    } catch (e) {
+      console.warn('[DEBUG] id_token parse error:', e.message);
     }
   }
 
   // Fallback: /v2/userinfo (OpenID Connect endpoint)
   if (!personUrn) {
+    console.log('[DEBUG] Trying /v2/userinfo...');
     const userinfoRes = await fetch('https://api.linkedin.com/v2/userinfo', {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
+    console.log('[DEBUG] /v2/userinfo status:', userinfoRes.status);
     if (userinfoRes.ok) {
       const userinfo = await userinfoRes.json();
+      console.log('[DEBUG] /v2/userinfo response:', JSON.stringify(userinfo));
       const sub = userinfo.sub || '';
       if (sub) {
         personUrn = sub.startsWith('urn:li:') ? sub : `urn:li:person:${sub}`;
         console.log(`Zalogowano jako: ${sub}`);
       }
+    } else {
+      const err = await userinfoRes.text();
+      console.warn('[DEBUG] /v2/userinfo error:', err);
     }
   }
 
   // Fallback: /v2/me
   if (!personUrn) {
+    console.log('[DEBUG] Trying /v2/me...');
     const profileRes = await fetch('https://api.linkedin.com/v2/me', {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
+    console.log('[DEBUG] /v2/me status:', profileRes.status);
     if (profileRes.ok) {
       const profile = await profileRes.json();
+      console.log('[DEBUG] /v2/me response:', JSON.stringify(profile));
       personUrn = profile.id ? `urn:li:person:${profile.id}` : '';
       if (personUrn) console.log(`Zalogowano jako: ${profile.id}`);
     } else {
+      const err = await profileRes.text();
+      console.warn('[DEBUG] /v2/me error:', err);
       console.warn('Nie udało się pobrać profilu — ustaw LINKEDIN_PERSON_URN ręcznie w .env');
     }
   }
