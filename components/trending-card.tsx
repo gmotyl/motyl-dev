@@ -153,6 +153,7 @@ export function TrendingCard({
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
+        style={isSuperAdmin ? { touchAction: 'pan-y' } : undefined}
         className={cn(
           'group relative rounded-lg border transition-all duration-200 hover:shadow-md flex flex-row overflow-hidden bg-background',
           `category-${currentCategory} unvisited-article`
