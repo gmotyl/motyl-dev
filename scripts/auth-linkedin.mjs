@@ -62,7 +62,7 @@ if (!CLIENT_ID || !CLIENT_SECRET) {
   process.exit(1);
 }
 
-const scope = 'openid profile w_member_social';
+const scope = 'profile w_member_social';
 const state = Math.random().toString(36).slice(2);
 
 const authUrl =
@@ -128,17 +128,17 @@ const server = createServer(async (req, res) => {
   const tokenData = await tokenRes.json();
   const accessToken = tokenData.access_token;
 
-  // Get person URN via OpenID userinfo
-  const profileRes = await fetch('https://api.linkedin.com/v2/userinfo', {
+  // Get person URN via /v2/me
+  const profileRes = await fetch('https://api.linkedin.com/v2/me', {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 
   let personUrn = '';
   if (profileRes.ok) {
     const profile = await profileRes.json();
-    // sub is the member ID, URN format: urn:li:person:ID
-    personUrn = `urn:li:person:${profile.sub}`;
-    console.log(`Zalogowano jako: ${profile.name} (${profile.email ?? profile.sub})`);
+    personUrn = profile.id ? `urn:li:person:${profile.id}` : '';
+    const name = [profile.localizedFirstName, profile.localizedLastName].filter(Boolean).join(' ');
+    console.log(`Zalogowano jako: ${name || profile.id}`);
   } else {
     console.warn('Nie udało się pobrać profilu — LINKEDIN_PERSON_URN będzie pusty');
   }
