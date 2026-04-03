@@ -11,7 +11,6 @@ import { getHomepageFeed } from '@/lib/trends'
 import { getContentUrl } from '@/lib/urls'
 import { getOgImage } from '@/lib/og'
 import { getAllNewsletterMeta } from '@/lib/newsletter-issues'
-import { auth } from '@/lib/auth'
 import Image from 'next/image'
 
 export const revalidate = 300 // ISR: revalidate every 5 min; vote counts update optimistically client-side
@@ -19,13 +18,11 @@ export const revalidate = 300 // ISR: revalidate every 5 min; vote counts update
 const emptyFeed = { trendings: [], lastWeekSummary: null }
 
 export default async function Home() {
-  const [feed, articles, newsletters, session] = await Promise.all([
+  const [feed, articles, newsletters] = await Promise.all([
     getHomepageFeed().catch(() => emptyFeed),
     getAllContentMetadata(),
     getAllNewsletterMeta(),
-    auth().catch(() => null),
   ])
-  const isSuperAdmin = session?.user?.isSuperAdmin ?? false
   const latestArticles = articles.filter(a => a.itemType === ItemType.Article).slice(0, 3)
   const totalVotes = feed.trendings.reduce((sum, t) => sum + t.voteCount, 0)
 
@@ -97,7 +94,7 @@ export default async function Home() {
           {feed.trendings.length > 0 ? (
             <section className="space-y-3">
               <h2 className="text-xl font-semibold">🎯 Trending Now</h2>
-              <TrendingList items={feed.trendings} isSuperAdmin={isSuperAdmin} />
+              <TrendingList items={feed.trendings} />
             </section>
           ) : (
             <section className="rounded-lg border border-dashed border-primary/30 p-8 text-center text-muted-foreground">
