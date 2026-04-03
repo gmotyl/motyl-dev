@@ -14,7 +14,7 @@ import { getAllNewsletterMeta } from '@/lib/newsletter-issues'
 import { auth } from '@/lib/auth'
 import Image from 'next/image'
 
-export const dynamic = 'force-dynamic' // votes change frequently
+export const revalidate = 300 // ISR: revalidate every 5 min; vote counts update optimistically client-side
 
 const emptyFeed = { trendings: [], lastWeekSummary: null }
 
