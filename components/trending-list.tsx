@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useSession } from 'next-auth/react'
 import { TrendingCard } from '@/components/trending-card'
 import type { ContentCategory } from '@/lib/og'
 import { useFLIP } from '@/hooks/use-flip'
@@ -17,10 +18,11 @@ interface TrendingItem {
 
 interface TrendingListProps {
   items: TrendingItem[]
-  isSuperAdmin: boolean
 }
 
-export function TrendingList({ items: initialItems, isSuperAdmin }: TrendingListProps) {
+export function TrendingList({ items: initialItems }: TrendingListProps) {
+  const { data: session } = useSession()
+  const isSuperAdmin = session?.user?.isSuperAdmin ?? false
   const [items, setItems] = useState(initialItems)
   const { listRef, snapshot } = useFLIP(items)
 
