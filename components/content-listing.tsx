@@ -1,75 +1,79 @@
 'use client'
 
-import { useState, useMemo, useTransition, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import Footer from '@/components/footer'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { useVisitedArticles } from '@/hooks/use-visited-articles'
 import { HashtagInput } from '@/components/hashtag-input'
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from '@/components/ui/pagination'
-import { type ContentItemMetadata } from '@/lib/articles'
 import AdUnit from '@/components/ad-unit'
-import { getFilteredContent } from '@/app/actions'
 import { getOgImage } from '@/lib/og'
 import Image from 'next/image'
 import { CategoryIcon, CategoryIconMini } from '@/components/category-icon'
 import { getContentCategory } from '@/lib/og'
+import { formatDate } from '@/lib/utils'
+import type { TrimmedItem, ContentManifest } from '@/lib/content-batches'
+
+const RENDER_BATCH = 30
 
 interface ContentListingProps {
   title: string
   description?: string
-  initialItems: ContentItemMetadata[]
-  totalPages: number
-  currentPage: number
+  initialBatch: TrimmedItem[]
+  manifest: ContentManifest
   allHashtags: string[]
-  hashtagCounts: Record<string, number>
-  totalItems: number
   contentType: 'article' | 'news' | 'all'
   basePath: string
-  requireHashtags?: string[]
-  excludeHashtags?: string[]
 }
 
 export function ContentListing({
   title,
   description,
-  initialItems,
-  totalPages: initialTotalPages,
-  currentPage: initialCurrentPage,
+  initialBatch,
+  manifest,
   allHashtags,
-  hashtagCounts: initialHashtagCounts,
-  totalItems: initialTotalItems,
   contentType,
   basePath,
-  requireHashtags,
-  excludeHashtags,
 }: ContentListingProps) {
-  const { markAsVisited, isVisited } = useVisitedArticles()
+  const { markAsVisited, isVisited, visitedArticles, isLoading: visitedLoading } = useVisitedArticles()
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [isPending, startTransition] = useTransition()
+  const sentinelRef = useRef<HTMLDivElement>(null)
 
-  // Component state, initialized from props
-  const [items, setItems] = useState(initialItems)
-  const [currentPage, setCurrentPage] = useState(initialCurrentPage)
-  const [totalPages, setTotalPages] = useState(initialTotalPages)
-  const [totalItems, setTotalItems] = useState(initialTotalItems)
-  const [hashtagCounts, setHashtagCounts] = useState(initialHashtagCounts)
+  // Data loading state
+  const [loadedItems, setLoadedItems] = useState<TrimmedItem[]>(initialBatch)
+  const [nextBatchIndex, setNextBatchIndex] = useState(1)
+  const [allBatchesLoaded, setAllBatchesLoaded] = useState(false)
+  const [isFetchingBatch, setIsFetchingBatch] = useState(false)
+  const [tagData, setTagData] = useState<TrimmedItem[] | null>(null)
+  const [isFetchingTag, setIsFetchingTag] = useState(false)
 
-  // Filter state derived from URL search parameters
+  // Render state
+  const [visibleCount, setVisibleCount] = useState(RENDER_BATCH)
+  const [removingSlugs, setRemovingSlugs] = useState<Set<string>>(new Set())
+  const [clientReady, setClientReady] = useState(false)
+
+  const contentKey = contentType === 'all' ? 'news' : contentType
+  const manifestSection = manifest[contentKey as 'news' | 'articles']
+  const totalBatches = manifestSection?.batches ?? 1
+  const serverTotalItems = manifestSection?.total ?? initialBatch.length
+
+  // Hashtag counts from manifest
+  const manifestTagCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const [tag, data] of Object.entries(manifest.tags)) {
+      const count = contentKey === 'news' ? data.news : data.articles
+      if (count > 0) counts[tag] = count
+    }
+    return counts
+  }, [manifest.tags, contentKey])
+
+  // Filter state from URL
   const selectedHashtags = useMemo(() => {
-    const hashtags = searchParams.get('hashtags')
-    return new Set(hashtags ? hashtags.split(',') : [])
+    const h = searchParams.get('hashtags')
+    return new Set(h ? h.split(',') : [])
   }, [searchParams])
 
   const filterMode = useMemo(() => {
@@ -80,102 +84,223 @@ export function ContentListing({
     return searchParams.get('unseen') === 'true'
   }, [searchParams])
 
-  // Central function to run filters and update state
-  const runFilter = useCallback(
-    (newFilterState: {
-      page?: number
-      hashtags?: Set<string>
-      mode?: 'AND' | 'OR' | 'EXCLUDE'
-      showUnseen?: boolean
-    }) => {
+  // Determine data source: tag data (if single hashtag) or loaded batches
+  const isUsingTagData = selectedHashtags.size === 1 && filterMode === 'AND' && tagData !== null
+  const baseItems = isUsingTagData ? tagData! : loadedItems
+
+  // Client-side filtering on loaded data
+  const filteredItems = useMemo(() => {
+    let result = baseItems
+
+    // Multi-hashtag filter (single-tag uses precompiled data)
+    if (selectedHashtags.size > 0 && !isUsingTagData) {
+      const tags = Array.from(selectedHashtags)
+      if (filterMode === 'AND') {
+        result = result.filter((item) => tags.every((t) => item.hashtags.includes(t)))
+      } else if (filterMode === 'OR') {
+        result = result.filter((item) => tags.some((t) => item.hashtags.includes(t)))
+      } else {
+        result = result.filter((item) => !tags.some((t) => item.hashtags.includes(t)))
+      }
+    }
+
+    // Unseen filter
+    if (showUnseenOnly && clientReady) {
+      result = result.filter((item) => !visitedArticles.has(item.slug))
+    }
+
+    return result
+  }, [baseItems, selectedHashtags, filterMode, showUnseenOnly, clientReady, visitedArticles, isUsingTagData])
+
+  // Hashtag counts: use manifest counts when no filter active, recompute from loaded data otherwise
+  const hashtagCounts = useMemo(() => {
+    if (selectedHashtags.size === 0 && !showUnseenOnly) return manifestTagCounts
+    const counts: Record<string, number> = {}
+    filteredItems.forEach((item) => {
+      item.hashtags.forEach((tag: string) => {
+        counts[tag] = (counts[tag] || 0) + 1
+      })
+    })
+    return counts
+  }, [filteredItems, selectedHashtags, showUnseenOnly, manifestTagCounts])
+
+  const totalItems = isUsingTagData
+    ? filteredItems.length
+    : selectedHashtags.size === 0 && !showUnseenOnly
+      ? serverTotalItems
+      : filteredItems.length
+
+  // Items visible via infinite scroll
+  const visibleItems = useMemo(() => {
+    return filteredItems.slice(0, visibleCount)
+  }, [filteredItems, visibleCount])
+
+  const hasMore = isUsingTagData
+    ? visibleCount < filteredItems.length
+    : visibleCount < filteredItems.length || !allBatchesLoaded
+
+  // Fetch next batch of items
+  const fetchNextBatch = useCallback(async () => {
+    if (isFetchingBatch || allBatchesLoaded || isUsingTagData) return
+    if (nextBatchIndex >= totalBatches) {
+      setAllBatchesLoaded(true)
+      return
+    }
+
+    setIsFetchingBatch(true)
+    try {
+      const res = await fetch(`/data/batches/${contentKey}-${nextBatchIndex}.json`)
+      if (res.ok) {
+        const batch: TrimmedItem[] = await res.json()
+        setLoadedItems((prev) => [...prev, ...batch])
+        setNextBatchIndex((prev) => prev + 1)
+        if (nextBatchIndex + 1 >= totalBatches) {
+          setAllBatchesLoaded(true)
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch batch:', e)
+    } finally {
+      setIsFetchingBatch(false)
+    }
+  }, [isFetchingBatch, allBatchesLoaded, isUsingTagData, nextBatchIndex, totalBatches, contentKey])
+
+  // Fetch precompiled tag data on single-tag selection
+  useEffect(() => {
+    if (selectedHashtags.size !== 1 || filterMode !== 'AND') {
+      setTagData(null)
+      return
+    }
+
+    const tag = Array.from(selectedHashtags)[0]
+    const safeName = tag.replace(/[^a-z0-9-]/gi, '_').toLowerCase()
+    const tagCount = manifest.tags[tag]?.[contentKey as 'news' | 'articles'] ?? 0
+
+    if (tagCount < 2) {
+      setTagData(null)
+      return
+    }
+
+    setIsFetchingTag(true)
+    fetch(`/data/tags/${contentKey}-${safeName}.json`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) setTagData(data)
+        else setTagData(null)
+      })
+      .catch(() => setTagData(null))
+      .finally(() => setIsFetchingTag(false))
+  }, [selectedHashtags, filterMode, contentKey, manifest.tags])
+
+  // When visited data loads and unseen=true, animate removal
+  useEffect(() => {
+    if (visitedLoading || clientReady) return
+
+    if (showUnseenOnly) {
+      const toRemove = new Set<string>()
+      baseItems.forEach((item) => {
+        if (visitedArticles.has(item.slug)) toRemove.add(item.slug)
+      })
+
+      if (toRemove.size > 0) {
+        setRemovingSlugs(toRemove)
+        const timer = setTimeout(() => {
+          setClientReady(true)
+          setRemovingSlugs(new Set())
+        }, 400)
+        return () => clearTimeout(timer)
+      }
+    }
+
+    setClientReady(true)
+  }, [visitedLoading, showUnseenOnly, baseItems, visitedArticles, clientReady])
+
+  useEffect(() => {
+    if (!visitedLoading && !showUnseenOnly && !clientReady) {
+      setClientReady(true)
+    }
+  }, [visitedLoading, showUnseenOnly, clientReady])
+
+  // IntersectionObserver — load more rendered items or fetch next batch
+  useEffect(() => {
+    const sentinel = sentinelRef.current
+    if (!sentinel) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries[0].isIntersecting) return
+
+        if (visibleCount < filteredItems.length) {
+          // More items available in memory — just reveal them
+          setVisibleCount((prev) => prev + RENDER_BATCH)
+        } else if (!allBatchesLoaded && !isUsingTagData) {
+          // Need more data — fetch next batch
+          fetchNextBatch()
+        }
+      },
+      { rootMargin: '400px' }
+    )
+
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [visibleCount, filteredItems.length, allBatchesLoaded, isUsingTagData, fetchNextBatch])
+
+  // Reset visible count when filters change
+  useEffect(() => {
+    setVisibleCount(RENDER_BATCH)
+  }, [selectedHashtags, filterMode, showUnseenOnly])
+
+  // URL updates
+  const updateURL = useCallback(
+    (updates: { hashtags?: Set<string>; mode?: string; unseen?: boolean }) => {
       const params = new URLSearchParams(searchParams)
 
-      const finalState = {
-        page: newFilterState.page ?? currentPage,
-        hashtags: Array.from(newFilterState.hashtags ?? selectedHashtags),
-        mode: newFilterState.mode ?? filterMode,
-        showUnseen: newFilterState.showUnseen ?? showUnseenOnly,
-        contentType: contentType,
-        requireHashtags: requireHashtags,
-        excludeHashtags: excludeHashtags,
-      }
+      const hashtags = updates.hashtags ?? selectedHashtags
+      const mode = updates.mode ?? filterMode
+      const unseen = updates.unseen ?? showUnseenOnly
 
-      // Update URL
-      params.set('page', finalState.page.toString())
-      if (finalState.hashtags.length > 0) {
-        params.set('hashtags', finalState.hashtags.join(','))
+      if (hashtags.size > 0) {
+        params.set('hashtags', Array.from(hashtags).join(','))
       } else {
         params.delete('hashtags')
       }
-      params.set('mode', finalState.mode)
-      if (finalState.showUnseen) {
+      if (mode !== 'AND') {
+        params.set('mode', mode)
+      } else {
+        params.delete('mode')
+      }
+      if (unseen) {
         params.set('unseen', 'true')
       } else {
         params.delete('unseen')
       }
-      router.push(`${pathname}?${params.toString()}`, { scroll: false })
 
-      // Call server action
-      startTransition(async () => {
-        const result = await getFilteredContent(finalState)
-        setItems(result.items)
-        setCurrentPage(result.currentPage)
-        setTotalPages(result.totalPages)
-        setTotalItems(result.totalItems)
-        setHashtagCounts(result.hashtagCounts)
-      })
+      const qs = params.toString()
+      router.replace(`${pathname}${qs ? '?' + qs : ''}`, { scroll: false })
     },
-    [
-      searchParams,
-      currentPage,
-      selectedHashtags,
-      filterMode,
-      showUnseenOnly,
-      router,
-      pathname,
-      contentType,
-      requireHashtags,
-      excludeHashtags,
-    ]
+    [searchParams, selectedHashtags, filterMode, showUnseenOnly, router, pathname]
   )
 
-  // Handlers for UI interactions
-  const handlePageChange = (page: number) => {
-    runFilter({ page })
-  }
-
   const handleHashtagToggle = (hashtag: string) => {
-    const newHashtags = new Set(selectedHashtags)
-    if (newHashtags.has(hashtag)) {
-      newHashtags.delete(hashtag)
-    } else {
-      newHashtags.add(hashtag)
-    }
-    runFilter({ hashtags: newHashtags, page: 1 })
+    const next = new Set(selectedHashtags)
+    if (next.has(hashtag)) next.delete(hashtag)
+    else next.add(hashtag)
+    updateURL({ hashtags: next })
   }
 
   const handleFilterModeChange = (mode: 'AND' | 'OR' | 'EXCLUDE') => {
-    runFilter({ mode, page: 1 })
+    updateURL({ mode })
   }
 
   const handleToggleUnseen = () => {
-    runFilter({ showUnseen: !showUnseenOnly, page: 1 })
+    updateURL({ unseen: !showUnseenOnly })
   }
 
   const handleClearFilters = () => {
-    runFilter({ hashtags: new Set(), showUnseen: false, page: 1, mode: 'AND' })
+    updateURL({ hashtags: new Set(), unseen: false, mode: 'AND' })
   }
 
-  // When initial props change (e.g., direct navigation), sync state
-  useEffect(() => {
-    setItems(initialItems)
-    setCurrentPage(initialCurrentPage)
-    setTotalPages(initialTotalPages)
-    setTotalItems(initialTotalItems)
-    setHashtagCounts(initialHashtagCounts)
-  }, [initialItems, initialCurrentPage, initialTotalPages, initialTotalItems, initialHashtagCounts])
-
-  // State for hashtag visibility UI
+  // Hashtag UI state
   const [showHashtagGrid, setShowHashtagGrid] = useState(false)
   const [showAllHashtags, setShowAllHashtags] = useState(false)
   const [showZeroCountHashtags, setShowZeroCountHashtags] = useState(false)
@@ -184,30 +309,24 @@ export function ContentListing({
     return [...allHashtags].sort((a, b) => {
       const countA = hashtagCounts[a] || 0
       const countB = hashtagCounts[b] || 0
-      if (countB !== countA) {
-        return countB - countA
-      }
-      return a.localeCompare(b)
+      return countB !== countA ? countB - countA : a.localeCompare(b)
     })
   }, [allHashtags, hashtagCounts])
 
   const { visibleHashtags, hiddenHashtagsWithCounts, hiddenHashtagsWithoutCounts } = useMemo(() => {
-    const selectedHashtagsArray = Array.from(selectedHashtags)
-    const selectedHashtagsSet = new Set(selectedHashtagsArray)
-
-    const hashtagsWithCounts = sortedHashtags.filter(
-      (hashtag) => (hashtagCounts[hashtag] || 0) > 0 || selectedHashtagsSet.has(hashtag)
+    const selected = new Set(selectedHashtags)
+    const withCounts = sortedHashtags.filter(
+      (h) => (hashtagCounts[h] || 0) > 0 || selected.has(h)
     )
-    const hashtagsWithoutCounts = sortedHashtags.filter(
-      (hashtag) => (hashtagCounts[hashtag] || 0) === 0 && !selectedHashtagsSet.has(hashtag)
+    const withoutCounts = sortedHashtags.filter(
+      (h) => (hashtagCounts[h] || 0) === 0 && !selected.has(h)
     )
 
     if (showAllHashtags) {
-      const hiddenZeroCounts = showZeroCountHashtags ? [] : hashtagsWithoutCounts
       return {
-        visibleHashtags: showZeroCountHashtags ? sortedHashtags : hashtagsWithCounts,
+        visibleHashtags: showZeroCountHashtags ? sortedHashtags : withCounts,
         hiddenHashtagsWithCounts: [],
-        hiddenHashtagsWithoutCounts: hiddenZeroCounts,
+        hiddenHashtagsWithoutCounts: showZeroCountHashtags ? [] : withoutCounts,
       }
     }
 
@@ -215,57 +334,35 @@ export function ContentListing({
     const visible: string[] = []
     const hidden: string[] = []
 
-    hashtagsWithCounts.forEach((hashtag) => {
-      if (selectedHashtagsSet.has(hashtag) || visible.length < VISIBLE_COUNT) {
-        visible.push(hashtag)
-      } else {
-        hidden.push(hashtag)
-      }
+    withCounts.forEach((h) => {
+      if (selected.has(h) || visible.length < VISIBLE_COUNT) visible.push(h)
+      else hidden.push(h)
     })
 
-    return {
-      visibleHashtags: visible,
-      hiddenHashtagsWithCounts: hidden,
-      hiddenHashtagsWithoutCounts: hashtagsWithoutCounts,
-    }
+    return { visibleHashtags: visible, hiddenHashtagsWithCounts: hidden, hiddenHashtagsWithoutCounts: withoutCounts }
   }, [sortedHashtags, hashtagCounts, selectedHashtags, showAllHashtags, showZeroCountHashtags])
 
-  const getPageNumbers = () => {
-    const pages: (number | 'ellipsis')[] = []
-    if (totalPages <= 7) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i)
-      }
-    } else {
-      pages.push(1)
-      if (currentPage > 3) {
-        pages.push('ellipsis')
-      }
-      const start = Math.max(2, currentPage - 1)
-      const end = Math.min(totalPages - 1, currentPage + 1)
-      for (let i = start; i <= end; i++) {
-        pages.push(i)
-      }
-      if (currentPage < totalPages - 2) {
-        pages.push('ellipsis')
-      }
-      pages.push(totalPages)
-    }
-    return pages
-  }
+  // Loading state
+  const isLoading = isFetchingTag || (visitedLoading && showUnseenOnly)
 
-  const startIndex = (currentPage - 1) * 20
-  const endIndex = startIndex + items.length
+  // Items to render (pre-filter during animation)
+  const renderItems = clientReady ? visibleItems : baseItems.slice(0, visibleCount)
 
   return (
     <div className="flex min-h-screen flex-col">
+      {/* Progress bar */}
+      {isLoading && (
+        <div className="fixed top-0 left-0 right-0 z-50 h-0.5 bg-muted overflow-hidden">
+          <div className="h-full bg-primary animate-progress-bar" />
+        </div>
+      )}
+
       <main className="flex-1 container py-10">
         <h1 className="text-3xl font-bold mb-2">{title}</h1>
         {description && <p className="text-muted-foreground mb-8">{description}</p>}
 
         {allHashtags.length > 0 && (
           <div className="mb-8">
-            {/* Compact filter bar */}
             <div className="flex items-center gap-3 flex-wrap">
               <HashtagInput
                 selectedHashtags={Array.from(selectedHashtags)}
@@ -294,36 +391,21 @@ export function ContentListing({
               {selectedHashtags.size > 0 && (
                 <div className="flex items-center gap-2">
                   <div className="flex gap-1 border rounded-md overflow-hidden">
-                    <button
-                      onClick={() => handleFilterModeChange('AND')}
-                      className={`px-2 py-1 text-xs font-medium transition-colors ${
-                        filterMode === 'AND'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-background hover:bg-muted'
-                      }`}
-                    >
-                      HAS
-                    </button>
-                    <button
-                      onClick={() => handleFilterModeChange('OR')}
-                      className={`px-2 py-1 text-xs font-medium transition-colors ${
-                        filterMode === 'OR'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-background hover:bg-muted'
-                      }`}
-                    >
-                      ANY
-                    </button>
-                    <button
-                      onClick={() => handleFilterModeChange('EXCLUDE')}
-                      className={`px-2 py-1 text-xs font-medium transition-colors ${
-                        filterMode === 'EXCLUDE'
-                          ? 'bg-destructive text-destructive-foreground'
-                          : 'bg-background hover:bg-muted'
-                      }`}
-                    >
-                      EXCLUDE
-                    </button>
+                    {(['AND', 'OR', 'EXCLUDE'] as const).map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => handleFilterModeChange(m)}
+                        className={`px-2 py-1 text-xs font-medium transition-colors ${
+                          filterMode === m
+                            ? m === 'EXCLUDE'
+                              ? 'bg-destructive text-destructive-foreground'
+                              : 'bg-primary text-primary-foreground'
+                            : 'bg-background hover:bg-muted'
+                        }`}
+                      >
+                        {m === 'AND' ? 'HAS' : m === 'OR' ? 'ANY' : 'EXCLUDE'}
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}
@@ -335,7 +417,6 @@ export function ContentListing({
               )}
             </div>
 
-            {/* Active filter badges */}
             {selectedHashtags.size > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-3">
                 {Array.from(selectedHashtags).map((hashtag) => (
@@ -351,7 +432,6 @@ export function ContentListing({
               </div>
             )}
 
-            {/* Expandable hashtag grid */}
             {showHashtagGrid && (
               <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border/50">
                 <Button
@@ -359,22 +439,19 @@ export function ContentListing({
                   size="sm"
                   onClick={handleClearFilters}
                 >
-                  All ({totalItems})
+                  All ({serverTotalItems})
                 </Button>
 
                 {visibleHashtags.map((hashtag) => {
                   const count = hashtagCounts[hashtag] || 0
                   const isSelected = selectedHashtags.has(hashtag)
-
                   return (
                     <Button
                       key={hashtag}
                       variant={isSelected ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => handleHashtagToggle(hashtag)}
-                      className={
-                        count === 0 && !isSelected ? 'text-muted-foreground line-through' : ''
-                      }
+                      className={count === 0 && !isSelected ? 'text-muted-foreground line-through' : ''}
                     >
                       #{hashtag}
                       {count > 0 && ` (${count})`}
@@ -384,119 +461,94 @@ export function ContentListing({
 
                 {!showAllHashtags &&
                   (hiddenHashtagsWithCounts.length > 0 || hiddenHashtagsWithoutCounts.length > 0) && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowAllHashtags(true)}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => setShowAllHashtags(true)} className="text-muted-foreground hover:text-foreground">
                       more...
                     </Button>
                   )}
 
-                {showAllHashtags &&
-                  !showZeroCountHashtags &&
-                  hiddenHashtagsWithoutCounts.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowZeroCountHashtags(true)}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      more...
-                    </Button>
-                  )}
+                {showAllHashtags && !showZeroCountHashtags && hiddenHashtagsWithoutCounts.length > 0 && (
+                  <Button variant="ghost" size="sm" onClick={() => setShowZeroCountHashtags(true)} className="text-muted-foreground hover:text-foreground">
+                    more...
+                  </Button>
+                )}
 
-                {showAllHashtags &&
-                  (showZeroCountHashtags || hiddenHashtagsWithoutCounts.length === 0) && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setShowAllHashtags(false)
-                        setShowZeroCountHashtags(false)
-                      }}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      less...
-                    </Button>
-                  )}
+                {showAllHashtags && (showZeroCountHashtags || hiddenHashtagsWithoutCounts.length === 0) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => { setShowAllHashtags(false); setShowZeroCountHashtags(false) }}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    less...
+                  </Button>
+                )}
               </div>
             )}
           </div>
         )}
-        <div className={`transition-opacity ${isPending ? 'opacity-50' : 'opacity-100'}`}>
-          {items.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">No items found.</p>
+
+        {renderItems.length === 0 && !isLoading ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">No items found.</p>
+          </div>
+        ) : (
+          <>
+            <div className="mb-4 text-sm text-muted-foreground">
+              {totalItems} items{hasMore && ` · showing ${visibleItems.length}`}
+              {isFetchingBatch && ' · loading…'}
             </div>
-          ) : (
-            <>
-              <div className="mb-4 text-sm text-muted-foreground">
-                Showing {startIndex + 1}-{endIndex} of {totalItems} items
-              </div>
 
-              <div className="my-6">
-                <AdUnit
-                  pId="5937972178718571"
-                  adSlot="9373832601"
-                  adFormat="fluid"
-                />
-              </div>
+            <div className="my-6">
+              <AdUnit pId="5937972178718571" adSlot="9373832601" adFormat="fluid" />
+            </div>
 
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {items.map((item) => {
-                  const hashtags = (item as { hashtags: string[] }).hashtags ?? []
-                  const category = contentType === 'news' ? getContentCategory(hashtags) : null
-                  const visited = isVisited(item.slug)
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {renderItems.map((item) => {
+                const hashtags = item.hashtags ?? []
+                const category = contentType === 'news' ? getContentCategory(hashtags) : null
+                const visited = isVisited(item.slug)
+                const isRemoving = removingSlugs.has(item.slug)
+                const isNews = contentType === 'news'
 
-                  const isNews = contentType === 'news'
-
-                  return isNews ? (
+                return isNews ? (
                   <Link
                     key={item.slug}
                     href={`${basePath}/${item.slug}`}
                     prefetch={false}
                     onClick={() => markAsVisited(item.slug)}
-                    className={`rounded-lg border transition-all hover:shadow-md flex flex-row md:flex-col overflow-hidden ${
+                    className={`rounded-lg border transition-all duration-300 hover:shadow-md flex flex-row md:flex-col overflow-hidden ${
                       visited ? 'visited-article' : 'unvisited-article'
-                    } ${category ? `category-${category}` : ''}`}
+                    } ${category ? `category-${category}` : ''} ${
+                      isRemoving ? 'opacity-0 scale-95 max-h-0 !p-0 !m-0 !border-0 !gap-0 overflow-hidden' : 'opacity-100 scale-100'
+                    }`}
+                    style={isRemoving ? { transition: 'all 350ms ease-out' } : undefined}
                   >
-                    {/* Mobile: mini icon on the left */}
                     <div className="flex-shrink-0 w-16 flex items-center justify-center p-2 md:hidden">
-                      <CategoryIconMini
-                        hashtags={hashtags}
-                        className="w-12 h-12"
-                      />
+                      <CategoryIconMini hashtags={hashtags} className="w-12 h-12" />
                     </div>
-                    {/* Desktop: full icon on top */}
                     <div className="relative w-full overflow-hidden rounded-t-lg hidden md:block" style={{ aspectRatio: '16/7' }}>
-                      <CategoryIcon
-                        hashtags={hashtags}
-                        className="w-full h-full"
-                      />
+                      <CategoryIcon hashtags={hashtags} className="w-full h-full" />
                     </div>
                     <div className="p-4 md:p-6 flex flex-col flex-grow min-w-0">
                       <h2 className="article-title text-base md:text-xl font-bold mb-1 md:mb-2">{item.title}</h2>
                       <p className="article-excerpt flex-grow line-clamp-2 md:line-clamp-3">{item.excerpt}</p>
                       <p className="text-xs text-muted-foreground mt-auto">
-                        {new Date(item.publishedAt).toLocaleDateString('pl-PL', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                        })}
+                        {formatDate(item.publishedAt)}
                       </p>
                     </div>
                   </Link>
-                  ) : (
+                ) : (
                   <Link
                     key={item.slug}
                     href={`${basePath}/${item.slug}`}
                     prefetch={false}
                     onClick={() => markAsVisited(item.slug)}
-                    className={`rounded-lg border backdrop-blur-sm transition-all hover:shadow-md hover:border-primary/50 flex flex-col overflow-hidden ${
+                    className={`rounded-lg border backdrop-blur-sm transition-all duration-300 hover:shadow-md hover:border-primary/50 flex flex-col overflow-hidden ${
                       visited ? 'visited-article' : 'unvisited-article'
+                    } ${
+                      isRemoving ? 'opacity-0 scale-95 max-h-0 !p-0 !m-0 !border-0 !gap-0 overflow-hidden' : 'opacity-100 scale-100'
                     }`}
+                    style={isRemoving ? { transition: 'all 350ms ease-out' } : undefined}
                   >
                     <div className="relative w-full overflow-hidden rounded-t-lg" style={{ aspectRatio: '16/7' }}>
                       <Image
@@ -510,74 +562,22 @@ export function ContentListing({
                       <h2 className="article-title text-xl font-bold mb-2">{item.title}</h2>
                       <p className="article-excerpt flex-grow line-clamp-3">{item.excerpt}</p>
                       <p className="text-xs text-muted-foreground mt-auto">
-                        {new Date(item.publishedAt).toLocaleDateString('pl-PL', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                        })}
+                        {formatDate(item.publishedAt)}
                       </p>
                     </div>
                   </Link>
-                  )
-                })}
-              </div>
+                )
+              })}
+            </div>
 
-              {totalPages > 1 && (
-                <div className="mt-8">
-                  <Pagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault()
-                            if (currentPage > 1) handlePageChange(currentPage - 1)
-                          }}
-                          className={
-                            currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'
-                          }
-                        />
-                      </PaginationItem>
-                      {getPageNumbers().map((page, index) => (
-                        <PaginationItem key={index}>
-                          {page === 'ellipsis' ? (
-                            <PaginationEllipsis />
-                          ) : (
-                            <PaginationLink
-                              href="#"
-                              onClick={(e) => {
-                                e.preventDefault()
-                                handlePageChange(page as number)
-                              }}
-                              isActive={currentPage === page}
-                              className="cursor-pointer"
-                            >
-                              {page}
-                            </PaginationLink>
-                          )}
-                        </PaginationItem>
-                      ))}
-                      <PaginationItem>
-                        <PaginationNext
-                          href="#"
-                          onClick={(e) => {
-                            e.preventDefault()
-                            if (currentPage < totalPages) handlePageChange(currentPage + 1)
-                          }}
-                          className={
-                            currentPage === totalPages
-                              ? 'pointer-events-none opacity-50'
-                              : 'cursor-pointer'
-                          }
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
-                </div>
-              )}
-            </>
-          )}
-        </div>
+            {/* Infinite scroll sentinel */}
+            {hasMore && (
+              <div ref={sentinelRef} className="flex justify-center py-8">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted border-t-primary" />
+              </div>
+            )}
+          </>
+        )}
       </main>
       <Footer />
     </div>

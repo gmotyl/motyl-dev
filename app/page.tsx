@@ -12,6 +12,7 @@ import { getContentUrl } from '@/lib/urls'
 import { getOgImage } from '@/lib/og'
 import { getAllNewsletterMeta } from '@/lib/newsletter-issues'
 import Image from 'next/image'
+import { formatDate } from '@/lib/utils'
 
 export const revalidate = 300 // ISR: revalidate every 5 min; vote counts update optimistically client-side
 
@@ -131,11 +132,7 @@ export default async function Home() {
                         <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{article.excerpt}</p>
                       )}
                       <p className="mt-2 text-xs text-primary/60">
-                        {new Date(article.publishedAt).toLocaleDateString('pl-PL', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                        })}
+                        {formatDate(article.publishedAt)}
                       </p>
                     </div>
                   </Link>

@@ -50,13 +50,37 @@ interface HashtagStats {
   frequency: Record<string, number>
 }
 
+interface TrimmedItem {
+  slug: string
+  title: string
+  excerpt: string
+  publishedAt: string
+  hashtags: string[]
+  itemType: ItemTypeValue
+  image?: string
+  sourcePattern?: string
+}
+
+interface ContentManifest {
+  generatedAt: string
+  news: { batches: number; total: number }
+  articles: { batches: number; total: number }
+  tags: Record<string, { news: number; articles: number }>
+}
+
 // --- Constants ---
+
+const BATCH_SIZE = 60
+const EXCERPT_LIMIT = 120
 
 const ROOT_DIR = process.cwd()
 const articlesDirectory = path.join(ROOT_DIR, 'articles')
 const newsDirectory = path.join(ROOT_DIR, 'news')
 const outputPath = path.join(ROOT_DIR, 'data', 'content-cache.json')
 const hashtagStatsPath = path.join(ROOT_DIR, 'data', 'hashtag-stats.json')
+const batchesDir = path.join(ROOT_DIR, 'public', 'data', 'batches')
+const tagsDir = path.join(ROOT_DIR, 'public', 'data', 'tags')
+const manifestPath = path.join(ROOT_DIR, 'public', 'data', 'manifest.json')
 
 const matterOptions = {
   engines: {
@@ -219,6 +243,62 @@ async function buildHashtagStats(items: ContentItem[]): Promise<void> {
   console.log(`  Output: ${hashtagStatsPath}`)
 }
 
+// --- Batch & Tag Generation ---
+
+function trimItem(item: ContentItem): TrimmedItem {
+  const { content, externalLinks, ...meta } = item
+  return {
+    ...meta,
+    excerpt: meta.excerpt.length > EXCERPT_LIMIT
+      ? meta.excerpt.slice(0, EXCERPT_LIMIT).replace(/\s+\S*$/, '…')
+      : meta.excerpt,
+  }
+}
+
+async function generateBatches(items: ContentItem[], contentType: string): Promise<number> {
+  const trimmed = items.map(trimItem)
+  const batchCount = Math.ceil(trimmed.length / BATCH_SIZE)
+
+  for (let i = 0; i < batchCount; i++) {
+    const batch = trimmed.slice(i * BATCH_SIZE, (i + 1) * BATCH_SIZE)
+    const filePath = path.join(batchesDir, `${contentType}-${i}.json`)
+    await fs.writeFile(filePath, JSON.stringify(batch), 'utf8')
+  }
+
+  console.log(`  ${contentType}: ${batchCount} batches of ${BATCH_SIZE} (${trimmed.length} items)`)
+  return batchCount
+}
+
+async function generateTagPages(
+  items: ContentItem[],
+  contentType: string
+): Promise<Record<string, number>> {
+  const tagMap: Record<string, ContentItem[]> = {}
+
+  for (const item of items) {
+    for (const tag of item.hashtags) {
+      if (!tagMap[tag]) tagMap[tag] = []
+      tagMap[tag].push(item)
+    }
+  }
+
+  const tagCounts: Record<string, number> = {}
+  let filesWritten = 0
+
+  for (const [tag, tagItems] of Object.entries(tagMap)) {
+    if (tagItems.length < 2) continue // skip single-item tags
+    const trimmed = tagItems.map(trimItem)
+    const safeName = tag.replace(/[^a-z0-9-]/gi, '_').toLowerCase()
+    const filePath = path.join(tagsDir, `${contentType}-${safeName}.json`)
+    await fs.writeFile(filePath, JSON.stringify(trimmed), 'utf8')
+    tagCounts[tag] = tagItems.length
+    filesWritten++
+  }
+
+  console.log(`  ${contentType}: ${filesWritten} tag pages generated`)
+  return tagCounts
+}
+
 // --- Main Build Function ---
 
 async function buildContentCache(): Promise<void> {
@@ -259,6 +339,45 @@ async function buildContentCache(): Promise<void> {
 
   // Build hashtag statistics
   await buildHashtagStats(allContent)
+
+  // --- Generate batches and tag pages ---
+  console.log('\nGenerating batches and tag pages...')
+  await fs.mkdir(batchesDir, { recursive: true })
+  await fs.mkdir(tagsDir, { recursive: true })
+
+  // Split by content type
+  const newsItems = allContent.filter((i) => i.itemType === ItemType.News)
+  const articleItems = allContent.filter((i) => i.itemType === ItemType.Article)
+
+  const newsBatchCount = await generateBatches(newsItems, 'news')
+  const articlesBatchCount = await generateBatches(articleItems, 'articles')
+
+  console.log('\nGenerating tag pages...')
+  const newsTagCounts = await generateTagPages(newsItems, 'news')
+  const articlesTagCounts = await generateTagPages(articleItems, 'articles')
+
+  // Merge tag counts for manifest
+  const allTags: Record<string, { news: number; articles: number }> = {}
+  for (const [tag, count] of Object.entries(newsTagCounts)) {
+    if (!allTags[tag]) allTags[tag] = { news: 0, articles: 0 }
+    allTags[tag].news = count
+  }
+  for (const [tag, count] of Object.entries(articlesTagCounts)) {
+    if (!allTags[tag]) allTags[tag] = { news: 0, articles: 0 }
+    allTags[tag].articles = count
+  }
+
+  const manifest: ContentManifest = {
+    generatedAt: new Date().toISOString(),
+    news: { batches: newsBatchCount, total: newsItems.length },
+    articles: { batches: articlesBatchCount, total: articleItems.length },
+    tags: allTags,
+  }
+
+  await fs.writeFile(manifestPath, JSON.stringify(manifest), 'utf8')
+  console.log(`\nManifest written: ${manifestPath}`)
+  console.log(`  News: ${newsBatchCount} batches, ${Object.keys(newsTagCounts).length} tag pages`)
+  console.log(`  Articles: ${articlesBatchCount} batches, ${Object.keys(articlesTagCounts).length} tag pages`)
 }
 
 // Run the build

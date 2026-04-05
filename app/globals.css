@@ -124,6 +124,16 @@ body {
   animation: highlight-pulse 2s ease-out;
 }
 
+@keyframes progress-bar {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(0%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-progress-bar {
+  animation: progress-bar 1.2s ease-in-out infinite;
+}
+
 @keyframes highlight-pulse {
   0% {
     background-color: rgba(168, 85, 247, 0.2);
