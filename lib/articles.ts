@@ -158,6 +158,38 @@ export async function applyBaseFilters(
   return result
 }
 
+export interface AllFilteredContent {
+  items: ContentItemMetadata[]
+  totalItems: number
+  hashtagCounts: Record<string, number>
+}
+
+export async function getAllFilteredContent({
+  contentType = 'all',
+  requireHashtags = [],
+  excludeHashtags = [],
+}: {
+  contentType?: ItemType | 'all'
+  requireHashtags?: string[]
+  excludeHashtags?: string[]
+}): Promise<AllFilteredContent> {
+  const allArticles = await getAllContentMetadata()
+
+  let content = allArticles
+  if (contentType !== 'all') {
+    content = allArticles.filter((item) => item.itemType === contentType)
+  }
+
+  const filtered = await applyBaseFilters(content, { requireHashtags, excludeHashtags })
+  const hashtagCounts = getHashtagCountsFromArticles(filtered)
+
+  return {
+    items: filtered,
+    totalItems: filtered.length,
+    hashtagCounts,
+  }
+}
+
 export async function getContentPageData({
   page = 1,
   limit = 20,

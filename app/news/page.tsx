@@ -1,49 +1,17 @@
 import { ContentListing } from '@/components/content-listing'
-import { getContentPageData, PageFilters, getAllHashtags } from '@/lib/articles'
-import { headers } from 'next/headers'
-import { auth } from '@/lib/auth'
-import { getUserViewedArticles } from '@/lib/article-views'
+import { getAllFilteredContent, getAllHashtags } from '@/lib/articles'
 import Header from '@/components/header'
+
+export const revalidate = 300 // ISR: 5 min
 
 export const metadata = {
   title: 'News - Motyl.dev',
   description: 'Listen while you commute. Vote what matters. Articles generated for TTS, trending topics shaped by your votes — directly influencing what sources we dig into.',
 }
 
-interface NewsPageProps {
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
-}
-
-export default async function NewsPage({ searchParams }: NewsPageProps) {
-  const params = await searchParams
-  const page = parseInt((params.page as string) || '1', 10)
-  const hashtags = params.hashtags ? (params.hashtags as string).split(',') : []
-  const mode = params.mode as 'AND' | 'OR' | 'EXCLUDE' | undefined
-  const showUnseen = params.unseen === 'true'
-
-  // Get visited articles from cookie (for anonymous users) OR database (for logged-in users)
-  const session = await auth()
-  let visitedSlugs: Set<string>
-
-  if (session?.user?.id) {
-    // Logged in - fetch from database
-    const dbSlugs = await getUserViewedArticles()
-    visitedSlugs = new Set(dbSlugs)
-  } else {
-    // Anonymous - read from cookie via middleware header
-    const headersList = await headers()
-    const visitedArticlesHeader = headersList.get('x-visited-articles')
-    visitedSlugs = new Set<string>(JSON.parse(visitedArticlesHeader || '[]'))
-  }
-  const filters: PageFilters = {
-    hashtags,
-    mode,
-    requireHashtags: ['generated'],
-    showUnseen,
-  }
-
-  const [pageData, allHashtags] = await Promise.all([
-    getContentPageData({ page, filters, visitedSlugs, contentType: 'news' }),
+export default async function NewsPage() {
+  const [contentData, allHashtags] = await Promise.all([
+    getAllFilteredContent({ contentType: 'news', requireHashtags: ['generated'] }),
     getAllHashtags(),
   ])
 
@@ -51,17 +19,14 @@ export default async function NewsPage({ searchParams }: NewsPageProps) {
     <div className="flex min-h-screen flex-col">
       <Header />
       <ContentListing
-        initialItems={pageData.items}
-        totalPages={pageData.totalPages}
-        currentPage={pageData.currentPage}
-        totalItems={pageData.totalItems}
+        allItems={contentData.items}
         allHashtags={allHashtags}
-        hashtagCounts={pageData.hashtagCounts}
+        hashtagCounts={contentData.hashtagCounts}
+        totalItems={contentData.totalItems}
         title="News"
         description="Listen while you commute. Vote what matters. Articles generated for TTS, trending topics shaped by your votes — directly influencing what sources we dig into."
         contentType="news"
         basePath="/news"
-        requireHashtags={['generated']}
       />
     </div>
   )
