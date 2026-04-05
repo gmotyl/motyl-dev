@@ -14,6 +14,7 @@ import { MarkReadDialog } from '@/components/mark-read-dialog'
 import { SectionVisibilityDialog } from '@/components/article-section-toggle'
 import { useSectionVisibility } from '@/hooks/use-section-visibility'
 import { BookCheck, Settings } from 'lucide-react'
+import { formatDate } from '@/lib/utils'
 
 interface ReadAllNewsPageProps {
   initialItems: ContentItem[]
@@ -314,11 +315,7 @@ function FullArticle({
         </Link>
         <div className="flex flex-wrap items-center gap-2 mt-2 text-sm text-muted-foreground">
           <time>
-            {new Date(item.publishedAt).toLocaleDateString('pl-PL', {
-              day: '2-digit',
-              month: '2-digit',
-              year: 'numeric',
-            })}
+            {formatDate(item.publishedAt)}
           </time>
           {item.hashtags?.slice(0, 5).map((tag: string) => (
             <span key={tag} className="text-xs bg-muted px-2 py-0.5 rounded">

@@ -16,6 +16,7 @@ import { type Content, ItemType } from '@/lib/types'
 import { getContentUrl } from '@/lib/urls'
 import { ContentItemMetadata } from '@/lib/articles'
 import { HeroImage } from '@/components/hero-image'
+import { formatDate } from '@/lib/utils'
 
 interface ContentPageProps {
   article: Content
@@ -108,11 +109,7 @@ export default async function ContentPage({ article, prevArticle, nextArticle }:
             <div className="flex justify-between items-center mb-2">
               <p className="text-muted-foreground">
                 Published on{' '}
-                {new Date(article.publishedAt).toLocaleDateString('pl-PL', {
-                  day: '2-digit',
-                  month: '2-digit',
-                  year: 'numeric',
-                })}
+                {formatDate(article.publishedAt)}
               </p>
               <WakeLockToggle />
             </div>

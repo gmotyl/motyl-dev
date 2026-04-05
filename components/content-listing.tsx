@@ -13,6 +13,7 @@ import { getOgImage } from '@/lib/og'
 import Image from 'next/image'
 import { CategoryIcon, CategoryIconMini } from '@/components/category-icon'
 import { getContentCategory } from '@/lib/og'
+import { formatDate } from '@/lib/utils'
 
 const BATCH_SIZE = 30
 
@@ -441,7 +442,7 @@ export function ContentListing({
                       <h2 className="article-title text-base md:text-xl font-bold mb-1 md:mb-2">{item.title}</h2>
                       <p className="article-excerpt flex-grow line-clamp-2 md:line-clamp-3">{item.excerpt}</p>
                       <p className="text-xs text-muted-foreground mt-auto">
-                        {new Date(item.publishedAt).toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                        {formatDate(item.publishedAt)}
                       </p>
                     </div>
                   </Link>
@@ -470,7 +471,7 @@ export function ContentListing({
                       <h2 className="article-title text-xl font-bold mb-2">{item.title}</h2>
                       <p className="article-excerpt flex-grow line-clamp-3">{item.excerpt}</p>
                       <p className="text-xs text-muted-foreground mt-auto">
-                        {new Date(item.publishedAt).toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                        {formatDate(item.publishedAt)}
                       </p>
                     </div>
                   </Link>
