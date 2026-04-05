@@ -1,7 +1,9 @@
-# Inside Ramp's Background Agent Stack: What It Really Takes to Run AI Engineers in Production
-
-#ona #backgroundagents #ai #devinfra #generated #en
-
+---
+title: "Inside Ramp's Background Agent Stack: What It Really Takes to Run AI Engineers in Production"
+excerpt: "A deep dive into the infrastructure layers behind Ramp's and Stripe's AI agents — environments, isolation, connectivity, and automation — and why most teams aren't ready to replicate it."
+publishedAt: "2026-04-02"
+slug: "inside-ramps-background-agent-stack"
+hashtags: "#ona #backgroundagents #ai #devinfra #generated #en"
 ---
 
 ## Ramp's Agents Now Write 57% of Their Merged Pull Requests — Here's the Full Infrastructure Story

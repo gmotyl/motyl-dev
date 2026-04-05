@@ -43,3 +43,4 @@ next-env.d.ts
 /public/data/manifest.json
 .gitnexus
 .trends-input.json
+.wrangler/

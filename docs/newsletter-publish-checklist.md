@@ -6,7 +6,7 @@ Workflow do publikacji każdego wydania newslettera motyl.dev.
 
 ## Faza 1 — Przygotowanie treści
 
-- [ ] Uruchom `/generate-news` → generuje artykuły na podstawie newsletterów ze skrzynki odbiorczej
+- [ ] Uruchom `/generate-trnds`
 - [ ] Manualna edycja: headline, lead, komentarze do linków
 - [ ] Sprawdź, że treść jest gotowa i zaakceptowana
 
@@ -39,19 +39,19 @@ Workflow do publikacji każdego wydania newslettera motyl.dev.
   - Cytat do zdjęcia
   - CTA (call to action)
 - [ ] Posty natywne dla: **LinkedIn**, **Bluesky**, **Twitter/X**
-- [ ] *(opcjonalnie)* Instagram caption + opis do TikTok
+- [ ] _(opcjonalnie)_ Instagram caption + opis do TikTok
 - [ ] Zatwierdź i opublikuj posty (ręcznie lub przez Postiz gdy gotowy)
 
 ---
 
 ## Komendy reference
 
-| Komenda | Co robi |
-|---|---|
-| `/generate-news` | Generuje artykuły na podstawie newsletterów ze skrzynki odbiorczej |
-| `/image-prompt [N]` | Prompt do NanoBanana na podstawie treści |
-| `/publish-image <path>` | Optimize → R2 upload → URL do frontmatter |
-| `/repurpose [N]` | Content atoms → posty social media |
+| Komenda                 | Co robi                                                            |
+| ----------------------- | ------------------------------------------------------------------ |
+| `/generate-news`        | Generuje artykuły na podstawie newsletterów ze skrzynki odbiorczej |
+| `/image-prompt [N]`     | Prompt do NanoBanana na podstawie treści                           |
+| `/publish-image <path>` | Optimize → R2 upload → URL do frontmatter                          |
+| `/repurpose [N]`        | Content atoms → posty social media                                 |
 
 ---
 
