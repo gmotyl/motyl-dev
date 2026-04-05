@@ -1,6 +1,7 @@
 import { ContentListing } from '@/components/content-listing'
-import { getAllFilteredContent, getAllHashtags } from '@/lib/articles'
+import { getAllHashtags } from '@/lib/articles'
 import Header from '@/components/header'
+import { readBatch, readManifest } from '@/lib/content-batches'
 
 export const revalidate = 300 // ISR: 5 min
 
@@ -10,8 +11,9 @@ export const metadata = {
 }
 
 export default async function NewsPage() {
-  const [contentData, allHashtags] = await Promise.all([
-    getAllFilteredContent({ contentType: 'news', requireHashtags: ['generated'] }),
+  const [initialBatch, manifest, allHashtags] = await Promise.all([
+    readBatch('news', 0),
+    readManifest(),
     getAllHashtags(),
   ])
 
@@ -19,10 +21,9 @@ export default async function NewsPage() {
     <div className="flex min-h-screen flex-col">
       <Header />
       <ContentListing
-        allItems={contentData.items}
+        initialBatch={initialBatch}
+        manifest={manifest}
         allHashtags={allHashtags}
-        hashtagCounts={contentData.hashtagCounts}
-        totalItems={contentData.totalItems}
         title="News"
         description="Listen while you commute. Vote what matters. Articles generated for TTS, trending topics shaped by your votes — directly influencing what sources we dig into."
         contentType="news"

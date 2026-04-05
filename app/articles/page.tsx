@@ -1,6 +1,7 @@
 import { ContentListing } from '@/components/content-listing'
-import { getAllFilteredContent, getAllHashtags } from '@/lib/articles'
+import { getAllHashtags } from '@/lib/articles'
 import Header from '@/components/header'
+import { readBatch, readManifest } from '@/lib/content-batches'
 
 export const revalidate = 300 // ISR: 5 min
 
@@ -10,8 +11,9 @@ export const metadata = {
 }
 
 export default async function ArticlesPage() {
-  const [contentData, allHashtags] = await Promise.all([
-    getAllFilteredContent({ contentType: 'article', excludeHashtags: ['generated'] }),
+  const [initialBatch, manifest, allHashtags] = await Promise.all([
+    readBatch('articles', 0),
+    readManifest(),
     getAllHashtags(),
   ])
 
@@ -19,10 +21,9 @@ export default async function ArticlesPage() {
     <div className="flex min-h-screen flex-col">
       <Header />
       <ContentListing
-        allItems={contentData.items}
+        initialBatch={initialBatch}
+        manifest={manifest}
         allHashtags={allHashtags}
-        hashtagCounts={contentData.hashtagCounts}
-        totalItems={contentData.totalItems}
         title="Blog"
         description="Original insights on web architecture and the future of AI-driven development"
         contentType="article"

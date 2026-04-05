@@ -7,23 +7,22 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { useVisitedArticles } from '@/hooks/use-visited-articles'
 import { HashtagInput } from '@/components/hashtag-input'
-import { type ContentItemMetadata } from '@/lib/articles'
 import AdUnit from '@/components/ad-unit'
 import { getOgImage } from '@/lib/og'
 import Image from 'next/image'
 import { CategoryIcon, CategoryIconMini } from '@/components/category-icon'
 import { getContentCategory } from '@/lib/og'
 import { formatDate } from '@/lib/utils'
+import type { TrimmedItem, ContentManifest } from '@/lib/content-batches'
 
-const BATCH_SIZE = 30
+const RENDER_BATCH = 30
 
 interface ContentListingProps {
   title: string
   description?: string
-  allItems: ContentItemMetadata[]
+  initialBatch: TrimmedItem[]
+  manifest: ContentManifest
   allHashtags: string[]
-  hashtagCounts: Record<string, number>
-  totalItems: number
   contentType: 'article' | 'news' | 'all'
   basePath: string
 }
@@ -31,10 +30,9 @@ interface ContentListingProps {
 export function ContentListing({
   title,
   description,
-  allItems,
+  initialBatch,
+  manifest,
   allHashtags,
-  hashtagCounts: serverHashtagCounts,
-  totalItems: serverTotalItems,
   contentType,
   basePath,
 }: ContentListingProps) {
@@ -43,9 +41,34 @@ export function ContentListing({
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const sentinelRef = useRef<HTMLDivElement>(null)
-  const [visibleCount, setVisibleCount] = useState(BATCH_SIZE)
+
+  // Data loading state
+  const [loadedItems, setLoadedItems] = useState<TrimmedItem[]>(initialBatch)
+  const [nextBatchIndex, setNextBatchIndex] = useState(1)
+  const [allBatchesLoaded, setAllBatchesLoaded] = useState(false)
+  const [isFetchingBatch, setIsFetchingBatch] = useState(false)
+  const [tagData, setTagData] = useState<TrimmedItem[] | null>(null)
+  const [isFetchingTag, setIsFetchingTag] = useState(false)
+
+  // Render state
+  const [visibleCount, setVisibleCount] = useState(RENDER_BATCH)
   const [removingSlugs, setRemovingSlugs] = useState<Set<string>>(new Set())
   const [clientReady, setClientReady] = useState(false)
+
+  const contentKey = contentType === 'all' ? 'news' : contentType
+  const manifestSection = manifest[contentKey as 'news' | 'articles']
+  const totalBatches = manifestSection?.batches ?? 1
+  const serverTotalItems = manifestSection?.total ?? initialBatch.length
+
+  // Hashtag counts from manifest
+  const manifestTagCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const [tag, data] of Object.entries(manifest.tags)) {
+      const count = contentKey === 'news' ? data.news : data.articles
+      if (count > 0) counts[tag] = count
+    }
+    return counts
+  }, [manifest.tags, contentKey])
 
   // Filter state from URL
   const selectedHashtags = useMemo(() => {
@@ -61,12 +84,16 @@ export function ContentListing({
     return searchParams.get('unseen') === 'true'
   }, [searchParams])
 
-  // Client-side filtering — all logic runs in browser
-  const filteredItems = useMemo(() => {
-    let result = allItems
+  // Determine data source: tag data (if single hashtag) or loaded batches
+  const isUsingTagData = selectedHashtags.size === 1 && filterMode === 'AND' && tagData !== null
+  const baseItems = isUsingTagData ? tagData! : loadedItems
 
-    // Hashtag filter
-    if (selectedHashtags.size > 0) {
+  // Client-side filtering on loaded data
+  const filteredItems = useMemo(() => {
+    let result = baseItems
+
+    // Multi-hashtag filter (single-tag uses precompiled data)
+    if (selectedHashtags.size > 0 && !isUsingTagData) {
       const tags = Array.from(selectedHashtags)
       if (filterMode === 'AND') {
         result = result.filter((item) => tags.every((t) => item.hashtags.includes(t)))
@@ -77,17 +104,17 @@ export function ContentListing({
       }
     }
 
-    // Unseen filter — only when client has visited data
+    // Unseen filter
     if (showUnseenOnly && clientReady) {
       result = result.filter((item) => !visitedArticles.has(item.slug))
     }
 
     return result
-  }, [allItems, selectedHashtags, filterMode, showUnseenOnly, clientReady, visitedArticles])
+  }, [baseItems, selectedHashtags, filterMode, showUnseenOnly, clientReady, visitedArticles, isUsingTagData])
 
-  // Recompute hashtag counts from filtered items
+  // Hashtag counts: use manifest counts when no filter active, recompute from loaded data otherwise
   const hashtagCounts = useMemo(() => {
-    if (selectedHashtags.size === 0 && !showUnseenOnly) return serverHashtagCounts
+    if (selectedHashtags.size === 0 && !showUnseenOnly) return manifestTagCounts
     const counts: Record<string, number> = {}
     filteredItems.forEach((item) => {
       item.hashtags.forEach((tag: string) => {
@@ -95,33 +122,88 @@ export function ContentListing({
       })
     })
     return counts
-  }, [filteredItems, selectedHashtags, showUnseenOnly, serverHashtagCounts])
+  }, [filteredItems, selectedHashtags, showUnseenOnly, manifestTagCounts])
 
-  const totalItems = filteredItems.length
+  const totalItems = isUsingTagData
+    ? filteredItems.length
+    : selectedHashtags.size === 0 && !showUnseenOnly
+      ? serverTotalItems
+      : filteredItems.length
 
   // Items visible via infinite scroll
   const visibleItems = useMemo(() => {
     return filteredItems.slice(0, visibleCount)
   }, [filteredItems, visibleCount])
 
-  const hasMore = visibleCount < filteredItems.length
+  const hasMore = isUsingTagData
+    ? visibleCount < filteredItems.length
+    : visibleCount < filteredItems.length || !allBatchesLoaded
+
+  // Fetch next batch of items
+  const fetchNextBatch = useCallback(async () => {
+    if (isFetchingBatch || allBatchesLoaded || isUsingTagData) return
+    if (nextBatchIndex >= totalBatches) {
+      setAllBatchesLoaded(true)
+      return
+    }
+
+    setIsFetchingBatch(true)
+    try {
+      const res = await fetch(`/data/batches/${contentKey}-${nextBatchIndex}.json`)
+      if (res.ok) {
+        const batch: TrimmedItem[] = await res.json()
+        setLoadedItems((prev) => [...prev, ...batch])
+        setNextBatchIndex((prev) => prev + 1)
+        if (nextBatchIndex + 1 >= totalBatches) {
+          setAllBatchesLoaded(true)
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch batch:', e)
+    } finally {
+      setIsFetchingBatch(false)
+    }
+  }, [isFetchingBatch, allBatchesLoaded, isUsingTagData, nextBatchIndex, totalBatches, contentKey])
+
+  // Fetch precompiled tag data on single-tag selection
+  useEffect(() => {
+    if (selectedHashtags.size !== 1 || filterMode !== 'AND') {
+      setTagData(null)
+      return
+    }
+
+    const tag = Array.from(selectedHashtags)[0]
+    const safeName = tag.replace(/[^a-z0-9-]/gi, '_').toLowerCase()
+    const tagCount = manifest.tags[tag]?.[contentKey as 'news' | 'articles'] ?? 0
+
+    if (tagCount < 2) {
+      setTagData(null)
+      return
+    }
+
+    setIsFetchingTag(true)
+    fetch(`/data/tags/${contentKey}-${safeName}.json`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) setTagData(data)
+        else setTagData(null)
+      })
+      .catch(() => setTagData(null))
+      .finally(() => setIsFetchingTag(false))
+  }, [selectedHashtags, filterMode, contentKey, manifest.tags])
 
   // When visited data loads and unseen=true, animate removal
   useEffect(() => {
     if (visitedLoading || clientReady) return
 
     if (showUnseenOnly) {
-      // Mark visited items for animated removal
       const toRemove = new Set<string>()
-      allItems.forEach((item) => {
-        if (visitedArticles.has(item.slug)) {
-          toRemove.add(item.slug)
-        }
+      baseItems.forEach((item) => {
+        if (visitedArticles.has(item.slug)) toRemove.add(item.slug)
       })
 
       if (toRemove.size > 0) {
         setRemovingSlugs(toRemove)
-        // After animation completes, apply actual filter
         const timer = setTimeout(() => {
           setClientReady(true)
           setRemovingSlugs(new Set())
@@ -131,24 +213,29 @@ export function ContentListing({
     }
 
     setClientReady(true)
-  }, [visitedLoading, showUnseenOnly, allItems, visitedArticles, clientReady])
+  }, [visitedLoading, showUnseenOnly, baseItems, visitedArticles, clientReady])
 
-  // Also mark ready immediately if unseen is off
   useEffect(() => {
     if (!visitedLoading && !showUnseenOnly && !clientReady) {
       setClientReady(true)
     }
   }, [visitedLoading, showUnseenOnly, clientReady])
 
-  // IntersectionObserver for infinite scroll
+  // IntersectionObserver — load more rendered items or fetch next batch
   useEffect(() => {
     const sentinel = sentinelRef.current
     if (!sentinel) return
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore) {
-          setVisibleCount((prev) => prev + BATCH_SIZE)
+        if (!entries[0].isIntersecting) return
+
+        if (visibleCount < filteredItems.length) {
+          // More items available in memory — just reveal them
+          setVisibleCount((prev) => prev + RENDER_BATCH)
+        } else if (!allBatchesLoaded && !isUsingTagData) {
+          // Need more data — fetch next batch
+          fetchNextBatch()
         }
       },
       { rootMargin: '400px' }
@@ -156,11 +243,11 @@ export function ContentListing({
 
     observer.observe(sentinel)
     return () => observer.disconnect()
-  }, [hasMore])
+  }, [visibleCount, filteredItems.length, allBatchesLoaded, isUsingTagData, fetchNextBatch])
 
   // Reset visible count when filters change
   useEffect(() => {
-    setVisibleCount(BATCH_SIZE)
+    setVisibleCount(RENDER_BATCH)
   }, [selectedHashtags, filterMode, showUnseenOnly])
 
   // URL updates
@@ -255,13 +342,16 @@ export function ContentListing({
     return { visibleHashtags: visible, hiddenHashtagsWithCounts: hidden, hiddenHashtagsWithoutCounts: withoutCounts }
   }, [sortedHashtags, hashtagCounts, selectedHashtags, showAllHashtags, showZeroCountHashtags])
 
-  // Determine which items to render (pre-filter view during animation)
-  const renderItems = clientReady ? visibleItems : allItems.slice(0, visibleCount)
+  // Loading state
+  const isLoading = isFetchingTag || (visitedLoading && showUnseenOnly)
+
+  // Items to render (pre-filter during animation)
+  const renderItems = clientReady ? visibleItems : baseItems.slice(0, visibleCount)
 
   return (
     <div className="flex min-h-screen flex-col">
-      {/* Progress bar — thin line at top during visited state loading */}
-      {(visitedLoading || (!clientReady && showUnseenOnly)) && (
+      {/* Progress bar */}
+      {isLoading && (
         <div className="fixed top-0 left-0 right-0 z-50 h-0.5 bg-muted overflow-hidden">
           <div className="h-full bg-primary animate-progress-bar" />
         </div>
@@ -397,7 +487,7 @@ export function ContentListing({
           </div>
         )}
 
-        {renderItems.length === 0 ? (
+        {renderItems.length === 0 && !isLoading ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">No items found.</p>
           </div>
@@ -405,6 +495,7 @@ export function ContentListing({
           <>
             <div className="mb-4 text-sm text-muted-foreground">
               {totalItems} items{hasMore && ` · showing ${visibleItems.length}`}
+              {isFetchingBatch && ' · loading…'}
             </div>
 
             <div className="my-6">
