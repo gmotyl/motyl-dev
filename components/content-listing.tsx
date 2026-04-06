@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
 import Footer from '@/components/footer'
-import Link from 'next/link'
+import { Link } from 'next-view-transitions'
 import { Button } from '@/components/ui/button'
 import { useVisitedArticles } from '@/hooks/use-visited-articles'
 import { HashtagInput } from '@/components/hashtag-input'
@@ -12,7 +12,7 @@ import { getOgImage } from '@/lib/og'
 import Image from 'next/image'
 import { CategoryIcon, CategoryIconMini } from '@/components/category-icon'
 import { getContentCategory } from '@/lib/og'
-import { formatDate } from '@/lib/utils'
+import { formatDate, vtName } from '@/lib/utils'
 import type { TrimmedItem, ContentManifest } from '@/lib/content-batches'
 
 const RENDER_BATCH = 30
@@ -530,7 +530,7 @@ export function ContentListing({
                       <CategoryIcon hashtags={hashtags} className="w-full h-full" />
                     </div>
                     <div className="p-4 md:p-6 flex flex-col flex-grow min-w-0">
-                      <h2 className="article-title text-base md:text-xl font-bold mb-1 md:mb-2">{item.title}</h2>
+                      <h2 className="article-title text-base md:text-xl font-bold mb-1 md:mb-2" style={{ viewTransitionName: vtName(item.slug) }}>{item.title}</h2>
                       <p className="article-excerpt flex-grow line-clamp-2 md:line-clamp-3">{item.excerpt}</p>
                       <p className="text-xs text-muted-foreground mt-auto">
                         {formatDate(item.publishedAt)}
@@ -559,7 +559,7 @@ export function ContentListing({
                       />
                     </div>
                     <div className="p-6 flex flex-col flex-grow">
-                      <h2 className="article-title text-xl font-bold mb-2">{item.title}</h2>
+                      <h2 className="article-title text-xl font-bold mb-2" style={{ viewTransitionName: vtName(item.slug) }}>{item.title}</h2>
                       <p className="article-excerpt flex-grow line-clamp-3">{item.excerpt}</p>
                       <p className="text-xs text-muted-foreground mt-auto">
                         {formatDate(item.publishedAt)}

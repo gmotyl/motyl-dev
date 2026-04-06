@@ -1,4 +1,5 @@
 import type React from 'react'
+import { ViewTransitions } from 'next-view-transitions'
 import '@/app/globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
 import { SessionProvider } from '@/components/session-provider'
@@ -16,8 +17,12 @@ import { BottomNav } from '@/components/navigation'
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
+    <ViewTransitions>
     <html lang="en" className="dark" suppressHydrationWarning>
-      <head></head>
+      <head>
+        {/* Manual link: Turbopack cannot parse ::view-transition-* pseudo-elements */}
+        <link rel="stylesheet" href="/view-transitions.css" />
+      </head>
       <body className="min-h-screen bg-background font-sans antialiased relative">
         <div className="absolute inset-0 bg-butterfly-pattern opacity-5 pointer-events-none z-0"></div>
         <Analytics />
@@ -42,6 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </SessionProvider>
       </body>
     </html>
+    </ViewTransitions>
   )
 }
 
