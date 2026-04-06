@@ -104,7 +104,7 @@ export default async function ContentPage({ article, prevArticle, nextArticle }:
           />
           <header className="mb-8">
             <div className="mb-4">
-              <h1 className="text-4xl font-bold leading-tight">{article.title}</h1>
+              <h1 className="text-4xl font-bold leading-tight" style={{ viewTransitionName: `title-${article.slug}` }}>{article.title}</h1>
             </div>
             <div className="flex justify-between items-center mb-2">
               <p className="text-muted-foreground">

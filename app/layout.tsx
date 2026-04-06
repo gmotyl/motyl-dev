@@ -17,7 +17,9 @@ import { BottomNav } from '@/components/navigation'
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
-      <head></head>
+      <head>
+        <link rel="stylesheet" href="/view-transitions.css" />
+      </head>
       <body className="min-h-screen bg-background font-sans antialiased relative">
         <div className="absolute inset-0 bg-butterfly-pattern opacity-5 pointer-events-none z-0"></div>
         <Analytics />
