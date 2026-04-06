@@ -3,6 +3,9 @@ import { getAllContent } from './lib/articles'
 import { ItemType } from './lib/types'
 
 const nextConfig: NextConfig = {
+  experimental: {
+    viewTransition: true,
+  },
   typescript: {
     ignoreBuildErrors: true,
   },
