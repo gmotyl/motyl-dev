@@ -36,7 +36,7 @@ export function ContentListing({
   contentType,
   basePath,
 }: ContentListingProps) {
-  const { markAsVisited, isVisited, visitedArticles, isLoading: visitedLoading } = useVisitedArticles()
+  const { isVisited, visitedArticles, isLoading: visitedLoading } = useVisitedArticles()
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -515,7 +515,6 @@ export function ContentListing({
                     key={item.slug}
                     href={`${basePath}/${item.slug}`}
                     prefetch={false}
-                    onClick={() => markAsVisited(item.slug)}
                     className={`rounded-lg border transition-all duration-300 hover:shadow-md flex flex-row md:flex-col overflow-hidden ${
                       visited ? 'visited-article' : 'unvisited-article'
                     } ${category ? `category-${category}` : ''} ${
@@ -542,7 +541,6 @@ export function ContentListing({
                     key={item.slug}
                     href={`${basePath}/${item.slug}`}
                     prefetch={false}
-                    onClick={() => markAsVisited(item.slug)}
                     className={`rounded-lg border backdrop-blur-sm transition-all duration-300 hover:shadow-md hover:border-primary/50 flex flex-col overflow-hidden ${
                       visited ? 'visited-article' : 'unvisited-article'
                     } ${
