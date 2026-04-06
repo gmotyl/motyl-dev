@@ -1,4 +1,5 @@
 import type React from 'react'
+import { ViewTransition } from 'react'
 import '@/app/globals.css'
 import { ThemeProvider } from '@/components/theme-provider'
 import { SessionProvider } from '@/components/session-provider'
@@ -32,7 +33,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             enableSystem
             disableTransitionOnChange
           >
-            {children}
+            <ViewTransition>{children}</ViewTransition>
             <BottomNav />
             <Toaster />
             <SonnerToaster position="top-center" richColors duration={3000} />
