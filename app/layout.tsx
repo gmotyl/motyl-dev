@@ -33,8 +33,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             enableSystem
             disableTransitionOnChange
           >
-            <ViewTransition>{children}</ViewTransition>
-            <BottomNav />
+            <ViewTransition>
+              {children}
+              <BottomNav />
+            </ViewTransition>
             <Toaster />
             <SonnerToaster position="top-center" richColors duration={3000} />
             <ServiceWorkerRegister />
