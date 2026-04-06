@@ -1,12 +1,12 @@
 ---
 issueNumber: 5
-week: '2026-w13'
-weekLabel: 'Week 13 (Mar 23 – Mar 29, 2026)'
+week: '2026-w14'
+weekLabel: 'Week 14 (Mar 30 – Apr 5, 2026)'
 publishedAt: '2026-04-05'
 image: 'https://img.motyl.dev/newsletter/motyl-dev-5.webp'
 ---
 
-# motyl.dev Weekly #5: Week 13 (Mar 23 – Mar 29, 2026)
+# motyl.dev Weekly #5: Week 14 (Mar 30 – Apr 5, 2026)
 
 > A curated digest of what I found worth reading this week.
 
