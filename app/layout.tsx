@@ -18,6 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <head>
+        {/* Manual link: Turbopack cannot parse ::view-transition-* pseudo-elements */}
         <link rel="stylesheet" href="/view-transitions.css" />
       </head>
       <body className="min-h-screen bg-background font-sans antialiased relative">

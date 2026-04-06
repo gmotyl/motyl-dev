@@ -1,17 +1,19 @@
 /* View Transitions — card title morphs to article h1 */
 /* Loaded via <link> in layout.tsx to bypass Turbopack CSS parsing */
 
-::view-transition-group(*) {
-  animation-duration: 300ms;
-  animation-timing-function: ease-in-out;
-}
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-group(*) {
+    animation-duration: 300ms;
+    animation-timing-function: ease-in-out;
+  }
 
-::view-transition-old(*):only-child {
-  animation: vt-fade-out 200ms ease-out forwards;
-}
+  ::view-transition-old(*):only-child {
+    animation: vt-fade-out 200ms ease-out forwards;
+  }
 
-::view-transition-new(*):only-child {
-  animation: vt-fade-in 300ms ease-in forwards;
+  ::view-transition-new(*):only-child {
+    animation: vt-fade-in 300ms ease-in forwards;
+  }
 }
 
 @keyframes vt-fade-out {

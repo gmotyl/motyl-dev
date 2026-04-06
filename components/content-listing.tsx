@@ -12,7 +12,7 @@ import { getOgImage } from '@/lib/og'
 import Image from 'next/image'
 import { CategoryIcon, CategoryIconMini } from '@/components/category-icon'
 import { getContentCategory } from '@/lib/og'
-import { formatDate } from '@/lib/utils'
+import { formatDate, vtName } from '@/lib/utils'
 import type { TrimmedItem, ContentManifest } from '@/lib/content-batches'
 
 const RENDER_BATCH = 30
@@ -515,7 +515,7 @@ export function ContentListing({
                     key={item.slug}
                     href={`${basePath}/${item.slug}`}
                     prefetch={false}
-                    onClick={() => setTimeout(() => markAsVisited(item.slug), 500)}
+                    onClick={() => markAsVisited(item.slug)}
                     className={`rounded-lg border transition-all duration-300 hover:shadow-md flex flex-row md:flex-col overflow-hidden ${
                       visited ? 'visited-article' : 'unvisited-article'
                     } ${category ? `category-${category}` : ''} ${
@@ -530,7 +530,7 @@ export function ContentListing({
                       <CategoryIcon hashtags={hashtags} className="w-full h-full" />
                     </div>
                     <div className="p-4 md:p-6 flex flex-col flex-grow min-w-0">
-                      <h2 className="article-title text-base md:text-xl font-bold mb-1 md:mb-2" style={{ viewTransitionName: `title-${item.slug}` }}>{item.title}</h2>
+                      <h2 className="article-title text-base md:text-xl font-bold mb-1 md:mb-2" style={{ viewTransitionName: vtName(item.slug) }}>{item.title}</h2>
                       <p className="article-excerpt flex-grow line-clamp-2 md:line-clamp-3">{item.excerpt}</p>
                       <p className="text-xs text-muted-foreground mt-auto">
                         {formatDate(item.publishedAt)}
@@ -542,7 +542,7 @@ export function ContentListing({
                     key={item.slug}
                     href={`${basePath}/${item.slug}`}
                     prefetch={false}
-                    onClick={() => setTimeout(() => markAsVisited(item.slug), 500)}
+                    onClick={() => markAsVisited(item.slug)}
                     className={`rounded-lg border backdrop-blur-sm transition-all duration-300 hover:shadow-md hover:border-primary/50 flex flex-col overflow-hidden ${
                       visited ? 'visited-article' : 'unvisited-article'
                     } ${
@@ -559,7 +559,7 @@ export function ContentListing({
                       />
                     </div>
                     <div className="p-6 flex flex-col flex-grow">
-                      <h2 className="article-title text-xl font-bold mb-2" style={{ viewTransitionName: `title-${item.slug}` }}>{item.title}</h2>
+                      <h2 className="article-title text-xl font-bold mb-2" style={{ viewTransitionName: vtName(item.slug) }}>{item.title}</h2>
                       <p className="article-excerpt flex-grow line-clamp-3">{item.excerpt}</p>
                       <p className="text-xs text-muted-foreground mt-auto">
                         {formatDate(item.publishedAt)}
