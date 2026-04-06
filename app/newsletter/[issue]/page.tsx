@@ -84,7 +84,7 @@ export default async function NewsletterIssuePage({
               components={{
                 h1: ({ children }) => (
                   <>
-                    <h1>{children}</h1>
+                    <h1 style={{ viewTransitionName: `newsletter-${newsletter.issueNumber}` }}>{children}</h1>
                     <div className="not-prose mb-8 rounded-lg overflow-hidden">
                       <Image
                         src={newsletter.image}

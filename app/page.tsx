@@ -12,7 +12,7 @@ import { getContentUrl } from '@/lib/urls'
 import { getOgImage } from '@/lib/og'
 import { getAllNewsletterMeta } from '@/lib/newsletter-issues'
 import Image from 'next/image'
-import { formatDate } from '@/lib/utils'
+import { formatDate, vtName } from '@/lib/utils'
 
 export const revalidate = 300 // ISR: revalidate every 5 min; vote counts update optimistically client-side
 
@@ -127,7 +127,7 @@ export default async function Home() {
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold hover:text-primary transition-colors">{article.title}</h3>
+                      <h3 className="font-semibold hover:text-primary transition-colors" style={{ viewTransitionName: vtName(article.slug) }}>{article.title}</h3>
                       {article.excerpt && (
                         <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{article.excerpt}</p>
                       )}
@@ -166,7 +166,7 @@ export default async function Home() {
                         className="w-full h-full object-cover"
                       />
                     </div>
-                    <span className="flex-1 font-medium">
+                    <span className="flex-1 font-medium" style={{ viewTransitionName: `newsletter-${issue.issueNumber}` }}>
                       Weekly #{issue.issueNumber}
                     </span>
                     <span className="text-sm text-muted-foreground whitespace-nowrap">
