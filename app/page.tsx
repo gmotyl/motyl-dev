@@ -12,7 +12,7 @@ import { getContentUrl } from '@/lib/urls'
 import { getOgImage } from '@/lib/og'
 import { getAllNewsletterMeta } from '@/lib/newsletter-issues'
 import Image from 'next/image'
-import { formatDate } from '@/lib/utils'
+import { formatDate, vtName } from '@/lib/utils'
 
 export const revalidate = 300 // ISR: revalidate every 5 min; vote counts update optimistically client-side
 
@@ -47,6 +47,7 @@ export default async function Home() {
             <Link
               href={`/newsletter/${newsletters[0].issueNumber}`}
               className="flex items-center gap-4 rounded-lg border border-primary/30 bg-primary/5 p-3 hover:border-primary/50 hover:bg-primary/10 transition-all duration-200"
+              style={{ viewTransitionName: vtName(`newsletter-${newsletters[0].issueNumber}`) }}
             >
               <div className="flex-shrink-0 w-20 h-14 rounded overflow-hidden">
                 <Image
@@ -146,16 +147,17 @@ export default async function Home() {
             </section>
           )}
 
-          {/* Newsletter archive (last 5) */}
+          {/* Newsletter archive (last 5, skip latest since it's in banner) */}
           {newsletters.length > 0 && (
             <section className="space-y-3">
               <h2 className="text-xl font-semibold">Past Issues</h2>
               <div className="space-y-2">
-                {newsletters.slice(0, 5).map((issue) => (
+                {newsletters.slice(1, 6).map((issue) => (
                   <Link
                     key={issue.issueNumber}
                     href={`/newsletter/${issue.issueNumber}`}
                     className="flex items-center gap-4 rounded-lg border border-muted bg-background/50 p-3 hover:border-primary/30 hover:shadow-sm transition-all duration-200"
+                    style={{ viewTransitionName: vtName(`newsletter-${issue.issueNumber}`) }}
                   >
                     <div className="flex-shrink-0 w-16 h-11 rounded overflow-hidden">
                       <Image
@@ -175,7 +177,7 @@ export default async function Home() {
                   </Link>
                 ))}
               </div>
-              {newsletters.length > 5 && (
+              {newsletters.length > 6 && (
                 <div className="text-right">
                   <Button asChild variant="ghost" size="sm">
                     <Link href="/newsletter">View all issues &rarr;</Link>

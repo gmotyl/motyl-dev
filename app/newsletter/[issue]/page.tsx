@@ -5,6 +5,7 @@ import Header from '@/components/header'
 import Footer from '@/components/footer'
 import ReactMarkdown from 'react-markdown'
 import { getAllNewsletters } from '@/lib/newsletter-issues'
+import { vtName } from '@/lib/utils'
 
 export async function generateStaticParams() {
   const all = await getAllNewsletters()
@@ -82,21 +83,34 @@ export default async function NewsletterIssuePage({
           <article className="prose prose-sm dark:prose-invert max-w-none">
             <ReactMarkdown
               components={{
-                h1: ({ children }) => (
-                  <>
-                    <h1>{children}</h1>
-                    <div className="not-prose mb-8 rounded-lg overflow-hidden">
-                      <Image
-                        src={newsletter.image}
-                        alt={`motyl.dev Weekly #${newsletter.issueNumber}`}
-                        width={768}
-                        height={400}
-                        className="w-full h-auto object-cover"
-                        priority
-                      />
-                    </div>
-                  </>
-                ),
+                h1: ({ children, ...props }) => {
+                  const content = String(children)
+                  // Only the first h1 (primary title) gets viewTransitionName
+                  // Subsequent h1s in newsletter content render normally
+                  const isPrimary = content.includes('motyl.dev Weekly') || content.includes('Weekly #')
+                  return (
+                    <>
+                      <h1
+                        {...props}
+                        style={isPrimary ? { viewTransitionName: vtName(`newsletter-${newsletter.issueNumber}`) } : undefined}
+                      >
+                        {children}
+                      </h1>
+                      {isPrimary && (
+                        <div className="not-prose mb-8 rounded-lg overflow-hidden">
+                          <Image
+                            src={newsletter.image}
+                            alt={`motyl.dev Weekly #${newsletter.issueNumber}`}
+                            width={768}
+                            height={400}
+                            className="w-full h-auto object-cover"
+                            priority
+                          />
+                        </div>
+                      )}
+                    </>
+                  )
+                },
               }}
             >
               {newsletter.content}
