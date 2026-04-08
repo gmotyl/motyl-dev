@@ -59,10 +59,10 @@ export default function AboutPage() {
               Curated trends. Honest takes.
             </h1>
             <p className="text-lg text-foreground/80 leading-relaxed">
-              motyl.dev keeps you up to date with the latest trends in Frontend &amp; AI. Every week, I curate the most important developments, dive deep into practical solutions for functional programming and architecture, and share real-world perspectives on the tools shaping our industry.
+              motyl.dev keeps you up to date with the latest trends in Frontend & AI. Every week, I curate the most important developments, dive deep into practical solutions for functional programming and architecture, and share real-world perspectives on the tools shaping our industry.
             </p>
             <p className="text-base text-muted-foreground leading-relaxed">
-              No ads. No paywalls. No algorithm deciding what you see. Just thoughtful writing and community-voted trends that matter.
+              No paywalls. No algorithm deciding what you see. Just thoughtful writing and community-voted trends that matter.
             </p>
           </section>
 
@@ -87,7 +87,25 @@ export default function AboutPage() {
             </div>
           </section>
 
-          {/* About Grzegorz — less prominent */}
+          {/* Editorial Policy */}
+          <section className="space-y-4">
+            <h2 className="text-xl font-semibold">How content is made</h2>
+            <div className="space-y-3 text-sm text-foreground/80 leading-relaxed">
+              <p>
+                <strong>Original articles</strong> and <strong>newsletter issues</strong> are written by me, Greg.
+                These are my own analysis, opinions, and insights drawn from two decades of building software.
+              </p>
+              <p>
+                <strong>News summaries</strong> in the /news section are AI-assisted: I curate which newsletters
+                and articles to include, and AI helps extract and summarize the key points. Every item is reviewed
+                for accuracy before publishing.
+              </p>
+              <p>
+                <strong>Trend voting</strong> is driven by the community — you vote on what matters.
+              </p>
+            </div>
+          </section>
+
           <section className="space-y-4 pt-4 border-t border-border/50">
             <h2 className="text-lg font-semibold text-foreground/80">motyl.dev by Grzegorz (Greg) Motyl</h2>
             <div className="space-y-3 text-sm text-foreground/70 leading-relaxed">
@@ -126,7 +144,7 @@ export default function AboutPage() {
           <section id="newsletter" className="rounded-lg border border-primary/20 bg-primary/5 p-6 md:p-8 space-y-4 text-center">
             <h2 className="text-xl font-bold">Stay in the loop</h2>
             <p className="text-muted-foreground max-w-sm mx-auto text-sm">
-              Get a weekly digest of the top Frontend &amp; AI trends, curated by me. No spam, unsubscribe any time.
+              Get a weekly digest of the top Frontend & AI trends, curated by me. No spam, unsubscribe any time.
             </p>
             <div className="max-w-sm mx-auto">
               <NewsletterForm />
