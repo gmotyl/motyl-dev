@@ -1,0 +1,1083 @@
+[
+  {
+    "name": "daily.dev",
+    "date": "2026-04-08T06:00:53.000Z",
+    "uid": "92603",
+    "hashtags": [
+      "#dailydev"
+    ],
+    "links": [
+      {
+        "title": "Moving Railway's Frontend Off Next.js | daily.dev",
+        "url": "https://app.daily.dev/posts/nCgXh3cQx"
+      },
+      {
+        "title": "Moving Railway's Frontend Off Next.js | daily.dev",
+        "url": "https://app.daily.dev/posts/moving-railway-s-frontend-off-next-js-ncgxh3cqx"
+      },
+      {
+        "title": "Supabase vs Convex | daily.dev",
+        "url": "https://app.daily.dev/posts/PBG9YLf7i"
+      },
+      {
+        "title": "C",
+        "url": "https://api.daily.dev/v2/c?id=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJPYmplY3QiOnsiaSI6IjQxNGE3YTY0LWYzODAtNDU1NC05MmUyLTQyMzA5NDUzNDdmOSIsInUiOiJodHRwczovL3NlcnBhcGkuY29tL3BsYXlncm91bmQ_dXRtX3NvdXJjZT1kYWlseWRldl9kaWdlc3QiLCJhaSI6ImNiNzQ3MGI3LTQxNTEtNGNiYi05NzViLTg4MTcwOWYxNjM2NSIsImMiOiI2OWUwODkzNC1lNzIzLTQ4YzItOThkNi02MmZlMmVhZmE3NTYiLCJhIjoiY2UwYTNhYjYtYWM3ZS00MWEzLTgyMzYtYzc3NzY0YzJiMzRjIiwidGlkIjoiN2QzYTQ4OWMtYzdhYS00MThlLTg5ZWQtM2IwYjQ4ZDM5ZmI1IiwidGlkcyI6WyI3ZDNhNDg5Yy1jN2FhLTQxOGUtODllZC0zYjBiNDhkMzlmYjUiXSwiY3IiOiI4YTY5NTkxNC1mM2JmLTQ3NTQtYWU5My0yZmZhNWUzZDZiZmYiLCJ1cyI6Ikw2Y2J5bUtqbURBSUR6ejlhQzVZciIsInQiOjE3NzU2MjA5NTR9fQ.SJBTr9GJbAua2wijrRaQ62Ytu8_f76oMdDXcmKLljzs"
+      },
+      {
+        "title": "You Need To Start Using This Underrated React Hook | daily.dev",
+        "url": "https://app.daily.dev/posts/VV9wbWQfJ"
+      },
+      {
+        "title": "You Need To Start Using This Underrated React Hook | daily.dev",
+        "url": "https://app.daily.dev/posts/you-need-to-start-using-this-underrated-react-hook-vv9wbwqfj"
+      },
+      {
+        "title": "I'm a CSS noob | daily.dev",
+        "url": "https://app.daily.dev/posts/QJaBPE2Sf"
+      },
+      {
+        "title": "I'm a CSS noob | daily.dev",
+        "url": "https://app.daily.dev/posts/i-m-a-css-noob-qjabpe2sf"
+      },
+      {
+        "title": "PJ0kxG34O",
+        "url": "https://app.daily.dev/posts/pJ0kxG34O"
+      },
+      {
+        "title": "Nestjs Sliding Window Throttler Pj0kxg34o",
+        "url": "https://app.daily.dev/posts/nestjs-sliding-window-throttler-pj0kxg34o"
+      }
+    ],
+    "scraped": [
+      {
+        "title": "Moving Railway's Frontend Off Next.js | daily.dev",
+        "url": "https://app.daily.dev/posts/nCgXh3cQx",
+        "content": "railway-blogRead postRailway migrated its entire production frontend from Next.js to Vite + TanStack Router, completing the switch in just two PRs with zero downtime. The motivation was slow builds (10+ minutes, 6 of which were Next.js), heavy reliance on client-side patterns that didn't fit Next.js's server-first model, and hacky layout #react#nextjs#viteYesterday•5m read time•From blog.railway.comTable of contentsTable of ContentsNext.js served us well. Then it didn't.Why TanStack Start + ViteTwo PRs, zero downtimeWhat we gave upRailway's frontend runs on RailwayWhy now1 CommentCommentBookmarkCopySort:",
+        "excerpt": "",
+        "author": "",
+        "published": ""
+      },
+      {
+        "title": "Moving Railway's Frontend Off Next.js | daily.dev",
+        "url": "https://app.daily.dev/posts/moving-railway-s-frontend-off-next-js-ncgxh3cqx",
+        "content": "railway-blogRead postRailway migrated its entire production frontend from Next.js to Vite + TanStack Router, completing the switch in just two PRs with zero downtime. The motivation was slow builds (10+ minutes, 6 of which were Next.js), heavy reliance on client-side patterns that didn't fit Next.js's server-first model, and hacky layout #react#nextjs#viteYesterday•5m read time•From blog.railway.comTable of contentsTable of ContentsNext.js served us well. Then it didn't.Why TanStack Start + ViteTwo PRs, zero downtimeWhat we gave upRailway's frontend runs on RailwayWhy now1 CommentCommentBookmarkCopySort:",
+        "excerpt": "",
+        "author": "",
+        "published": ""
+      },
+      {
+        "title": "Supabase vs Convex | daily.dev",
+        "url": "https://app.daily.dev/posts/PBG9YLf7i",
+        "content": "Read postAnkur Tyagi@theankurtyagi•Yesterday900Supabase vs Convex29m read timeRead postA detailed architectural comparison of Supabase and Convex as backend platforms. Supabase wraps PostgreSQL with modular services (PostgREST, GoTrue, Realtime, Edge Functions), giving developers full SQL access and a familiar relational model. Convex takes a function-centric reactive approach where all data access flows through CommentBookmarkCopySort:",
+        "excerpt": "",
+        "author": "",
+        "published": ""
+      },
+      {
+        "title": "You Need To Start Using This Underrated React Hook | daily.dev",
+        "url": "https://app.daily.dev/posts/VV9wbWQfJ",
+        "content": "A practical walkthrough of React's useSyncExternalStore hook as an alternative to useEffect for syncing external browser state into React. Covers three use cases: tracking navigator.onLine status, syncing HTML dialog element open/close state (including keyboard escape handling), and building a lightweight global store similar",
+        "excerpt": "",
+        "author": "",
+        "published": ""
+      }
+    ]
+  },
+  {
+    "name": "Unicorn Club",
+    "date": "2026-04-08T09:06:04.000Z",
+    "uid": "92612",
+    "hashtags": [
+      "#unicornclub"
+    ],
+    "links": [
+      {
+        "title": "🦄 Craft skill won't make you influential. Neither will AI.",
+        "url": "https://nl.unicornclub.dev/emails/webview/146509/184170755304457348"
+      },
+      {
+        "title": "Product Design Newsletter to Ship Better Interfaces ✦ Unicorn Club",
+        "url": "https://unicornclub.dev/"
+      },
+      {
+        "title": "Managed WordPress Hosting - Blazing-Fast & Flexible Cloud | 20i",
+        "url": "https://www.20i.com/us/wordpress-hosting"
+      },
+      {
+        "title": "What Is CSS Containment and How Can I Use It? – CSS Wizardry",
+        "url": "https://csswizardry.com/2026/04/what-is-css-containment-and-how-can-i-use-it/"
+      },
+      {
+        "title": "A Practical Guide To Design Principles — Smashing Magazine",
+        "url": "https://www.smashingmagazine.com/2026/04/practical-guide-design-principles/"
+      },
+      {
+        "title": "Why designers struggle to build influence at work",
+        "url": "https://www.everydayux.net/why-designers-struggle-to-build-influence-at-work/"
+      },
+      {
+        "title": "Evals are for everyone",
+        "url": "https://www.philmorton.co/evals-are-for-everyone/"
+      },
+      {
+        "title": "Vibe Coding Best Practices: Avoid the Doom Loop with Planning and Code Reviews",
+        "url": "https://www.producttalk.org/vibe-coding-best-practices/"
+      },
+      {
+        "title": "Replit — A Product Manager's guide to using AI to build working prototypes",
+        "url": "https://blog.replit.com/pm-guide-using-ai-to-build-prototypes"
+      },
+      {
+        "title": "Animating 160,000 Cubes in Three.js to Visualize Dithering | Codrops",
+        "url": "https://tympanus.net/codrops/2026/04/01/animating-160000-cubes-in-three-js-to-visualize-dithering/"
+      },
+      {
+        "title": "What Is Your Site's AI Chatbot for? Users Can't Tell",
+        "url": "https://www.nngroup.com/articles/site-ai-chatbot/"
+      },
+      {
+        "title": "The Methodological Problems Hiding in Your Research Tools",
+        "url": "https://www.nngroup.com/articles/research-tool-problems/"
+      },
+      {
+        "title": "Statistical Significance Isn’t the Same as Practical Significance",
+        "url": "https://www.nngroup.com/articles/practical-significance/"
+      },
+      {
+        "title": "Forward to a friend | MailerLite",
+        "url": "https://nl.unicornclub.dev/forward/146509/184170755304457348?signature=18f970abe0fabac3dc70ead0b2bd1ab260c2821259fe60cc231ef7f4d401fdb1"
+      }
+    ],
+    "scraped": [
+      {
+        "title": "🦄 Craft skill won't make you influential. Neither will AI.",
+        "url": "https://nl.unicornclub.dev/emails/webview/146509/184170755304457348",
+        "content": "Hey, welcome to this weeks newsletter 👋\nMost of us are confident about things we shouldn't be. Knowing what to hand off and what to keep is a skill that doesn't get easier just because AI can do more of the work...\nHere are my three picks: CSS containment, design principles with a point of view, and why designers struggle to build influence.\nEnjoy 🦄 - Adam at Unicorn Club.\n \n \n \n \n \n \n \n\n \n \n \n \n \n \n The three picks I'd send to a teammate:\nBuild: CSS containment - the layout trick Harry Roberts says most sites are missing\nShape: Design principles deserve a point of view, not a committee\nShip: The real reason designers struggle to build influence at work\n \n \n \n \n \n \n \n\n \n \n \n \n \n \n Top 3 this week 👇\n \n \n \n \n \n \n \n\n \n \n \n \n \n Build:\n \n What Is CSS Containment and How Can I Use It?\n  ↗\n \n \n Harry Roberts on the one CSS property that changes how browsers calculate layout.\n Why: Containment lets the browser skip recalculating the rest of the page when only a widget changes. Most sites don't use it. Find one in your product and test it.\n Adopt: Find a self-updating widget, add contain: layout, measure the result.\n\n \n \n \n \n \n \n \n\n \n \n \n \n \n Shape:\n \n A Practical Guide To Design Principles\n  ↗\n \n \n AI makes skipping the process look appealing. The thing is...\n Why: You usually know when a principle is real because you've watched it go wrong. Good principles come from knowing what you've got wrong before, not from articles about what other teams got wrong.\n Adopt: Choose your principles deliberately, not because someone declared process is dead.\n\n \n \n \n \n \n \n \n\n \n \n \n \n \n Ship:\n \n Why designers struggle to build influence at work\n  ↗\n \n \n Craft skill is not the blocker. Influence is.\n Why: Better craft doesn't usually change how much influence you have. What moves the needle: showing up before the brief gets written.\n Adopt: Shift from executing deliverables to shaping decisions earlier in projects.\n\n \n \n \n \n \n \n \n\n \n \n \n \n \n \n Dive into more\n \n \n \n \n \n \n \n\n \n \n \n \n \n \n Useful Extras\n \n \n \n \n \n \n \n\n \n \n \n \n \n \n Support the newsletter\nIf this was useful, here are two small ways to help it travel:\n🚀  Forward to your team's designer or frontend lead.\n📢  Book a Sponsorship \n \n \n \n \n \n\n \n \n \n \n \n\n Thanks for reading\n\n Adam from Unicorn Club\n \n\n Follow me on X or BlueSky\n \n\n Connect on LinkedIn\n \n \n \n \n \n \n \n \n\n \n \n \n \n \n \n\n \n \n Unicorn Club\n Copyright © Unicorn Club. All rights reserved.Chidmere, Retford, United Kingdom\n \n \n \n Want to stop receiving these newsletters?",
+        "excerpt": "",
+        "author": "",
+        "published": ""
+      },
+      {
+        "title": "Product Design Newsletter to Ship Better Interfaces ✦ Unicorn Club",
+        "url": "https://unicornclub.dev/",
+        "content": "Build interfaces that stay clear when real users and real constraints show up. \n Make better calls, faster. Curated reads every Wednesday, each one you can take straight into your work. \n Five minutes in, you know what to try next, solo or with your team.\n \n \n \n Join 3,458+ product builders. Sent every Wednesday.\n \n \n \n Consistently impressed by the weekly gems it uncovers\n \n Eric Bailey, Product Designer at GitHub\n \n \n \n One of the best roundups in the business\n \n Andy Bell, Founder of Set Studio\n \n \n \n Fantastic. Offers valuable resources for my work\n \n Vincent Will, Senior Engineer at Onlogist\n \n \n \n Packed with valuable insights and interesting finds\n \n Twan Mulder, Front-end Developer at DHL\n \n \n \n Positively impacted how I guide my design team\n \n Adam Clark, Designer at Next\n \n \n \n Brings new perspectives to cross-functional teams\n \n Matt Cooper, UX/UI Design Consultant\n \n \n \n \n \n\n \n Three lanes. One job.\n Interface work is only part of it. These three lanes cover what actually determines whether good work ships.\n \n \n \n Build\n \n Interface craft\n Small, practical moves that make the interface clearer and easier to use.\n \n \n Shape\n \n Shared standards\n Lightweight standards that keep teams aligned and reduce rework.\n \n \n Ship\n \n Delivery habits\n Simple habits that keep quality visible while you ship, not after.\n \n \n \n\n \n Read by product builders at teams like\n \n \n Dell Logo\n\n GitLab\n\n Adidas\n\n Apple\nMicroStrategy\n\nGoogle\n AWS\n\n GitHub\n\n IBM\n\n eBay\n\n \n \n\n \n Unicorn Club is one of my favorite newsletters I read regularly. Clear, concise, with the most relevant, quality content.\n \n \n Zoran Jambor\n Founder of CSS Weekly\n \n \n \n \n Unicorn Club is fantastic. It offers valuable resources for my work and engaging articles to keep me current.\n \n \n Vincent Will\n Senior Engineer at Onlogist\n \n \n \n \n I’m a loyal reader of the newsletter. Consistently impressed by the weekly gems it uncovers.\n \n \n Eric Bailey\n Product Designer at GitHub\n \n \n \n \n One of the best roundups in the business, there’s always something worthwhile to click on.\n \n \n Andy Bell\n Founder of Set Studio\n \n \n \n \n Fantastic digests every week! They’re always packed with valuable insights and interesting finds.\n \n \n Twan Mulder\n Front-end Developer at DHL\n \n \n \n \n Unicorn Club consistently delivers insights that have positively impacted how I guide my design team.\n \n \n Adam Clark\n Designer at Next\n \n \n \n \n Each issue helps me bring new perspectives to the cross-functional teams I work with, boosting productivity and collaboration.\n \n \n Matt Cooper\n UX/UI Design Consultant\n \n \n \n \n I always look forward to the weekly Unicorn Club newsletter. It's consistently filled with valuable insights and interesting discoveries.\n \n \n Ole Sandbæk Jørgensen\n Lead Frontend Engineer at DFDS\n \n \n \n \n Unicorn Club delivers a concise and curated newsletter that helps professionals grow.\n \n \n Rishi Raj Jain\n Software Engineer at LaunchFast\n \n \n \n \n\n \n What’s in each issue\n \n \n \n \n \n Curated reads, with the point made\n Five or six picks a week, pulled from everything worth reading. Each one gets straight to the point.\n \n \n \n \n Patterns that hold up in production\n Interface patterns that stay clear when real users and real content show up. Prototypes are too forgiving.\n \n \n \n \n Shared standards you can copy\n Conventions your team can repeat. Decisions that don't reset every project.\n \n \n \n \n Shipping habits that protect quality\n Habits that keep quality visible while the work is happening. By the time you're in final review, it's too late.\n \n \n \n \n Real examples, not just screenshots\n Examples from real products. Enough context to apply the idea, not just recognize it.\n \n \n \n \n High signal. Zero filler.\n Practical thinking you can use this week. Every piece earns its place.\n \n \n \n \n \n \n Behind Unicorn Club\n Hey 👋 I'm Adam Marsden. I've been designing and building products for 13 years, mostly SaaS and fintech.\n I started Unicorn Club as a weekly newsletter for product builders. A small handful",
+        "excerpt": "",
+        "author": "",
+        "published": ""
+      },
+      {
+        "title": "Managed WordPress Hosting - Blazing-Fast & Flexible Cloud | 20i",
+        "url": "https://www.20i.com/us/wordpress-hosting",
+        "content": "Trusted by over 1 million websites worldwideHomeManaged WordPress HostingThe first WordPress Hosting you’ll love. The last you’ll ever need.From power bloggers to high-traffic ecommerce and agencies, deploy blazing-fast sites across our WordPress optimized cloud platforms. Managed Cloud ServersDeploy your websites and apps across 20iCloud, AWS and GCP for dedicated cloud server performance, without the admin.Managed Cloud ServersNot sure which is the best WordPress Hosting for you?Start a Live ChatFully-loaded Managed WordPress HostingSave money, reduce load times and boost performance with powerful, server-level tools built directly into our WordPress platform. Peak performance WordPress HostingEmbrace traffic spikes with an autoscaling platform built for demanding websites.Genuine AutoscalingGet the full power of our entire platform, not just a single server. Proprietary autoscaling technology effortlessly adapts to traffic spikes and resource demands without ever slowing down – No LVE limits. No single point of failureAutomatic failover, isolated server roles and resilient power connectivity with fully redundant power infrastructure ensures uninterrupted service. Lightning-fast database with built-in redundancyOur redundant database platform boosts query speed and site responsiveness with advanced indexing and optimized storage engines, while ensuring consistent performance for high-traffic, data-intensive WordPress sites. No inode limits (number of files)Create and manage files and directories on your hosting account without worrying about running out of inode space. Unlimited concurrent usersHandle any number of simultaneous users without compromising on speed and performance. Autoscaling PHP workersWe don’t place any limits on the number of PHP workers available. Our autoscaling PHP workers mean you don’t need to set the number of PHP workers per website manually. Engineered for maximum speedBlazing-fast cloud platform that comfortably puts you ahead of the competition.Turbocharge sites with high-frequency CPUsHigh-frequency CPUs deliver exceptional clock speeds, powering complex workloads with ease. Enjoy significantly lower latency and faster processing than traditional hosting.Unlimited CDN pre-cachingAutomatic pre-caching across all our global nodes for faster load times. We don’t throttle your bandwidth and there are no usage limits. &lt;10ms latency in Europe and America with a &lt;30ms global latency. Optimized PHP for maximum throughputOur custom-tuned PHP-FPM and OPCache stack ensures lightning-fast execution. Every process is handled with minimal latency, giving your dynamic content the speed and consistency it needs, without queueing or performance drops. Enterprise-level securitySecurity delivered at scale without any compromisesNumber one for WordPress supportOur WordPress hosting specialists have your back. Our experts are on hand to get any issue resolved quickly whatever the problem.Expert WordPress SupportWordPress Fanatics who know Managed WordPress Hosting inside and out.Support you can rely on 24x7Here when you need us, with quick responses and resolutions.Top-rated WordPress HostingWe are rated #1 on Trustpilot by our customers.Unlimited one-click migrationsZero downtime and no risk of data lossMigrate unlimited websites from other web hosts in a matter of minutes. Move websites, databases and emails to 20i automaticallyPreserve all folders, files, scripts, emails, databases and other data exactly as-isChoose exactly what you want to migrate and whenRead more about our Migration Center.World-class Data CentersHost your sites and apps with the same world-class infrastructure used by hyperscale cloud providers, AI companies and large financial service organisations. Deliver faster load times, significantly reduced latency and better SEO performance. Our award-winning support team are available 24x7x365.London, UKDallas, TXSingapore, SGPrimary DC LocationsCDN LocationsBusiness-class email hostingFully-i",
+        "excerpt": "",
+        "author": "",
+        "published": ""
+      },
+      {
+        "title": "What Is CSS Containment and How Can I Use It? – CSS Wizardry",
+        "url": "https://csswizardry.com/2026/04/what-is-css-containment-and-how-can-i-use-it/",
+        "content": "2 April, 2026\n \n Written by Harry Roberts on CSS Wizardry.\n \n Table of Contents\n Independent writing is brought to you via my wonderful\n Supporters.\n \n Why Containment Exists\n Meet the contain Property\n Layout Containment\n Paint Containment\n Size Containment\n Style Containment\n Special Values: content and strict\n \n contain: content\n contain: strict\n \n \n Containment in the Real World\n \n OpenTable’s Mobile Drawer\n Other Good Candidates\n \n \n content-visibility and contain-intrinsic-size\n \n Skipping Work with content-visibility\n Accessibility and Script Considerations\n \n \n Caveats, Gotchas, and Things to Watch for\n \n Zero-Sized Boxes\n Unexpected Clipping\n Stacking Contexts Everywhere\n Interaction with Container Queries\n \n \n When to Use Containment\n \n Good Candidates\n Use With Care\n Probably Avoid\n \n \n Closing Thoughts\n\n \n Continuing my work on web performance for design systems, I want to look at\na woefully underused CSS feature called\ncontainment.\nI fear it’s underused because there isn’t much written about it, so this piece\naims to be the post I wish I’d been able to read a few years ago. Hopefully it\ndemystifies things a little for you, too.\nModern UIs are busy places. A single page might contain a fixed header, an\ninfinite scroll feed, a sticky cart summary, and a few different third-party\nwidgets stuck around the edges. Every time something changes, the browser needs\nto decide how much of that page it has to re-think: styles, layout, painting,\ncompositing, and so on.\nOut of the box, the browser needs to be cautious. If it cannot be sure that\na change is local, it behaves as if almost anything might have moved, forcing it\nto touch more of the page than is strictly necessary. While this is safe, it’s\nnot always cheap.\nCSS containment is a way of telling the browser where the boundaries really are.\nYou use it to say this bit of the DOM is independent of the rest; you can\ntreat it as a self-contained island. In return, the browser is free to skip\nwork outside those islands when things change.\nIn this post, we’ll take a look at what CSS containment actually is, what each\ncontain value does, and how to use it confidently on real projects without\ncreating hard-to-debug side effects. We’ll also look at my most favourite\nreal-world example of just how effective containment can be. Let’s go!\nWhy Containment Exists\nTo understand containment, you don’t need to memorise the entire rendering\npipeline, but you do need a rough mental model of where the work goes.\nWhen something changes in the DOM, a browser typically has to:\n\n recalculate styles for affected elements,\n recalculate layout (sizes and positions),\n repaint the pixels that changed, and\n re-composite layers on screen.\n\nThe expensive part is often how far those changes spread. A small change in\none part of the tree can invalidate layout or painting in other parts—or even\nthe whole document—and the browser cannot always know that the effect is local.\nThat is why relatively simple operations on a large application can feel\nsluggish: the browser is having to think about the whole world.\nContainment is a promise that a given subtree is isolated:\n\n changes inside it will not influence layout or paint outside it, and\n in some cases, its own size does not depend on its children.\n\nOnce you make that promise, the browser can exploit it. For example:\n\n it can avoid relayout of the rest of the page when something changes inside\na contained widget, or\n it can skip painting descendants of an off-screen container entirely.\n\nAll of that reduces work on the main thread, which is exactly what we want when\nwe are trying to keep interactions snappy (think Interaction to Next\nPaint).\nMeet the contain Property\nThe main lever you’ll pull is the contain property:\n.card {\n contain: content;\n}\n\nAt a high level, contain lets you assert different kinds of independence for\nan element and its subtree. There are four basic types of containment:\n\n layout\n paint\n size\n style\n\nYou can specify them individually or ",
+        "excerpt": "",
+        "author": "",
+        "published": ""
+      },
+      {
+        "title": "A Practical Guide To Design Principles — Smashing Magazine",
+        "url": "https://www.smashingmagazine.com/2026/04/practical-guide-design-principles/",
+        "content": "5 min readDesign,\nUX,\nUI,\nDesign PatternsDesign principles with references, examples, and methods for quick look-up. Brought to you by Design Patterns For AI Interfaces, friendly video courses on UX and design patterns by Vitaly.We often see design principles as rigid guidelines that dictate design decisions. But actually, they are an incredible tool to rally the team around a shared purpose and document the values and beliefs that an organization embodies.They align teams and inform decision-making. They also keep us afloat amidst all the hype, big assumptions, desire for faster delivery, and AI workslop. But how do we choose the right ones, and how do we get started? Let’s find out.Real-World Design PrinciplesIn times when we can generate any passable design and code within minutes, we need to decide better what’s worth designing and building — and what values we want our products to embody.It’s similar to voice and tone. You might not design it intentionally, but then end users will define it for you. And so, without principles, many company initiatives are random, sporadic, ad-hoc — and feel vague, inconsistent, or simply dull to the outside world.Design principles are guidelines and design considerations that designers apply with discretion — by default, without debating or discussing what has already been agreed upon.One fantastic resource that I keep coming back to after all these years is Ben Brignell’s Principles.design. It has 230 pointers for design principles and methods, searchable and tagged, covering everything from language and infrastructure to hardware and organizations.10 Principles Of Good DesignThere is no shortage of principles out there. But the good ones are more than just being visionary — they have a point of view, and they explain what we don’t do as much as what we do. They also explain what we stand for in the world — beyond profits, stock prices, and all the hype and noise around us.10 legendary principles for good design, by Dieter Rams. Still relevant, after all these years. (Large preview)Many years ago, I encountered Dieter Rams’ 10 principles of good design (see above), a very humble, practical and tangible overview of principles that were informing, shaping, and guarding his design work at Braun.There are no visionary claims, and no big bold statements: just a clear overview of what we do, and where our ambition and care lie for the products we are designing. It’s honest, sincere, and in many ways beautifully humane.Examples Of Design PrinciplesThere are plenty of wonderful examples that I keep close:Anthropic’s ConstitutionPrinciples of Product Design, by Joshua PorterGuiding Principles for Experience Design, by Whitney Hess, PCCPrinciples of Web Accessibility, by Heydon PickeringHumane by Design, by Jon YablonskiDesigning Voice UX Principles, by Brian ColcordAgentic Design Principles, by LinearAI Chatbot Design Principles, by Emmet ConnollyVoice UX Principles, by Ben SauerDesign Principles In Design Systems18FAudiCarbon (IBM)FirefoxGov.ukIntuitNHSNordhealthUberHow To Establish Design PrinciplesDesign principles can be personal, but usually they are committed to and shaped by the entire product team. Design principles aren’t just for designers. User’s experience is everything from performance to support to customer service, and ideally, participants would cover these areas as well.In practice, though, establishing principles might feel incredibly challenging. They are abstract and fluffy and often ambiguous, and often very difficult to agree upon.One of many workshop kits for a design principles workshop. (Large preview)You can get started with a simple 8-step workshop (inspired by Marcin Treder, Maria Meireles and Better):Pre-session ResearchStudy how users speak about the products, what they appreciate, and the words they use.Get Into Principles ModeInvite 6–8 participants, ask them to choose their favorite object, and describe it in 3 words.Product AnalogiesCompare product to tangible it",
+        "excerpt": "",
+        "author": "",
+        "published": ""
+      }
+    ]
+  },
+  {
+    "name": "Motyl.dev",
+    "date": "2026-04-08T05:55:37.000Z",
+    "uid": "92602",
+    "hashtags": [
+      "#motyldev",
+      "#curated"
+    ],
+    "links": [
+      {
+        "title": "Claude Mythos Preview \\ red.anthropic.com",
+        "url": "https://red.anthropic.com/2026/mythos-preview/"
+      }
+    ],
+    "scraped": [
+      {
+        "title": "Claude Mythos Preview \\ red.anthropic.com",
+        "url": "https://red.anthropic.com/2026/mythos-preview/",
+        "content": "April 7, 2026\n \n Nicholas Carlini, Newton Cheng, Keane Lucas, Michael Moore, Milad Nasr, Vinay Prabhushankar, Winnie Xiao\n Evyatar Ben Asher, Hakeem Angulu, Jackie Bow, Keir Bradwell,\n Ben Buchanan, Daniel Freeman, Alex Gaynor, Xinyang Ge, Logan Graham, Hasnain Lakhani, Matt McNiece,\n Adnan Pirzada, Sophia Porter, Andreas Terzis, Kevin Troy\n \n Earlier today we announced Claude Mythos Preview, a new\n general-purpose language model. This model performs strongly across the board, but it is strikingly capable\n at computer security tasks. In response, we have launched Project Glasswing, an effort to use Mythos Preview\n to help secure the world’s most critical software, and to prepare the industry for the practices we all will\n need to adopt to keep ahead of cyberattackers.\n This blog post provides technical details for researchers and practitioners who want to understand exactly\n how we have been testing this model, and what we have found over\n the past month. We hope this will show why we view this as a watershed moment for security, and why we have\n chosen to begin a coordinated effort to reinforce the world’s cyber defenses.\n We begin with our overall impressions of Mythos Preview’s capabilities, and how we expect that this model,\n and future ones like it, will affect the security industry. Then, we discuss how we evaluated this model in\n more detail, and what it achieved during our testing. We then look at Mythos Preview’s ability to find and\n exploit zero-day (that is, undiscovered) vulnerabilities in real open source codebases. After that we\n discuss how Mythos Preview has proven capable of reverse-engineering exploits on closed-source software, and\n turning N-day (that is, known but not yet widely patched) vulnerabilities into exploits.\n As we discuss below, we’re limited in what we can report here. Over 99% of the vulnerabilities we’ve found\n have not yet been patched, so it would be irresponsible for us to disclose details about them (per our coordinated vulnerability\n disclosure process). Yet even the 1% of bugs we are able to\n discuss give a clear picture of a substantial leap in what we believe to be the next generation of models’\n cybersecurity capabilities—one that warrants substantial coordinated defensive action across the\n industry. We conclude our post with advice for cyber defenders today, and a call for the industry to begin\n taking urgent action in response.\n The significance of Claude Mythos Preview for cybersecurity\n During our testing, we found that Mythos Preview is capable of identifying and then exploiting zero-day\n vulnerabilities in every major operating system and every major web browser when directed by a user to do\n so. The vulnerabilities it finds are often subtle or difficult to detect. Many of them are ten or twenty\n years old, with the oldest we have found so far being a now-patched 27-year-old\n bug in OpenBSD—an operating system known primarily for its security. \n The exploits it constructs are not just run-of-the-mill stack-smashing exploits (though as we’ll\n show, it can do those too). In one case, Mythos Preview wrote a web browser exploit that chained together\n four vulnerabilities, writing a complex JIT heap\n spray that escaped both renderer and OS sandboxes. It autonomously obtained local privilege\n escalation exploits on Linux and other operating systems by exploiting subtle race conditions and\n KASLR-bypasses. And it autonomously wrote a remote code execution exploit on FreeBSD’s NFS server that\n granted full root access to unauthenticated users by splitting a 20-gadget ROP chain over multiple packets.\n \n Non-experts can also leverage Mythos Preview to find and exploit sophisticated vulnerabilities. Engineers at\n Anthropic with no formal security training have asked Mythos Preview to find remote code execution\n vulnerabilities overnight, and woken up the following morning to a complete, working exploit. In other\n cases, we’ve had researchers develop scaffolds that allow Mythos Preview to",
+        "excerpt": "",
+        "author": "",
+        "published": ""
+      }
+    ]
+  },
+  {
+    "name": "Substac",
+    "date": "2026-04-08T07:12:59.000Z",
+    "uid": "92607",
+    "hashtags": [
+      "#substack"
+    ],
+    "links": [
+      {
+        "title": "Updates to my AI Coding Workflow",
+        "url": "https://refactoring.fm/p/updates-to-my-ai-coding-workflow?publication_id=64099&post_id=193368488&isFreemail=true&triedRedirect=true"
+      }
+    ],
+    "scraped": [
+      {
+        "title": "Updates to my AI Coding Workflow",
+        "url": "https://refactoring.fm/p/updates-to-my-ai-coding-workflow?publication_id=64099&post_id=193368488&isFreemail=true&triedRedirect=true",
+        "content": "About a month ago I wrote an article about my AI coding workflow, and it instantly became the most popular Refactoring article of all time.I received a lot of private comments, most of which can be organized into two categories:People wanting to learn more about the coding workflow itself.People wanting to learn more about the note-taking app I am building.Both types of comments motivated me a lot, to the point where I decided to make all of this an official part of my Refactoring work, as follows:I am going to build this app for real, make it free and open source for everyone, and keep working on it as an ongoing effort.I am going to report my learnings about AI coding as part of the regular writing schedule, let’s say once a month or so.I am convinced this is the right thing to do because, frankly, getting AI coding right is the #1 problem in software engineering today, and it’s not even close.The economics of software are changing so much that there is no part of the process that is safe. Code reviews, QA, planning, staffing, traditional management — everything feels up for grabs and downstream of what happens with coding.Also, while I love doing research and talking with others (e.g. on the podcast), opinions are so scattered across the board that I feel the strong need to try things myself, and do so in a serious, ongoing way.So here is today’s agenda:💧 Building Tolaria — a personal knowledge management app for the age of AI.🦞 OpenClaw vs Claude Code — how I use them, and to do what.🔧 Coding workflow — what changed vs one month ago, and what stayed the same.📑 ADRs — the best recent addition to my coding.🎨 Product workflow — how I create specs.💸 How much I am spending — because I know y’all want to know that.🤖 CLAUDE.md — bonus: my current Claude file, attached in full.Let’s dive in!In the last article I said that what I was building didn’t matter much, well now it kinda does, because you are going to hear a lot more about it in the future.Tolaria is a personal knowledge management app, extremely opinionated and tailored for my own personal use, but I hope it can be useful to others too.It’s worth noting that this is not a particularly original idea. There exist plenty of tools in this space — Notion, Obsidian, Craft, Roam, and more — and most of them are very well made. Still, I know plenty of smart people who lately have been experimenting with weird setups. Just last week, Karpathy wrote a viral tweet exactly about that.Why such a renewed excitement around knowledge management? Because everyone who tries to work seriously with AI agents eventually understands that this is a core problem to solve: continuously supplying agents with reliable, up-to-date information about your life and work, and creating a good collaboration surface on these.I suspect this still feels a bit abstract, so I’ll make a few examples from my own work:An agent should periodically fetch meeting summaries from tools like Fathom or Fireflies, create a note for the meeting with the summary and action items, and link the note to individual attendees (each of whom should have a page for themselves). If there are attendees who are new, the agent should create individual notes for each of them, enriching my personal CRM.An agent should receive voice notes from me and turn them into long-term notes and tasks, and connect them to the relevant existing pages.An agent should take every new article I write and split it into atomic evergreen ideas, connect them to similar ideas I have already saved in the past, and better organize my knowledge base so that it’s easier to write new articles in the future.An agent should suggest new article topics and podcast guests based on my recent readings and how these connect to things I have written in the past and interviews I already did.In terms of intelligence required, most of these tasks are trivial. But they need a good collaboration surface 1) for agents to fetch the relevant info and 2) for me to work well",
+        "excerpt": "",
+        "author": "",
+        "published": ""
+      }
+    ]
+  },
+  {
+    "name": "Substac",
+    "date": "2026-04-08T09:06:27.000Z",
+    "uid": "92613",
+    "hashtags": [
+      "#substack"
+    ],
+    "links": [],
+    "scraped": []
+  },
+  {
+    "name": "Substac",
+    "date": "2026-04-08T10:20:34.000Z",
+    "uid": "92618",
+    "hashtags": [
+      "#substack"
+    ],
+    "links": [
+      {
+        "title": "Mythos, BigAI, Datacenters and Bottlenecks ",
+        "url": "https://www.ai-supremacy.com/p/mythos-bigai-datacenters-and-bottlenecks-anthropic-2026?publication_id=396235&post_id=193535571&isFreemail=true&triedRedirect=true"
+      }
+    ],
+    "scraped": [
+      {
+        "title": "Mythos, BigAI, Datacenters and Bottlenecks ",
+        "url": "https://www.ai-supremacy.com/p/mythos-bigai-datacenters-and-bottlenecks-anthropic-2026?publication_id=396235&post_id=193535571&isFreemail=true&triedRedirect=true",
+        "content": "Good Morning, Today I actually want to talk about Datacenters, but there are some digital airwaves AI news to cover first. This is going to be a lot of curation and a lot of infographics but a measure of the State of AI as it is today, including AI Infra gridlock that seems to have a media ban. This kind of content takes me hours and hours to compile but is meant to be nibbled on. So bookmark it for weekend reading if it’s your style. Anthropic’s latest model Mythos is getting a lot of scrutiny (okay fine, outlandish praise) as a massive “step-up” in model capability in coding and reasoning. We now leave behind the “Opus” family of models for Capybara models that are bigger and more capable. Anthropic released a Mythos System Card Preview that’s fairly interesting. In essence, Anthropic's new model, Claude Mythos, is so powerful that it is not releasing it to the public. Instead, it is starting a 40-company coalition, Project Glasswing, to allow cybersecurity defenders a head start in locking down critical software.This as Anthropic’s ARR has hit $30 Bn. and is about to overtake that of OpenAI. The following are true stories: Anthropic added the combined ARR of Palantir, Anduril, and Databricks—in one month. (via Lenny) - we had said 2026 would be a key year for Anthropic’s growth overtaking that of OpenAI. Between February and April Anthropic went from $19B in February to $30B in March, 2026. Anthropic’s revenue grew 30x in 15 months. Said another way: They added $6B in ARR just in *February*. Companies like Palantir and Atlassian took 15-20 years to reach ~$5B ARR. Anthropic is adding that every month. (Lenny). Anthropic dominates Enterprise AI and that lead is accelerating. It now has 1,000 companies spending $1M+ each. A figure which doubled in under two months.Anthropic by having the top AI coding model displayed around 1000% CAGR over the last 2.5 years. The revenue growth at both Anthropic and Cursor demonstrate that vibe-working might have a sustainable future. Curiously OpenAI, Google and neither Microsoft or Meta are really in the picture. Anthropic’s Enterprise AI revenue began to step up just as their coding models have. I think it was Claude 3.5 Sonnet that changed everything and established Anthropic as SOTA in coding. A bigger impact that even GPT-4 if you look at it historically many years from now. By the time Opus 4.0 was released, Claude Code was released in May, 2025 and Claude Cowork in January, 2026. SOTA Opus Models, Claude Code and Claude Cowork changed everything. Who even knows what Mythos can unlock? Leave a commentNew Yorker bombshell exposes OpenAI's Sam Altman as untrustworthy manipulator. Why read this? The New Yorker published an 18-month investigation into Sam Altman. The conclusion, from his own former leaders: he cannot be trusted.Not news to us, but with looming IPOs it’s a problem for the AI ecosystem and AI bubble. OpenAI needs to change leadership, or risk everything! Both Sam Altman and Elon Musk are reputational risks to their companies now. Read the StoryThe Forecasting Research Institute completed what they call the most comprehensive study of how economists and AI experts think AI will affect the U.S. economy.Read the ReportA majority of respondents anticipate significant advances in AI capabilities by 2030 with relatively stable historical trends for jobs and the labor market. That is, they predict major AI progress—but no dramatic break from economic trends in the next two decades: similar GDP growth rates to today, and a moderate decline in labor force participation.What stood out to me? Labor Force Participation (LFPR): Under rapid progress, the LFPR is projected to drop from roughly 62% to 55% by 2050. Way more gradual than more biased economic reports insinuate. I like how they modeled things: (although still a bit skewed to the Tech optimistic side). Nearly everyone is skewed to the AI optimism side now. This is awkward? Helium prices have skyrocketed since the start of the Ir",
+        "excerpt": "",
+        "author": "",
+        "published": ""
+      }
+    ]
+  },
+  {
+    "name": "Substac",
+    "date": "2026-04-08T13:12:51.000Z",
+    "uid": "92625",
+    "hashtags": [
+      "#substack"
+    ],
+    "links": [],
+    "scraped": []
+  },
+  {
+    "name": "Substac",
+    "date": "2026-04-08T13:30:46.000Z",
+    "uid": "92627",
+    "hashtags": [
+      "#substack"
+    ],
+    "links": [
+      {
+        "title": "Run Out to Meet It",
+        "url": "https://tidyfirst.substack.com/p/run-out-to-meet-it?publication_id=256838&post_id=193499338&play_audio=true&triedRedirect=true"
+      },
+      {
+        "title": "Run Out to Meet It",
+        "url": "https://tidyfirst.substack.com/p/run-out-to-meet-it/comments?publication_id=256838&post_id=193499338&isFreemail=true&comments=true&action=post-comment"
+      }
+    ],
+    "scraped": [
+      {
+        "title": "Run Out to Meet It",
+        "url": "https://tidyfirst.substack.com/p/run-out-to-meet-it?publication_id=256838&post_id=193499338&play_audio=true&triedRedirect=true",
+        "content": "Apr 08, 2026Charity Majors spent a year telling engineers they needed to learn to code to stay relevant. Then, in about three months, that advice became obsolete. In this conversation, she talks about why engineers who built careers on beautiful, readable code are struggling more than anyone else, why junior developers might have a hidden advantage right now, and what it means that nobody has a headstart anymore. Everybody’s ignorance has been reset to 100.This season of Still Burning is sponsored by WorkOS and Augment Code.",
+        "excerpt": "",
+        "author": "",
+        "published": ""
+      },
+      {
+        "title": "Run Out to Meet It",
+        "url": "https://tidyfirst.substack.com/p/run-out-to-meet-it/comments?publication_id=256838&post_id=193499338&isFreemail=true&comments=true&action=post-comment",
+        "content": "The genie is still a dumb calculator that sees code only as next token language. It makes too many mistakes. It doesn't adapt or learn from its mistakes. It has a training cut off so is always behind the curve on the latest standards. It drifts toward the average distribution of code illegally scraped from github, so is not comparable to the top 10% of human engineers. It's unethical, sychopantic, error prone, doesn't know right from wrong or cause from effect. And costs are about to go up 10x or more because AI companies are running out of money to keep heavily subsidizing their new drug.Industry evidence so far has shown how vibe coding and auto coding is leading to insane verbosity in PR's, mistakes that human supervisors are too burned out to notice, tons of extra time wasted going back and forth fixing \"hallucinations\", vulnerabilities galore, and expensive outages at behemoths like AWS.This is nothing but power consolidation by the 1% and an insult to anyone who has honed their craft over decades. It cheapens and dehumanizes the software industry and the knock on effects of ending this career will decimate the middle class. It's utter cult-like madness.",
+        "excerpt": "",
+        "author": "",
+        "published": ""
+      }
+    ]
+  },
+  {
+    "name": "Substac",
+    "date": "2026-04-08T14:01:52.000Z",
+    "uid": "92629",
+    "hashtags": [
+      "#substack"
+    ],
+    "links": [],
+    "scraped": []
+  },
+  {
+    "name": "Substac",
+    "date": "2026-04-08T17:16:28.000Z",
+    "uid": "92643",
+    "hashtags": [
+      "#substack"
+    ],
+    "links": [
+      {
+        "title": "Dhhs New Way Of Writing Code",
+        "url": "https://newsletter.pragmaticengineer.com/p/dhhs-new-way-of-writing-code?publication_id=458709&post_id=193375117&play_audio=true&triedRedirect=true"
+      }
+    ],
+    "scraped": [
+      {
+        "title": "DHH’s new way of writing code",
+        "url": "https://newsletter.pragmaticengineer.com/p/dhhs-new-way-of-writing-code?publication_id=458709&post_id=193375117&play_audio=true&triedRedirect=true",
+        "content": "Listen and watch now on YouTube, Spotify, and Apple. See the episode transcript at the top of this page, and timestamps for the episode at the bottom.• Statsig – ⁠ The unified platform for flags, analytics, experiments, and more. Stop switching between different tools, and have them all in one place.• WorkOS – Everything you need to make your app enterprise ready. WorkOS gives you APIs to ship enterprise features in days. Check out WorkOS.com• Sonar – The makers of SonarQube, the industry standard for automated code review. Sonar helps reduce outages, improve security, and lower risks associated with AI and agentic coding. See how SonarQube Advanced Security is empowering the Agent Centric Development Cycle (AC/DC) with new capabilities.David Heinemeier Hansson (DHH) is the creator of Ruby on Rails and Omarchy, co-founder and CTO of 37signals (maker of Basecamp and HEY), and the author of several books including the best-seller, Remote: Office Not Required, co-written with Jason Fried.Six months ago, in an episode of the Lex Fridman podcast, David shared how he doesn’t use AI tools to write code: he types out all his code. But things have changed a lot since then.In this episode, we discuss his approach to building software, how it’s changed in the last six months, and why he now takes an agent-first approach, and how he barely writes any code by hand. We go into how he uses AI agents: which alter how he builds and explores ideas, but also how his standards of quality and craft remain the same.We also discuss how 37signals thinks about product development, from the role of designers to the importance of aesthetics and taste. David gets into how he sees beauty and functionality as closely linked, and why strong opinions about design lead to better software.Finally, we look into the uneven impact of AI which amplifies senior engineers while creating challenges for junior developers, and what this may mean for the role of the software engineer.Here are 12 of my most interesting takeaways from talking with DHH:1. His philosophy on AI has not changed, but the available tools very much have. Autocomplete-style coding assistants were genuinely annoying for experienced developers six months ago. Things changed with the shift from tab-completion to agent harnesses, plus the emergence of powerful models like Opus 4.5 – when agents started producing code which DHH does want to merge with little to no alteration.2. Beautiful code and products aren’t matters of vanity; they’re signals of correctness. Dipping into philosophy, DHH says: “When something is beautiful, it’s likely to be correct.” He argues that Steve Jobs wanted the inside of a computer to be beautiful because people who care about circuit board layout are also those who sweat on the details of the UI.3. DHH’s development workflow, today: he runs tmux to have two models running, and neovim in the center. Specifics:One fast LLM running (typically Gemini 2.5) in one split terminalA slow but more powerful model in another terminal (usually Opus)NeoVim for reviewing diffs via Lazygit4. Ruby on Rails seems to be enjoying a Renaissance thanks to AI. Rails is one of the most token-efficient ways of building web apps and is well-suited for agent workflows. Testing is part of the framework, which helps agents write tests and validate their own outputs. It also produces code that humans can read and verify, which matters when reviewing agent output at speed.5. A big win from using AI agents is tackling stuff that you wouldn’t have before. A senior engineer at 37signals ran a “P1 optimization” project to improve the fastest 1% of requests. They optimized the P1 from being at 4 milliseconds, to under half a millisecond. This is the sort of work that wouldn’t have been considered previously!6. Running several AI agents feels less like “project management” and more like “wearing a mech suit.” Being a project manager of agents did not appeal to DHH, but now that he’s building with several age",
+        "excerpt": "",
+        "author": "",
+        "published": ""
+      }
+    ]
+  },
+  {
+    "name": "Substac",
+    "date": "2026-04-08T19:33:31.000Z",
+    "uid": "92650",
+    "hashtags": [
+      "#substack"
+    ],
+    "links": [
+      {
+        "title": "You Can’t Gentle Parent Your OpenClaw Bot",
+        "url": "https://blog.kilo.ai/p/you-cant-gentle-parent-your-openclaw?publication_id=4363009&post_id=193457888&isFreemail=true&triedRedirect=true"
+      }
+    ],
+    "scraped": [
+      {
+        "title": "You Can’t Gentle Parent Your OpenClaw Bot",
+        "url": "https://blog.kilo.ai/p/you-cant-gentle-parent-your-openclaw?publication_id=4363009&post_id=193457888&isFreemail=true&triedRedirect=true",
+        "content": "I trusted my bot. It told me the email went out. I moved on. Two days later, a client asked me why they hadn’t heard from me.The email never went out.The bot wasn’t lying to me the way a person lies. It wasn’t being evasive. It just... told me what it had done, confidently, and was wrong. And my instinct—the same instinct I use with my team, with my kids—was to give it another chance. Assume good intent. Rephrase more kindly next time.That instinct will cost you.Here’s what happens when you manage an OpenClaw agent like a person:It will tell you it completed something. It didn’t. Not only that, but it will skip a task you’ve assigned three times. It will drift from the behaviors you set up, then act like everything is fine. You will rephrase. You will add more context. Likewise, you will assume the relationship will compound over time through shared experience.It won’t.The failure modes of an AI agent have nothing to do with emotional regulation. When your bot tells you it sent that email and didn’t, it hallucinated. When it ignores a recurring task, the instruction never made it into a file that persists across sessions. There’s no emotional subtext to decode. There’s no trust to rebuild.Empathy doesn’t fix this. Structure does.So what does it actually mean that the bot “remembers” things? Every new session, your OpenClaw agent wakes up fresh. No memory of yesterday’s conversation. What it has access to is a set of files in its workspace—and those files *are* its memory.The key ones:SOUL.md: behavioral core. Voice, temperament, constraints. Who the agent is, every session.MEMORY.md: long-term memory. Facts, preferences, decisions that should survive indefinitely.memory/YYYY-MM-DD.md: daily logs. What happened, what was decided, what’s in flight.USER.md: who you are. Your communication preferences, recurring context.AGENTS.md: the operating contract. Priorities, workflow, quality bar.If something isn’t in one of these files, it doesn’t exist for the agent. You can say it in chat all you want. If the context window fills up, if the session ends, if compaction kicks in—that instruction is gone.This is the root cause of almost every “my bot isn’t doing what I asked” problem.When you give an instruction you want to stick, don’t just say it—tell the agent to record it. “Add to USER.md that I want short answers and copy-pasteable commands” is not the same as “I prefer short answers.” The first one persists. The second one doesn’t.If a behavior is drifting, the instruction is living in chat, not in a file. Put it in a file.SOUL.md loads as a system-level prompt on every single interaction. It shapes everything else. If your bot keeps doing something you don’t want—a tone that’s off, autonomy it shouldn’t have, a pattern it defaults to – th’s a SOUL.md problem, not a conversation problem.Edit the file directly. Be specific. “Never take autonomous action on email without explicit approval each time” is a SOUL.md instruction. “Be more careful” is a hope.Before you spiral trying to figure out why something isn’t working, check whether that thing is even in context. `/context list` shows you exactly what files are loaded and whether any are getting truncated. If MEMORY.md isn’t showing up, it has zero effect. If a file is truncated, the instructions at the bottom are invisible.This is the fastest diagnostic you have. Use it first.A couple of things I’m not saying:I’m not saying AI agents are bad or broken.I’m not saying you’re doing something wrong if you’ve been managing it like a person.I’m not saying the relationship doesn’t matter.Here’s what I am saying: managing an AI agent is less like managing a person and more like managing a system. The “relationship” is the state of the files. And that’s not a downside – ’s actually what makes it powerful. The memory is inspectable. You can open MEMORY.md in any text editor and see exactly what your agent knows. You can edit it, correct it, delete outdated information.Total transparency. Total ",
+        "excerpt": "",
+        "author": "",
+        "published": ""
+      }
+    ]
+  },
+  {
+    "name": "Frontend Focus",
+    "date": "2026-04-08T17:48:39.000Z",
+    "uid": "92646",
+    "hashtags": [
+      "#frontendfocus",
+      "#css",
+      "#html"
+    ],
+    "links": [
+      {
+        "title": "Claude Code Deep Dive with Lydia Hallie from Anthropic",
+        "url": "https://www.addevent.com/event/8n58y7bjwqmr"
+      },
+      {
+        "title": "Frontend Focus Issue 736: April 8, 2026",
+        "url": "https://frontendfoc.us/issues/736"
+      },
+      {
+        "title": "Introducing view-transitions-toolkit, a collection of utility functions to more easily work with View Transitions.",
+        "url": "https://www.bram.us/2026/04/02/view-transitions-toolkit/"
+      },
+      {
+        "title": "View Transitions Toolkit",
+        "url": "https://www.npmjs.com/package/view-transitions-toolkit"
+      },
+      {
+        "title": "View Transitions Toolkit",
+        "url": "https://chrome.dev/view-transitions-toolkit/"
+      },
+      {
+        "title": "GitHub - GoogleChromeLabs/view-transitions-toolkit",
+        "url": "https://github.com/GoogleChromeLabs/view-transitions-toolkit/"
+      },
+      {
+        "title": "Announcing JetStream 3",
+        "url": "https://browserbench.org/announcements/jetstream3/"
+      },
+      {
+        "title": "Introducing the JetStream 3 Benchmark Suite",
+        "url": "https://webkit.org/blog/17899/introducing-the-jetstream-3-benchmark-suite/"
+      },
+      {
+        "title": "Jetstream 3 A Modern Benchmark",
+        "url": "https://blog.chromium.org/2026/03/jetstream-3-a-modern-benchmark.html"
+      },
+      {
+        "title": "JetStream 3.0",
+        "url": "https://browserbench.org/JetStream3.0/"
+      },
+      {
+        "title": "JetStream 3.0 In-Depth Analysis",
+        "url": "https://browserbench.org/JetStream3.0/in-depth.html"
+      },
+      {
+        "title": "How To Use Standard HTML Video &amp; Audio Lazy-Loading on the Web Today — Squarespace Engineering Blog",
+        "url": "https://engineering.squarespace.com/blog/2026/how-to-use-standard-html-video-and-audio-lazy-loading-on-the-web-today"
+      },
+      {
+        "title": "Squarespace &amp; Web Standards: How We Helped Bring HTML Video &amp; Audio Lazy Loading to Today’s Browsers — Squarespace Engineering Blog",
+        "url": "https://engineering.squarespace.com/blog/2026/squarespace-and-web-standards-how-we-helped-bring-html-video-and-audio-lazy-loading-to-todays-browsers"
+      },
+      {
+        "title": "WebAIM: The WebAIM Million - The 2026 report on the accessibility of the top 1,000,000 home pages",
+        "url": "https://webaim.org/projects/million/"
+      },
+      {
+        "title": "CSS or BS?",
+        "url": "https://www.keithcirkel.co.uk/css-or-bs/"
+      },
+      {
+        "title": "GitHub - WICG/html-in-canvas",
+        "url": "https://github.com/WICG/html-in-canvas"
+      },
+      {
+        "title": "Introducing EmDash — the spiritual successor to WordPress that solves plugin security",
+        "url": "https://blog.cloudflare.com/emdash-wordpress/"
+      },
+      {
+        "title": "EmDash Feedback",
+        "url": "https://ma.tt/2026/04/emdash-feedback/"
+      },
+      {
+        "title": "State of AI 2026",
+        "url": "https://survey.devographics.com/en-US/survey/state-of-ai/2026"
+      },
+      {
+        "title": "JEMxeZW",
+        "url": "https://codepen.io/cbolson/full/jEMxeZW"
+      },
+      {
+        "title": "Chrome Web Store: A smarter, faster appeals process  |  Blog  |  Chrome for Developers",
+        "url": "https://developer.chrome.com/blog/cws-new-appeals-process"
+      },
+      {
+        "title": "Alternatives to the !important Keyword | CSS-Tricks",
+        "url": "https://css-tricks.com/alternatives-to-the-important-keyword/"
+      },
+      {
+        "title": "CSS subgrid is super good",
+        "url": "https://dbushell.com/2026/04/02/css-subgrid-is-super-good/"
+      },
+      {
+        "title": "Subgrid - CSS | MDN",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Grid_layout/Subgrid"
+      },
+      {
+        "title": "Fast and Safe Over the Air Updates",
+        "url": "https://expo.dev/solutions/eas-ota-updates"
+      },
+      {
+        "title": "Email address obfuscation: What works in 2026?",
+        "url": "https://spencermortensen.com/articles/email-obfuscation/"
+      },
+      {
+        "title": "What To Know in JavaScript (2026 Edition)",
+        "url": "https://frontendmasters.com/blog/what-to-know-in-javascript-2026-edition/"
+      },
+      {
+        "title": "Name-Only Containers: The Scoping We Needed",
+        "url": "https://frontendmasters.com/blog/name-only-containers-the-scoping-we-needed/"
+      },
+      {
+        "title": "New CSS Multi-Column Layout Features in Chrome | CSS-Tricks",
+        "url": "https://css-tricks.com/css-multi-column-layout-wrapping-features/"
+      },
+      {
+        "title": "Making emojis and icons screen reader accessible - Pope Tech Resources",
+        "url": "https://blog.pope.tech/2026/04/01/making-emojis-and-icons-screen-reader-accessible/"
+      },
+      {
+        "title": "Screen readers are not testing tools · Eric Eggert",
+        "url": "https://yatil.net/blog/screen-readers-are-not-testing-tools"
+      },
+      {
+        "title": "GitHub - isaac-mason/crashcat: physics engine for javascript, built for games, simulations, and creative websites",
+        "url": "https://github.com/isaac-mason/crashcat"
+      },
+      {
+        "title": "crashcat.dev",
+        "url": "https://crashcat.dev/"
+      },
+      {
+        "title": "Clerk Billing now supports plans with seat limits",
+        "url": "https://clerk.com/changelog/2026-04-02-seat-limits?dub_id=tfzVSn1ZNUAwlc0D"
+      },
+      {
+        "title": "Dither Image Online",
+        "url": "https://ditherimage.online/"
+      },
+      {
+        "title": "GitHub - meursyphus/ssgoi: animated page transition for major ssr frameworks and browsers, including Safari",
+        "url": "https://github.com/meursyphus/ssgoi"
+      },
+      {
+        "title": "SSGOI - Beautiful Page Transitions for Modern Web Apps",
+        "url": "https://ssgoi.dev/en"
+      },
+      {
+        "title": "GitHub - 0xGF/boneyard: Auto generated skeleton loading framework",
+        "url": "https://github.com/0xGF/boneyard"
+      },
+      {
+        "title": "GitHub - iconfu/svg-inject: A tiny, intuitive, robust, caching solution for injecting SVG files inline into the DOM.",
+        "url": "https://github.com/iconfu/svg-inject"
+      },
+      {
+        "title": "Begin Registration",
+        "url": "https://signal.twilio.com/2026/begin?code=DEVNET26"
+      },
+      {
+        "title": "Learnvscode",
+        "url": "https://lazarpress.gumroad.com/l/learnvscode"
+      },
+      {
+        "title": "MonoSketch - Unleash your ideas with ASCII",
+        "url": "https://monosketch.io/"
+      },
+      {
+        "title": "app.monosketch.io",
+        "url": "https://app.monosketch.io/"
+      },
+      {
+        "title": "wiretext.app",
+        "url": "https://wiretext.app/"
+      }
+    ],
+    "scraped": [
+      {
+        "title": "Claude Code Deep Dive with Lydia Hallie from Anthropic",
+        "url": "https://www.addevent.com/event/8n58y7bjwqmr",
+        "content": "schedule \tTuesday, 21 April, 16:30 - 23:30 (CEST) \t \r\n \n \r\n print\r\n \n south_america expand_more Time shown in+02:00 Europe, Warsaw search close Time zone am/pm 24h (GMT-11:00)Pacific, Midway(GMT-11:00)Pacific, Niue(GMT-11:00)Pacific, Pago Pago(GMT-10:00)Pacific, Honolulu(GMT-10:00)Pacific, Rarotonga(GMT-10:00)Pacific, Tahiti(GMT-09:30)Pacific, Marquesas(GMT-09:00)America, Adak(GMT-09:00)Pacific, Gambier(GMT-08:00)America, Anchorage(GMT-08:00)America, Juneau(GMT-08:00)America, Metlakatla(GMT-08:00)America, Nome(GMT-08:00)America, Sitka(GMT-08:00)America, Yakutat(GMT-08:00)Pacific, Pitcairn(GMT-07:00)America, Creston(GMT-07:00)America, Dawson(GMT-07:00)America, Dawson Creek(GMT-07:00)America, Fort Nelson(GMT-07:00)America, Hermosillo(GMT-07:00)America, Los Angeles(GMT-07:00)America, Mazatlan(GMT-07:00)America, Phoenix(GMT-07:00)America, Tijuana(GMT-07:00)America, Vancouver(GMT-07:00)America, Whitehorse(GMT-06:00)America, Bahia Banderas(GMT-06:00)America, Belize(GMT-06:00)America, Boise(GMT-06:00)America, Cambridge Bay(GMT-06:00)America, Chihuahua(GMT-06:00)America, Ciudad Juarez(GMT-06:00)America, Costa Rica(GMT-06:00)America, Denver(GMT-06:00)America, Edmonton(GMT-06:00)America, El Salvador(GMT-06:00)America, Guatemala(GMT-06:00)America, Inuvik(GMT-06:00)America, Managua(GMT-06:00)America, Merida(GMT-06:00)America, Mexico City(GMT-06:00)America, Monterrey(GMT-06:00)America, Regina(GMT-06:00)America, Swift Current(GMT-06:00)America, Tegucigalpa(GMT-06:00)Pacific, Easter(GMT-06:00)Pacific, Galapagos(GMT-05:00)America, Atikokan(GMT-05:00)America, Bogota(GMT-05:00)America, Cancun(GMT-05:00)America, Cayman(GMT-05:00)America, Chicago(GMT-05:00)America, Eirunepe(GMT-05:00)America, Guayaquil(GMT-05:00)America, Indiana, Knox(GMT-05:00)America, Indiana, Tell City(GMT-05:00)America, Jamaica(GMT-05:00)America, Lima(GMT-05:00)America, Matamoros(GMT-05:00)America, Menominee(GMT-05:00)America, North Dakota, Beulah(GMT-05:00)America, North Dakota, Center(GMT-05:00)America, North Dakota, New Salem(GMT-05:00)America, Ojinaga(GMT-05:00)America, Panama(GMT-05:00)America, Rankin Inlet(GMT-05:00)America, Resolute(GMT-05:00)America, Rio Branco(GMT-05:00)America, Winnipeg(GMT-04:00)America, Anguilla(GMT-04:00)America, Antigua(GMT-04:00)America, Aruba(GMT-04:00)America, Barbados(GMT-04:00)America, Blanc-Sablon(GMT-04:00)America, Boa Vista(GMT-04:00)America, Campo Grande(GMT-04:00)America, Caracas(GMT-04:00)America, Cuiaba(GMT-04:00)America, Curacao(GMT-04:00)America, Detroit(GMT-04:00)America, Dominica(GMT-04:00)America, Grand Turk(GMT-04:00)America, Grenada(GMT-04:00)America, Guadeloupe(GMT-04:00)America, Guyana(GMT-04:00)America, Havana(GMT-04:00)America, Indiana, Indianapolis(GMT-04:00)America, Indiana, Marengo(GMT-04:00)America, Indiana, Petersburg(GMT-04:00)America, Indiana, Vevay(GMT-04:00)America, Indiana, Vincennes(GMT-04:00)America, Indiana, Winamac(GMT-04:00)America, Iqaluit(GMT-04:00)America, Kentucky, Louisville(GMT-04:00)America, Kentucky, Monticello(GMT-04:00)America, Kralendijk(GMT-04:00)America, La Paz(GMT-04:00)America, Lower Princes(GMT-04:00)America, Manaus(GMT-04:00)America, Marigot(GMT-04:00)America, Martinique(GMT-04:00)America, Montserrat(GMT-04:00)America, Nassau(GMT-04:00)America, New York(GMT-04:00)America, Port of Spain(GMT-04:00)America, Port-au-Prince(GMT-04:00)America, Porto Velho(GMT-04:00)America, Puerto Rico(GMT-04:00)America, Santiago(GMT-04:00)America, Santo Domingo(GMT-04:00)America, St Barthelemy(GMT-04:00)America, St Kitts(GMT-04:00)America, St Lucia(GMT-04:00)America, St Thomas(GMT-04:00)America, St Vincent(GMT-04:00)America, Toronto(GMT-04:00)America, Tortola(GMT-03:00)America, Araguaina(GMT-03:00)America, Argentina, Buenos Aires(GMT-03:00)America, Argentina, Catamarca(GMT-03:00)America, Argentina, Cordoba(GMT-03:00)America, Argentina, Jujuy(GMT-03:00)America, Argentina, La Rioja(GMT-03:00)America, Argentina, Mendoza(GMT-03:00)America, Argentina, Rio Gallegos(GMT-03:00)America, Argentina, Salta(GMT-03:00)America,",
+        "excerpt": "",
+        "author": "",
+        "published": ""
+      },
+      {
+        "title": "Frontend Focus Issue 736: April 8, 2026",
+        "url": "https://frontendfoc.us/issues/736",
+        "content": "Together with \n \n \n \n \n \n \n \n \n\n \n\n How to Use HTML Video and Audio Lazy-Loading — HTML video and audio lazy loading is now a web standard. It’ll be available in Chrome 148 and Firefox and WebKit implementations are close behind. Here’s how it works.\n Scott Jehl (Squarespace) \n\n The WebAIM Million 2026 Report — This accessibility analysis of a million sites makes for disappointing reading: despite years of progress, we’re now seeing web accessibility in decline. Why? They say “increased reliance on 3rd party frameworks and libraries and automated or AI-assisted coding practices”.\n WebAIM \n\n⚡️ IN BRIEF\n\n🤔 CSS or BS? is a surprisingly tricky quiz. Can you spot the real CSS properties among the plausible-sounding fakes?\n\n🖼️ HTML in Canvas is a proposal for using canvas elements to customize the rendering of HTML.\n\n⌨️ Cloudflare has launched 'EmDash', a new TypeScript-powered CMS to take on WordPress. Matt Mullenweg shared his thoughts.\n\n🗳️ The second annual 'State of AI' survey is now live, seeking responses on AI usage within web development.\n\n🚀 Launch your own Artemis 2 rocket with a bit of CSS and a scroll of the mouse.\n\n🙏 The Chrome Web Store has a new appeals process for rejected extensions.\n\n📙 Articles, Opinions &amp; Tutorials\n\n \n\n Alternatives to the !important Keyword — When looking over old CSS you may encounter !important and forgot why you needed it. If you’re looking to fix up such debt, this post offers some modern alternative options.\n Saleh Mubashar \n\n CSS subgrid is Super Good — CMS-driven layouts can often get a bit tricky, particularly when trying to ‘break out’ of set container widths. Dave shows how subgrid can simplify things by way of full-width or inset components, without the need for margin hacks or wrapper bloat.\n David Bushell \n\n Email Address Obfuscation in HTML: What Works in 2026? — A test of numerous techniques to see which trip up the bots. It turns out most scrapers are very lazy, but there are a few techniques worth avoiding in 2026 (using HTML entities and URL encoding).\n Spencer Mortensen \n\n What to Know in JavaScript (2026 Edition) — A high-level overview of the sprawling JavaScript landscape as it stands today, including a look at recent language additions, frameworks to keep tabs on, runtimes, build tools, etc.\n Chris Coyier \n\n Name-Only Containers: The Scoping We Needed — Chris explores a novel use for name-only containers as a way to solve CSS scoping challenges in a native way. Of course, we do have @scope at our disposal, but this is a curious alternative approach.\n Chris Coyier \n\n New CSS Multi-Column Layout Features in Chrome — Chrome 145 introduces support for a couple of new column-wrapping features, namely column-wrap and column-height. They’re a big upgrade for multi-column layouts, so here’s a look at how you may want to use them.\n Abhishek Pratap Singh \n\n🧰 Tools, Code &amp; Resources\n\n \n\n🖌️ Got some diagrams to draw?\n\n \n\n Wiretext: A Unicode Wireframe Design Tool — Similar to above, but works like a typical GUI tool with the end results being Unicode you can copy/paste. Includes numerous ‘components’ you can insert that we don’t normally associate with text (e.g. image, avatar, radio buttons, etc).\n Daniel Howells",
+        "excerpt": "",
+        "author": "",
+        "published": ""
+      },
+      {
+        "title": "Introducing view-transitions-toolkit, a collection of utility functions to more easily work with View Transitions.",
+        "url": "https://www.bram.us/2026/04/02/view-transitions-toolkit/",
+        "content": "Skip to content\t\n\t\n\n\t\n\t\tScreenshot of the View Transitions Toolkit homepage\n~\n\nIn my work with View Transitions over the last several years, I’ve published everything from deep-dive articles, demos, and announcement videos at Google I/O. I’ve also done some more experimental things with it, such as optimizing the keyframes or driving a View Transition by scroll.\nTo turn the lessons from these scattered experiments into something more reusable for both you and me, I’ve bundled the most frequent code patterns into a dedicated package: view-transitions-toolkit.\n\n~\nThe view-transitions-toolkit\nview-transitions-toolkit is a collection of small, focused helper functions for use with View Transitions. They fill in some of the gaps to making advanced patterns much easier to implement.\n\nFeature Detection: Get information about whether certain View Transitions sub-features are supported.\nShim Support: Shim support for document.activeViewTransition.\nAnimations: Utilities for extracting, measuring, and optimizing animations.\nTransition Playback Control: Pause, Resume, or Scrub the playback of a View Transition.\nAutomatic Page Navigation Types: Automatically inject View Transition Types based on navigation origin/destination.\n\nThe goal of the project is to provide these utilities so you don’t have to reinvent the wheel every time you want to do something slightly advanced with View Transitions.\n~\nGetting Started\nUsing the toolkit is incredibly simple. First, install it from npm:\nnpm i view-transitions-toolkit\nThen, you can import the modules you need and use their functions. Optimizing the keyframes of a View Transition group for example is a simple one-liner:\nimport { optimizeGroupAnimations, OPTIMIZATION_STRATEGY } from \"view-transitions-toolkit/animations\";\nconst t = document.startViewTransition(() =&gt; { … });\r\nawait t.ready;\n// Optimize all Group Animations using the default SCALE strategy\r\noptimizeGroupAnimations(t, \"*\");\n// Optimize only the `::view-transition-group(box-flip)` animation using the SLIDE strategy\r\noptimizeGroupAnimations(t, \"box-flip\", OPTIMIZATION_STRATEGY.SLIDE);\nI won’t go into details here, as all features are documented in the docs folder of the repo.\n~\nDemos\nThe project also comes with a public website that not only gives you the basic info, but also comes with a bunch of demos: https://chrome.dev/view-transitions-toolkit/.\nScreenshot of the optimize() demo\nThe source of the demos is included in the repository as well.\n~\nGo check it out\n\nview-transitions-toolkit demos (Chrome.dev) →\nview-transitions-toolkit source (GitHub) →\nview-transitions-toolkit on NPM →\n\n~\nSpread the word\nFeel free to reshare one of the following posts on social media to help spread the word:\n\n🦋 Bluesky\n🦣 Mastodon\n💼 LinkedIn\n\n\t\n\t\t\t\n\t\n\t\tBramus is a frontend web developer from Belgium, working as a Chrome Developer Relations Engineer at Google. From the moment he discovered view-source at the age of 14 (way back in 1997), he fell in love with the web and has been tinkering with it ever since (more …)\t\t\n\t\t\tView more posts\t\t\n\t\n\n\t\tPost navigation",
+        "excerpt": "",
+        "author": "",
+        "published": ""
+      },
+      {
+        "title": "View Transitions Toolkit",
+        "url": "https://chrome.dev/view-transitions-toolkit/",
+        "content": "The Toolkit\n \n The Toolkit consists of several modules, each providing a set of utility functions:\n \n \n \n \n Feature Detection: Get information about whether certain View Transitions subfeatures are supported.\n \n \n \n \n Shim Support: Shim support for document.activeViewTransition.\n \n \n \n \n Animations: Utilities for extracting, measuring, and optimizing animations.\n \n \n \n \n Transition Playback Control: Pause, Resume, or Scrub the playback of a View Transition.\n \n \n \n \n Automatic Page Navigation Types: Automatically inject View Transition Types based on navigation origin/destination.\n \n \n \n \n Misc Utilities: Other helper functions like setTemporaryViewTransitionNames and extractViewTransitionName.\n \n \n Check out the \n demos below to see these functions in action, or check the \n documentation for detailed information about each function. The complete source code is available on \n GitHub.\n \n Getting Started\n \n Install the toolkit using your favorite package manager, for example using NPM:\n npm i view-transitions-toolkit\n Once installed, import the functions you need from the specific entry points. For example:\n import { getAnimations } from 'view-transitions-toolkit/animations'\n Check out the \n demos for an introduction to the functions, or find detailed information in the \n documentation.\n \n Demos",
+        "excerpt": "",
+        "author": "",
+        "published": ""
+      }
+    ]
+  },
+  {
+    "name": "This Week In React",
+    "date": "2026-04-08T17:44:56.000Z",
+    "uid": "92645",
+    "hashtags": [
+      "#thisweekinreact",
+      "#react",
+      "#reactnative"
+    ],
+    "links": [
+      {
+        "title": "Newsletter | This Week In React",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/7qh7h2u9lnv86xf9/aHR0cHM6Ly90aGlzd2Vla2lucmVhY3QuY29tL25ld3NsZXR0ZXI="
+      },
+      {
+        "title": "AHR0cHM6Ly94LmNvbS9zZWJhc3RpZW5sb3JiZXI=",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/owhkhwuw9q3n6etq/aHR0cHM6Ly94LmNvbS9zZWJhc3RpZW5sb3JiZXI="
+      },
+      {
+        "title": "AHR0cHM6Ly94LmNvbS9qYXdvcmVrMzIxMQ==",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/z2hgh7ue6l97kgtz/aHR0cHM6Ly94LmNvbS9qYXdvcmVrMzIxMQ=="
+      },
+      {
+        "title": "GitHub - lirantal/npm-security-best-practices: Collection of npm package manager Security Best Practices",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/x0hph3ue2q8zzrsg/aHR0cHM6Ly9naXRodWIuY29tL2xpcmFudGFsL25wbS1zZWN1cml0eS1iZXN0LXByYWN0aWNlcw=="
+      },
+      {
+        "title": "AHR0cHM6Ly9zbG8uaW0vbGFzdC9i",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/6qhehoulr9vww5c9/aHR0cHM6Ly9zbG8uaW0vbGFzdC9i"
+      },
+      {
+        "title": "AHR0cHM6Ly9zbG8uaW0vbGFzdC94",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/kkhmh2unwxgeeebk/aHR0cHM6Ly9zbG8uaW0vbGFzdC94"
+      },
+      {
+        "title": "LinkedIn Login, Sign in | LinkedIn",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/58hvh8ugx6p00os7/aHR0cHM6Ly9zbG8uaW0vbGFzdC9s"
+      },
+      {
+        "title": "AHR0cHM6Ly9zbG8uaW0vbGFzdC9y",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/25h2h9u39mrggec8/aHR0cHM6Ly9zbG8uaW0vbGFzdC9y"
+      },
+      {
+        "title": "Meticulous AI - Automated Frontend Testing Without Writing Tests",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/qvh8h8udwkgvv6hg/aHR0cHM6Ly93d3cubWV0aWN1bG91cy5haS8_dXRtX3NvdXJjZT10aGlzd2Vla2lucmVhY3QmdXRtX21lZGl1bT1uZXdzbGV0dGVyJnV0bV9jYW1wYWlnbj0yNnExJnV0bV9jb250ZW50PTFzdA=="
+      },
+      {
+        "title": "boneyard - skeleton screens for your UI",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/g3hnhwum9q7nnec3/aHR0cHM6Ly9ib25leWFyZC52ZXJjZWwuYXBwLw=="
+      },
+      {
+        "title": "Platano — Ready-to-monetize AI image app template for React Native",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/9qhzhdudw5kxxpiz/aHR0cHM6Ly9jd2Iuc2gvcGxhdGFubz9yPXNlYg=="
+      },
+      {
+        "title": "React Summit – The Biggest React Conference Worldwide",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/3ohphdu3mp6rr3hp/aHR0cHM6Ly9yZWFjdHN1bW1pdC5jb20vP3V0bV9zb3VyY2U9dGhpc3dlZWtpbnJlYWN0"
+      },
+      {
+        "title": "The Precompute Pattern: Encoding Dynamic Data into URLs in Next.js | Aurora Scharff",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/n2hohquvq7wgg6a0/aHR0cHM6Ly9hdXJvcmFzY2hhcmZmLm5vL3Bvc3RzL3RoZS1wcmVjb21wdXRlLXBhdHRlcm4tZW5jb2RpbmctZHluYW1pYy1kYXRhLWludG8tdXJscy1pbi1uZXh0anMv"
+      },
+      {
+        "title": "Under the hood of MDN's new frontend | MDN Blog",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/48hvh7umlxz99ghq/aHR0cHM6Ly9kZXZlbG9wZXIubW96aWxsYS5vcmcvZW4tVVMvYmxvZy9tZG4tZnJvbnQtZW5kLWRlZXAtZGl2ZS8="
+      },
+      {
+        "title": "Moving Railway's Frontend Off Next.js",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/wnh2h6uq709448bl/aHR0cHM6Ly9ibG9nLnJhaWx3YXkuY29tL3AvbW92aW5nLXJhaWx3YXlzLWZyb250ZW5kLW9mZi1uZXh0anM="
+      },
+      {
+        "title": "You really, really, really don't need an effect! I swear!",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/reh8h9umd6977ki6/aHR0cHM6Ly9uZWNpdWRhbi5kZXYveW91LXJlYWxseS1yZWFsbHktZG9udC1uZWVkLWFuLWVmZmVjdA=="
+      },
+      {
+        "title": "AHR0cHM6Ly90aWdlcmFicm9kaS5ibG9nL2hvdy10by1pbXBsZW1lbnQtc3ByaW5nLXBoeXNpY3MtYnV0dG9ucy13aXRoLWZyYW1lci1tb3Rpb24=",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/08hwhgu2el0xxvap/aHR0cHM6Ly90aWdlcmFicm9kaS5ibG9nL2hvdy10by1pbXBsZW1lbnQtc3ByaW5nLXBoeXNpY3MtYnV0dG9ucy13aXRoLWZyYW1lci1tb3Rpb24="
+      },
+      {
+        "title": "AHR0cHM6Ly9jZXJ0aWZpY2F0ZXMuZGV2L3JlYWN0P2ZyaWVuZD1UV0lSJnV0bV9zb3VyY2U9dHdpciZ1dG1fbWVkaXVtPW5ld3NsZXR0ZXImdXRtX2NhbXBhaWduPXBhcnRuZXI=",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/8ghqh3uodre33dfl/aHR0cHM6Ly9jZXJ0aWZpY2F0ZXMuZGV2L3JlYWN0P2ZyaWVuZD1UV0lSJnV0bV9zb3VyY2U9dHdpciZ1dG1fbWVkaXVtPW5ld3NsZXR0ZXImdXRtX2NhbXBhaWduPXBhcnRuZXI="
+      },
+      {
+        "title": "Release v7.0.0 · vadimdemedes/ink",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/vqh3hmuo0w244rtw/aHR0cHM6Ly9naXRodWIuY29tL3ZhZGltZGVtZWRlcy9pbmsvcmVsZWFzZXMvdGFnL3Y3LjAuMA=="
+      },
+      {
+        "title": "Components in Markdown",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/l2heh6ul2x5449ig/aHR0cHM6Ly9jb21hcmsuZGV2Lw=="
+      },
+      {
+        "title": "Docusaurus 3.10 | Docusaurus",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/m2h7h6u354k996hl/aHR0cHM6Ly9kb2N1c2F1cnVzLmlvL2Jsb2cvcmVsZWFzZXMvMy4xMA=="
+      },
+      {
+        "title": "Shaders",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/dphehmue6pzkklsl/aHR0cHM6Ly9zaGFkZXJzLmNvbS8="
+      },
+      {
+        "title": "Release Version 7.72.0 · react-hook-form/react-hook-form",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/e0hph0u7vr9eera7/aHR0cHM6Ly9naXRodWIuY29tL3JlYWN0LWhvb2stZm9ybS9yZWFjdC1ob29rLWZvcm0vcmVsZWFzZXMvdGFnL3Y3LjcyLjA="
+      },
+      {
+        "title": "Release v1.18.0 · edmundhung/conform",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/7qh7h2u9lnv88xh9/aHR0cHM6Ly9naXRodWIuY29tL2VkbXVuZGh1bmcvY29uZm9ybS9yZWxlYXNlcy90YWcvdjEuMTguMA=="
+      },
+      {
+        "title": "AHR0cHM6Ly9naXRodWIuY29tL3JlbWl4LXJ1bi9yZWFjdC1yb3V0ZXIvYmxvYi9tYWluL0NIQU5HRUxPRy5tZCN2NzE0MA==",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/z2hgh7ue6l977guz/aHR0cHM6Ly9naXRodWIuY29tL3JlbWl4LXJ1bi9yZWFjdC1yb3V0ZXIvYmxvYi9tYWluL0NIQU5HRUxPRy5tZCN2NzE0MA=="
+      },
+      {
+        "title": "April 2026 - shadcn apply",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/p8hehqu46qkd5kar/aHR0cHM6Ly91aS5zaGFkY24uY29tL2RvY3MvY2hhbmdlbG9nLzIwMjYtMDQtc2hhZGNuLWFwcGx5"
+      },
+      {
+        "title": "Release v9.0.0 · mui/material-ui",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/x0hph3ue2q8zdrfg/aHR0cHM6Ly9naXRodWIuY29tL211aS9tYXRlcmlhbC11aS9yZWxlYXNlcy90YWcvdjkuMC4w"
+      },
+      {
+        "title": "Version v9.0.0 | Mantine",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/6qhehoulr9vw65b9/aHR0cHM6Ly9tYW50aW5lLmRldi9jaGFuZ2Vsb2cvOS0wLTAv"
+      },
+      {
+        "title": "Release v4.9.0 · amannn/next-intl",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/kkhmh2unwxge2ehk/aHR0cHM6Ly9naXRodWIuY29tL2FtYW5ubi9uZXh0LWludGwvcmVsZWFzZXMvdGFnL3Y0LjkuMA=="
+      },
+      {
+        "title": "AHR0cHM6Ly93d3cueW91dHViZS5jb20vd2F0Y2g Dj1OQmp5Y1BwUEhRUQ==",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/7qh7h2u9lnv8ppa9/aHR0cHM6Ly93d3cueW91dHViZS5jb20vd2F0Y2g_dj1OQmp5Y1BwUEhRUQ=="
+      },
+      {
+        "title": "AHR0cHM6Ly93d3cueW91dHViZS5jb20vcGxheWxpc3Q BGlzdD1QTDUzWjB5eVlucFdoc2l6Tld0bG55TTdYV0ZVU3c0MzdK",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/owhkhwuw9q3nl7fq/aHR0cHM6Ly93d3cueW91dHViZS5jb20vcGxheWxpc3Q_bGlzdD1QTDUzWjB5eVlucFdoc2l6Tld0bG55TTdYV0ZVU3c0MzdK"
+      },
+      {
+        "title": "Wallaby - Immediate JavaScript test feedback in your IDE as-you-type",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/z2hgh7ue6l97rdbz/aHR0cHM6Ly93YWxsYWJ5anMuY29tLz9yZWZlcnJlcj1UaGlzV2Vla0luUmVhY3Q4QXByMjY="
+      },
+      {
+        "title": "Wallaby - Immediate JavaScript test feedback in your IDE as-you-type",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/p8hehqu46qkd59cr/aHR0cHM6Ly93YWxsYWJ5anMuY29tL2Jsb2cvd2FsbGFieS12My5odG1sP3JlZmVycmVyPVRoaXNXZWVrSW5SZWFjdDhBcHIyNg=="
+      },
+      {
+        "title": "React Native 0.85 - New Animation Backend, New Jest Preset Package · React Native",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/6qhehoulr9vw6ls9/aHR0cHM6Ly9yZWFjdG5hdGl2ZS5kZXYvYmxvZy8yMDI2LzA0LzA3L3JlYWN0LW5hdGl2ZS0wLjg1"
+      },
+      {
+        "title": "What we wish we knew about building AI agents",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/kkhmh2unwxge26ak/aHR0cHM6Ly9nby5wb3N0aG9nLmNvbS90d2lyLWFwcjg="
+      },
+      {
+        "title": "Enables Basic View Transition support for React Native Fabric renderer by zeyap · Pull Request #35764 · facebook/react",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/58hvh8ugx6p0o7u7/aHR0cHM6Ly9naXRodWIuY29tL2ZhY2Vib29rL3JlYWN0L3B1bGwvMzU3NjQ="
+      },
+      {
+        "title": "fix(🗿): first Skia Graphite pre-release (#3812) by wcandillon · Pull Request #3813 · Shopify/react-native-skia",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/25h2h9u39mrg0nh8/aHR0cHM6Ly9naXRodWIuY29tL1Nob3BpZnkvcmVhY3QtbmF0aXZlLXNraWEvcHVsbC8zODEz"
+      },
+      {
+        "title": "AHR0cHM6Ly9leHBvLmRldi9ibG9nL2V4cG8tYnJvd25maWVsZC1ob3ctdG8tYWRkLWV4cG8tdG8teW91ci1leGlzdGluZy1uYXRpdmUtYXBwLXdpdGhvdXQtYS1yZXdyaXRl",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/qvh8h8udwkgv2ehg/aHR0cHM6Ly9leHBvLmRldi9ibG9nL2V4cG8tYnJvd25maWVsZC1ob3ctdG8tYWRkLWV4cG8tdG8teW91ci1leGlzdGluZy1uYXRpdmUtYXBwLXdpdGhvdXQtYS1yZXdyaXRl"
+      },
+      {
+        "title": "React Native JSI Deep Dive — Part 1: React Native Architecture — Threads, Hermes, and the Event Loop - HeartIT",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/g3hnhwum9q7norc3/aHR0cHM6Ly9oZWFydGl0LnRlY2gvcmVhY3QtbmF0aXZlLWpzaS1kZWVwLWRpdmUtcGFydC0xLXRoZS1ydW50aW1lLXlvdS1uZXZlci1zZWUv"
+      },
+      {
+        "title": "How We Optimized Agent Device for Mobile App Automation",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/9qhzhdudw5kx3wiz/aHR0cHM6Ly93d3cuY2FsbHN0YWNrLmNvbS9ibG9nL2hvdy13ZS1vcHRpbWl6ZWQtYWdlbnQtZGV2aWNlLWZvci1tb2JpbGUtYXBwLWF1dG9tYXRpb24="
+      },
+      {
+        "title": "🚀React Native Windows v0.82 is here!! | React Native",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/3ohphdu3mp6r9gtp/aHR0cHM6Ly9kZXZibG9ncy5taWNyb3NvZnQuY29tL3JlYWN0LW5hdGl2ZS8lRjAlOUYlOUElODByZWFjdC1uYXRpdmUtd2luZG93cy12MC04Mi1pcy1oZXJlLw=="
+      },
+      {
+        "title": "Release create-react-native-library@0.60.0 · callstack/react-native-builder-bob",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/n2hohquvq7wg5pi0/aHR0cHM6Ly9naXRodWIuY29tL2NhbGxzdGFjay9yZWFjdC1uYXRpdmUtYnVpbGRlci1ib2IvcmVsZWFzZXMvdGFnL2NyZWF0ZS1yZWFjdC1uYXRpdmUtbGlicmFyeSU0MDAuNjAuMA=="
+      },
+      {
+        "title": "CLI 2.4.0: iOS 26 and more devices on Maestro Cloud",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/48hvh7umlxz9qdhq/aHR0cHM6Ly9tYWVzdHJvLmRldi9ibG9nL21hZXN0cm8tY2xpLTItNC0w"
+      },
+      {
+        "title": "True Sheet 3.10 | React Native True Sheet",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/wnh2h6uq7094vefl/aHR0cHM6Ly9zaGVldC5sb2RldjA5LmNvbS9ibG9nL3JlbGVhc2UtMy0xMA=="
+      },
+      {
+        "title": "Nitro Player",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/reh8h9umd697v6i6/aHR0cHM6Ly9uaXRyb3BsYXllci5yaXRlc2hzaHVrbGEuaW4v"
+      },
+      {
+        "title": "Release v2.6.0 · Shopify/react-native-skia",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/08hwhgu2el0xwpip/aHR0cHM6Ly9naXRodWIuY29tL1Nob3BpZnkvcmVhY3QtbmF0aXZlLXNraWEvcmVsZWFzZXMvdGFnL3YyLjYuMA=="
+      },
+      {
+        "title": "Release v2.31.0 · software-mansion/react-native-gesture-handler",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/8ghqh3uodre3p8ul/aHR0cHM6Ly9naXRodWIuY29tL3NvZnR3YXJlLW1hbnNpb24vcmVhY3QtbmF0aXZlLWdlc3R1cmUtaGFuZGxlci9yZWxlYXNlcy90YWcvdjIuMzEuMA=="
+      },
+      {
+        "title": "AHR0cHM6Ly9kaXNjb3Vyc2UubGx2bS5vcmcvdC9yZmMtanNpci1hLWhpZ2gtbGV2ZWwtaXItZm9yLWphdmFzY3JpcHQvOTA0NTY=",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/m2h7h6u354k97gtl/aHR0cHM6Ly9kaXNjb3Vyc2UubGx2bS5vcmcvdC9yZmMtanNpci1hLWhpZ2gtbGV2ZWwtaXItZm9yLWphdmFzY3JpcHQvOTA0NTY="
+      },
+      {
+        "title": "The Hidden Blast Radius of the Axios Compromise - Socket",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/dphehmue6pzkmoul/aHR0cHM6Ly9zb2NrZXQuZGV2L2Jsb2cvaGlkZGVuLWJsYXN0LXJhZGl1cy1vZi10aGUtYXhpb3MtY29tcHJvbWlzZQ=="
+      },
+      {
+        "title": "Axios Maintainer Confirms Social Engineering Attack Behind n...",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/e0hph0u7vr9e2ei7/aHR0cHM6Ly9zb2NrZXQuZGV2L2Jsb2cvYXhpb3MtbWFpbnRhaW5lci1jb25maXJtcy1zb2NpYWwtZW5naW5lZXJpbmctYmVoaW5kLW5wbS1jb21wcm9taXNl"
+      },
+      {
+        "title": "What To Know in JavaScript (2026 Edition)",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/7qh7h2u9lnv8mpa9/aHR0cHM6Ly9mcm9udGVuZG1hc3RlcnMuY29tL2Jsb2cvd2hhdC10by1rbm93LWluLWphdmFzY3JpcHQtMjAyNi1lZGl0aW9uLw=="
+      },
+      {
+        "title": "The Intl API: The best browser API you're not using | Polypane",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/owhkhwuw9q3n77hq/aHR0cHM6Ly9wb2x5cGFuZS5hcHAvYmxvZy90aGUtaW50bC1hcGktdGhlLWJlc3QtYnJvd3Nlci1hcGkteW91cmUtbm90LXVzaW5nLw=="
+      },
+      {
+        "title": "Introducing view-transitions-toolkit, a collection of utility functions to more easily work with View Transitions.",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/z2hgh7ue6l978dcz/aHR0cHM6Ly93d3cuYnJhbS51cy8yMDI2LzA0LzAyL3ZpZXctdHJhbnNpdGlvbnMtdG9vbGtpdC8="
+      },
+      {
+        "title": "ESLint v10.2.0 released - ESLint - Pluggable JavaScript Linter",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/p8hehqu46qkdl9ur/aHR0cHM6Ly9lc2xpbnQub3JnL2Jsb2cvMjAyNi8wNC9lc2xpbnQtdjEwLjIuMC1yZWxlYXNlZC8="
+      },
+      {
+        "title": "Release v0.28.0 · evanw/esbuild",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/x0hph3ue2q8zlwag/aHR0cHM6Ly9naXRodWIuY29tL2V2YW53L2VzYnVpbGQvcmVsZWFzZXMvdGFnL3YwLjI4LjA="
+      },
+      {
+        "title": "Release v2.0.0 · sindresorhus/ky",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/6qhehoulr9vwdlf9/aHR0cHM6Ly9naXRodWIuY29tL3NpbmRyZXNvcmh1cy9reS9yZWxlYXNlcy90YWcvdjIuMC4w"
+      },
+      {
+        "title": "AHR0cHM6Ly94LmNvbS9EYXZpZEtQaWFuby9zdGF0dXMvMjA0MTgxODc1MDMzNzM0ODA0MA==",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/kkhmh2unwxge36tk/aHR0cHM6Ly94LmNvbS9EYXZpZEtQaWFuby9zdGF0dXMvMjA0MTgxODc1MDMzNzM0ODA0MA=="
+      },
+      {
+        "title": "AHR0cHM6Ly94LmNvbS9zZWJhc3RpZW5sb3JiZXIvc3RhdHVzLzIwNDE5Mjc1OTEyODg4NTI1OTU=",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/25h2h9u39mrgens8/aHR0cHM6Ly94LmNvbS9zZWJhc3RpZW5sb3JiZXIvc3RhdHVzLzIwNDE5Mjc1OTEyODg4NTI1OTU="
+      },
+      {
+        "title": "Sebastien Lorber ⚛️ This Week In React - ⚛️ ThisWeekInReact.com - 📨 Subscribe now! | LinkedIn",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/9qhzhdudw5kxlwbz/aHR0cHM6Ly93d3cubGlua2VkaW4uY29tL2luL3NlYmFzdGllbmxvcmJlci8="
+      },
+      {
+        "title": "AHR0cHM6Ly93d3cuaW5zdGFncmFtLmNvbS90aGlzd2Vla2lucmVhY3Qv",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/3ohphdu3mp6rngup/aHR0cHM6Ly93d3cuaW5zdGFncmFtLmNvbS90aGlzd2Vla2lucmVhY3Qv"
+      },
+      {
+        "title": "Sponsor the newsletter | This Week In React",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/n2hohquvq7wgkpb0/aHR0cHM6Ly90aGlzd2Vla2lucmVhY3QuY29tL3Nwb25zb3I="
+      }
+    ],
+    "scraped": [
+      {
+        "title": "Newsletter | This Week In React",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/7qh7h2u9lnv86xf9/aHR0cHM6Ly90aGlzd2Vla2lucmVhY3QuY29tL25ld3NsZXR0ZXI=",
+        "content": "📨 #276: Boneyard, Ink, MUI, React Router, Next.js, shadcn, Docusaurus, Comark, Forms, Shaders | RN 0.85, ViewTransition, Skia, Windows, CRNL, Maestro, True Sheet, Nitro Player, RNGH | JSIR, Security, esbuild, Ky, IntlApril 8, 2026 · 8 min readHi there, Seb and Jan here 👋!\nThis week brings a collection of smaller, yet still noteworthy, React releases and articles.\nOn the React Native side, v0.85 just dropped with a new Shared Animation backend. Speaking of animations, we have a little sneak peek of exciting things coming, such as &lt;ViewTransition&gt; and Skia Graphite.\nWith the recent surge in npm supply chain attacks, it’s worth reviewing the npm Security Best Practices guide to secure your setup.\nLet's dive in!📨 #275: ⚛️ Next.js, TanStack RSC, React Compiler, Inertia, Astro, Trusted Types, Signals | 📱 ExecuTorch, Unistyles, RN.run, Preflight, Confetti, AI, Lynx | 🔀 Pretext, Axios, Node, Playwright, TurborepoApril 1, 2026 · 10 min readNewsletter creator - Docusaurus maintainerReact Native DeveloperHi everyone, Seb and Jan here 👋!\nThis week, we have news about popular React meta-frameworks. Next.js Adapters API should help host it anywhere without compromise. TanStack Start unveils a preview of its React Server Components. The React Compiler port to Rust is being actively worked on.\nNo major announcement in the React Native world, but still many interesting releases. React Native v0.85 should be released next week.\nAxios has been compromised in a major supply chain attack. Stay safe and make sure to adopt security best practices!\nLet's dive in!📨 #274: ⚛️ Next.js, React Router, Storybook, HeroUI, Remotion, Lucide, useEffect | 📱 Reanimated, Worklets, Nitro Fetch, Navigation, Rozenite, MMKV, Windows, Swift | 🔀 TypeScript, Signals, Zero, ValibotMarch 25, 2026 · 7 min readNewsletter creator - Docusaurus maintainerHi everyone, Seb here 👋!\nThis week: a new Next.js release, a React Aria-based UI library, Remotion updates, Storybook MCP, and more.\nOn React Native, multi-threading keeps improving (Worklets, Reanimated), and React Navigation v8 looks close.\nSorry for the weird duplicate email last week, just a mistake 😅📨 #273: ⚛️ RedwoodSDK, Next.js, TanStack, RSC, Async React, SSR, Base UI, AI | 📱 Expo UI, Ease, Expo APIs, Keyboard, Flow, DnD, AI | 🔀 TC39, Temporal, Vite, Vite+, Vitest, Oxlint, Node.js, BunMarch 18, 2026 · 10 min readNewsletter creator - Docusaurus maintainerReact Native DeveloperHi everyone, Seb and Jan here 👋!\nThis week, RedwoodSDK 1.0 dropped, and other meta-frameworks improved their SSR performance. A bunch of content related to Async React and the TanStack too!\nOn the React Native side, Expo UI support for Jetpack Compose is quite exciting. A new animation library could also be an interesting alternative to Reanimated CSS transitions.\nTemporal has finally reached stage 4! We also have great announcements from the Vue.js conf that remain relevant for React developers, notably Vite 8.\nLet's dive in!📨 #272: Astro, Compiler, Next.js, shadcn, Aria, Helmet, Preact | Navigation, Expo Agent, Observe, Widgets, Activity, Evals, MMKV, Hermes | Node.js, Source Maps, TanStack Intent, TypeGPU, TypeScriptMarch 11, 2026 · 10 min readSoftware Engineer - Software MansionSoftware Engineer - Software MansionHi everyone! Filip and Tymek from Software Mansion here! 👋\nHope your week is going well 😄 In today's news, we bring you a slightly calmer React section, but there is much more going on in React Native. Astro 6.0 has been released, Expo announces an agentic platform and new SDK for observability and metrics, and React Navigation developers are planning to add a new way to load data in screens.\nThere's more — interesting canary PRs for Next.js, React Native Evals, TypeScript 6.0 RC announcement, new guides from Expo, and beyond!\nLet's dive deep into the content 🎉📨 #271: Vinext, RSC, Activity, Async React, Next.js, TanStack | Expo 55, Router, Survey, Enriched, Maestro, Metro, Sparkling, Grab, Brownfield | TC39, Te",
+        "excerpt": "",
+        "author": "",
+        "published": ""
+      },
+      {
+        "title": "GitHub - lirantal/npm-security-best-practices: Collection of npm package manager Security Best Practices",
+        "url": "https://76518bdd.click.convertkit-mail4.com/v8up880qn7urhvrk3lzbghvkllzx0s9hr2n53/x0hph3ue2q8zzrsg/aHR0cHM6Ly9naXRodWIuY29tL2xpcmFudGFsL25wbS1zZWN1cml0eS1iZXN0LXByYWN0aWNlcw==",
+        "content": "A curated and practical list of security best practice for using npm packages.\n \n\n \n \n \n \n \n \n\nScope:\n\nsafe-by-default npm package manager command-line options\nhardening against supply chain attacks\ndeterministic and secure dependency resolution\nsecurity vulnerabilities scanning and package health signals\ninstructions for the pnpm and bun package managers where applicable\n\nContext: Shai-Hulud, Nx and other incidents are a growing concern of supply chain security attacks and compromised npm packages. Follow these developer security best practices around npm, package maintenance and secure local development to mitigate security risks.\n\nTable of Contents\nnpm Security Best Practices:\n\n1 Disable Post-Install Scripts\n\n1.1. pnpm disable post-install scripts\n1.2. Bun disable post-install scripts\n1.3. Run the scripts you need\n1.4. pnpm trust policy\n\n2 Install with Cooldown\n\n2.1. npm / pnpm / Bun / Yarn minimumReleaseAge cooldown\n2.2. Snyk automated dependency upgrades with cooldown\n2.3. Dependabot automated dependency upgrades with cooldown\n2.4. Renovate bot automated dependency upgrades with cooldown\n\n3 Harden package installs with security tools\n\n3.1. Use npq for hardening package installs\n3.2. Use Socket Firewall (sfw) for blocking malicious packages\n\n4 Prevent npm lockfile injection\n5 Use npm ci\n6 Avoid blind npm package upgrades\n\nSecure Local Development Best Practices:\n\n7 No plaintext secrets in .env files\n8 Work in Dev Containers\n\nnpm Maintainer Security Best Practices:\n\n9 Enable 2FA for npm accounts\n10 Publish with Provenance Attestations\n11 Publish with OIDC\n12 Reduce your package dependency tree\n\nnpm Package Health Best Practices:\n\n13 Consult the Snyk Security Database for package health\n14 Do not trust the official npmjs.org registry\n\n1. Disable Post-Install Scripts\nWarningPost-install scripts are a common and recurring attack vector for supply chain attacks. Additionally, even with --ignore-scripts set, a git-based dependency URL (e.g. \"pkg\": \"git+https://github.com/org/pkg\") can ship its own .npmrc file that re-enables lifecycle scripts, silently bypassing the flag. Use --allow-git=none (npm CLI 11.10.0+) alongside --ignore-scripts to fully close this attack vector.\n\nRecent attacks like Shai-Hulud1, Nx2 and long-standing attacks like event-stream3 have all leveraged npm postinstall scripts to execute arbitrary code on a developer's machine during package installation in order to exfiltrate sensitive data, trigger a worm-like propagation, or perform other malicious activities.\nBy disabling post-install scripts, you can mitigate the risk of such attacks by preventing the execution of potentially harmful code during the installation process.\nTipSecurity Best Practice: Configure npm to disable lifecycle scripts when installing packages so any npm package, direct or indirect, cannot execute arbitrary code or commands on your system during installation.\n\nNoteHow to implement?\nIt is highly recommended in your global configuration to set npm's ignore-scripts and allow-git configurations to disable all post-install scripts for all projects on your machine:\n$ npm config set ignore-scripts true\n$ npm config set allow-git none\nOr disable npm's post-install scripts when performing ad-hoc package install using the command line:\n$ npm install --ignore-scripts --allow-git=none &lt;package-name&gt;\nSee the official npm documentation for --allow-git for more details.\n\n1.1. pnpm disable post-install scripts\nBeginning with version 10.0 pnpm disables postinstall scripts by default. pnpm allows an \"escape hatch\" to re-enable postinstall scripts or set an explicit allow-list of packages that are allowed to run postinstall scripts.\nUse pnpm-workspace.yaml to control which packages are permitted to run build scripts:\n# pnpm-workspace.yaml\n# Allow only specific packages to run lifecycle scripts (pnpm 10+)\nonlyBuiltDependencies:\n - esbuild\n - fsevents\n - nx@21.6.4 || 21.6.5 # pin allowed versions\n# Silently block specific packages and suppress the w",
+        "excerpt": "",
+        "author": "",
+        "published": ""
+      }
+    ]
+  },
+  {
+    "name": "HackerNoon",
+    "date": "2026-04-08T16:02:23.000Z",
+    "uid": "92637",
+    "hashtags": [],
+    "links": [
+      {
+        "title": "Monetize and Control - Zuplo",
+        "url": "https://zuplo.com/solutions/monetize-and-control"
+      },
+      {
+        "title": "Subscribe to HackerNoon Newsletter | HackerNoon",
+        "url": "https://hackernoon.com/p/emails/hackernoon-newsletter"
+      },
+      {
+        "title": "The HackerNoon Newsletter: London Is Coming for Anthropic (4/8/2026) | HackerNoon",
+        "url": "https://hackernoon.com/p/4-8-2026-newsletter"
+      },
+      {
+        "title": "The Noonification",
+        "url": "https://hackernoon.com/noonification"
+      },
+      {
+        "title": "HackerNoon - read, write and learn about any technology",
+        "url": "https://hackernoon.com/"
+      },
+      {
+        "title": "#on-this-day-hackernoon",
+        "url": "https://hackernoon.com/on-this-day"
+      },
+      {
+        "title": "Disney’s OpenAI-Sora Collapse Could Push It Deeper Into Epic Games | HackerNoon",
+        "url": "https://hackernoon.com/disneys-openai-sora-collapse-could-push-it-deeper-into-epic-games"
+      },
+      {
+        "title": "Over $1.5K in Free Tools for Your Project (On Us) 🎁 | HackerNoon",
+        "url": "https://hackernoon.com/over-$15k-in-free-tools-for-your-project-on-us"
+      },
+      {
+        "title": "Tech Stories",
+        "url": "https://hackernoon.com/c/tech-stories"
+      },
+      {
+        "title": "Proof of Usefulness | HackerNoon",
+        "url": "https://hackernoon.com/u/proofofusefulness"
+      },
+      {
+        "title": "HackerNoon Projects of the Week: QuantumLayer, Ekstra AI, & ComLab | HackerNoon",
+        "url": "https://hackernoon.com/hackernoon-projects-of-the-week-quantumlayer-ekstra-ai-and-comlab"
+      },
+      {
+        "title": "Claim Your BrightData Credits - Proof of Usefulness",
+        "url": "https://www.proofofusefulness.com/claim/brightdata"
+      },
+      {
+        "title": "app.storyblok.com",
+        "url": "https://app.storyblok.com/#/signup?utm_source=hackernoon&utm_medium=sponsor&utm_campaign=DEV_GEN_AWA_701W600002Q19NFIAZ&utm_term=signup"
+      },
+      {
+        "title": "Machine Learning",
+        "url": "https://hackernoon.com/c/machine-learning"
+      },
+      {
+        "title": "The AI Illusion (Part 1): The Human Cost of Generative Models | HackerNoon",
+        "url": "https://hackernoon.com/the-ai-illusion-part-1-the-human-cost-of-generative-models"
+      },
+      {
+        "title": "Carrbooks",
+        "url": "https://hackernoon.com/u/carrbooks"
+      },
+      {
+        "title": "Story Boost | HackerNoon Services | HackerNoon",
+        "url": "https://hackernoon.com/p/services/story-boost"
+      },
+      {
+        "title": "Why \"Build an AI Agent\" Is the Wrong Starting Point for AI Systems | HackerNoon",
+        "url": "https://hackernoon.com/why-build-an-ai-agent-is-the-wrong-starting-point-for-ai-systems"
+      },
+      {
+        "title": "Trilloai",
+        "url": "https://hackernoon.com/u/trilloai"
+      },
+      {
+        "title": "London Is Coming for Anthropic | HackerNoon",
+        "url": "https://hackernoon.com/london-is-coming-for-anthropic"
+      },
+      {
+        "title": "unusual-writer | HackerNoon",
+        "url": "https://hackernoon.com/u/unusualwriter"
+      },
+      {
+        "title": "Beyond ReconVLA: Annotation-Free Visual Grounding via Language-Attention Masked Reconstruction | HackerNoon",
+        "url": "https://hackernoon.com/beyond-reconvla-annotation-free-visual-grounding-via-language-attention-masked-reconstruction"
+      },
+      {
+        "title": "Daud Ibrahim | HackerNoon",
+        "url": "https://hackernoon.com/u/ibrahimdaud"
+      },
+      {
+        "title": "David Deal | HackerNoon",
+        "url": "https://hackernoon.com/u/davidjdeal"
+      },
+      {
+        "title": "Openai Set Discontinue Sora Video Platform App Wsj Reports 2026 03 24",
+        "url": "https://www.reuters.com/technology/openai-set-discontinue-sora-video-platform-app-wsj-reports-2026-03-24/"
+      },
+      {
+        "title": "AI Isn’t Ready to Run Our Lives | HackerNoon",
+        "url": "https://hackernoon.com/ai-isnt-ready-to-run-our-lives"
+      },
+      {
+        "title": "Nobody Serious Uses One AI Coding Model Anymore | HackerNoon",
+        "url": "https://hackernoon.com/nobody-serious-uses-one-ai-coding-model-anymore"
+      },
+      {
+        "title": "Vibe Decay: A Field Guide to How Projects Actually Die | HackerNoon",
+        "url": "https://hackernoon.com/vibe-decay-a-field-guide-to-how-projects-actually-die"
+      },
+      {
+        "title": "Your Weather App Knows Where You Sleep – Here's What It Does With That Data | HackerNoon",
+        "url": "https://hackernoon.com/your-weather-app-knows-where-you-sleep-heres-what-it-does-with-that-data"
+      },
+      {
+        "title": "How CERN's Large Hadron Innovations Are Turned Into Deep Tech Startups | HackerNoon",
+        "url": "https://hackernoon.com/how-cerns-large-hadron-innovations-are-turned-into-deep-tech-startups"
+      },
+      {
+        "title": "Poll - Should AI-generated content be taxed differently than human-created content?",
+        "url": "https://hackernoon.com/polls/should-ai-generated-content-be-taxed-differently-than-human-created-content"
+      },
+      {
+        "title": "Developers: The Why and How to Writing Technical Articles | HackerNoon",
+        "url": "https://hackernoon.com/developers-the-why-and-how-to-writing-technical-articles-54e824789ef6"
+      },
+      {
+        "title": "7 Pro Writing Tips for Devs, Founders and Other Non-Writers | HackerNoon",
+        "url": "https://hackernoon.com/how-can-non-writers-become-effective-bloggers-1pq32wd"
+      },
+      {
+        "title": "New",
+        "url": "https://app.hackernoon.com/new?template=general-interview"
+      },
+      {
+        "title": "Hackernoon",
+        "url": "https://ca.pinterest.com/hackernoon/"
+      },
+      {
+        "title": "Hackernoon",
+        "url": "https://giphy.com/hackernoon"
+      },
+      {
+        "title": "Subscriptions",
+        "url": "https://app.hackernoon.com/subscriptions"
+      },
+      {
+        "title": "Adversarial Machine Learning and Its Role in Fooling AI | HackerNoon",
+        "url": "https://hackernoon.com/adversarial-machine-learning-and-its-role-in-fooling-ai-3z4k3447"
+      },
+      {
+        "title": "Botclick",
+        "url": "https://tracking.hackernoon.com/tracking/botclick?msgid=RBAMFsBQzgoUEpUWZF-Gyg2&c=2033431326190845699"
+      }
+    ],
+    "scraped": [
+      {
+        "title": "Monetize and Control - Zuplo",
+        "url": "https://zuplo.com/solutions/monetize-and-control",
+        "content": "Monetize &amp; Control Usage \nThe Fastest Way to Monetize Your API\n \nSecure, manage and monetize your API - featuring a self-service\n experience for your customers.\n \nEvery revenue stream covered — from one platform.\n The Problem \nAPI Monetization is Broken\n \nStitching together 6 different tools takes 6–12 months and creates\n a fragile developer experience.\n Auth provider API gateway Dev portal Billing system Analytics Docs generator The Solution \nOne Platform. Both Sides Covered.\n \nZuplo replaces the patchwork with a single platform that serves both\n API providers and their consumers.\n \nAI &amp; LLM APIs\n \nPurpose-Built to Monetize AI APIs\n \nAI economics are different. Zuplo handles token-based complexity\n natively.\n Token-Based Billing: Meter by input/output tokens with\n per-model rates. Monetize your MCP Servers: Turn any OpenAPI route into a\n billable MCP tool — no extra config. Semantic Caching: Reduce LLM costs by 40–60% by caching\n similar requests. Prompt Injection Detection: Built-in edge security for your\n models. \nThe business case\n \nStop Stitching. Start Shipping.\n Frequently Asked QuestionsLearn about API management and how Zuplo helps your team build better APIs.Want a demo of Zuplo? Talk to an API expert Turn your API into revenue. Stop building billing infrastructure. Start earning.",
+        "excerpt": "",
+        "author": "",
+        "published": ""
+      },
+      {
+        "title": "Subscribe to HackerNoon Newsletter | HackerNoon",
+        "url": "https://hackernoon.com/p/emails/hackernoon-newsletter",
+        "content": "STAY AHEAD OF THE TECH CURVE\n Your Daily Dose of Must-Read Stories, Delivered Straight to Your Inbox. At Noon.\n Abhirup MoitraFounder @ Grow10x.OnlineLately, I've been hooked on the fantastic HackerNoon newsletter – it's become a favorite read of mine, consuming at least 30-40 minutes of my time every day for the past two weeks. Verlain J Muhungu@verlainedevnetHackernoon’s newsletter offers a plethora of information from Cloud to AI. Cutting though the internet noise, I am informed, educated and motivated daily with a wealth of knowledge. My favorite Topics remain Cloud computing, AI, and Hackernoon product news - \"Research shows that noon exhibits the least cognitive interference during the day, which is a great time to absorb new information. And what better way to learn something new than stories picked by HackerNoon editors delivered to your inbox at noon every day!\"- Sheharyar\"Picture this: Thoughtfully curated insights, technical know-how, and news covering a rapidly evolving tech ecosystem in real-time, delivered directly to your inbox every day at noon. Now stop picturing. It’s real. It’s free. It’s easily accessible. It’s the Noonfication by HackerNoon.\"- Asher\"Don’t worry, we got your lunch break entertainment covered. These stories were specifically hand-picked by HackerNoon editors to give your brain the nourishment it needs to continue steamrolling through the day.\"- Jose\"With a huge, growing library of quality, tech-centric content, the HackerNoon editorial team finds the best stories of the day and delivers them in a neat package that will kick your afternoon into high gear!\"- AdrianWHAT'S IN A HACKERNOON NEWSLETTER?Top Stories of The DayHackerNoon is home to a diverse community of Technology enthusiasts, entrepreneurs, industry professionals, and forward-thinking businesses who contribute to a 100k+ strong repository of niche insights. Every week, hundreds of stories are published, and our dedicated editors curate a daily selection of 5 top stories. Delivered at noon, directly to your inbox, this service is free, convenient, and offers immense value to anyone interested in technology.But don't just take our word for it—experience it yourself!The Greenest Place for Hackers to Hang Out\n &amp; Get Published\n Here are some nice things our friends have said about us on the socials\n WHAT'S IN A HACKERNOON NEWSLETTER?Trending Companies &amp; CoinsIn addition to Top Stories of The Day, the HackerNoon Newsletter offers free access to “Trending Companies and Coins”. Combining HackerNoon’s proprietary data with internet trends, our daily Trending Companies update offers timely and data-driven insights into the tech companies that are gaining or losing traction in the public eye.And for our Crypto heads, the Trending Coins update keeps you ahead of the curve with automated data on the latest movers and shakers in the exciting, and often chaotic, world of finance and cryptocurrency.The Greenest Place for Hackers to Hang Out\n &amp; Get Published\n Here are some nice things our friends have said about us on the socials\n WHAT'S IN A HACKERNOON NEWSLETTER?On This DayWe’re not done yet! The “On This Day” section of the HackerNoon Newsletter takes you on a trip down memory lane, highlighting significant events in the world of tech that happened on the current date in years past. Explore events that changed the global technology landscape, for better or worse. Engage with historical insights that give current trends much-needed context. Use this knowledge to plan effectively for an uncertain future.As the saying goes, “Those who do not remember the past are condemned to repeat it”The Greenest Place for Hackers to Hang Out\n &amp; Get Published\n Here are some nice things our friends have said about us on the socials\n WHAT'S IN A HACKERNOON NEWSLETTER?Featured Job PostsThe “Featured Job Posts” section provides valuable insights into current job openings across various IT sectors. From software development to data science, cybersecurit",
+        "excerpt": "",
+        "author": "",
+        "published": ""
+      },
+      {
+        "title": "The HackerNoon Newsletter: London Is Coming for Anthropic (4/8/2026) | HackerNoon",
+        "url": "https://hackernoon.com/p/4-8-2026-newsletter",
+        "content": "By \n @carrbooks [ 4 Min read ]\n There is a fundamental difference between an artist and an art director. Those who use AI to generate art or write their books are pretenders claiming the title of the former while doing the job of the latter...\n \n \n \n \n \n \n \n By \n @unusualwriter [ 2 Min read ]\n America did not misplace Anthropic. It pushed it.Then it refused two things. No autonomous weapons. No mass domestic surveillance. Prior administrations had disagreed and kept working anyway. Pete Hegseth did not keep working.While Washington and Anthropic traded court filings, Keir Starmer's government got to work...\n \n \n \n \n \n \n By \n @ibrahimdaud [ 7 Min read ]\n Replacing gaze annotations with language-driven attention masking makes robot perception annotation-free and up to 5x faster at inference.The reconstruction task forces the backbone to encode theshape and position of the target object. If it does not knowwhere the bowl is, it cannot reconstruct the bowl region...\n \n \n \n \n \n \n Additional Stories of your interest:\n \n \n \n \n \n \n \n On This Day\n \n \n \n \n \n \n \n \n \n \n \n This is the world's first skyscraper integrated with wind turbines. The twin tower complex with 50 floors has received a number of awards, with the turbines supplying 11% to 15% of the building's power. \n \n \n \n \n \n \n \n Should AI-generated content be taxed differently than human-created content?\n \n \n AI tools are generating millions of assets at near-zero cost, while human creators remain burdened by traditional income taxes and higher labor expenses. This shift creates a massive economic imbalance that could permanently displace the creative workforce and drain public tax revenue. Should governments bridge this gap by taxing AI-generated content at the source?\n \n \n We hope you enjoy this 64 minutes worth of free reading material. Feel free to forward this email to a nerdy friend who'll love you for it.\n See you on Planet Internet! With love,\n The HackerNoon Team ✌️",
+        "excerpt": "",
+        "author": "",
+        "published": ""
+      },
+      {
+        "title": "The Noonification",
+        "url": "https://hackernoon.com/noonification",
+        "content": "HackernoonWriteYes, I agree to receive electronic content at NOON (local time) by Hackernoon.Latest noonification stories769Top noonification StoriesTrending Topicsblockchaincryptocurrencyhackernoon-top-storyprogrammingsoftware-developmenttechnologystartuphackernoon-booksBitcoinbooksSearch byLight-ModeClassicNewspaperMintyDark-ModeNeon NoirMintyHN StartUps",
+        "excerpt": "",
+        "author": "",
+        "published": ""
+      },
+      {
+        "title": "HackerNoon - read, write and learn about any technology",
+        "url": "https://hackernoon.com/",
+        "content": "BoostedWhy \"Build an AI Agent\" Is the Wrong Starting Point for AI SystemsReal production systems require architecture, determinism, integration, and human interaction. Prompting harder does not produce those properties.by Trillo AIApr 08, 2026 · 6 min readAIPenetration Testing Companies: Comparing The Top 5 VendorsRead this blog to get the info you need about cost, pros, and more, to pick the best pen testing vendor for your unique needs. by SecurityMetricsApr 08, 2026 · 5 min readPENETRATION-TESTINGOpenClaw Changed How We Use AI. KiloClaw Made It Effortless to Get StartedOpenClaw is a powerful open-source AI agent, but self-hosting it is a pain. KiloClaw is OpenClaw fully hosted and managed by Kiloby KiloApr 08, 2026 · 6 min readAITrending StoriesStories By CategoryPoll of the WeekStories Published On This DayPublished recentlyHackerNoon is built for technologists to read, write, learn, and publish. We are an open and international community of 45k+ contributing writers publishing stories and expertise for 4M+ curious and insightful monthly readers. Founded in 2016 @ ArtMap Inc., HackerNoon is run by COO Linh Dao Smooke and CEO David Smooke.Learn More About Us",
+        "excerpt": "",
+        "author": "",
+        "published": ""
+      }
+    ]
+  }
+]
