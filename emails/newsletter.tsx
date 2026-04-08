@@ -72,21 +72,28 @@ export default function NewsletterEmail({
               <Text className="text-xs text-gray-400 text-center m-0">
                 You're receiving this because you subscribed to motyl.dev Weekly.
               </Text>
-              <Text className="text-xs text-gray-400 text-center mt-2 m-0">
-                <Link
-                  href="{{{RESEND_UNSUBSCRIBE_URL}}}"
-                  style={{ color: '#8B5CF6', textDecoration: 'none' }}
-                >
-                  Unsubscribe
-                </Link>
-                {' · '}
-                <Link
-                  href="https://motyl.dev"
-                  style={{ color: '#8B5CF6', textDecoration: 'none' }}
-                >
-                  motyl.dev
-                </Link>
-              </Text>
+<Text className="text-xs text-gray-400 text-center mt-2 m-0">
+  <Link
+    href="{{{RESEND_UNSUBSCRIBE_URL}}}"
+    style={{ color: '#8B5CF6', textDecoration: 'none' }}
+  >
+    Unsubscribe
+  </Link>
+  {' · '}
+  <Link
+    href="https://motyl.dev/privacy"
+    style={{ color: '#8B5CF6', textDecoration: 'none' }}
+  >
+    Privacy
+  </Link>
+  {' · '}
+  <Link
+    href="https://motyl.dev"
+    style={{ color: '#8B5CF6', textDecoration: 'none' }}
+  >
+    motyl.dev
+  </Link>
+</Text>
             </Section>
           </Container>
         </Body>
