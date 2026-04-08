@@ -20,13 +20,13 @@ export function AdSlot() {
     <aside className="ad-slot">
       <Script
         async
-        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8092948394838040"
+        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5937972178718571"
         crossOrigin="anonymous"
       />
       <ins
         className="adsbygoogle"
         style={{ display: 'block', height: 250 }}
-        data-ad-client="ca-pub-8092948394838040"
+        data-ad-client="ca-pub-5937972178718571"
         data-ad-slot="9748901656"
         data-full-width-responsive="true"
       ></ins>

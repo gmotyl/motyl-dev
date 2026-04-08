@@ -20,10 +20,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Manual link: Turbopack cannot parse ::view-transition-* pseudo-elements */}
         <link rel="stylesheet" href="/view-transitions.css" />
       </head>
-      <body className="min-h-screen bg-background font-sans antialiased relative">
-<div className="absolute inset-0 bg-butterfly-pattern opacity-5 pointer-events-none z-0"></div>
-         <ConsentGatedAnalytics />
-         <SessionProvider>
+<body className="min-h-screen bg-background font-sans antialiased relative">
+  <div className="absolute inset-0 bg-butterfly-pattern opacity-5 pointer-events-none
+    z-0"></div>
+  <ConsentGatedAnalytics />
+  <SessionProvider>
           <ThemeProvider
             attribute="class"
             defaultTheme="dark"
