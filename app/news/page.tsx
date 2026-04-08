@@ -29,7 +29,7 @@ export default async function NewsPage() {
         manifest={manifest}
         allHashtags={allHashtags}
         title="News"
-        description="Listen while you commute. Vote what matters. Articles generated for TTS, trending topics shaped by your votes — directly influencing what sources we dig into."
+        description="AI-curated frontend and AI news — filtered and reviewed for quality."
         contentType="news"
         basePath="/news"
       />
