@@ -7,7 +7,11 @@ export const revalidate = 300 // ISR: 5 min
 
 export const metadata = {
   title: 'News - Motyl.dev',
-  description: 'Listen while you commute. Vote what matters. Articles generated for TTS, trending topics shaped by your votes — directly influencing what sources we dig into.',
+  description: 'AI-curated frontend and AI news summaries — filtered and reviewed by Grzegorz Motyl.',
+  robots: {
+    index: false,
+    follow: false,
+  },
 }
 
 export default async function NewsPage() {
