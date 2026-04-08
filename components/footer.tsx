@@ -9,9 +9,14 @@ export default function Footer() {
           <Code className="h-5 w-5 text-primary" />
           <span>Grzegorz Motyl</span>
         </Link>
-        <p className="text-center text-sm text-muted-foreground md:text-left">
-          &copy; {new Date().getFullYear()} Grzegorz Motyl. Raising the bar of professional software development.
-        </p>
+<p className="text-center text-sm text-muted-foreground md:text-left">
+  &copy; {new Date().getFullYear()} Grzegorz Motyl. Raising the bar of professional software development.
+</p>
+<div className="flex items-center gap-3 text-xs text-muted-foreground">
+  <Link href="/privacy" className="hover:text-primary transition-colors">Privacy</Link>
+  <span>·</span>
+  <Link href="/unsubscribe" className="hover:text-primary transition-colors">Unsubscribe</Link>
+</div>
         <div className="flex items-center gap-4">
           <a
             href="https://github.com/gmotyl/motyl-dev"
