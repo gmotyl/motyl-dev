@@ -1,4 +1,6 @@
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
+import Image from 'next/image'
 import { AdSlot } from '@/components/ad-slot'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
