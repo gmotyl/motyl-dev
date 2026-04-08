@@ -1,5 +1,3 @@
-import { TrendingList } from '@/components/trending-list'
-import { InfoTooltip } from '@/components/info-tooltip'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import NewsletterForm from '@/components/newsletter-form'
@@ -7,7 +5,6 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { getAllContentMetadata } from '@/lib/articles'
 import { ItemType } from '@/lib/types'
-import { getHomepageFeed } from '@/lib/trends'
 import { getContentUrl } from '@/lib/urls'
 import { getOgImage } from '@/lib/og'
 import { getAllNewsletterMeta } from '@/lib/newsletter-issues'
@@ -16,23 +13,19 @@ import { formatDate, vtName } from '@/lib/utils'
 
 export const revalidate = 300 // ISR: revalidate every 5 min; vote counts update optimistically client-side
 
-const emptyFeed = { trendings: [], lastWeekSummary: null }
-
 export default async function Home() {
-  const [feed, articles, newsletters] = await Promise.all([
-    getHomepageFeed().catch(() => emptyFeed),
+  const [articles, newsletters] = await Promise.all([
     getAllContentMetadata(),
     getAllNewsletterMeta(),
   ])
-  const latestArticles = articles.filter(a => a.itemType === ItemType.Article).slice(0, 3)
-  const totalVotes = feed.trendings.reduce((sum, t) => sum + t.voteCount, 0)
+  const latestArticles = articles.filter(a => a.itemType === ItemType.Article).slice(0, 6)
 
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: 'Motyl.dev',
     url: 'https://motyl.dev',
-    description: 'Frontend & AI trends, curated weekly by Grzegorz Motyl. Vote on what matters.',
+    description: 'AI for FE newsletter — frontend & AI trends curated weekly by Grzegorz Motyl.',
   }
 
   return (
@@ -81,31 +74,13 @@ export default async function Home() {
 
           {/* Hero */}
           <section className="space-y-3">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-                🔥 What&apos;s Hot in FE &amp; AI
-              </h1>
-              <InfoTooltip text="Upvote any link from our news section to surface trends. Top links form the weekly summary." />
-            </div>
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+              motyl.dev — AI for FE newsletter
+            </h1>
             <p className="text-muted-foreground">
-              Trending to next weekly issue &middot; {totalVotes} votes cast
+              Frontend &amp; AI trends, curated weekly by Grzegorz Motyl.
             </p>
           </section>
-
-          {/* Trending items */}
-          {feed.trendings.length > 0 ? (
-            <section className="space-y-3">
-              <h2 className="text-xl font-semibold">🎯 Trending Now</h2>
-              <TrendingList items={feed.trendings} />
-            </section>
-          ) : (
-            <section className="rounded-lg border border-dashed border-primary/30 p-8 text-center text-muted-foreground">
-              <p>No trending items yet this week. Be the first to vote on a news article!</p>
-              <Button asChild variant="outline" className="mt-4">
-                <Link href="/news">Browse News</Link>
-              </Button>
-            </section>
-          )}
 
           {/* Latest Articles */}
           {latestArticles.length > 0 && (
@@ -191,7 +166,7 @@ export default async function Home() {
           <section className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-6 md:p-8 space-y-4 text-center">
             <h2 className="text-2xl font-bold">☕ Fuel Quality Content</h2>
             <p className="text-muted-foreground max-w-sm mx-auto text-sm">
-              Help me keep sharing high-quality insights without ads or paywalls.
+              Help me keep sharing high-quality insights.
             </p>
             <div>
               <a
