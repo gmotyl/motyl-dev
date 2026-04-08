@@ -25,3 +25,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# AI assistants
+.claude/
+.qwen/
+.mcp.json
+.npmrc
+
+# Cache & data artifacts
+data/
+public/data/
+processed-uids.json
