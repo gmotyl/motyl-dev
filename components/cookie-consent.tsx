@@ -16,15 +16,17 @@ const GdprConsent = () => {
     setShowBanner(false);
     if (typeof window !== 'undefined' && window.localStorage) {
       window.localStorage.setItem('gdpr-consent', 'true');
+      window.dispatchEvent(new Event('gdpr-consent-changed'));
     }
-  };
+  }
 
   const handleDecline = () => {
     setShowBanner(false);
     if (typeof window !== 'undefined' && window.localStorage) {
       window.localStorage.setItem('gdpr-consent', 'false');
+      window.dispatchEvent(new Event('gdpr-consent-changed'));
     }
-  };
+  }
 
   if (!showBanner) {
     return null;
@@ -52,7 +54,13 @@ const GdprConsent = () => {
       onAccept={handleAccept}
       onDecline={handleDecline}
     >
-      This website uses cookies to enhance the user experience.
+      <span>
+        We use cookies for analytics and advertising. See our{' '}
+        <a href="/privacy" style={{ color: 'var(--primary)', textDecoration: 'underline' }}>
+          privacy policy
+        </a>{' '}
+        for details.
+      </span>
     </CookieConsent>
   );
 };

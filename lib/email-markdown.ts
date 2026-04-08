@@ -65,6 +65,10 @@ export function wrapInEmailShell(bodyHtml: string): string {
     <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;">
     <div style="text-align: center;">
       <p style="font-size: 12px; color: #9ca3af; margin: 0;">
+        <a href="https://motyl.dev/unsubscribe" style="color: ${PURPLE}; text-decoration: none;">Unsubscribe</a>
+        &nbsp;&middot;&nbsp;
+        <a href="https://motyl.dev/privacy" style="color: ${PURPLE}; text-decoration: none;">Privacy</a>
+        &nbsp;&middot;&nbsp;
         <a href="https://motyl.dev" style="color: ${PURPLE}; text-decoration: none;">motyl.dev</a>
       </p>
     </div>

@@ -11,7 +11,7 @@ import { ArticleViewTracker } from '@/components/article-view-tracker'
 import { ArticleNavigation } from '@/components/article-navigation'
 import { BuyMeACoffeeButton } from '@/components/buy-me-a-coffee-button'
 import { ArticleWrapper } from '@/components/article-wrapper'
-import AdUnit from '@/components/ad-unit'
+import { AdSlot } from '@/components/ad-slot'
 import { type Content, ItemType } from '@/lib/types'
 import { getContentUrl } from '@/lib/urls'
 import { ContentItemMetadata } from '@/lib/articles'
@@ -128,25 +128,13 @@ export default async function ContentPage({ article, prevArticle, nextArticle }:
           <BuyMeACoffeeButton itemType={article.itemType} />
 
           <div className="my-6">
-            <AdUnit
-              pId="5937972178718571"
-              adSlot="9945496480"
-              adFormat="fluid"
-              adLayout="in-article"
-              style={{ display: 'block', textAlign: 'center' }}
-            />
+            <AdSlot format="horizontal" />
           </div>
 
           <ArticleExternalLinks article={article} />
 
           <div className="my-6">
-            <AdUnit
-              pId="5937972178718571"
-              adSlot="3059705694"
-              adFormat="autorelaxed"
-              adLayout="in-article"
-              style={{ display: 'block' }}
-            />
+            <AdSlot format="horizontal" />
           </div>
 
           <ArticleNavigation prevArticle={prevArticle} nextArticle={nextArticle} />
