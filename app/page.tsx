@@ -103,7 +103,7 @@ export default async function Home() {
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold hover:text-primary transition-colors">{article.title}</h3>
+                      <h3 className="font-semibold hover:text-primary transition-colors" style={{ viewTransitionName: vtName(article.slug) }}>{article.title}</h3>
                       {article.excerpt && (
                         <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{article.excerpt}</p>
                       )}
