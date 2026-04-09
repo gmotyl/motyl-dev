@@ -9,7 +9,7 @@ import { getContentUrl } from '@/lib/urls'
 import { getOgImage } from '@/lib/og'
 import { getAllNewsletterMeta } from '@/lib/newsletter-issues'
 import Image from 'next/image'
-import { formatDate, vtName } from '@/lib/utils'
+import { formatDate, vtName, vtImageName } from '@/lib/utils'
 
 export const revalidate = 300 // ISR: revalidate every 5 min; vote counts update optimistically client-side
 
@@ -42,7 +42,7 @@ export default async function Home() {
               className="flex items-center gap-4 rounded-lg border border-primary/30 bg-primary/5 p-3 hover:border-primary/50 hover:bg-primary/10 transition-all duration-200"
               style={{ viewTransitionName: vtName(`newsletter-${newsletters[0].issueNumber}`) }}
             >
-              <div className="flex-shrink-0 w-20 h-14 rounded overflow-hidden">
+              <div className="flex-shrink-0 w-20 h-14 rounded overflow-hidden" style={{ viewTransitionName: vtImageName(`newsletter-${newsletters[0].issueNumber}`) }}>
                 <Image
                   src={newsletters[0].image}
                   alt={`Weekly #${newsletters[0].issueNumber}`}
@@ -93,7 +93,7 @@ export default async function Home() {
                     href={getContentUrl(article)}
                     className="flex gap-4 rounded-lg border border-muted bg-background/50 p-4 hover:border-primary/30 hover:shadow-sm transition-all duration-200"
                   >
-                    <div className="flex-shrink-0 w-40 h-24 rounded overflow-hidden">
+                    <div className="flex-shrink-0 w-40 h-24 rounded overflow-hidden" style={{ viewTransitionName: vtImageName(article.slug) }}>
                       <Image
                         src={getOgImage(article as { image?: string; hashtags: string[] })}
                         alt={article.title}
@@ -134,7 +134,7 @@ export default async function Home() {
                     className="flex items-center gap-4 rounded-lg border border-muted bg-background/50 p-3 hover:border-primary/30 hover:shadow-sm transition-all duration-200"
                     style={{ viewTransitionName: vtName(`newsletter-${issue.issueNumber}`) }}
                   >
-                    <div className="flex-shrink-0 w-16 h-11 rounded overflow-hidden">
+                    <div className="flex-shrink-0 w-16 h-11 rounded overflow-hidden" style={{ viewTransitionName: vtImageName(`newsletter-${issue.issueNumber}`) }}>
                       <Image
                         src={issue.image}
                         alt={`Weekly #${issue.issueNumber}`}
