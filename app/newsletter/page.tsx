@@ -6,6 +6,7 @@ import { getAllNewsletterMeta } from '@/lib/newsletter-issues'
 import { getHomepageFeed } from '@/lib/trends'
 import NewsletterForm from '@/components/newsletter-form'
 import { NewsletterTabs } from '@/components/newsletter-tabs'
+import { vtName, vtImageName } from '@/lib/utils'
 
 const title = 'Newsletter Archive - Motyl.dev'
 const description = 'Weekly curated digest of frontend & AI trends by Grzegorz Motyl.'
@@ -78,8 +79,9 @@ export default async function NewsletterArchive({ searchParams }: NewsletterArch
                         key={issue.issueNumber}
                         href={`/newsletter/${issue.issueNumber}`}
                         className="flex items-center gap-4 rounded-lg border border-muted bg-background/50 p-3 hover:border-primary/30 hover:shadow-sm transition-all duration-200"
+                        style={{ viewTransitionName: vtName(`newsletter-${issue.issueNumber}`) }}
                       >
-                        <div className="flex-shrink-0 w-20 h-14 rounded overflow-hidden">
+                        <div className="flex-shrink-0 w-20 h-14 rounded overflow-hidden" style={{ viewTransitionName: vtImageName(`newsletter-${issue.issueNumber}`) }}>
                           <Image
                             src={issue.image}
                             alt={`Weekly #${issue.issueNumber}`}
