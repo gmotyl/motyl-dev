@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { ContentListing } from '@/components/content-listing'
 import { getAllHashtags } from '@/lib/articles'
 import Header from '@/components/header'
@@ -24,15 +25,17 @@ export default async function NewsPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <ContentListing
-        initialBatch={initialBatch}
-        manifest={manifest}
-        allHashtags={allHashtags}
-        title="News"
-        description="AI-curated frontend and AI news — filtered and reviewed for quality."
-        contentType="news"
-        basePath="/news"
-      />
+      <Suspense>
+        <ContentListing
+          initialBatch={initialBatch}
+          manifest={manifest}
+          allHashtags={allHashtags}
+          title="News"
+          description="AI-curated frontend and AI news — filtered and reviewed for quality."
+          contentType="news"
+          basePath="/news"
+        />
+      </Suspense>
     </div>
   )
 }
