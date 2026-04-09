@@ -127,15 +127,19 @@ export default async function ContentPage({ article, prevArticle, nextArticle }:
 
           <BuyMeACoffeeButton itemType={article.itemType} />
 
-          <div className="my-6">
-            <AdSlot format="horizontal" />
-          </div>
+          {!isNewsArticle && (
+            <div className="my-6">
+              <AdSlot format="horizontal" />
+            </div>
+          )}
 
           <ArticleExternalLinks article={article} />
 
-          <div className="my-6">
-            <AdSlot format="horizontal" />
-          </div>
+          {!isNewsArticle && (
+            <div className="my-6">
+              <AdSlot format="horizontal" />
+            </div>
+          )}
 
           <ArticleNavigation prevArticle={prevArticle} nextArticle={nextArticle} />
         </article>

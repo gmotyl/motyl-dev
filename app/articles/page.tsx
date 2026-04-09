@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { ContentListing } from '@/components/content-listing'
 import { getAllHashtags } from '@/lib/articles'
 import Header from '@/components/header'
@@ -20,15 +21,17 @@ export default async function ArticlesPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <ContentListing
-        initialBatch={initialBatch}
-        manifest={manifest}
-        allHashtags={allHashtags}
-        title="Blog"
-        description="Original insights on web architecture and the future of AI-driven development"
-        contentType="article"
-        basePath="/articles"
-      />
+      <Suspense>
+        <ContentListing
+          initialBatch={initialBatch}
+          manifest={manifest}
+          allHashtags={allHashtags}
+          title="Blog"
+          description="Original insights on web architecture and the future of AI-driven development"
+          contentType="article"
+          basePath="/articles"
+        />
+      </Suspense>
     </div>
   )
 }

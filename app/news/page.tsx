@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { ContentListing } from '@/components/content-listing'
 import { getAllHashtags } from '@/lib/articles'
 import Header from '@/components/header'
@@ -7,7 +8,11 @@ export const revalidate = 300 // ISR: 5 min
 
 export const metadata = {
   title: 'News - Motyl.dev',
-  description: 'Listen while you commute. Vote what matters. Articles generated for TTS, trending topics shaped by your votes — directly influencing what sources we dig into.',
+  description: 'AI-curated frontend and AI news summaries — filtered and reviewed by Grzegorz Motyl.',
+  robots: {
+    index: false,
+    follow: false,
+  },
 }
 
 export default async function NewsPage() {
@@ -20,15 +25,17 @@ export default async function NewsPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <ContentListing
-        initialBatch={initialBatch}
-        manifest={manifest}
-        allHashtags={allHashtags}
-        title="News"
-        description="Listen while you commute. Vote what matters. Articles generated for TTS, trending topics shaped by your votes — directly influencing what sources we dig into."
-        contentType="news"
-        basePath="/news"
-      />
+      <Suspense>
+        <ContentListing
+          initialBatch={initialBatch}
+          manifest={manifest}
+          allHashtags={allHashtags}
+          title="News"
+          description="AI-curated frontend and AI news — filtered and reviewed for quality."
+          contentType="news"
+          basePath="/news"
+        />
+      </Suspense>
     </div>
   )
 }

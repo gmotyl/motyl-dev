@@ -6,7 +6,7 @@ import Header from '@/components/header'
 import Footer from '@/components/footer'
 import ReactMarkdown from 'react-markdown'
 import { getAllNewsletters } from '@/lib/newsletter-issues'
-import { vtName } from '@/lib/utils'
+import { vtName, vtImageName } from '@/lib/utils'
 
 export async function generateStaticParams() {
   const all = await getAllNewsletters()
@@ -98,7 +98,7 @@ export default async function NewsletterIssuePage({
                         {children}
                       </h1>
                       {isPrimary && (
-                        <div className="not-prose mb-8 rounded-lg overflow-hidden">
+                        <div className="not-prose mb-8 rounded-lg overflow-hidden" style={{ viewTransitionName: vtImageName(`newsletter-${newsletter.issueNumber}`) }}>
                           <Image
                             src={newsletter.image}
                             alt={`motyl.dev Weekly #${newsletter.issueNumber}`}

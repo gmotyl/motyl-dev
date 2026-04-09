@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils'
 const SUPPORT_URL = 'https://www.buymeacoffee.com/motyl.dev'
 
 const NAV_LINKS = [
-  { label: 'Trending', href: '/' },
+  { label: 'Home', href: '/' },
   { label: 'Newsletter', href: '/newsletter' },
   { label: 'Blog', href: '/articles' },
   { label: 'News', href: '/news?unseen=true' },

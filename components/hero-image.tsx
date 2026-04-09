@@ -2,6 +2,7 @@ import Image from 'next/image'
 import { CategoryIcon } from '@/components/category-icon'
 import { type Content, ItemType } from '@/lib/types'
 import { getOgImage } from '@/lib/og'
+import { vtImageName } from '@/lib/utils'
 
 interface HeroImageProps {
   article: Content
@@ -10,14 +11,14 @@ interface HeroImageProps {
 export function HeroImage({ article }: HeroImageProps) {
   if (article.itemType === ItemType.News) {
     return (
-      <div className="mb-8 rounded-lg overflow-hidden" style={{ aspectRatio: '16/5' }}>
+      <div className="mb-8 rounded-lg overflow-hidden" style={{ aspectRatio: '16/5', viewTransitionName: vtImageName(article.slug) }}>
         <CategoryIcon hashtags={article.hashtags} className="w-full h-full" />
       </div>
     )
   }
 
   return (
-    <div className="mb-8 rounded-lg overflow-hidden">
+    <div className="mb-8 rounded-lg overflow-hidden" style={{ viewTransitionName: vtImageName(article.slug) }}>
       <Image
         src={getOgImage(article)}
         alt={article.title}

@@ -10,6 +10,11 @@ export function vtName(slug: string): string {
   return `title-${slug.replace(/[^a-z0-9-]/gi, '_')}`
 }
 
+/** View-transition-name for hero/card images. */
+export function vtImageName(slug: string): string {
+  return `image-${slug.replace(/[^a-z0-9-]/gi, '_')}`
+}
+
 /**
  * Format a YYYY-MM-DD date string using Temporal API (timezone-safe).
  * Falls back to manual parsing if Temporal is unavailable.

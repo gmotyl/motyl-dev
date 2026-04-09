@@ -62,12 +62,13 @@ Derive the object key from the article slug:
 blog/[article-slug].[ext]
 ```
 
-Upload using wrangler:
+Upload using wrangler — **always use `--remote`** to upload to the actual R2 bucket (without it, wrangler defaults to the local emulator):
 ```bash
 CLOUDFLARE_ACCOUNT_ID=... CLOUDFLARE_API_TOKEN=... \
   npx wrangler r2 object put [R2_BUCKET_NAME]/blog/[article-slug].webp \
   --file <optimized-webp-path> \
-  --content-type image/webp
+  --content-type image/webp \
+  --remote
 ```
 
 On success, construct the CDN URL:

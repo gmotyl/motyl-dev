@@ -7,12 +7,12 @@ import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { useVisitedArticles } from '@/hooks/use-visited-articles'
 import { HashtagInput } from '@/components/hashtag-input'
-import AdUnit from '@/components/ad-unit'
+import { InfoTooltip } from '@/components/info-tooltip'
 import { getOgImage } from '@/lib/og'
 import Image from 'next/image'
 import { CategoryIcon, CategoryIconMini } from '@/components/category-icon'
 import { getContentCategory } from '@/lib/og'
-import { formatDate, vtName } from '@/lib/utils'
+import { formatDate, vtName, vtImageName } from '@/lib/utils'
 import type { TrimmedItem, ContentManifest } from '@/lib/content-batches'
 
 const RENDER_BATCH = 30
@@ -358,7 +358,12 @@ export function ContentListing({
       )}
 
       <main className="flex-1 container py-10">
-        <h1 className="text-3xl font-bold mb-2">{title}</h1>
+        <div className="flex items-center gap-2 mb-2">
+          <h1 className="text-3xl font-bold">{title}</h1>
+          {contentType === 'news' && (
+            <InfoTooltip text="News summaries in this section are AI-assisted: I curate which newsletters and articles to include, and AI helps extract and summarize the key points, to support manual filtering of content worth reading. Every item is reviewed for accuracy before publishing." />
+          )}
+        </div>
         {description && <p className="text-muted-foreground mb-8">{description}</p>}
 
         {allHashtags.length > 0 && (
@@ -498,10 +503,6 @@ export function ContentListing({
               {isFetchingBatch && ' · loading…'}
             </div>
 
-            <div className="my-6">
-              <AdUnit pId="5937972178718571" adSlot="9373832601" adFormat="fluid" />
-            </div>
-
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {renderItems.map((item) => {
                 const hashtags = item.hashtags ?? []
@@ -525,7 +526,7 @@ export function ContentListing({
                     <div className="flex-shrink-0 w-16 flex items-center justify-center p-2 md:hidden">
                       <CategoryIconMini hashtags={hashtags} className="w-12 h-12" />
                     </div>
-                    <div className="relative w-full overflow-hidden rounded-t-lg hidden md:block" style={{ aspectRatio: '16/7' }}>
+                    <div className="relative w-full overflow-hidden rounded-t-lg hidden md:block" style={{ aspectRatio: '16/7', viewTransitionName: vtImageName(item.slug) }}>
                       <CategoryIcon hashtags={hashtags} className="w-full h-full" />
                     </div>
                     <div className="p-4 md:p-6 flex flex-col flex-grow min-w-0">
@@ -548,7 +549,7 @@ export function ContentListing({
                     }`}
                     style={isRemoving ? { transition: 'all 350ms ease-out' } : undefined}
                   >
-                    <div className="relative w-full overflow-hidden rounded-t-lg" style={{ aspectRatio: '16/7' }}>
+                    <div className="relative w-full overflow-hidden rounded-t-lg" style={{ aspectRatio: '16/7', viewTransitionName: vtImageName(item.slug) }}>
                       <Image
                         src={getOgImage(item as { image?: string; hashtags: string[] })}
                         alt={item.title}
