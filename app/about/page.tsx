@@ -52,18 +52,35 @@ export default function AboutPage() {
       <Header />
       <main className="flex-1">
         <div className="container max-w-3xl mx-auto px-4 py-12 md:py-16 space-y-14">
-
           {/* Motyl.dev Platform Description */}
           <section className="space-y-4">
             <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-              Curated trends. Honest takes.
+              motyl.dev - curated trends & honest takes
             </h1>
             <p className="text-lg text-foreground/80 leading-relaxed">
-              motyl.dev keeps you up to date with the latest trends in Frontend & AI. Every week, I curate the most important developments, dive deep into practical solutions for functional programming and architecture, and share real-world perspectives on the tools shaping our industry.
+              motyl.dev keeps you up to date with the latest trends in Frontend & AI. Every week, I
+              curate the most important developments, dive deep into practical solutions for
+              functional programming and architecture, and share real-world perspectives on the
+              tools shaping our industry.
             </p>
             <p className="text-base text-muted-foreground leading-relaxed">
-              No paywalls. No algorithm deciding what you see. Just thoughtful writing and community-voted trends that matter.
+              No paywalls. No algorithm deciding what you see. Just thoughtful writing and
+              community-voted trends that matter.
             </p>
+          </section>
+
+          {/* Newsletter */}
+          <section
+            id="newsletter"
+            className="rounded-lg border border-primary/20 bg-primary/5 p-6 md:p-8 space-y-4 text-center"
+          >
+            <h2 className="text-xl font-bold">Stay in the loop</h2>
+            <p className="text-muted-foreground max-w-sm mx-auto text-sm">
+              No spam, unsubscribe anytime.
+            </p>
+            <div className="max-w-sm mx-auto">
+              <NewsletterForm />
+            </div>
           </section>
 
           {/* Expertise Cards */}
@@ -92,13 +109,14 @@ export default function AboutPage() {
             <h2 className="text-xl font-semibold">How content is made</h2>
             <div className="space-y-3 text-sm text-foreground/80 leading-relaxed">
               <p>
-                <strong>Original articles</strong> and <strong>newsletter issues</strong> are written by me, Greg.
-                These are my own analysis, opinions, and insights drawn from two decades of building software.
+                <strong>Original articles</strong> and <strong>newsletter issues</strong> are
+                written by me, Greg. These are my own analysis, opinions, and insights drawn from
+                two decades of building software.
               </p>
               <p>
-                <strong>News summaries</strong> in the /news section are AI-assisted: I curate which newsletters
-                and articles to include, and AI helps extract and summarize the key points. Every item is reviewed
-                for accuracy before publishing.
+                <strong>News summaries</strong> in the /news section are AI-assisted: I curate which
+                newsletters and articles to include, and AI helps extract and summarize the key
+                points. Every item is reviewed for accuracy before publishing.
               </p>
               <p>
                 <strong>Trend voting</strong> is driven by the community — you vote on what matters.
@@ -107,13 +125,18 @@ export default function AboutPage() {
           </section>
 
           <section className="space-y-4 pt-4 border-t border-border/50">
-            <h2 className="text-lg font-semibold text-foreground/80">motyl.dev by Grzegorz (Greg) Motyl</h2>
+            <h2 className="text-lg font-semibold text-foreground/80">
+              motyl.dev by Grzegorz (Greg) Motyl
+            </h2>
             <div className="space-y-3 text-sm text-foreground/70 leading-relaxed">
               <p>
-                I&apos;m Greg, a frontend developer with over two decades of experience in TypeScript and React. I care obsessively about architecture, functional programming, and clean code.
+                I&apos;m Greg, a frontend developer with over two decades of experience in
+                TypeScript and React. I care obsessively about architecture, functional programming,
+                and clean code.
               </p>
               <p>
-                Outside of coding, I&apos;m a father, occasional runner, and someone who takes coffee quality way too seriously.
+                Outside of coding, I&apos;m a father, occasional runner, and someone who takes
+                coffee quality way too seriously.
               </p>
             </div>
           </section>
@@ -123,8 +146,8 @@ export default function AboutPage() {
             <div className="space-y-2">
               <h2 className="text-2xl md:text-3xl font-bold">Support the work</h2>
               <p className="text-muted-foreground max-w-md mx-auto">
-                Your support helps me keep sharing quality insights without ads or paywalls.
-                Every coffee keeps the server running and the ideas flowing.
+                Your support helps me keep sharing quality insights without ads or paywalls. Every
+                coffee keeps the server running and the ideas flowing.
               </p>
             </div>
             <a
@@ -139,18 +162,6 @@ export default function AboutPage() {
               Opens buymeacoffee.com — no account needed
             </p>
           </section>
-
-          {/* Newsletter */}
-          <section id="newsletter" className="rounded-lg border border-primary/20 bg-primary/5 p-6 md:p-8 space-y-4 text-center">
-            <h2 className="text-xl font-bold">Stay in the loop</h2>
-            <p className="text-muted-foreground max-w-sm mx-auto text-sm">
-              Get a weekly digest of the top Frontend & AI trends, curated by me. No spam, unsubscribe any time.
-            </p>
-            <div className="max-w-sm mx-auto">
-              <NewsletterForm />
-            </div>
-          </section>
-
         </div>
       </main>
       <Footer />

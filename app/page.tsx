@@ -18,7 +18,7 @@ export default async function Home() {
     getAllContentMetadata(),
     getAllNewsletterMeta(),
   ])
-  const latestArticles = articles.filter(a => a.itemType === ItemType.Article).slice(0, 6)
+  const latestArticles = articles.filter((a) => a.itemType === ItemType.Article).slice(0, 6)
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -30,10 +30,22 @@ export default async function Home() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <Header />
       <main className="flex-1">
         <div className="container max-w-3xl mx-auto px-4 py-12 md:py-16 space-y-12">
+          {/* Hero */}
+          <section className="space-y-3">
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+              motyl.dev — AI for FE newsletter
+            </h1>
+            <p className="text-muted-foreground">
+              Frontend &amp; AI trends, curated weekly by Grzegorz Motyl.
+            </p>
+          </section>
 
           {/* Latest newsletter banner */}
           {newsletters.length > 0 && (
@@ -42,7 +54,12 @@ export default async function Home() {
               className="flex items-center gap-4 rounded-lg border border-primary/30 bg-primary/5 p-3 hover:border-primary/50 hover:bg-primary/10 transition-all duration-200"
               style={{ viewTransitionName: vtName(`newsletter-${newsletters[0].issueNumber}`) }}
             >
-              <div className="flex-shrink-0 w-20 h-14 rounded overflow-hidden" style={{ viewTransitionName: vtImageName(`newsletter-${newsletters[0].issueNumber}`) }}>
+              <div
+                className="flex-shrink-0 w-20 h-14 rounded overflow-hidden"
+                style={{
+                  viewTransitionName: vtImageName(`newsletter-${newsletters[0].issueNumber}`),
+                }}
+              >
                 <Image
                   src={newsletters[0].image}
                   alt={`Weekly #${newsletters[0].issueNumber}`}
@@ -52,7 +69,9 @@ export default async function Home() {
                 />
               </div>
               <div className="flex-1 min-w-0">
-                <span className="text-xs font-medium text-primary uppercase tracking-wide">Latest Issue</span>
+                <span className="text-xs font-medium text-primary uppercase tracking-wide">
+                  Latest Issue
+                </span>
                 <p className="font-semibold truncate">
                   motyl.dev Weekly #{newsletters[0].issueNumber}: {newsletters[0].weekLabel}
                 </p>
@@ -62,24 +81,18 @@ export default async function Home() {
           )}
 
           {/* Newsletter */}
-          <section id="newsletter" className="rounded-lg border border-primary/20 bg-primary/5 p-6 md:p-8 space-y-4 text-center">
-            <h2 className="text-2xl font-bold">📬 Weekly Newsletter</h2>
+          <section
+            id="newsletter"
+            className="rounded-lg border border-primary/20 bg-primary/5 p-6 md:p-8 space-y-4 text-center"
+          >
+            <h2 className="text-2xl font-bold">📬 motyl.dev Weekly</h2>
             <p className="text-muted-foreground max-w-sm mx-auto text-sm">
-              Get the best frontend & AI links delivered to your inbox every week. No spam, unsubscribe anytime.
+              Get the best frontend & AI articles and tools delivered to your inbox every week. No
+              spam, unsubscribe anytime.
             </p>
             <div className="max-w-sm mx-auto">
               <NewsletterForm />
             </div>
-          </section>
-
-          {/* Hero */}
-          <section className="space-y-3">
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
-              motyl.dev — AI for FE newsletter
-            </h1>
-            <p className="text-muted-foreground">
-              Frontend &amp; AI trends, curated weekly by Grzegorz Motyl.
-            </p>
           </section>
 
           {/* Latest Articles */}
@@ -93,7 +106,10 @@ export default async function Home() {
                     href={getContentUrl(article)}
                     className="flex gap-4 rounded-lg border border-muted bg-background/50 p-4 hover:border-primary/30 hover:shadow-sm transition-all duration-200"
                   >
-                    <div className="flex-shrink-0 w-40 h-24 rounded overflow-hidden" style={{ viewTransitionName: vtImageName(article.slug) }}>
+                    <div
+                      className="flex-shrink-0 w-40 h-24 rounded overflow-hidden"
+                      style={{ viewTransitionName: vtImageName(article.slug) }}
+                    >
                       <Image
                         src={getOgImage(article as { image?: string; hashtags: string[] })}
                         alt={article.title}
@@ -103,9 +119,16 @@ export default async function Home() {
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold hover:text-primary transition-colors" style={{ viewTransitionName: vtName(article.slug) }}>{article.title}</h3>
+                      <h3
+                        className="font-semibold hover:text-primary transition-colors"
+                        style={{ viewTransitionName: vtName(article.slug) }}
+                      >
+                        {article.title}
+                      </h3>
                       {article.excerpt && (
-                        <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{article.excerpt}</p>
+                        <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+                          {article.excerpt}
+                        </p>
                       )}
                       <p className="mt-2 text-xs text-primary/60">
                         {formatDate(article.publishedAt)}
@@ -134,7 +157,10 @@ export default async function Home() {
                     className="flex items-center gap-4 rounded-lg border border-muted bg-background/50 p-3 hover:border-primary/30 hover:shadow-sm transition-all duration-200"
                     style={{ viewTransitionName: vtName(`newsletter-${issue.issueNumber}`) }}
                   >
-                    <div className="flex-shrink-0 w-16 h-11 rounded overflow-hidden" style={{ viewTransitionName: vtImageName(`newsletter-${issue.issueNumber}`) }}>
+                    <div
+                      className="flex-shrink-0 w-16 h-11 rounded overflow-hidden"
+                      style={{ viewTransitionName: vtImageName(`newsletter-${issue.issueNumber}`) }}
+                    >
                       <Image
                         src={issue.image}
                         alt={`Weekly #${issue.issueNumber}`}
@@ -143,9 +169,7 @@ export default async function Home() {
                         className="w-full h-full object-cover"
                       />
                     </div>
-                    <span className="flex-1 font-medium">
-                      Weekly #{issue.issueNumber}
-                    </span>
+                    <span className="flex-1 font-medium">Weekly #{issue.issueNumber}</span>
                     <span className="text-sm text-muted-foreground whitespace-nowrap">
                       {issue.weekLabel}
                     </span>
@@ -179,7 +203,6 @@ export default async function Home() {
               </a>
             </div>
           </section>
-
         </div>
       </main>
       <Footer />
