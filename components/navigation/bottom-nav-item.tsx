@@ -30,9 +30,6 @@ export function BottomNavItem({
           : "text-muted-foreground hover:text-foreground"
       )}
     >
-      {isActive && (
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-primary" />
-      )}
       <div className="relative">
         <Icon className={cn("h-6 w-6", isActive && "text-primary")} />
         {badge && (
