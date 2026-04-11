@@ -44,3 +44,8 @@ next-env.d.ts
 .gitnexus
 .trends-input.json
 .wrangler/
+
+# Local environment / IDE
+.claude/settings.local.json
+.npmrc
+.qwen/
