@@ -1,10 +1,10 @@
 "use client"
 
-import { usePathname } from "next/navigation"
 import { Home, Newspaper, BookOpen, User } from "lucide-react"
+import { useBottomNav, type NavItemConfig } from "@/hooks/use-bottom-nav"
 import { BottomNavItem } from "./bottom-nav-item"
 
-const navItems = [
+const navItems: NavItemConfig[] = [
   { href: "/", icon: Home, label: "Home" },
   { href: "/news?unseen=true", icon: Newspaper, label: "News" },
   { href: "/articles", icon: BookOpen, label: "Blog" },
@@ -12,26 +12,8 @@ const navItems = [
 ]
 
 export function BottomNav() {
-  const pathname = usePathname()
-
-  const getActiveIndex = () => {
-    if (pathname === "/") return 0
-    if (pathname.startsWith("/news")) return 1
-    if (pathname.startsWith("/articles")) return 2
-    if (pathname === "/me") return 3
-    return -1
-  }
-
-  const activeIndex = getActiveIndex()
+  const { activeIndex, isItemActive } = useBottomNav(navItems)
   const tabCount = navItems.length
-
-  const isActive = (href: string) => {
-    if (href === "/") return pathname === "/"
-    if (href.startsWith("/news")) return pathname.startsWith("/news")
-    if (href.startsWith("/articles")) return pathname.startsWith("/articles")
-    if (href === "/me") return pathname === "/me"
-    return false
-  }
 
   return (
     <nav
@@ -54,7 +36,8 @@ export function BottomNav() {
           href={item.href}
           icon={item.icon}
           label={item.label}
-          isActive={isActive(item.href)}
+          isActive={isItemActive(item)}
+          badge={item.badge}
         />
       ))}
     </nav>
