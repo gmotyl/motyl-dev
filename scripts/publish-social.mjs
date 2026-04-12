@@ -193,7 +193,7 @@ function hmacSha1(key, data) {
 
 // ─── LinkedIn (v2) ────────────────────────────────────────────────────────────
 
-async function publishLinkedIn(text, link) {
+async function publishLinkedIn(text, link, comment) {
   const accessToken = process.env.LINKEDIN_ACCESS_TOKEN;
   const personUrn = process.env.LINKEDIN_PERSON_URN;
 
@@ -239,10 +239,42 @@ async function publishLinkedIn(text, link) {
   }
 
   const data = await res.json();
-  const postId = data?.id?.split(':').pop();
+  const postUrn = data?.id;
+
+  // Post first comment with the link (bypasses LinkedIn algorithm suppression)
+  if (comment && postUrn) {
+    await postLinkedInComment(accessToken, personUrn, postUrn, comment);
+  }
+
+  const postId = postUrn?.split(':').pop();
   return postId
-    ? `https://www.linkedin.com/feed/update/${data.id}/`
+    ? `https://www.linkedin.com/feed/update/${postUrn}/`
     : 'Published (URL unavailable)';
+}
+
+async function postLinkedInComment(accessToken, personUrn, postUrn, commentText) {
+  const body = {
+    actor: personUrn,
+    message: { text: commentText },
+  };
+
+  const encodedUrn = encodeURIComponent(postUrn);
+  const res = await fetch(`https://api.linkedin.com/v2/socialActions/${encodedUrn}/comments`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+      'X-Restli-Protocol-Version': '2.0.0',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    console.error(`⚠ LinkedIn comment failed (${res.status}): ${err}`);
+  } else {
+    console.log('✓ First comment posted with link');
+  }
 }
 
 // ─── CLI entry point ──────────────────────────────────────────────────────────
@@ -259,9 +291,10 @@ async function main() {
   const platform = get('--platform');
   const textArg = get('--text');
   const link = get('--link') || null;
+  const comment = get('--comment') || null;
 
   if (!platform || !textArg) {
-    console.error('Usage: node scripts/publish-social.mjs --platform <bluesky|twitter|linkedin> --text "..." [--link https://...]');
+    console.error('Usage: node scripts/publish-social.mjs --platform <bluesky|twitter|linkedin> --text "..." [--link https://...] [--comment "first comment text"]');
     process.exit(1);
   }
 
@@ -281,7 +314,7 @@ async function main() {
         url = await publishTwitter(text);
         break;
       case 'linkedin':
-        url = await publishLinkedIn(text, link);
+        url = await publishLinkedIn(text, link, comment);
         break;
       default:
         throw new Error(`Unknown platform: ${platform}. Use: bluesky, twitter, linkedin`);
