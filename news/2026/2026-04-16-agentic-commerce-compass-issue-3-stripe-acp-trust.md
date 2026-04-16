@@ -98,3 +98,24 @@ This doesn't mean shipping unreliable AI. It means the benchmark is "does this h
 **Why do I care:** This is the most practically useful reframe in this issue. If you're on a team blocking AI feature adoption because the AI "makes mistakes sometimes," this framing is the argument that unsticks the conversation. Bring SLA data and conversion data from the current system. Then ask whether the AI is actually worse by the metrics that matter, not just by the metric that's easiest to cite.
 
 **Link:** [Agentic Commerce Compass: Issue #3](https://www.linkedin.com/pulse/agentic-commerce-compass-issue-3-usealokai-suswf)
+
+---
+
+## Alokai vs. SAP Composable Storefront: Ambient Intelligence as the UX Differentiator
+
+**TLDR:** Mateusz Ostafil published a video comparing Alokai to SAP Composable Storefront (Spartacus), including a demo of Alokai Compass enabling agentic commerce for SAP Commerce Cloud. The standout isn't the feature comparison — it's the UX framing: ambient intelligence with no chat window, no prompt box. The storefront just gets smarter.
+
+SAP sunsetted on-premise Commerce in July 2026. Every vendor in the market is now running the same migration pitch. The more interesting question, as Pawel Wiacek frames it in this issue's opener, isn't where to migrate — it's whether your commerce stack is ready for a world where AI agents are becoming a primary shopping interface. The Alokai vs. SAP Composable Storefront video is useful precisely because it answers that question visually rather than in a feature matrix.
+
+The demo shows smart product highlighting and contextual tooltips that adapt to user intent. No chat window. No prompt. The intelligence is embedded into the browsing experience. This is a concrete implementation of the trust gap Forrester is pointing at: if consumers don't trust AI agents to shop for them, the alternative isn't to remove AI — it's to make the AI invisible in a way that feels helpful rather than intrusive. The chat window is the social commerce playbook. Ambient intelligence is a different bet.
+
+Ostafil's framing introduces a useful shorthand: UX + AX = modern CX. Agent Experience — how well your storefront serves AI agents operating on behalf of users — isn't a separate layer you add later. It's a design constraint that should be shaping your architecture now. The teams shipping both will compound; the ones shipping only one will retrofit.
+
+**Key takeaways:**
+- Ambient intelligence (smart highlighting, contextual tooltips) addresses the consumer trust problem by making AI helpful without making it visible
+- AX (Agent Experience) is not a post-launch feature — it's an architectural constraint, and retrofitting it is expensive
+- SAP's on-premise sunset creates migration pressure, but migration destination matters less than whether the destination is agentic-ready
+
+**Why do I care:** If you're on a team evaluating storefront platforms during a SAP migration, "does it support agentic commerce" is now a valid evaluation criterion alongside performance, integrations, and DX. The ambient intelligence pattern shown in the demo — surfacing contextual intelligence without routing users through a chat interface — is better UX and better trust design, regardless of your stack.
+
+**Link:** [Agentic Commerce Compass: Issue #3](https://www.linkedin.com/pulse/agentic-commerce-compass-issue-3-usealokai-suswf)
