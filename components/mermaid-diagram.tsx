@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import mermaid from 'mermaid'
 
 let mermaidInitialized = false
@@ -49,8 +49,6 @@ function initMermaid() {
   mermaidInitialized = true
 }
 
-let idCounter = 0
-
 function fixAmbiguousLabels(src: string): string {
   return src.replace(/\[([/\\])([^\]]*[^/\\])\]/g, '["$1$2"]')
 }
@@ -81,7 +79,7 @@ function patchSvgDarkTheme(el: HTMLDivElement) {
     const shape = n.querySelector('rect, polygon') as SVGElement | null
     if (!shape) return
     const t = n.getAttribute('transform') || ''
-    const m = t.match(/translate\(([\d.]+),\s*([\d.]+)\)/)
+    const m = t.match(/translate\(([-\d.eE]+)[,\s]+([-\d.eE]+)\)/)
     if (!m) { shape.style.fill = neutralNode.fill; shape.style.stroke = neutralNode.stroke; return }
     const nx = +m[1], ny = +m[2]
     let matched = false
@@ -216,7 +214,8 @@ function patchSvgDarkTheme(el: HTMLDivElement) {
 export function MermaidDiagram({ chart }: { chart: string }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [error, setError] = useState<string | null>(null)
-  const idRef = useRef(`mermaid-${Date.now()}-${idCounter++}`)
+  const id = useId()
+  const idRef = useRef(`mermaid-${id.replace(/:/g, '')}`)
 
   useEffect(() => {
     if (!containerRef.current) return

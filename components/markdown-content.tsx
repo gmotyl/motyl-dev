@@ -76,7 +76,7 @@ export function MarkdownContent({ content, itemType, category, patternName }: Ma
       if (/language-mermaid/.test(className || '')) {
         const chart = String(children).replace(/\n$/, '')
         return (
-          <span className="mermaid-block">
+          <span data-mermaid-diagram="">
             <Suspense fallback={<div className="animate-pulse rounded bg-gray-800 p-8 text-center text-gray-500">Loading diagram...</div>}>
               <MermaidDiagram chart={chart} />
             </Suspense>
@@ -87,7 +87,7 @@ export function MarkdownContent({ content, itemType, category, patternName }: Ma
     },
     pre: ({ children, ...props }) => {
       const child = (Array.isArray(children) ? children[0] : children) as any
-      if (child?.props?.className === 'mermaid-block') return <>{children}</>
+      if (child?.props?.['data-mermaid-diagram'] !== undefined) return <>{children}</>
       return <pre {...props}>{children}</pre>
     },
   }
