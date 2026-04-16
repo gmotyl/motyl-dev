@@ -1,6 +1,6 @@
 ---
 title: Daily.dev Newsletter - February 4, 2026 Technical Digest
-excerpt: A curated selection of web development, tools, and AI insights from daily.dev's latest newsletter.
+excerpt: "A curated selection of web development, tools, and AI insights from daily.dev's latest newsletter."
 publishedAt: "2026-02-04"
 slug: "daily-dev-feb-4-2026"
 hashtags: "#dailydev #frontend #webdev #development #tools #git #php #ai #agi"

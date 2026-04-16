@@ -1,6 +1,6 @@
 ---
 title: 'Daniel Miessler: Your AI Assistant Should Know Who You Are, Not Just What You Asked'
-excerpt: 'At [un]prompted 2026, Miessler presents PAI v2.4 — a completely rewritten personal AI infrastructure built on Claude Code with 7 components, 67 skills, and a scientific method loop that treats your goals as the system's primary input.'
+excerpt: "At [un]prompted 2026, Miessler presents PAI v2.4 — a completely rewritten personal AI infrastructure built on Claude Code with 7 components, 67 skills, and a scientific method loop that treats your goals as the system's primary input."
 publishedAt: '2026-04-16'
 slug: 'daniel-miessler-anatomy-agentic-personal-ai-infrastructure-unprompted-2026'
 hashtags: '#ai #agents #llm #architecture #workflow #productivity #unprompted2026 #generated #en'
