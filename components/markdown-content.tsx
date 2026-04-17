@@ -6,10 +6,12 @@ import remarkGfm from 'remark-gfm'
 import * as emoji from 'node-emoji'
 import { ShareAIButton } from '@/components/share-ai-button'
 import { VoteButton } from '@/components/vote-button'
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import type { Components } from 'react-markdown'
 import { ItemType, type ItemTypeValue } from '@/lib/types'
 import type { ContentCategory } from '@/lib/og'
+
+const MermaidDiagram = lazy(() => import('@/components/mermaid-diagram').then(m => ({ default: m.MermaidDiagram })))
 
 interface MarkdownContentProps {
   content: string
@@ -69,7 +71,25 @@ export function MarkdownContent({ content, itemType, category, patternName }: Ma
       }
 
       return <a href={href} {...props}>{children}</a>
-    }
+    },
+    code: ({ className, children, ...props }) => {
+      if (/language-mermaid/.test(className || '')) {
+        const chart = String(children).replace(/\n$/, '')
+        return (
+          <span data-mermaid-diagram="">
+            <Suspense fallback={<div className="animate-pulse rounded bg-gray-800 p-8 text-center text-gray-500">Loading diagram...</div>}>
+              <MermaidDiagram chart={chart} />
+            </Suspense>
+          </span>
+        )
+      }
+      return <code className={className} {...props}>{children}</code>
+    },
+    pre: ({ children, ...props }) => {
+      const child = (Array.isArray(children) ? children[0] : children) as any
+      if (child?.props?.['data-mermaid-diagram'] !== undefined) return <>{children}</>
+      return <pre {...props}>{children}</pre>
+    },
   }
 
   return (

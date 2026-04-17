@@ -72,6 +72,7 @@
     "lucide-react": "^0.454.0",
     "markdown-it": "^14.1.1",
     "marked": "latest",
+    "mermaid": "^11.14.0",
     "next": "16.0.10",
     "next-auth": "5.0.0-beta.30",
     "next-themes": "^0.4.4",
