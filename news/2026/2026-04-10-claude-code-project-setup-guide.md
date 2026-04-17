@@ -1,10 +1,10 @@
 ---
-title: "How to Set Up Any Project in Claude Code: From Blank Folder to Working Agent System"
+title: 'How to Set Up Any Project in Claude Code: From Blank Folder to Working Agent System'
 excerpt: "A practical guide to crossing the gap between 'I installed Claude Code' and 'Claude actually knows my project' — covering CLAUDE.md, custom commands, skills, and MCP connections for non-developers and developers alike."
-publishedAt: "2026-04-10"
-slug: "claude-code-project-setup-guide"
-hashtags: "#ai #agents #dx #workflow #generated #en"
-source_pattern: "Substac"
+publishedAt: '2026-04-10'
+slug: 'claude-code-project-setup-guide-review'
+hashtags: '#ai #agents #dx #workflow #generated #en'
+source_pattern: 'Substac'
 ---
 
 ## From Blank Folder to Working System: How to Set Up Any Project in Claude Code
@@ -22,6 +22,7 @@ What's particularly valuable is the author's point that Claude Code is not a dev
 The "blank folder problem" is also a literacy problem. You get good at Claude Code by understanding what kinds of context make AI actually useful, and that's not intuitive. The article's real contribution is making that learning curve explicit rather than leaving people to discover it through trial and error over months.
 
 **Key takeaways:**
+
 - The "blank folder problem": the real barrier to Claude Code adoption is building context, not learning features
 - `CLAUDE.md` is the foundation — it tells Claude what the project is and how to work within it
 - Custom commands encode repeatable workflows; skills handle complex multi-step tasks

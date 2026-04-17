@@ -150,6 +150,23 @@ describe('Content cache loading', () => {
     const slugs = articles.map((a) => a.slug)
     const uniqueSlugs = new Set(slugs)
 
+    // Find duplicates for better error reporting
+    const slugCounts = slugs.reduce(
+      (acc, slug) => {
+        acc[slug] = (acc[slug] || 0) + 1
+        return acc
+      },
+      {} as Record<string, number>
+    )
+
+    const duplicates = Object.entries(slugCounts)
+      .filter(([, count]) => count > 1)
+      .map(([slug]) => slug)
+
+    if (duplicates.length > 0) {
+      throw new Error(`Found duplicate slugs: ${duplicates.join(', ')}`)
+    }
+
     expect(slugs.length).toBe(uniqueSlugs.size)
   })
 })

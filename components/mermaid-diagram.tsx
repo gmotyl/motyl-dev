@@ -137,7 +137,8 @@ function patchSvgDarkTheme(el: HTMLDivElement) {
   actorLines.forEach((l, i) => {
     const p = actorPalette[i % actorPalette.length]
     l.style.stroke = p.stroke
-    l.style.opacity = '0.5'
+    l.style.opacity = '0.6'
+    l.style.strokeWidth = '1.5'
   })
 
   // Notes
@@ -169,46 +170,87 @@ function patchSvgDarkTheme(el: HTMLDivElement) {
     r.setAttribute('stroke', p.stroke)
   })
 
-  // Signal arrows — solid vs dotted
-  const solidColor = '#3b82f6'
-  const dottedColor = '#f59e0b'
-  el.querySelectorAll<SVGLineElement>('line.messageLine0').forEach((l) => { l.style.stroke = solidColor })
-  el.querySelectorAll<SVGLineElement>('line.messageLine1').forEach((l) => { l.style.stroke = dottedColor })
-  // Paths
-  el.querySelectorAll<SVGPathElement>('path').forEach((p) => {
-    const s = p.getAttribute('stroke')
-    if (s === 'black' || s === '#000000' || s === '#000') p.setAttribute('stroke', solidColor)
-    const f = p.getAttribute('fill')
-    if (f === 'black' || f === '#000000' || f === '#000') p.setAttribute('fill', solidColor)
+  // Signal arrows — color by source actor
+  const actorXPositions: number[] = []
+  actorLines.forEach((l) => {
+    actorXPositions.push(parseFloat(l.getAttribute('x1') || '0'))
   })
-  // Marker arrowheads
-  el.querySelectorAll<SVGElement>('marker path, marker circle').forEach((m) => {
-    const s = m.getAttribute('stroke')
-    if (!s || s === 'black' || s === '#000000') (m as HTMLElement).style.stroke = solidColor
-    const f = m.getAttribute('fill')
-    if (!f || f === 'black' || f === '#000000') (m as HTMLElement).style.fill = solidColor
-  })
-  // Clone markers for dotted lines
-  el.querySelectorAll<SVGLineElement>('line.messageLine1').forEach((line) => {
-    const markerUrl = line.getAttribute('marker-end')
+  const findSourceActor = (x: number): number => {
+    let closest = 0, minDist = Infinity
+    actorXPositions.forEach((ax, i) => {
+      const d = Math.abs(ax - x)
+      if (d < minDist) { minDist = d; closest = i }
+    })
+    return closest
+  }
+  const brightenColor = (hex: string): string => {
+    const r = parseInt(hex.slice(1, 3), 16)
+    const g = parseInt(hex.slice(3, 5), 16)
+    const b = parseInt(hex.slice(5, 7), 16)
+    return `rgb(${Math.round(r + (255 - r) * 0.4)}, ${Math.round(g + (255 - g) * 0.4)}, ${Math.round(b + (255 - b) * 0.4)})`
+  }
+  // Helper: get or create a marker clone for a given color
+  const markerCache = new Map<string, string>()
+  const recolorMarker = (line: SVGLineElement, attr: string, color: string): void => {
+    const markerUrl = line.getAttribute(attr)
     if (!markerUrl) return
-    const id = markerUrl.replace(/^url\(#|\)$/g, '')
-    const orig = el.querySelector(`#${CSS.escape(id)}`)
-    if (!orig) return
-    const cloneId = id + '-dotted'
-    if (el.querySelector(`#${CSS.escape(cloneId)}`)) {
-      line.setAttribute('marker-end', `url(#${cloneId})`)
+    const mid = markerUrl.replace(/^url\(#|\)$/g, '')
+    const cacheKey = `${mid}-${color.replace(/[^a-zA-Z0-9]/g, '')}`
+    if (markerCache.has(cacheKey)) {
+      line.setAttribute(attr, `url(#${markerCache.get(cacheKey)})`)
       return
     }
+    const orig = el.querySelector(`#${CSS.escape(mid)}`)
+    if (!orig) return
     const clone = orig.cloneNode(true) as SVGMarkerElement
-    clone.id = cloneId
-    clone.querySelectorAll('path, circle').forEach((c) => {
-      ;(c as HTMLElement).style.fill = dottedColor
-      ;(c as HTMLElement).style.stroke = dottedColor
+    clone.id = cacheKey
+    clone.querySelectorAll('path, circle, polygon, line').forEach((c) => {
+      ;(c as HTMLElement).style.setProperty('fill', color, 'important')
+      ;(c as HTMLElement).style.setProperty('stroke', color, 'important')
     })
     orig.parentNode!.appendChild(clone)
-    line.setAttribute('marker-end', `url(#${cloneId})`)
+    markerCache.set(cacheKey, cacheKey)
+    line.setAttribute(attr, `url(#${cacheKey})`)
+  }
+  const colorLineMarkers = (line: SVGLineElement, color: string): void => {
+    recolorMarker(line, 'marker-end', color)
+    recolorMarker(line, 'marker-start', color)
+  }
+  // Solid message lines — source actor color
+  el.querySelectorAll<SVGLineElement>('line.messageLine0').forEach((l) => {
+    const x1 = parseFloat(l.getAttribute('x1') || '0')
+    const srcIdx = findSourceActor(x1)
+    const p = actorPalette[srcIdx % actorPalette.length]
+    l.style.stroke = p.stroke
+    colorLineMarkers(l, p.stroke)
   })
+  // Dotted message lines — brightened source actor color
+  el.querySelectorAll<SVGLineElement>('line.messageLine1').forEach((l) => {
+    const x1 = parseFloat(l.getAttribute('x1') || '0')
+    const srcIdx = findSourceActor(x1)
+    const p = actorPalette[srcIdx % actorPalette.length]
+    const bright = brightenColor(p.stroke)
+    l.style.stroke = bright
+    colorLineMarkers(l, bright)
+  })
+  // Paths — fallback for non-sequence diagrams
+  const fallbackColor = '#3b82f6'
+  const isSequenceDiagram = actorLines.length > 0
+  el.querySelectorAll<SVGPathElement>('path').forEach((p) => {
+    if (isSequenceDiagram && p.closest('marker')) return
+    const s = p.getAttribute('stroke')
+    if (s === 'black' || s === '#000000' || s === '#000') p.setAttribute('stroke', fallbackColor)
+    const f = p.getAttribute('fill')
+    if (f === 'black' || f === '#000000' || f === '#000') p.setAttribute('fill', fallbackColor)
+  })
+  if (!isSequenceDiagram) {
+    el.querySelectorAll<SVGElement>('marker path, marker circle').forEach((m) => {
+      const s = m.getAttribute('stroke')
+      if (!s || s === 'black' || s === '#000000') (m as HTMLElement).style.stroke = fallbackColor
+      const f = m.getAttribute('fill')
+      if (!f || f === 'black' || f === '#000000') (m as HTMLElement).style.fill = fallbackColor
+    })
+  }
 }
 
 export function MermaidDiagram({ chart }: { chart: string }) {
