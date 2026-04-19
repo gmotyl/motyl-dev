@@ -5,9 +5,11 @@ const CATEGORY_HASHTAGS: Record<string, string[]> = {
   productivity: ['productivity', 'career', 'careeradvice', 'career-advice', 'workflow', 'automation', 'leadership', 'management', 'engineering-culture', 'dx', 'techwriting', 'technicalwriting', 'technical-writing', 'contentcreation', 'content-creation'],
   tools: ['devtools', 'developer-tools', 'vscode', 'cursor', 'ide', 'github', 'ci-cd', 'tooling', 'observability', 'monitoring', 'security', 'open-source', 'opensource'],
   ai: ['ai', 'agents', 'llm', 'claude', 'openai', 'anthropic', 'chatgpt', 'prompt-engineering', 'promptengineering', 'mcp', 'rag', 'deepseek', 'gemini', 'gpt', 'claude-code', 'claudecode', 'vibecoding', 'vibe-coding'],
+  video: ['video', 'youtube', 'talk', 'talks', 'conference', 'keynote', 'presentation', 'screencast', 'livestream', 'stream', 'vlog'],
+  podcast: ['podcast', 'podcasts', 'interview', 'episode', 'audio', 'show'],
 }
 
-export const CONTENT_CATEGORIES = ['frontend', 'architecture', 'coding', 'productivity', 'tools', 'ai', 'general'] as const
+export const CONTENT_CATEGORIES = ['frontend', 'architecture', 'coding', 'productivity', 'tools', 'ai', 'video', 'podcast', 'general'] as const
 export type ContentCategory = (typeof CONTENT_CATEGORIES)[number]
 
 const HASHTAG_TO_CATEGORIES: Record<string, string[]> = {}
@@ -17,7 +19,7 @@ for (const [category, keywords] of Object.entries(CATEGORY_HASHTAGS)) {
   }
 }
 
-const CATEGORY_PRIORITY: ContentCategory[] = ['ai', 'frontend', 'architecture', 'coding', 'tools', 'productivity']
+const CATEGORY_PRIORITY: ContentCategory[] = ['ai', 'frontend', 'architecture', 'coding', 'tools', 'productivity', 'video', 'podcast']
 
 const IMG_BASE = 'https://img.motyl.dev'
 const GENERIC_FALLBACK = `${IMG_BASE}/greg-stanczyk.jpg`

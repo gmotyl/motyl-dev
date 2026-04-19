@@ -278,6 +278,90 @@ function ToolsIcon() {
   )
 }
 
+function VideoIcon() {
+  return (
+    <svg viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      <defs>
+        <linearGradient id="vid-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#1a0606" />
+          <stop offset="100%" stopColor="#0a0a0a" />
+        </linearGradient>
+        <radialGradient id="vid-glow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#ef4444" stopOpacity="0.25" />
+          <stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <rect width="400" height="220" fill="url(#vid-bg)" />
+      <circle cx="200" cy="100" r="110" fill="url(#vid-glow)" />
+      {/* Rounded red play button */}
+      <rect x="130" y="44" width="140" height="104" rx="22" fill="#ef4444" />
+      <rect x="130" y="44" width="140" height="104" rx="22" fill="#b91c1c" fillOpacity="0.35" />
+      {/* Play triangle */}
+      <path d="M188 76 L188 116 L224 96 Z" fill="#ffffff" />
+      {/* Film sprocket dots */}
+      {[36, 60, 84, 108, 132, 156].map((y) => (
+        <g key={y}>
+          <rect x="56" y={y} width="10" height="10" rx="1.5" fill="#ef4444" fillOpacity="0.35" />
+          <rect x="334" y={y} width="10" height="10" rx="1.5" fill="#ef4444" fillOpacity="0.35" />
+        </g>
+      ))}
+      <text x="200" y="213" textAnchor="middle" fill="#ef4444" fontSize="11" fontFamily="monospace" fillOpacity="0.5" letterSpacing="3">VIDEO</text>
+    </svg>
+  )
+}
+
+function PodcastIcon() {
+  return (
+    <svg viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      <defs>
+        <radialGradient id="pod-bg" cx="50%" cy="50%" r="60%">
+          <stop offset="0%" stopColor="#1a0a2e" />
+          <stop offset="100%" stopColor="#07030f" />
+        </radialGradient>
+        <radialGradient id="pod-glow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#f472b6" stopOpacity="0.28" />
+          <stop offset="100%" stopColor="#f472b6" stopOpacity="0" />
+        </radialGradient>
+        <linearGradient id="mic-body" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#f472b6" />
+          <stop offset="100%" stopColor="#be185d" />
+        </linearGradient>
+      </defs>
+      <rect width="400" height="220" fill="url(#pod-bg)" />
+      <circle cx="200" cy="100" r="110" fill="url(#pod-glow)" />
+      {/* Mic capsule */}
+      <rect x="178" y="34" width="44" height="80" rx="22" fill="url(#mic-body)" stroke="#fbcfe8" strokeWidth="1.2" strokeOpacity="0.6" />
+      {/* Capsule grill lines */}
+      {[50, 62, 74, 86, 98].map((y) => (
+        <line key={y} x1="186" y1={y} x2="214" y2={y} stroke="#fbcfe8" strokeWidth="1" strokeOpacity="0.45" />
+      ))}
+      {/* Mic arc yoke */}
+      <path d="M160 96 C160 130, 240 130, 240 96" stroke="#f472b6" strokeWidth="3" fill="none" strokeLinecap="round" />
+      {/* Stand */}
+      <line x1="200" y1="118" x2="200" y2="160" stroke="#f472b6" strokeWidth="3" strokeLinecap="round" />
+      <rect x="176" y="158" width="48" height="6" rx="3" fill="#f472b6" />
+      {/* Sound waves */}
+      {[
+        [120, 60, 140, 100, 120, 140],
+        [100, 48, 124, 100, 100, 152],
+        [280, 60, 260, 100, 280, 140],
+        [300, 48, 276, 100, 300, 152],
+      ].map(([x1, y1, x2, y2, x3, y3], i) => (
+        <path
+          key={i}
+          d={`M${x1} ${y1} Q${x2} ${y2} ${x3} ${y3}`}
+          stroke="#f472b6"
+          strokeWidth="1.5"
+          fill="none"
+          strokeOpacity={0.55 - i * 0.1}
+          strokeLinecap="round"
+        />
+      ))}
+      <text x="200" y="213" textAnchor="middle" fill="#f472b6" fontSize="11" fontFamily="monospace" fillOpacity="0.5" letterSpacing="3">PODCAST</text>
+    </svg>
+  )
+}
+
 function GeneralIcon() {
   return (
     <svg viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
@@ -378,6 +462,28 @@ function MiniToolsIcon() {
   )
 }
 
+function MiniVideoIcon() {
+  return (
+    <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      <rect width="48" height="48" rx="8" fill="#1a0606" />
+      <rect x="10" y="14" width="28" height="20" rx="5" fill="#ef4444" />
+      <path d="M21 20 L21 28 L29 24 Z" fill="#ffffff" />
+    </svg>
+  )
+}
+
+function MiniPodcastIcon() {
+  return (
+    <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+      <rect width="48" height="48" rx="8" fill="#1a0a2e" />
+      <rect x="19" y="10" width="10" height="18" rx="5" fill="#f472b6" />
+      <path d="M15 24 C15 32, 33 32, 33 24" stroke="#f472b6" strokeWidth="1.5" fill="none" strokeLinecap="round" />
+      <line x1="24" y1="30" x2="24" y2="38" stroke="#f472b6" strokeWidth="1.5" strokeLinecap="round" />
+      <rect x="18" y="37" width="12" height="2.5" rx="1" fill="#f472b6" />
+    </svg>
+  )
+}
+
 function MiniGeneralIcon() {
   return (
     <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
@@ -396,6 +502,8 @@ const iconMap: Record<string, React.ReactNode> = {
   coding: <CodingIcon />,
   productivity: <ProductivityIcon />,
   tools: <ToolsIcon />,
+  video: <VideoIcon />,
+  podcast: <PodcastIcon />,
   general: <GeneralIcon />,
 }
 
@@ -406,6 +514,8 @@ const miniIconMap: Record<string, React.ReactNode> = {
   coding: <MiniCodingIcon />,
   productivity: <MiniProductivityIcon />,
   tools: <MiniToolsIcon />,
+  video: <MiniVideoIcon />,
+  podcast: <MiniPodcastIcon />,
   general: <MiniGeneralIcon />,
 }
 
