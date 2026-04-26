@@ -48,7 +48,7 @@ const GdprConsent = () => {
     <div
       role="dialog"
       aria-label="Cookie consent"
-      className="fixed bottom-0 left-0 right-0 z-[1000] bg-[#1a1a1a] text-foreground border-t border-border/40 p-4 md:p-5"
+      className="dark fixed bottom-0 left-0 right-0 z-[1000] bg-[#1a1a1a] text-foreground border-t border-border/40 p-4 md:p-5"
     >
       <div className="container max-w-4xl mx-auto flex flex-col gap-3">
         {!showDetails ? (
