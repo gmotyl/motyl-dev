@@ -1,7 +1,7 @@
 'use client'
 
 import Script from 'next/script'
-import { useEffect, useState } from 'react'
+import { useConsent } from '@/lib/consent'
 
 interface AdSlotProps {
   format?: 'auto' | 'rectangle' | 'horizontal'
@@ -9,22 +9,9 @@ interface AdSlotProps {
 }
 
 export function AdSlot({ format = 'auto', className = '' }: AdSlotProps) {
-  const [hasConsent, setHasConsent] = useState(false)
+  const { ads } = useConsent()
 
-  useEffect(() => {
-    const consent = window.localStorage.getItem('gdpr-consent')
-    setHasConsent(consent === 'true')
-
-    const handleConsentChange = () => {
-      const updated = window.localStorage.getItem('gdpr-consent')
-      setHasConsent(updated === 'true')
-    }
-
-    window.addEventListener('gdpr-consent-changed', handleConsentChange)
-    return () => window.removeEventListener('gdpr-consent-changed', handleConsentChange)
-  }, [])
-
-  if (!hasConsent) return null
+  if (!ads) return null
 
   return (
     <aside className={`ad-slot ${className}`}>

@@ -14,7 +14,7 @@ export default function PrivacyPage() {
       <main className="flex-1">
         <div className="container max-w-3xl mx-auto px-4 py-12 md:py-16 prose prose-invert prose-sm max-w-none">
           <h1>Privacy Policy</h1>
-          <p className="text-muted-foreground">Last updated: April 2026</p>
+          <p className="text-muted-foreground">Last updated: 26 April 2026</p>
 
           <h2>Who we are</h2>
           <p>
@@ -42,25 +42,36 @@ export default function PrivacyPage() {
 
           <h3>Analytics</h3>
           <p>
-            We use <strong>Vercel Analytics</strong> and <strong>Vercel Speed Insights</strong> to
-            understand how visitors use the site. These tools collect anonymized usage data
-            (page views, performance metrics). They are only loaded after you accept the cookie
-            consent banner. No personal data is collected by these tools.
+            We use <strong>Vercel Analytics</strong>, <strong>Vercel Speed Insights</strong>, and{' '}
+            <strong>Cloudflare Web Analytics</strong> to understand how visitors use the site.
+            These tools collect anonymized usage data (page views, performance metrics).
+            They are only loaded if you opt in to the &ldquo;Analytics&rdquo; category in the
+            cookie banner. No personal data is collected by these tools.
           </p>
 
-          <h3>Cookies</h3>
-          <p>We use the following cookies:</p>
+          <h3>Granular consent</h3>
+          <p>
+            The cookie banner gives you separate toggles for <strong>Analytics</strong> and{' '}
+            <strong>Advertising</strong>. You can accept one and reject the other.
+            Strictly necessary items (auth session and your consent state itself) are always on.
+            You can change your choice at any time via{' '}
+            <strong>Cookie settings</strong> in the footer.
+          </p>
+
+          <h3>Cookies and storage</h3>
+          <p>We use the following:</p>
           <ul>
-            <li><strong>gdpr-consent</strong> — Stores your cookie consent preference (accept/decline)</li>
-            <li><strong>visitedArticles</strong> — Tracks which articles you have read (for visual indicators)</li>
-            <li><strong>authjs.session-token</strong> — Authentication session (only if signed in)</li>
+            <li><strong>gdpr-consent</strong> — Stores your per-category consent preference (analytics, ads).</li>
+            <li><strong>visitedArticles</strong> — Tracks which articles you have read (for visual indicators).</li>
+            <li><strong>authjs.session-token</strong> — Authentication session (only if signed in).</li>
           </ul>
 
           <h3>Advertising</h3>
           <p>
             We may display ads from Google AdSense or other developer-focused ad networks
             on article and newsletter pages. These services may use cookies to serve relevant ads.
-            Ad scripts are only loaded after you accept the cookie consent banner.
+            Ad scripts are only loaded if you opt in to the &ldquo;Advertising&rdquo; category
+            in the cookie banner.
           </p>
 
           <h2>How we use your data</h2>
