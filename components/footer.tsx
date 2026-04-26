@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { Code, Github, MailCheck } from "lucide-react"
+import { CookieSettingsLink } from "@/components/cookie-settings-link"
 
 export default function Footer() {
   return (
@@ -14,6 +15,8 @@ export default function Footer() {
 </p>
 <div className="flex items-center gap-3 text-xs text-muted-foreground">
   <Link href="/privacy" className="hover:text-primary transition-colors">Privacy</Link>
+  <span>·</span>
+  <CookieSettingsLink />
   <span>·</span>
   <Link href="/unsubscribe" className="hover:text-primary transition-colors">Unsubscribe</Link>
 </div>
