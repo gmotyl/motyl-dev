@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getContentPageData } from '@/lib/articles'
 import { headers } from 'next/headers'
+import { auth } from '@/lib/auth'
+import { getUserViewedArticles } from '@/lib/article-views'
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
@@ -13,14 +15,23 @@ export async function GET(request: NextRequest) {
   const mode = searchParams.get('mode') as 'AND' | 'OR' | 'EXCLUDE' || 'AND'
   const includeContent = searchParams.get('includeContent') === 'true'
 
-  // Get visited articles from cookie header
-  const headersList = await headers()
-  const visitedArticlesHeader = headersList.get('x-visited-articles')
   let visitedSlugs = new Set<string>()
-  try {
-    visitedSlugs = new Set<string>(JSON.parse(visitedArticlesHeader || '[]'))
-  } catch (e) {
-    console.error('Failed to parse visited articles header:', e)
+
+  if (showUnseen) {
+    // Use DB for logged-in users so unseen filtering is consistent across devices
+    const session = await auth()
+    if (session?.user?.id) {
+      const dbSlugs = await getUserViewedArticles()
+      visitedSlugs = new Set(dbSlugs)
+    } else {
+      const headersList = await headers()
+      const visitedArticlesHeader = headersList.get('x-visited-articles')
+      try {
+        visitedSlugs = new Set<string>(JSON.parse(visitedArticlesHeader || '[]'))
+      } catch (e) {
+        console.error('Failed to parse visited articles header:', e)
+      }
+    }
   }
 
   const pageData = await getContentPageData({

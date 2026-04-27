@@ -21,6 +21,8 @@ interface ReadAllNewsPageProps {
   totalItems: number
 }
 
+const MAX_DOM_ARTICLES = 12
+
 export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNewsPageProps) {
   const { data: session } = useSession()
   const [items, setItems] = useState<ContentItem[]>(initialItems)
@@ -35,6 +37,13 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
   const { hiddenSections, toggleSection, isHydrated } = useSectionVisibility()
 
   const loadMoreRef = useRef<HTMLDivElement>(null)
+  // Refs so fetchMore can read current values without stale closures or extra deps
+  const itemsRef = useRef<ContentItem[]>(initialItems)
+  const scrolledPastSlugsRef = useRef<Set<string>>(new Set())
+  const sessionRef = useRef(session)
+  useEffect(() => { itemsRef.current = items }, [items])
+  useEffect(() => { scrolledPastSlugsRef.current = scrolledPastSlugs }, [scrolledPastSlugs])
+  useEffect(() => { sessionRef.current = session }, [session])
 
   // Infinite scroll observer
   useEffect(() => {
@@ -71,7 +80,43 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
       const data = await res.json()
 
       if (data.items?.length > 0) {
-        setItems(prev => [...prev, ...data.items])
+        const prevItems = itemsRef.current
+        const scrolled = scrolledPastSlugsRef.current
+        const sess = sessionRef.current
+        const combined = [...prevItems, ...data.items]
+
+        // Evict oldest scrolled-past articles to keep DOM manageable on mobile
+        let finalItems = combined
+        if (combined.length > MAX_DOM_ARTICLES && scrolled.size > 0) {
+          const toEvict = combined
+            .filter(i => scrolled.has(i.slug))
+            .slice(0, combined.length - MAX_DOM_ARTICLES)
+
+          if (toEvict.length > 0) {
+            const evictSlugs = toEvict.map(i => i.slug)
+            finalItems = combined.filter(i => !evictSlugs.includes(i.slug))
+
+            // Mark evicted articles as read in storage — user scrolled past them
+            const stored = localStorage.getItem('visitedArticles')
+            let existing: string[] = []
+            try { existing = stored ? JSON.parse(stored) : [] } catch { /* ignore */ }
+            const merged = [...new Set([...existing, ...evictSlugs])]
+            localStorage.setItem('visitedArticles', JSON.stringify(merged))
+            document.cookie = `visitedArticles=${JSON.stringify(merged)};path=/;max-age=31536000;samesite=lax`
+            if (sess?.user) {
+              evictSlugs.forEach(slug =>
+                fetch(`/api/articles/${slug}/view`, { method: 'POST' }).catch(console.error)
+              )
+            }
+            setScrolledPastSlugs(prev => {
+              const next = new Set(prev)
+              evictSlugs.forEach(s => next.delete(s))
+              return next
+            })
+          }
+        }
+
+        setItems(finalItems)
         setPage(nextPage)
         setHasMore(data.currentPage < data.totalPages)
       } else {
