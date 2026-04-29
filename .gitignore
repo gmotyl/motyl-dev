@@ -52,3 +52,6 @@ next-env.d.ts
 
 # Git worktrees
 .worktrees/
+
+# Eval output (generated articles from eval runs)
+evals/.output/
