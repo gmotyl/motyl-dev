@@ -1,6 +1,6 @@
 ---
 description: Generate newsletter articles from mailbox
-allowed-tools: ["mcp__newsletter-ai__*"]
+allowed-tools: ["mcp__newsletter-ai__*", "Read"]
 argument-hint: [limit] [pattern]
 ---
 
