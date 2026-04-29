@@ -81,7 +81,7 @@ When processing these newsletters:
 
    - Call `mcp__newsletter-ai__get_newsletters_list` to see what was prepared
    - Call `mcp__newsletter-ai__get_config` to get newsletter-ai MCP config
-   - Call `mcp__newsletter-ai__get_prompt_template` to get PROMPT.md
+   - Read `commands/PROMPT.md` directly from disk to get the prompt template
 
 5. **For each newsletter (sequentially, automatically):**
 
