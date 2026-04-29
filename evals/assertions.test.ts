@@ -110,8 +110,15 @@ describe('assertHasHashtags', () => {
 });
 
 describe('assertGeneratedHashtag', () => {
-  it('passes when #generated present', () => {
+  it('passes when #generated present (space-separated)', () => {
     expect(assertGeneratedHashtag(VALID_ARTICLE).pass).toBe(true);
+  });
+  it('passes when #generated present (JSON array format)', () => {
+    const arrayStyle = VALID_ARTICLE.replace(
+      'hashtags: "#jsweekly #javascript #generated #en"',
+      'hashtags: ["#jsweekly", "#javascript", "#generated", "#en"]'
+    );
+    expect(assertGeneratedHashtag(arrayStyle).pass).toBe(true);
   });
   it('fails when #generated missing', () => {
     const bad = VALID_ARTICLE.replace('#generated', '#notgenerated');
@@ -130,30 +137,42 @@ describe('assertHasArticleHeadings', () => {
 });
 
 describe('assertHasTldr', () => {
-  it('passes when **TLDR:** present', () => {
+  it('passes when **TLDR:** present (inline bold)', () => {
     expect(assertHasTldr(VALID_ARTICLE).pass).toBe(true);
   });
-  it('fails when **TLDR:** missing', () => {
+  it('passes when ## TLDR heading present', () => {
+    const headingStyle = VALID_ARTICLE.replace(/\*\*TLDR:\*\*/g, '## TLDR');
+    expect(assertHasTldr(headingStyle).pass).toBe(true);
+  });
+  it('fails when TLDR section absent entirely', () => {
     const bad = VALID_ARTICLE.replace(/\*\*TLDR:\*\*/g, 'Summary:');
     expect(assertHasTldr(bad).pass).toBe(false);
   });
 });
 
 describe('assertHasKeyTakeaways', () => {
-  it('passes when **Key takeaways:** present', () => {
+  it('passes when **Key takeaways:** present (inline bold)', () => {
     expect(assertHasKeyTakeaways(VALID_ARTICLE).pass).toBe(true);
   });
-  it('fails when **Key takeaways:** missing', () => {
+  it('passes when ## Key takeaways heading present', () => {
+    const headingStyle = VALID_ARTICLE.replace(/\*\*Key takeaways:\*\*/g, '## Key takeaways');
+    expect(assertHasKeyTakeaways(headingStyle).pass).toBe(true);
+  });
+  it('fails when Key takeaways section absent entirely', () => {
     const bad = VALID_ARTICLE.replace(/\*\*Key takeaways:\*\*/g, '**Lessons:**');
     expect(assertHasKeyTakeaways(bad).pass).toBe(false);
   });
 });
 
 describe('assertHasWhyDoICare', () => {
-  it('passes when **Why do I care:** present', () => {
+  it('passes when **Why do I care:** present (inline bold)', () => {
     expect(assertHasWhyDoICare(VALID_ARTICLE).pass).toBe(true);
   });
-  it('fails when **Why do I care:** missing', () => {
+  it('passes when ## Why do I care heading present', () => {
+    const headingStyle = VALID_ARTICLE.replace(/\*\*Why do I care:\*\*/g, '## Why do I care');
+    expect(assertHasWhyDoICare(headingStyle).pass).toBe(true);
+  });
+  it('fails when Why do I care section absent entirely', () => {
     const bad = VALID_ARTICLE.replace(/\*\*Why do I care:\*\*/g, '**Opinion:**');
     expect(assertHasWhyDoICare(bad).pass).toBe(false);
   });

@@ -62,8 +62,10 @@ export function assertHasHashtags(content: string): AssertionResult {
 
 export function assertGeneratedHashtag(content: string): AssertionResult {
   const fm = getFrontmatter(content);
-  const pass = !!fm.hashtags && fm.hashtags.includes('#generated');
-  return { name: '#generated in hashtags', pass, message: pass ? undefined : `#generated not found in: "${fm.hashtags}"` };
+  // Accept both space-separated string and JSON array formats
+  const raw = fm.hashtags ?? '';
+  const pass = raw.includes('#generated');
+  return { name: '#generated in hashtags', pass, message: pass ? undefined : `#generated not found in: "${raw}"` };
 }
 
 export function assertHasArticleHeadings(content: string): AssertionResult {
@@ -74,20 +76,20 @@ export function assertHasArticleHeadings(content: string): AssertionResult {
 
 export function assertHasTldr(content: string): AssertionResult {
   const body = getBody(content);
-  const pass = /\*\*TLDR:\*\*/i.test(body);
-  return { name: 'Has **TLDR:**', pass, message: pass ? undefined : '**TLDR:** not found in body' };
+  const pass = /\*\*TLDR:\*\*/i.test(body) || /^## TLDR/im.test(body);
+  return { name: 'Has TLDR section', pass, message: pass ? undefined : 'TLDR section not found (neither **TLDR:** nor ## TLDR)' };
 }
 
 export function assertHasKeyTakeaways(content: string): AssertionResult {
   const body = getBody(content);
-  const pass = /\*\*Key takeaways:\*\*/i.test(body);
-  return { name: 'Has **Key takeaways:**', pass, message: pass ? undefined : '**Key takeaways:** not found in body' };
+  const pass = /\*\*Key takeaways:\*\*/i.test(body) || /^## Key takeaways/im.test(body);
+  return { name: 'Has Key takeaways section', pass, message: pass ? undefined : 'Key takeaways section not found' };
 }
 
 export function assertHasWhyDoICare(content: string): AssertionResult {
   const body = getBody(content);
-  const pass = /\*\*Why do I care:\*\*/i.test(body);
-  return { name: 'Has **Why do I care:**', pass, message: pass ? undefined : '**Why do I care:** not found in body' };
+  const pass = /\*\*Why do I care:\*\*/i.test(body) || /^## Why do I care/im.test(body);
+  return { name: 'Has Why do I care section', pass, message: pass ? undefined : 'Why do I care section not found' };
 }
 
 export function assertNoEmDash(content: string): AssertionResult {
