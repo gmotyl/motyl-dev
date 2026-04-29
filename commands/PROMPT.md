@@ -75,7 +75,7 @@ You will be provided with newsletter-level hashtags (e.g., `#dailydev #frontend`
 1. **Start with the provided newsletter hashtags** (e.g., `#dailydev #frontend`)
 2. When you find `#agregate` hastag it means there are many diffrent possible newsletters, you have to figure out newsletter name and replace `#agregate` with newsletter name hashtag
 2. **Then add 3-5 article-specific technical hashtags** based on content analysis
-3. **Finally add `#generated` and language code** (e.g., `#en`, `#pl`)
+3. **Finally add `#generated` and language code** (e.g., `#en`, `#pl`) — **`#generated` is REQUIRED and MUST appear in every article's hashtags, no exceptions**
 4. Follow the existing hashtag guidelines below
 5. Ensure hashtags are relevant, specific, and useful for discovery
 
