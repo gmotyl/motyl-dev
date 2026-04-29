@@ -186,7 +186,7 @@ The eval `.mcp.json` sets `OUTPUT_PATH` to `evals/.output/` and `EVAL_PROVIDER` 
 | 11 | `**Key takeaways:**` present |
 | 12 | `**Why do I care:**` present |
 
-### Quality (7) — writing rule compliance
+### Quality & Content (7) — writing rule compliance + content integrity
 
 | # | Assertion |
 |---|-----------|
@@ -205,7 +205,7 @@ The eval `.mcp.json` sets `OUTPUT_PATH` to `evals/.output/` and `EVAL_PROVIDER` 
 | Provider | Command |
 |----------|---------|
 | Claude Code | `claude -p "/generate-news 1 safe"` |
-| OpenCode | `opencode run --command generate-news "1 safe"` |
+| OpenCode | `opencode run --command generate-news "1 safe"` *(exact flag syntax to be verified — `--command` may or may not require the slash prefix)* |
 
 Both run with `cwd = motyl-dev` and the swapped `.mcp.json`.
 
