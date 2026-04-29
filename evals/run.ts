@@ -8,7 +8,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MOTYL_DEV = path.resolve(__dirname, '..');
 const OUTPUT_DIR = path.join(__dirname, '.output');
 const MCP_JSON = path.join(MOTYL_DEV, '.mcp.json');
-const MCP_BACKUP = path.join(MOTYL_DEV, '.mcp.json.eval-backup');
 
 const PROVIDERS = {
   claude: {
@@ -52,7 +51,6 @@ async function runEval(provider: Provider): Promise<boolean> {
   await fs.rm(outputFile, { force: true });
 
   const originalMcp = await fs.readFile(MCP_JSON, 'utf-8');
-  await fs.writeFile(MCP_BACKUP, originalMcp);
 
   try {
     await fs.writeFile(MCP_JSON, JSON.stringify(buildEvalMcpConfig(provider), null, 2));
@@ -74,7 +72,6 @@ async function runEval(provider: Provider): Promise<boolean> {
     }
   } finally {
     await fs.writeFile(MCP_JSON, originalMcp);
-    await fs.rm(MCP_BACKUP, { force: true });
   }
 
   // Assertion #1: file exists and is non-empty
