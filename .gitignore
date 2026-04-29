@@ -49,3 +49,6 @@ next-env.d.ts
 .claude/settings.local.json
 .npmrc
 .qwen/
+
+# Git worktrees
+.worktrees/
