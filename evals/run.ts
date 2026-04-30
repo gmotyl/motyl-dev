@@ -8,6 +8,20 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MOTYL_DEV = path.resolve(__dirname, '..');
 const OUTPUT_DIR = path.join(__dirname, '.output');
 const MCP_JSON = path.join(MOTYL_DEV, '.mcp.json');
+const MCP_BACKUP = path.join(MOTYL_DEV, '.mcp.json.eval-backup');
+
+// Restore .mcp.json from backup on SIGINT/SIGTERM so Ctrl+C can't corrupt it.
+// SIGKILL and crashes can't be caught — the backup file on disk is the recovery path.
+async function restoreFromBackup() {
+  try {
+    const backup = await fs.readFile(MCP_BACKUP, 'utf-8');
+    await fs.writeFile(MCP_JSON, backup);
+    await fs.rm(MCP_BACKUP, { force: true });
+  } catch { /* backup doesn't exist, nothing to restore */ }
+}
+
+process.on('SIGINT', async () => { await restoreFromBackup(); process.exit(130); });
+process.on('SIGTERM', async () => { await restoreFromBackup(); process.exit(143); });
 
 const PROVIDERS = {
   claude: {
@@ -51,6 +65,7 @@ async function runEval(provider: Provider): Promise<boolean> {
   await fs.rm(outputFile, { force: true });
 
   const originalMcp = await fs.readFile(MCP_JSON, 'utf-8');
+  await fs.writeFile(MCP_BACKUP, originalMcp);
 
   try {
     await fs.writeFile(MCP_JSON, JSON.stringify(buildEvalMcpConfig(provider), null, 2));
@@ -72,6 +87,7 @@ async function runEval(provider: Provider): Promise<boolean> {
     }
   } finally {
     await fs.writeFile(MCP_JSON, originalMcp);
+    await fs.rm(MCP_BACKUP, { force: true });
   }
 
   // Assertion #1: file exists and is non-empty
