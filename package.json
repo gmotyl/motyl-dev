@@ -21,8 +21,12 @@
     "newsletter:send": "tsx scripts/send-newsletter.ts --send",
     "image:optimize": "tsx scripts/image-optimize.ts",
     "auth:linkedin": "node scripts/auth-linkedin.mjs",
-    "eval:claude": "tsx evals/run.ts --provider claude",
-    "eval:opencode": "tsx evals/run.ts --provider opencode",
+    "eval:claude:sonnet": "tsx evals/run.ts --provider claude:sonnet",
+    "eval:claude:opus": "tsx evals/run.ts --provider claude:opus",
+    "eval:opencode:minimax": "tsx evals/run.ts --provider opencode:minimax",
+    "eval:opencode:bigpickle": "tsx evals/run.ts --provider opencode:bigpickle",
+    "eval:claude": "pnpm eval:claude:sonnet && pnpm eval:claude:opus",
+    "eval:opencode": "pnpm eval:opencode:minimax && pnpm eval:opencode:bigpickle",
     "eval": "pnpm eval:claude && pnpm eval:opencode"
   },
   "dependencies": {
