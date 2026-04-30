@@ -13,12 +13,12 @@ const PROVIDERS = {
   claude: {
     name: 'Claude Code',
     command: 'claude',
-    args: ['-p', '/generate-news 1 safe'],
+    args: ['--dangerously-skip-permissions', '-p', '/generate-news 1 safe'],
   },
   opencode: {
     name: 'OpenCode',
     command: 'opencode',
-    args: ['run', '--command', 'generate-news', '--dangerously-skip-permissions', '1', 'safe'],
+    args: ['run', '--command', 'generate-news', '1', 'safe'],
   },
 } as const;
 
