@@ -7,6 +7,7 @@ import { getUserViewedArticles } from '@/lib/article-views'
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const page = parseInt(searchParams.get('page') || '1', 10)
+  const limit = parseInt(searchParams.get('limit') || '20', 10)
   const contentType = searchParams.get('contentType') as 'article' | 'news' | 'all' || 'all'
   const requireHashtags = searchParams.get('requireHashtags')?.split(',').filter(Boolean) || undefined
   const excludeHashtags = searchParams.get('excludeHashtags')?.split(',').filter(Boolean) || undefined
@@ -36,6 +37,7 @@ export async function GET(request: NextRequest) {
 
   const pageData = await getContentPageData({
     page,
+    limit,
     filters: {
       hashtags,
       mode,

@@ -70,6 +70,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
     try {
       const params = new URLSearchParams({
         page: nextPage.toString(),
+        limit: '5',
         unseen: 'true',
         contentType: 'news',
         requireHashtags: 'generated',
