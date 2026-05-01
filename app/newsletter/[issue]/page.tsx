@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { AdSlot } from '@/components/ad-slot'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import ReactMarkdown from 'react-markdown'
@@ -116,7 +115,6 @@ export default async function NewsletterIssuePage({
             >
               {newsletter.content}
             </ReactMarkdown>
-            <AdSlot format="horizontal" />
           </article>
 
           {/* Navigation */}

@@ -11,7 +11,6 @@ import { ArticleViewTracker } from '@/components/article-view-tracker'
 import { ArticleNavigation } from '@/components/article-navigation'
 import { BuyMeACoffeeButton } from '@/components/buy-me-a-coffee-button'
 import { ArticleWrapper } from '@/components/article-wrapper'
-import { AdSlot } from '@/components/ad-slot'
 import { type Content, ItemType } from '@/lib/types'
 import { getContentUrl } from '@/lib/urls'
 import { ContentItemMetadata } from '@/lib/articles'
@@ -127,19 +126,7 @@ export default async function ContentPage({ article, prevArticle, nextArticle }:
 
           <BuyMeACoffeeButton itemType={article.itemType} />
 
-          {!isNewsArticle && (
-            <div className="my-6">
-              <AdSlot format="horizontal" />
-            </div>
-          )}
-
           <ArticleExternalLinks article={article} />
-
-          {!isNewsArticle && (
-            <div className="my-6">
-              <AdSlot format="horizontal" />
-            </div>
-          )}
 
           <ArticleNavigation prevArticle={prevArticle} nextArticle={nextArticle} />
         </article>

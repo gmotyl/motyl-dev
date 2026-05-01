@@ -25,12 +25,7 @@ const NAV_LINKS = [
 export default function Header() {
   const { data: session, status } = useSession()
   const pathname = usePathname()
-  const [mounted, setMounted] = React.useState(false)
   const [mobileOpen, setMobileOpen] = React.useState(false)
-
-  React.useEffect(() => {
-    setMounted(true)
-  }, [])
 
   // Close mobile menu on route change
   React.useEffect(() => {
@@ -111,36 +106,33 @@ export default function Header() {
           </div>
 
           {/* Hamburger — shown below lg */}
-          {mounted && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="lg:hidden"
-              onClick={() => setMobileOpen((prev) => !prev)}
-              aria-expanded={mobileOpen}
-              aria-controls="mobile-menu"
-              aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
-            >
-              {mobileOpen ? (
-                <X className="h-5 w-5" aria-hidden="true" />
-              ) : (
-                <Menu className="h-5 w-5" aria-hidden="true" />
-              )}
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden"
+            onClick={() => setMobileOpen((prev) => !prev)}
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-menu"
+            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+          >
+            {mobileOpen ? (
+              <X className="h-5 w-5" aria-hidden="true" />
+            ) : (
+              <Menu className="h-5 w-5" aria-hidden="true" />
+            )}
+          </Button>
         </div>
       </div>
 
       {/* Mobile menu — slide down */}
-      {mounted && (
-        <div
-          id="mobile-menu"
-          {...(!mobileOpen ? { inert: true } : {})}
-          className={cn(
-            'lg:hidden overflow-hidden transition-all duration-300 ease-in-out border-b border-border/40',
-            mobileOpen ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'
-          )}
-        >
+      <div
+        id="mobile-menu"
+        {...(!mobileOpen ? { inert: true } : {})}
+        className={cn(
+          'lg:hidden overflow-hidden transition-all duration-300 ease-in-out border-b border-border/40',
+          mobileOpen ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'
+        )}
+      >
           <nav
             className="flex flex-col gap-1 px-4 py-3"
             aria-label="Mobile navigation"
@@ -202,7 +194,6 @@ export default function Header() {
             </div>
           </nav>
         </div>
-      )}
     </header>
   )
 }
