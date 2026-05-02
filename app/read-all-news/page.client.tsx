@@ -73,7 +73,6 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
         limit: '5',
         unseen: 'true',
         contentType: 'news',
-        requireHashtags: 'generated',
         includeContent: 'true',
       })
 

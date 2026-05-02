@@ -32,7 +32,6 @@ export default async function ReadAllNewsPage() {
     limit: 5,
     filters: {
       showUnseen: true,
-      requireHashtags: ['generated'],
     },
     visitedSlugs,
     contentType: 'news',
