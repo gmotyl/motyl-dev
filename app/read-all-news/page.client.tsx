@@ -13,7 +13,7 @@ import { ContentItem } from '@/lib/articles'
 import { MarkReadDialog } from '@/components/mark-read-dialog'
 import { SectionVisibilityDialog } from '@/components/article-section-toggle'
 import { useSectionVisibility } from '@/hooks/use-section-visibility'
-import { BookCheck, Settings } from 'lucide-react'
+import { BookCheck, ChevronDown, Settings } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 interface ReadAllNewsPageProps {
@@ -129,6 +129,23 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
     }
   }, [loading, hasMore, page])
 
+  // Jump to the next subarticle title (mobile "Next" button).
+  // Each subarticle ends with a "**Link:**" line and is followed by another <h2>,
+  // so finding the next h2 below the viewport top lands the user on the next title.
+  const handleScrollNext = useCallback(() => {
+    const headings = document.querySelectorAll<HTMLElement>('main h2')
+    if (headings.length === 0) return
+    const threshold = 80
+    for (const h of Array.from(headings)) {
+      if (h.getBoundingClientRect().top > threshold) {
+        h.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        return
+      }
+    }
+    // No more headings ahead — nudge toward bottom so infinite-scroll loads more
+    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' })
+  }, [])
+
   // Track scrolled-past articles
   const handleScrolledPast = useCallback((slug: string) => {
     setScrolledPastSlugs(prev => {
@@ -225,7 +242,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <main className="flex-1 container py-8 px-4 max-w-2xl mx-auto">
+      <main className="flex-1 container py-8 px-4 pb-24 sm:pb-8 max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold mb-2">Read all news</h1>
         <p className="text-muted-foreground mb-8">
           Scroll through unvisited articles. Mark them as read when you're done.
@@ -284,16 +301,35 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
           </button>
         )}
 
-        {/* Mark-read button */}
+        {/* Mark-read button (desktop only — mobile uses bottom bar) */}
         {scrolledPastSlugs.size > 0 && (
           <button
             onClick={() => { setPendingNavUrl(null); setDialogOpen(true) }}
-            className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-3 rounded-full shadow-lg hover:bg-primary/90 transition-colors"
+            className="hidden sm:flex items-center gap-2 bg-primary text-primary-foreground px-4 py-3 rounded-full shadow-lg hover:bg-primary/90 transition-colors"
           >
             <BookCheck className="h-5 w-5" />
             <span className="font-medium">Mark read ({scrolledPastSlugs.size})</span>
           </button>
         )}
+      </div>
+
+      {/* Mobile bottom action bar: Mark read + Next */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 flex border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+        <button
+          onClick={() => { setPendingNavUrl(null); setDialogOpen(true) }}
+          disabled={scrolledPastSlugs.size === 0}
+          className="flex-1 flex items-center justify-center gap-2 py-4 font-medium text-foreground border-r border-border disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          <BookCheck className="h-5 w-5" />
+          <span>Mark read{scrolledPastSlugs.size > 0 ? ` (${scrolledPastSlugs.size})` : ''}</span>
+        </button>
+        <button
+          onClick={handleScrollNext}
+          className="flex-1 flex items-center justify-center gap-2 py-4 font-medium bg-primary text-primary-foreground"
+        >
+          <span>Next</span>
+          <ChevronDown className="h-5 w-5" />
+        </button>
       </div>
 
       {/* Section visibility dialog */}
