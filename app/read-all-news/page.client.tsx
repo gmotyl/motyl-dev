@@ -260,7 +260,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <main className="flex-1 container py-8 px-4 pb-24 sm:pb-8 max-w-2xl mx-auto">
+      <main className="flex-1 container py-8 px-4 pb-36 sm:pb-8 max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold mb-2">Read all news</h1>
         <p className="text-muted-foreground mb-8">
           Scroll through unvisited articles. Mark them as read when you're done.
@@ -307,8 +307,8 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
       </main>
       <Footer />
 
-      {/* Floating buttons */}
-      <div className="fixed bottom-20 sm:bottom-6 right-4 z-40 flex flex-col items-end gap-3">
+      {/* Floating buttons (settings + desktop mark-read pill) */}
+      <div className="fixed bottom-36 sm:bottom-6 right-4 z-40 flex flex-col items-end gap-3">
         {/* Settings button — wait for hydration so toggle has localStorage state */}
         {isHydrated && (
           <button
@@ -331,8 +331,8 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
         )}
       </div>
 
-      {/* Mobile bottom action bar: Mark read + Next */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 flex border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      {/* Mobile bottom action bar: Mark read + Next. Sits above the bottom-nav (h-16). */}
+      <div className="sm:hidden fixed bottom-16 left-0 right-0 z-40 flex border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <button
           onClick={() => { setPendingNavUrl(null); setDialogOpen(true) }}
           disabled={scrolledPastSlugs.size === 0}
