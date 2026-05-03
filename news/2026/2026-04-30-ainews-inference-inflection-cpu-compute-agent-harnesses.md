@@ -2,7 +2,7 @@
 title: "The Inference Inflection: CPU Demand, Agent Harnesses, and the Race for Cheap Tokens"
 excerpt: "AI compute has shifted from training to inference at scale, and the knock-on effects are reshaping everything from chip demand to how coding agents are built."
 publishedAt: "2026-04-30"
-slug: "ainews-20260430"
+slug: "ainews-20260430-inference"
 hashtags: ["#ai", "#inference", "#agents", "#llm", "#openai", "#machinelearning"]
 ---
 

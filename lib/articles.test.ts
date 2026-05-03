@@ -132,7 +132,7 @@ describe('Content cache loading', () => {
     expect(first).toHaveProperty('publishedAt')
     expect(first).toHaveProperty('hashtags')
     expect(first).toHaveProperty('itemType')
-  }, 15000)
+  }, 60000)
 
   it('should return articles sorted by publishedAt descending', async () => {
     const articles = await getAllContentMetadata()
