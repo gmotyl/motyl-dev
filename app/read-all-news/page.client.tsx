@@ -260,7 +260,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <main className="flex-1 container py-8 px-4 pb-36 sm:pb-8 max-w-2xl mx-auto">
+      <main className="flex-1 container py-8 px-4 pb-48 sm:pb-8 max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold mb-2">Read all news</h1>
         <p className="text-muted-foreground mb-8">
           Scroll through unvisited articles. Mark them as read when you're done.
@@ -308,7 +308,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
       <Footer />
 
       {/* Floating buttons (settings + desktop mark-read pill) */}
-      <div className="fixed bottom-36 sm:bottom-6 right-4 z-40 flex flex-col items-end gap-3">
+      <div className="fixed bottom-44 sm:bottom-6 right-4 z-40 flex flex-col items-end gap-3">
         {/* Settings button — wait for hydration so toggle has localStorage state */}
         {isHydrated && (
           <button
@@ -336,18 +336,18 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
         <button
           onClick={() => { setPendingNavUrl(null); setDialogOpen(true) }}
           disabled={scrolledPastSlugs.size === 0}
-          className="flex-1 flex items-center justify-center gap-2 py-4 font-medium text-foreground border-r border-border disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex-1 flex items-center justify-center gap-2 py-8 text-base font-medium text-foreground border-r border-border disabled:opacity-40 disabled:cursor-not-allowed active:bg-muted/40"
         >
-          <BookCheck className="h-5 w-5" />
+          <BookCheck className="h-6 w-6" />
           <span>Mark read{scrolledPastSlugs.size > 0 ? ` (${scrolledPastSlugs.size})` : ''}</span>
         </button>
         <button
           onClick={handleScrollNext}
           disabled={!hasNext}
-          className="flex-1 flex items-center justify-center gap-2 py-4 font-medium bg-primary text-primary-foreground disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex-1 flex items-center justify-center gap-2 py-8 text-base font-medium bg-primary text-primary-foreground disabled:opacity-40 disabled:cursor-not-allowed active:bg-primary/80"
         >
           <span>Next</span>
-          <ChevronDown className="h-5 w-5" />
+          <ChevronDown className="h-6 w-6" />
         </button>
       </div>
 
