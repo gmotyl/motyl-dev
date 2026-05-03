@@ -132,19 +132,37 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
   // Jump to the next subarticle title (mobile "Next" button).
   // Each subarticle ends with a "**Link:**" line and is followed by another <h2>,
   // so finding the next h2 below the viewport top lands the user on the next title.
-  const handleScrollNext = useCallback(() => {
+  const NEXT_THRESHOLD = 80
+  const findNextHeading = useCallback(() => {
     const headings = document.querySelectorAll<HTMLElement>('main h2')
-    if (headings.length === 0) return
-    const threshold = 80
     for (const h of Array.from(headings)) {
-      if (h.getBoundingClientRect().top > threshold) {
-        h.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        return
-      }
+      if (h.getBoundingClientRect().top > NEXT_THRESHOLD) return h
     }
-    // No more headings ahead — nudge toward bottom so infinite-scroll loads more
-    window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' })
+    return null
   }, [])
+
+  const handleScrollNext = useCallback(() => {
+    const next = findNextHeading()
+    if (next) {
+      next.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    } else {
+      window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' })
+    }
+  }, [findNextHeading])
+
+  // Track whether there's a next heading ahead; drives the disabled state of the
+  // mobile "Next" button. Recompute on scroll, resize, and when items change.
+  const [hasNext, setHasNext] = useState(false)
+  useEffect(() => {
+    const update = () => setHasNext(findNextHeading() !== null || hasMore)
+    update()
+    window.addEventListener('scroll', update, { passive: true })
+    window.addEventListener('resize', update)
+    return () => {
+      window.removeEventListener('scroll', update)
+      window.removeEventListener('resize', update)
+    }
+  }, [findNextHeading, items.length, hasMore])
 
   // Track scrolled-past articles
   const handleScrolledPast = useCallback((slug: string) => {
@@ -325,7 +343,8 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
         </button>
         <button
           onClick={handleScrollNext}
-          className="flex-1 flex items-center justify-center gap-2 py-4 font-medium bg-primary text-primary-foreground"
+          disabled={!hasNext}
+          className="flex-1 flex items-center justify-center gap-2 py-4 font-medium bg-primary text-primary-foreground disabled:opacity-40 disabled:cursor-not-allowed"
         >
           <span>Next</span>
           <ChevronDown className="h-5 w-5" />
