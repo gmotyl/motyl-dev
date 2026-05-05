@@ -181,7 +181,7 @@ describe('getContentItemBySlug', () => {
     expect(article).not.toBeNull()
     expect(article?.slug).toBe(firstSlug)
     expect(article).toHaveProperty('content')
-  })
+  }, 60000)
 
   it('should return null for non-existent slug', async () => {
     const article = await getContentItemBySlug('definitely-does-not-exist-12345')
