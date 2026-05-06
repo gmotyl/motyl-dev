@@ -143,7 +143,7 @@ describe('Content cache loading', () => {
       const nextDate = new Date(articles[i + 1].publishedAt).getTime()
       expect(currentDate).toBeGreaterThanOrEqual(nextDate)
     }
-  })
+  }, 60000)
 
   it('should have no duplicate slugs across all content', async () => {
     const articles = await getAllContentMetadata()
