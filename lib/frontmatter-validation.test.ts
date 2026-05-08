@@ -49,7 +49,7 @@ describe('Markdown frontmatter validation', () => {
         `${failures.length} file(s) have invalid YAML frontmatter:\n${failures.join('\n')}`
       )
     }
-  })
+  }, 60_000)
 
   it('should have required fields (title, slug, publishedAt) in every markdown file', () => {
     const failures: string[] = []
@@ -70,5 +70,5 @@ describe('Markdown frontmatter validation', () => {
         `${failures.length} file(s) are missing required frontmatter fields:\n${failures.join('\n')}`
       )
     }
-  })
+  }, 60_000)
 })

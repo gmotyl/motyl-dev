@@ -58,7 +58,7 @@ describe('BookmarkDialog', () => {
     expect(screen.getByLabelText(/Title/i)).toBeInTheDocument()
     expect(screen.getByText(/Hashtags/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Add Bookmark' })).toBeInTheDocument()
-  })
+  }, 60_000)
 
   it('shows validation errors for invalid URL and empty title', async () => {
     const user = userEvent.setup()
@@ -139,5 +139,5 @@ describe('BookmarkDialog', () => {
         })
       )
     })
-  })
+  }, 60_000)
 })

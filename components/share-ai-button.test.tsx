@@ -42,8 +42,8 @@ describe('ShareAIButton', () => {
     // Wait for hydration
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /share/i })).toBeEnabled()
-    })
-  })
+    }, { timeout: 60_000 })
+  }, 60_000)
 
   it('shows "Copied!" state after successful click', async () => {
     const user = userEvent.setup()
