@@ -193,12 +193,86 @@ function hmacSha1(key, data) {
 
 // ─── LinkedIn (v2) ────────────────────────────────────────────────────────────
 
-async function publishLinkedIn(text, link, comment) {
+async function uploadLinkedInImage(accessToken, personUrn, imagePathOrUrl) {
+  // 1. Register upload
+  const regRes = await fetch('https://api.linkedin.com/v2/assets?action=registerUpload', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({
+      registerUploadRequest: {
+        recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
+        owner: personUrn,
+        serviceRelationships: [
+          { relationshipType: 'OWNER', identifier: 'urn:li:userGeneratedContent' },
+        ],
+      },
+    }),
+  });
+  if (!regRes.ok) {
+    throw new Error(`LinkedIn registerUpload failed (${regRes.status}): ${await regRes.text()}`);
+  }
+  const reg = await regRes.json();
+  if (process.env.DEBUG_LINKEDIN) {
+    console.error('registerUpload response:', JSON.stringify(reg, null, 2));
+  }
+  const uploadInfo =
+    reg?.value?.['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'] ||
+    reg?.value?.uploadMechanism?.['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'];
+  const uploadUrl = uploadInfo?.uploadUrl;
+  const asset = reg?.value?.asset;
+  if (!uploadUrl || !asset) {
+    throw new Error(
+      `LinkedIn registerUpload returned unexpected shape: ${JSON.stringify(reg).slice(0, 500)}`
+    );
+  }
+
+  // 2. Load image bytes (URL or local path)
+  let bytes;
+  if (/^https?:\/\//.test(imagePathOrUrl)) {
+    const imgRes = await fetch(imagePathOrUrl);
+    if (!imgRes.ok) throw new Error(`Image fetch failed (${imgRes.status}): ${imagePathOrUrl}`);
+    bytes = Buffer.from(await imgRes.arrayBuffer());
+  } else {
+    bytes = readFileSync(resolve(imagePathOrUrl));
+  }
+
+  // 3. PUT binary to uploadUrl
+  const putRes = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: bytes,
+  });
+  if (!putRes.ok) {
+    throw new Error(`LinkedIn image upload failed (${putRes.status}): ${await putRes.text()}`);
+  }
+  return asset;
+}
+
+async function publishLinkedIn(text, link, comment, image) {
   const accessToken = process.env.LINKEDIN_ACCESS_TOKEN;
   const personUrn = process.env.LINKEDIN_PERSON_URN;
 
   if (!accessToken || !personUrn) {
     throw new Error('Missing LINKEDIN_ACCESS_TOKEN or LINKEDIN_PERSON_URN in .env');
+  }
+
+  let imageAsset = null;
+  if (image) {
+    imageAsset = await uploadLinkedInImage(accessToken, personUrn, image);
+    console.log(`✓ Image uploaded: ${imageAsset}`);
+  }
+
+  let shareMediaCategory = 'NONE';
+  let media = null;
+  if (imageAsset) {
+    shareMediaCategory = 'IMAGE';
+    media = [{ status: 'READY', media: imageAsset }];
+  } else if (link) {
+    shareMediaCategory = 'ARTICLE';
+    media = [{ status: 'READY', originalUrl: link }];
   }
 
   const body = {
@@ -207,15 +281,8 @@ async function publishLinkedIn(text, link, comment) {
     specificContent: {
       'com.linkedin.ugc.ShareContent': {
         shareCommentary: { text },
-        shareMediaCategory: link ? 'ARTICLE' : 'NONE',
-        ...(link && {
-          media: [
-            {
-              status: 'READY',
-              originalUrl: link,
-            },
-          ],
-        }),
+        shareMediaCategory,
+        ...(media && { media }),
       },
     },
     visibility: {
@@ -292,9 +359,10 @@ async function main() {
   const textArg = get('--text');
   const link = get('--link') || null;
   const comment = get('--comment') || null;
+  const image = get('--image') || null;
 
   if (!platform || !textArg) {
-    console.error('Usage: node scripts/publish-social.mjs --platform <bluesky|twitter|linkedin> --text "..." [--link https://...] [--comment "first comment text"]');
+    console.error('Usage: node scripts/publish-social.mjs --platform <bluesky|twitter|linkedin> --text "..." [--link https://...] [--comment "first comment text"] [--image path-or-url]');
     process.exit(1);
   }
 
@@ -314,7 +382,7 @@ async function main() {
         url = await publishTwitter(text);
         break;
       case 'linkedin':
-        url = await publishLinkedIn(text, link, comment);
+        url = await publishLinkedIn(text, link, comment, image);
         break;
       default:
         throw new Error(`Unknown platform: ${platform}. Use: bluesky, twitter, linkedin`);
