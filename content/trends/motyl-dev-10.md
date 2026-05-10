@@ -8,7 +8,7 @@ image: 'https://img.motyl.dev/blog/motyl-dev-trends-10.webp'
 
 # motyl.dev Weekly #10: Week 18 (Apr 27 – May 3, 2026)
 
-> A curated digest of what the community found worth reading this week.
+> A curated digest of what the I found worth reading this week.
 
 This week the field stopped pretending agents are magic and started treating them like software again, with eval suites, compiler-style output checks, and harnesses to keep parallel runs under control. Around that, the community pushed back on UI patterns that no longer fit, sharpened opinions on what "agentic coding" actually buys you, and re-litigated who really owns the React tree.
 
