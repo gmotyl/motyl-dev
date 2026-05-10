@@ -13,7 +13,7 @@ import { ContentItem } from '@/lib/articles'
 import { MarkReadDialog } from '@/components/mark-read-dialog'
 import { SectionVisibilityDialog } from '@/components/article-section-toggle'
 import { useSectionVisibility } from '@/hooks/use-section-visibility'
-import { BookCheck, ChevronDown, Settings } from 'lucide-react'
+import { BookCheck, ChevronDown, Copy, Check, Settings } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 interface ReadAllNewsPageProps {
@@ -33,6 +33,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
   const [dialogOpen, setDialogOpen] = useState(false)
   const [pendingNavUrl, setPendingNavUrl] = useState<string | null>(null)
   const [sectionToggleOpen, setSectionToggleOpen] = useState(false)
+  const [exportState, setExportState] = useState<'idle' | 'working' | 'done' | 'error'>('idle')
 
   const { hiddenSections, toggleSection, isHydrated } = useSectionVisibility()
 
@@ -211,6 +212,46 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
     }
   }, [session, pendingNavUrl])
 
+  const handleExport = useCallback(async () => {
+    if (exportState === 'working') return
+    setExportState('working')
+    try {
+      const PAGE_SIZE = 50
+      const all: ContentItem[] = []
+      for (let p = 1; p <= 40; p++) {
+        const params = new URLSearchParams({
+          page: String(p),
+          limit: String(PAGE_SIZE),
+          unseen: 'true',
+          contentType: 'news',
+          includeContent: 'true',
+        })
+        const res = await fetch(`/api/content?${params}`)
+        if (!res.ok) throw new Error(`status ${res.status}`)
+        const data = await res.json()
+        const items: ContentItem[] = data.items ?? []
+        all.push(...items)
+        if (items.length < PAGE_SIZE) break
+      }
+
+      const text = all
+        .map((it) => {
+          const body = filterHiddenSections(it.content ?? '', hiddenSections).trim()
+          const date = formatDate(it.publishedAt)
+          return `# ${it.title}\n${date}\n\n${body}`
+        })
+        .join('\n\n---\n\n')
+
+      const header = `Motyl.dev — unread news (${all.length} items, exported ${new Date().toISOString().slice(0, 10)})\n\n`
+      await navigator.clipboard.writeText(header + text)
+      setExportState('done')
+      setTimeout(() => setExportState('idle'), 2000)
+    } catch {
+      setExportState('error')
+      setTimeout(() => setExportState('idle'), 2500)
+    }
+  }, [exportState, hiddenSections])
+
   const handleDialogCancel = useCallback(() => {
     setDialogOpen(false)
     if (pendingNavUrl) {
@@ -316,6 +357,22 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
             className="flex items-center justify-center w-12 h-12 bg-muted text-muted-foreground rounded-full shadow-lg hover:bg-muted/80 transition-colors"
           >
             <Settings className="h-5 w-5" />
+          </button>
+        )}
+
+        {/* Export-to-clipboard button */}
+        {items.length > 0 && (
+          <button
+            onClick={handleExport}
+            disabled={exportState === 'working'}
+            title="Copy all unread news as plaintext"
+            className="flex items-center justify-center w-12 h-12 bg-muted text-muted-foreground rounded-full shadow-lg hover:bg-muted/80 transition-colors disabled:opacity-50"
+          >
+            {exportState === 'done' ? (
+              <Check className="h-5 w-5 text-primary" />
+            ) : (
+              <Copy className="h-5 w-5" />
+            )}
           </button>
         )}
 

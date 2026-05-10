@@ -12,7 +12,7 @@ const ALL_SECTIONS: { id: SectionType; label: string }[] = [
   { id: 'tradeoffs', label: 'Why Do I Care' },
 ]
 
-const DEFAULT_HIDDEN: SectionType[] = ['summary', 'keyTakeaways', 'tradeoffs']
+const DEFAULT_HIDDEN: SectionType[] = []
 
 export { ALL_SECTIONS }
 
