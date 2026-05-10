@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
   const requireHashtags = searchParams.get('requireHashtags')?.split(',').filter(Boolean) || undefined
   const excludeHashtags = searchParams.get('excludeHashtags')?.split(',').filter(Boolean) || undefined
   const showUnseen = searchParams.get('unseen') === 'true'
+  const excludeSlugs = searchParams.get('excludeSlugs')?.split(',').filter(Boolean) || []
   const hashtags = searchParams.get('hashtags')?.split(',').filter(Boolean) || []
   const mode = searchParams.get('mode') as 'AND' | 'OR' | 'EXCLUDE' || 'AND'
   const includeContent = searchParams.get('includeContent') === 'true'
@@ -34,6 +35,11 @@ export async function GET(request: NextRequest) {
       }
     }
   }
+
+  // Caller can ask the server to skip specific slugs even if they aren't yet
+  // marked as visited. Used by infinite scrollers to keep pagination stable
+  // when the visited set is mutating mid-session.
+  for (const slug of excludeSlugs) visitedSlugs.add(slug)
 
   const pageData = await getContentPageData({
     page,

@@ -29,7 +29,6 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
   const [scrolledPastSlugs, setScrolledPastSlugs] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(initialItems.length < totalItems)
-  const [page, setPage] = useState(1)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [pendingNavUrl, setPendingNavUrl] = useState<string | null>(null)
   const [sectionToggleOpen, setSectionToggleOpen] = useState(false)
@@ -42,6 +41,10 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
   const itemsRef = useRef<ContentItem[]>(initialItems)
   const scrolledPastSlugsRef = useRef<Set<string>>(new Set())
   const sessionRef = useRef(session)
+  // Every slug we have ever fetched, including those evicted from the DOM.
+  // Sent as excludeSlugs so the server doesn't return them again, regardless
+  // of how the visited cookie shifts mid-session.
+  const loadedSlugsRef = useRef<Set<string>>(new Set(initialItems.map((i) => i.slug)))
   useEffect(() => { itemsRef.current = items }, [items])
   useEffect(() => { scrolledPastSlugsRef.current = scrolledPastSlugs }, [scrolledPastSlugs])
   useEffect(() => { sessionRef.current = session }, [session])
@@ -61,21 +64,22 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
 
     observer.observe(loadMoreRef.current)
     return () => observer.disconnect()
-  }, [hasMore, loading, page])
+  }, [hasMore, loading])
 
   const fetchMore = useCallback(async () => {
     if (loading || !hasMore) return
     setLoading(true)
-    const nextPage = page + 1
 
     try {
+      const exclude = Array.from(loadedSlugsRef.current)
       const params = new URLSearchParams({
-        page: nextPage.toString(),
+        page: '1',
         limit: '5',
         unseen: 'true',
         contentType: 'news',
         includeContent: 'true',
       })
+      if (exclude.length) params.set('excludeSlugs', exclude.join(','))
 
       const res = await fetch(`/api/content?${params}`)
       const data = await res.json()
@@ -84,7 +88,11 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
         const prevItems = itemsRef.current
         const scrolled = scrolledPastSlugsRef.current
         const sess = sessionRef.current
-        const combined = [...prevItems, ...data.items]
+        const newItems = (data.items as ContentItem[]).filter(
+          (i) => !loadedSlugsRef.current.has(i.slug),
+        )
+        for (const i of newItems) loadedSlugsRef.current.add(i.slug)
+        const combined = [...prevItems, ...newItems]
 
         // Evict oldest scrolled-past articles to keep DOM manageable on mobile
         let finalItems = combined
@@ -118,7 +126,6 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
         }
 
         setItems(finalItems)
-        setPage(nextPage)
         setHasMore(data.currentPage < data.totalPages)
       } else {
         setHasMore(false)
@@ -128,7 +135,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
     } finally {
       setLoading(false)
     }
-  }, [loading, hasMore, page])
+  }, [loading, hasMore])
 
   // Jump to the next subarticle title (mobile "Next" button).
   // Each subarticle ends with a "**Link:**" line and is followed by another <h2>,
