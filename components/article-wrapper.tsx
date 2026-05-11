@@ -25,9 +25,7 @@ interface ArticleWrapperProps {
 
 export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps) {
   const isNews = article.itemType === ItemType.News
-  const { hiddenSections, toggleSection, isHydrated } = useSectionVisibility(
-    isNews ? ['summary', 'keyTakeaways', 'tradeoffs'] : []
-  )
+  const { hiddenSections, toggleSection, isHydrated } = useSectionVisibility()
 
   const filteredContent = useMemo(() => {
     return isNews ? filterHiddenSections(article.content, hiddenSections) : article.content
