@@ -1,0 +1,31 @@
+---
+title: "Anders Hejlsberg on Designing Languages That Last: Turbo Pascal, C#, and TypeScript"
+excerpt: "Lessons from a 40-year career building the languages developers actually want to use, from a tiny Borland IDE to the TypeScript compiler that keeps your editor responsive."
+publishedAt: "2026-05-13"
+slug: "anders-hejlsberg-turbo-pascal-csharp-typescript"
+hashtags: "#pragmaticengineer #typescript #csharp #compilers #language-design #developer-tools #ai #microsoft #generated #en"
+source_pattern: "Pragmatic engineer"
+---
+
+## Anders Hejlsberg on Designing Languages That Last: Turbo Pascal, C#, and TypeScript
+
+**TLDR:** Anders Hejlsberg, the designer behind Turbo Pascal, Delphi, C#, and TypeScript, sat down with the Pragmatic Engineer to walk through four decades of language design. The conversation covers what made each language stick, how a six-person team built C#, why TypeScript broke compiler orthodoxy to stay fast, and where AI changes (and does not change) the craft of writing code.
+
+**Summary:** There is something quietly reassuring about hearing Anders Hejlsberg talk about programming. He started on an HP 2100 with 32K of memory and a paper tape boot loader, and he describes that machine with real affection. No layers, no abstractions, nothing between you and the silicon. The last fifty years, in his telling, have been a long story of piling layers on top of that bare metal, and his career has been about making the top layer feel like a place you actually want to live.
+
+Turbo Pascal is the origin myth. It sold for forty-nine dollars and ninety-five cents when competitors charged five hundred, and it shipped with an editor, a compiler, and a debugger that all spoke to each other. The original debugger was a hack worth pausing on. When a program crashed, the compiler printed the program counter address. You could then re-run the compiler in a mode that stopped at that address, and the IDE would show which line was syntactically being processed. No line maps, no symbol tables, just clever reuse of what already existed. Constraints really do force creativity, and Anders has been working in that constraint-shaped style ever since.
+
+The C# story has a courtroom in the middle of it. Microsoft hired Anders to build Visual J++, but the Sun lawsuit closed off Java as a foundation, so the company decided to build something new that married VB's productivity with C++'s power. The design team had six people, met three times a week for two hours, and that was it. Anders is firm on this: you do not need a large team to design even a large language, you need people who have built languages before. C# is also where async/await first landed in a serious mainstream language. The pattern spread because compilers can generate the state machines that humans loathe writing by hand, and developers got to keep writing sequential-looking code.
+
+TypeScript almost did not happen, or rather, almost happened as the wrong thing. The Outlook.com team asked Anders to productize Script#, a C#-to-JavaScript transpiler. He refused. If you want the best JavaScript developers to use your tool, he reasoned, they need to be writing JavaScript, not pretending to write it. That instinct shaped everything that followed. The TypeScript compiler is a strange beast by traditional standards. It is functional by necessity, lazy by design, and built around the editor experience. With five hundred files open, it caches abstract syntax trees for four hundred and ninety-nine of them and rebuilds only the one under the cursor. It resolves the minimum types needed for the current position and not a symbol more. That is why your editor stays responsive when your project does not.
+
+The AI section of the conversation is where Anders is most measured. The languages AI handles best are the ones AI has seen most, which means TypeScript and Python, not because of any inherent design fitness but because of training data volume. His own team finds AI useful for plenty of things but limited for compiler work, where the big picture across types, symbols, binding, and parsing is not well represented in training sets. He predicts we will all end up as project managers for armies of agent-programmers, and he admits, with characteristic honesty, that he is not personally thrilled about reviewing code all day. He thinks the review experience itself will have to change, with AI generating commentary that guides humans through what changed and why.
+
+**Key takeaways:**
+- Designing a language is a ten-year play. Version one is rough, version two is better, and version three is when it actually becomes great. Then you still have to convince people to adopt it.
+- Tooling is not a footnote to a language, it is half of why anyone picks it up. Turbo Pascal proved this in 1983, TypeScript reproved it in 2014, and the lesson keeps getting forgotten.
+- AI fluency in a language tracks training data volume far more than language design. If you want AI to write your code well, your stack's popularity matters more than its elegance.
+
+**Why do I care:** As a senior frontend engineer, I spend most of my working hours inside the TypeScript compiler's editor experience without thinking about it, and that is exactly the point Anders is making. The fact that intellisense feels instant in a million-line monorepo is not magic, it is the compiler aggressively refusing to do work it does not need to do right now. That mindset is worth borrowing for our own code. Most of our perceived performance problems are not algorithmic, they are about doing work eagerly that we could defer until someone actually looks at it. The other thing worth sitting with is his ten-year framing. We tend to ship a framework, declare it the future, and pivot within eighteen months. The tools that have actually shaped my career, React, TypeScript, Node, all took a decade of iteration to become the obvious choice. If you are building a library or a framework right now, plan accordingly.
+
+**Link:** [TypeScript, C# and Turbo Pascal with Anders Hejlsberg](https://newsletter.pragmaticengineer.com/p/typescript-c-and-turbo-pascal-with?publication_id=458709&post_id=197401883&play_audio=true&triedRedirect=true)
