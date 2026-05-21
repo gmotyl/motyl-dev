@@ -1,0 +1,32 @@
+---
+title: "Why Rust Is Different: Memory Safety, Ownership, and the Compiler That Never Lies"
+excerpt: "Alice Ryhl, Google Android Rust team engineer and Tokio maintainer, breaks down what truly separates Rust from every other language, and why its compiler might be its greatest feature."
+publishedAt: "2026-05-21"
+slug: "why-rust-is-different-alice-ryhl"
+hashtags: "#pragmaticengineer #rust #memorysafety #systems #programming #en"
+source_pattern: "Pragmatic engineer"
+---
+
+## Why Rust Is Different: Memory Safety, Ownership, and the Compiler That Never Lies
+
+**TLDR:** In a deep podcast conversation with Gergely Orosz, Alice Ryhl, a Google Android Rust engineer and core Tokio maintainer, explains what makes Rust genuinely distinct from languages like Go, TypeScript, and C++. The compiler is not just a build tool, it is a correctness engine that turns entire classes of bugs into non-events. For teams and individuals willing to climb the learning curve, that tradeoff is increasingly hard to ignore.
+
+Rust has this reputation as the language developers love but rarely ship in. The surveys back it up year after year, most admired, still not mainstream. Alice Ryhl's story cuts right through that narrative. She did not apply to Google. She spent years answering questions on Rust forums, contributed to documentation, became a Tokio maintainer while still in college, and eventually received an email asking if she wanted to work on the Android Rust team. That career arc is itself a statement about what Rust's community values.
+
+The most interesting thing Alice brings up early in the conversation is the idea that Rust turns implicit failures into compile errors by design. This is not a happy accident. Where other languages let you forget to handle null, leave a variable uninitialized, or skip propagating an error, Rust makes the omission a build failure. The '?' operator for error propagation is a good example. You have to make a decision about errors at the call site. That is not always comfortable, but it means you cannot accidentally ignore a failure. The compiler is relentless about it. And once you internalize that, refactoring becomes surprisingly straightforward. Alice describes her approach simply: change a return type, fix the compiler errors, repeat until it compiles. At that point, you have updated every place that needed updating. No grep, no hoping you caught everything.
+
+The ownership and borrowing model is where most newcomers hit a wall. Alice is honest about this. The hard part is not learning Rust syntax, it is unlearning how you design data structures. Cyclic object graphs, which feel completely natural in Python or JavaScript, fight the borrow checker hard. A Book referencing Page objects that reference back to the Book is possible in Rust, but the ownership model makes it painful. That friction is intentional. Rust is pushing you toward designs that the compiler can reason about. Flattening structures, using indices instead of pointers, leaning on plain structs. It is not idiomatic in other languages, but it leads to code that does not have the aliasing and lifetime bugs that make C++ so treacherous.
+
+The Rust editions system deserves more attention than it usually gets. Rust has released language editions (2015, 2018, 2021, 2024) that can coexist within the same project. A library on the 2021 edition works with a binary on the 2024 edition. This is how Rust added async and await as reserved keywords without forcing every crate in the ecosystem to migrate at once. Compare that to Python 2 to Python 3, which fragmented the community for almost a decade. It is a genuinely clever solution to a genuinely hard problem. Adding keywords to a language is normally catastrophic for compatibility. Rust has found a way to do it cleanly.
+
+One observation from Alice that I keep coming back to is about AI and Rust specifically. She makes the case that Rust might be unusually well-suited for agent-generated code because the compiler provides a high-quality feedback loop. An agent can make a change, run the compiler, get precise error messages, and iterate. The compiler does not say "something might be wrong," it says exactly what is wrong and often suggests how to fix it. That is a different dynamic than working with a language that lets broken code run and fail at runtime. At the same time, Alice warns about false fluency. Because Rust is so strict, code that compiles tends to be trusted. But an AI can produce code that compiles and still does something pointless, like translating a C build flag directly into Rust where it has no equivalent meaning. Compiles does not mean correct.
+
+**Key takeaways:**
+- Rust's ownership model forces data structure decisions upfront that eliminate entire categories of aliasing and lifetime bugs at compile time, not at runtime in production.
+- The editions system (2015, 2018, 2021, 2024) allows Rust to evolve syntax without breaking the existing ecosystem, solving a problem that has fractured other language communities for years.
+- AI agents may benefit from Rust's strict compiler feedback loop, but the risk of false fluency, compiling code that is semantically wrong or cargo-culted from other languages, is real and worth watching closely.
+- Rust in the Linux kernel is no longer experimental as of December 2025, and US government mandates pushing away from memory-unsafe languages are accelerating adoption across the board.
+
+**Why do I care:** From a frontend-leaning architect's seat, Rust still feels distant, but the backend story is getting harder to dismiss. The reliability argument Alice makes against TypeScript on the backend is not about syntax preferences, it is about whether your production system can reach a state that the language's design simply does not permit. When I think about the kinds of bugs that slip through TypeScript services, undefined where an object was expected, unhandled promise rejections that silently swallow errors, I can see exactly what problem Rust is solving. The AI angle is the part I am watching most carefully. If agents are going to write more of our backend infrastructure, a language where the compiler enforces correctness and gives precise, actionable feedback is a genuinely different target than one that only fails at runtime. That changes the calculus.
+
+**Link:** [Why Rust is different, with Alice Ryhl](https://newsletter.pragmaticengineer.com/p/why-rust-is-different-with-alice?publication_id=458709&post_id=198284678&play_audio=true&triedRedirect=true)
