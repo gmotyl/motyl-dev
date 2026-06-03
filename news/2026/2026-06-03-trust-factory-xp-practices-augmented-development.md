@@ -1,0 +1,32 @@
+---
+title: "The Trust Factory: How XP Practices Manufacture Trust in the Age of AI"
+excerpt: "Kent Beck argues that we're accumulating code faster than trust, and that XP's real product was never speed but a machine for building trust between people."
+publishedAt: "2026-06-03"
+slug: "trust-factory-xp-practices-augmented-development"
+hashtags: "#kentbeck #engineering #architecture #agents #testing #refactoring #generated #en"
+source_pattern: "Kent Beck"
+---
+
+## Trust Factory
+
+**TLDR:** Kent Beck takes the line "we're accumulating code faster than we are accumulating trust" and runs with it, arguing that Extreme Programming was secretly a trust factory all along. Each XP practice, principle, and value quietly manufactures trust between people while also making the people more trustworthy. The warning underneath is that solo AI-assisted coding skips almost every one of those trust-building moments, and that gap is going to hurt.
+
+**Summary:** The essay opens with a phrase Beck clearly can't stop chewing on: we can now produce code faster than ever, but software is bipedal. Code and trust have to walk together, and if you only grow one leg the whole thing just hops along awkwardly. He points out that both code and trust are asymmetrical, but in different ways. Code either works or it doesn't, and one bad decision in a long chain of good ones is still just a bug you can often fix in roughly the time it took to create it. Trust is worse. It accumulates slowly and evaporates instantly, and once it's gone it's close to impossible to win back. That asymmetry is the whole reason he thinks trust deserves the same engineering attention we give to code.
+
+From there he reframes XP itself. He says he never thought of it this way before, but XP didn't just deliver functionality faster, it manufactured trust, and he wants to understand the mechanism. So he walks down through the three layers of XP, from concrete practices to principles to values, and shows how each one produces trust. Programmer testing demonstrates trustworthiness to the team and builds the programmer's own confidence. Pairing builds trust directly between two people while cutting defects. Continuous integration removes the nasty surprises that erode trust. Weekly planning and a customer embedded in the team create dozens of small honest interactions a day. Continuous deployment, refactoring, and observability all do the same thing in their own way, by making correct behavior visible and shared.
+
+The part that genuinely surprised Beck is a pattern he didn't expect. Every practice that creates trust also encourages trustworthiness. If he knows he'll get paged at three in the morning, he does the work up front to avoid being paged. If he knows he'll be writing tests, he shapes the code to make testing easier. Trust and trustworthiness feed each other in a loop, and he sees the same loop at the level of principles like humanity, mutual benefit, and flow, and again at the level of values like communication, feedback, and courage. He's honest about his own doubts here, admitting he's gone iffy on simplicity as a value because successful systems always end up complicated, which is a nice bit of self-correction rather than dogma.
+
+Then comes the real argument, and it's a worried one. Development is shifting toward individuals working alone with what he calls the genie, the AI assistant, in what he names the single player problem. Trust already lags features, and this shift widens the gap in a way he calls unstable and unsustainable. He lists how naive solo AI coding erodes trust: the genie cares about satisfying the prompt, not the purpose, so generated code tends to fall over in the slightly unusual cases. The "this works, oh no it doesn't" whiplash burns trust. Working alone deletes most of the small daily chances to build it. Purely reactive, feature-treadmill project management wins tactically and loses strategically. And the genie ignores optionality and future change, so you walk cheerfully off the end of the productivity pier.
+
+His conclusion is deliberately provocative for an industry obsessed with speed. Trust-optimized augmented development means slowing down on purpose: slow down to make sure the stuff actually works, slow down for structural improvements that keep options open, slow down to keep humans talking to each other, slow down to keep refreshing the long-term purpose. He closes by saying that's how you actually go faster. More chances to build trust lead to more focus on trustworthiness, which leads to more trust. He also nods to Jessica Kerr's idea that a software system is a symmathesy, a human-technical thing we're inside of and can only influence rather than control, which is his way of retracting the old "the program is the truth" line he used to repeat.
+
+**Key takeaways:**
+- Code and trust are both asymmetrical, but trust is harder because it builds slowly and is effectively irreversible once broken.
+- XP's practices, principles, and values each produce trust, and the same act that creates trust also makes the actor more trustworthy, forming a reinforcing loop.
+- Solo AI-assisted coding strips out the everyday interactions that used to manufacture trust, and optimizes for satisfying prompts rather than real purposes.
+- Beck's prescription is counterintuitive: slow down to verify behavior, preserve optionality, keep people interacting, and keep purpose alive, because that's the path to going faster.
+
+**Why do I care:** As someone who has watched teams adopt AI tooling at speed, I find this the most useful framing I've seen of what we're quietly trading away. The danger isn't that the genie writes bad code, it's that the single player workflow deletes pairing, review, shared CI pain, and the customer conversation, which were never overhead. They were how a team earned the right to move fast. For an architect this lands directly on day-to-day decisions: if your org is handing every developer an AI and measuring lines shipped, you're optimizing the one leg of the system that was never the bottleneck. The practical move is to deliberately keep the trust-building rituals around the AI rather than letting it become a reason to work alone. I'd push back on one thing though. Beck names the problem well but is light on what trust-building looks like specifically when the third party in the room is a model and not a colleague, and that's the design question I actually want answered.
+
+**Link:** [Trust Factory](https://tidyfirst.substack.com/p/trust-factory)
