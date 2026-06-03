@@ -1,7 +1,11 @@
 // Service Worker for motyl.dev PWA
-// Version 1.0.0
+// Version 2.0.0
+//
+// Bump CACHE_VERSION on any caching-behaviour change: activate() deletes
+// every motyl-* cache from older versions, so stale HTML/assets cached by
+// a previous SW cannot outlive a deploy of this file.
 
-const CACHE_VERSION = 'motyl-v1.0.0';
+const CACHE_VERSION = 'motyl-v2.0.0';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const ARTICLE_CACHE = `${CACHE_VERSION}-articles`;
@@ -12,21 +16,30 @@ const PRECACHE_ASSETS = [
   '/',
   '/articles',
   '/offline',
-  '/manifest.json',
+  '/manifest.webmanifest',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png'
 ];
 
-// Install event - precache static assets
+// Install event - precache static assets.
+// Precache failures must not reject the install: a single 404 in addAll()
+// fails the whole install, leaving the previous SW active forever (this is
+// how a renamed manifest.json froze v1 on devices for months).
 self.addEventListener('install', (event) => {
   console.log('[SW] Installing service worker...');
 
   event.waitUntil(
     caches.open(STATIC_CACHE)
-      .then((cache) => {
-        console.log('[SW] Precaching static assets');
-        return cache.addAll(PRECACHE_ASSETS);
-      })
+      .then((cache) =>
+        Promise.allSettled(PRECACHE_ASSETS.map((asset) => cache.add(asset)))
+          .then((results) => {
+            results.forEach((r, i) => {
+              if (r.status === 'rejected') {
+                console.warn('[SW] Precache failed (skipped):', PRECACHE_ASSETS[i], r.reason);
+              }
+            });
+          })
+      )
       .then(() => self.skipWaiting())
   );
 });
