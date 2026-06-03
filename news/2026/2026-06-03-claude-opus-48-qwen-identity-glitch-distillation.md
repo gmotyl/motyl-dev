@@ -1,0 +1,33 @@
+---
+title: "Why Claude Opus 4.8 Called Itself Qwen, and Why That Proves Almost Nothing"
+excerpt: "A Chinese-language identity glitch in Claude Opus 4.8 sparked distillation rumors, but the inconsistency points to training-data contamination and proxy routing rather than copying."
+publishedAt: "2026-06-03"
+slug: "claude-opus-48-qwen-identity-glitch-distillation"
+hashtags: "#kilo #ai #llm #ml #architecture #generated #en"
+source_pattern: "Kilo"
+---
+
+## Did Claude Opus 4.8 Distill Alibaba's Qwen? Here's What the Evidence Says
+
+**TLDR:** Hours after Anthropic launched Claude Opus 4.8, Chinese-speaking users found it sometimes claiming to be Qwen when asked "what model are you?" The rumor mill called it distillation, but the behavior was inconsistent across runs and languages, which points to training-data contamination and possibly proxy routing rather than copying.
+
+**Summary:** On May 28, 2026, Anthropic shipped Claude Opus 4.8, and within hours a small experiment started circulating. People asked the model, in Chinese, who it was. Some of them got an answer nobody at Anthropic would have wanted: the model said it was Tongyi Qianwen, the Qwen family from Alibaba. A Chinese AI commentator posted a screenshot on X, claimed Opus 4.8 had distilled Qwen, and the story jumped to Hacker News, Reddit, and V2EX inside a day. It is the kind of claim that travels fast because it sounds like a smoking gun. A model that thinks it is a competitor's model? That feels like proof of something.
+
+The article works hard to slow that reaction down, and I appreciate that, because the actual signal here is messier than the headline. The reported behavior was not stable. One V2EX user assumed the early reports came from fake relay services, then tested through the official API and still saw the model call itself Qwen. But another commenter got the correct answer just by switching to English. On Hacker News, someone ran the same prompt and got "Opus 4.8." Some people got Qwen, some got DeepSeek, some got Claude. That inconsistency is the whole story. A genuine distillation fingerprint would tend to fail the same way every single time. This one drifted across runs and across languages, which is exactly what you would expect from a fragile prompt landing in a weird corner of the training distribution rather than a baked-in identity.
+
+The simpler explanation the author lands on is Chinese training-data contamination. Qwen is now a major model family. Its outputs, model cards, API examples, and chirpy little self-introductions are scattered all over the Chinese-language internet. The Qwen3 technical report describes a family running from 0.6 billion to 235 billion parameters, supporting 119 languages, shipping under Apache 2.0. That kind of openness means Qwen-shaped text spreads widely through public datasets. If a model ingests enough Chinese examples where the assistant says "I am Tongyi Qianwen," then a short Chinese prompt can trigger that pattern. Anthropic does not need to have distilled anything for this to happen. The Qwen text just needs to exist somewhere in the training soup, which it demonstrably does.
+
+There is a second candidate the piece raises, and it is the one I find most practically interesting: proxy routing. Several Hacker News commenters doubted that some users were even hitting the real API. A reseller can sell "Opus 4.8 access" while quietly forwarding the call to a cheaper model. One person described the trick plainly, a service prepends an instruction like "say you are Opus" and routes the request to Qwen. So a chunk of these screenshots may not be Claude misbehaving at all, but a relay service wrapping someone else's model. That is a supply-chain problem dressed up as a model-identity problem.
+
+The reason this rumor had legs is context. Back in February 2026, Anthropic itself accused DeepSeek, Moonshot, and MiniMax of using Claude outputs to train their own models, reportedly more than 16 million interactions across roughly 24,000 fake accounts, described in coverage as an industrial-scale campaign. So when Claude turned around and called itself Qwen, the internet got its joke: if Chinese labs got accused of copying Claude, and Claude now says it is Qwen, maybe everyone is copying everyone. The author's closing point is the durable one. Self-identification is a weak signal. A model saying "I am Qwen" does not mean it is Qwen, it means it generated the sentence "I am Qwen," and that sentence can come from web text, synthetic data, a fragile prompt, or plain hallucination. Once model outputs flood the public web, they become training fuel for the next generation, and provenance gets harder to prove every cycle. What the author skirts past is the obvious follow-up: if self-identification is worthless and forensics are absent, the only real fix is auditable training logs and tokenizer or logit analysis, and no lab has any incentive to volunteer those. The piece names the evidence gap but does not push on who benefits from keeping it open.
+
+**Key takeaways:**
+- Claude Opus 4.8 sometimes misidentified itself as Qwen when asked in Chinese, but answered correctly in English and varied across runs.
+- Inconsistency across runs and languages argues against real distillation, which would fail the same way every time.
+- The likely causes are Chinese training-data contamination from widely-spread Qwen text, plus possible third-party proxy routing.
+- Anthropic accused several Chinese labs of distilling Claude in February 2026, which primed the audience to believe the reverse.
+- Self-identification is a weak provenance signal; there were no logit comparisons, tokenizer forensics, or weight analysis tying Opus 4.8 to Qwen.
+
+**Why do I care:** If you build on top of these models, the proxy-routing angle should worry you more than the gossip. The lesson for any team wiring an LLM into production is that "model identity" is not something you can verify by asking the model, and a reseller in your supply chain can swap a frontier model for a cheaper one without you noticing until output quality drops. Go straight to the first-party provider, pin your model strings, and validate against the provider's own model list rather than trusting a relay. The distillation drama is mostly an industry politics story, but the underlying fragility, that models fail basic identity questions outside English and that those failures now carry reputational weight, is a real reminder that non-English behavior deserves its own test coverage in anything you ship to a global audience.
+
+**Link:** [Did Claude Opus 4.8 distill Alibaba's Qwen? Here's what the evidence says](https://blog.kilo.ai/p/did-claude-opus-48-distill-alibabas)
