@@ -8,7 +8,7 @@ image: 'https://img.motyl.dev/blog/motyl-dev-16.webp'
 
 # motyl.dev Weekly #16: Week 24 (Jun 8 – Jun 14, 2026)
 
-> A curated digest of what the community found worth reading this week.
+> A curated digest of what I found worth reading this week.
 
 This week the conversation kept circling back to a single tension: AI accelerates the typing, but it does nothing for the thinking. From agentic code review to the architecture behind AI data centers, from model evaluations to contract-style comments that keep agents honest, the standout pieces all argue that human judgment is becoming more valuable, not less. Here's what I found worth your time.
 
