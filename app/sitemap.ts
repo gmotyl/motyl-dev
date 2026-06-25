@@ -1,13 +1,14 @@
 import { MetadataRoute } from 'next';
 import { getAllContentMetadata } from '@/lib/articles';
 import { getContentUrl } from '@/lib/urls';
+import { ItemType } from '@/lib/types';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.BASE_URL || 'https://motyl.dev';
 
   const content = await getAllContentMetadata();
 
-  const contentEntries: MetadataRoute.Sitemap = content.map((item) => {
+  const contentEntries: MetadataRoute.Sitemap = content.filter((item) => item.itemType !== ItemType.News).map((item) => {
     let lastModified: Date;
     try {
       lastModified = new Date(item.publishedAt);
@@ -32,12 +33,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date(),
       changeFrequency: 'daily',
       priority: 1,
-    },
-    {
-      url: `${baseUrl}/news`,
-      lastModified: new Date(),
-      changeFrequency: 'daily',
-      priority: 0.9,
     },
     {
       url: `${baseUrl}/articles`,
