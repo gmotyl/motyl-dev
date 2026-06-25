@@ -25,13 +25,18 @@ export async function getFilteredContent(filterState: FilterState) {
     excludeHashtags,
   } = filterState
 
+  // Fetch session once; used for both news rejection and 'all'→'article' downgrade.
+  const session = await auth()
+  const isSuperAdmin = !!session?.user?.isSuperAdmin
+
   // News is SuperAdmin-only; reject any non-SuperAdmin request for news content.
-  if (contentType === 'news') {
-    const session = await auth()
-    if (!session?.user?.isSuperAdmin) {
-      throw new Error('Forbidden')
-    }
+  if (contentType === 'news' && !isSuperAdmin) {
+    throw new Error('Forbidden')
   }
+
+  // Non-SuperAdmins requesting 'all' would receive news mixed in; downgrade to
+  // articles-only so pagination counts remain accurate and news never leaks.
+  const effectiveContentType = !isSuperAdmin && contentType === 'all' ? 'article' : contentType
 
   const headersList = await headers()
   const visitedArticlesHeader = headersList.get('x-visited-articles')
@@ -49,7 +54,7 @@ export async function getFilteredContent(filterState: FilterState) {
     page,
     filters,
     visitedSlugs,
-    contentType,
+    contentType: effectiveContentType,
   })
 
   return pageData

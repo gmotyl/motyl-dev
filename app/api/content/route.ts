@@ -17,18 +17,23 @@ export async function GET(request: NextRequest) {
   const mode = searchParams.get('mode') as 'AND' | 'OR' | 'EXCLUDE' || 'AND'
   const includeContent = searchParams.get('includeContent') === 'true'
 
-  if (contentType === 'news') {
-    const session = await auth()
-    if (!session?.user?.isSuperAdmin) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
+  // Fetch session once; used for news rejection, 'all'→'article' downgrade, and
+  // unseen filtering. Avoids duplicate auth() calls.
+  const session = await auth()
+  const isSuperAdmin = !!session?.user?.isSuperAdmin
+
+  if (contentType === 'news' && !isSuperAdmin) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
+
+  // Non-SuperAdmins requesting 'all' would receive news mixed in; downgrade to
+  // articles-only so pagination counts remain accurate and news never leaks.
+  const effectiveContentType = !isSuperAdmin && contentType === 'all' ? 'article' : contentType
 
   let visitedSlugs = new Set<string>()
 
   if (showUnseen) {
     // Use DB for logged-in users so unseen filtering is consistent across devices
-    const session = await auth()
     if (session?.user?.id) {
       const dbSlugs = await getUserViewedArticles()
       visitedSlugs = new Set(dbSlugs)
@@ -59,7 +64,7 @@ export async function GET(request: NextRequest) {
       excludeHashtags,
     },
     visitedSlugs,
-    contentType,
+    contentType: effectiveContentType,
     includeContent,
   })
 
