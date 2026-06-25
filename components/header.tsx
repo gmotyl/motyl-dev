@@ -11,19 +11,13 @@ import { SignInButton } from '@/components/sign-in-button'
 import { DevSignInButton } from '@/components/dev-sign-in-button'
 import { InstallPrompt } from '@/components/install-prompt'
 import { cn } from '@/lib/utils'
+import { getVisibleNavLinks } from '@/lib/nav-links'
 
 const SUPPORT_URL = 'https://www.buymeacoffee.com/motyl.dev'
 
-const NAV_LINKS = [
-  { label: 'Home', href: '/' },
-  { label: 'Newsletter', href: '/newsletter' },
-  { label: 'Blog', href: '/articles' },
-  { label: 'News', href: '/news?unseen=true' },
-  { label: 'About', href: '/about' },
-] as const
-
 export default function Header() {
   const { data: session, status } = useSession()
+  const navLinks = getVisibleNavLinks(!!session?.user?.isSuperAdmin)
   const pathname = usePathname()
   const [mobileOpen, setMobileOpen] = React.useState(false)
 
@@ -56,7 +50,7 @@ export default function Header() {
           className="ml-8 hidden lg:flex items-center gap-1"
           aria-label="Main navigation"
         >
-          {NAV_LINKS.map(({ label, href }) => (
+          {navLinks.map(({ label, href }) => (
             <Link
               key={href}
               href={href}
@@ -137,7 +131,7 @@ export default function Header() {
             className="flex flex-col gap-1 px-4 py-3"
             aria-label="Mobile navigation"
           >
-            {NAV_LINKS.map(({ label, href }) => (
+            {navLinks.map(({ label, href }) => (
               <Link
                 key={href}
                 href={href}

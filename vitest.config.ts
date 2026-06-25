@@ -4,6 +4,13 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [tsconfigPaths(), react()],
+  resolve: {
+    alias: {
+      // Allow Node built-ins (fs, path) to resolve in jsdom test environment
+      fs: 'node:fs',
+      path: 'node:path',
+    },
+  },
   test: {
     environment: 'jsdom',
     setupFiles: './vitest.setup.ts',

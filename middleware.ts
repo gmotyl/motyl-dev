@@ -13,9 +13,16 @@ export function middleware(req: NextRequest) {
   const sessionToken = req.cookies.get('authjs.session-token') ||
                        req.cookies.get('__Secure-authjs.session-token')
 
-  // Protect /bookmarks page - redirect to home if no session
-  if (pathname.startsWith("/bookmarks") && !sessionToken) {
-    return NextResponse.redirect(new URL("/", req.url))
+  // Logged-out gating: bookmarks + SuperAdmin-only news routes
+  const needsSession =
+    pathname.startsWith('/bookmarks') ||
+    pathname.startsWith('/news') ||
+    pathname.startsWith('/read-all-news')
+  if (needsSession && !sessionToken) {
+    const target = pathname.startsWith('/bookmarks')
+      ? new URL('/', req.url)
+      : new URL(`/api/auth/signin?callbackUrl=${encodeURIComponent(pathname)}`, req.url)
+    return NextResponse.redirect(target)
   }
 
   // Continue the request with the new headers

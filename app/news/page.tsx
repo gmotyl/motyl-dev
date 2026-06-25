@@ -3,6 +3,7 @@ import { ContentListing } from '@/components/content-listing'
 import { getAllHashtags } from '@/lib/articles'
 import Header from '@/components/header'
 import { readBatch, readManifest } from '@/lib/content-batches'
+import { requireSuperAdmin } from '@/lib/require-super-admin'
 
 export const revalidate = 300 // ISR: 5 min
 
@@ -16,6 +17,8 @@ export const metadata = {
 }
 
 export default async function NewsPage() {
+  await requireSuperAdmin('/news')
+
   const [initialBatch, manifest, allHashtags] = await Promise.all([
     readBatch('news', 0),
     readManifest(),
