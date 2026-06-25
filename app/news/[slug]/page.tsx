@@ -69,30 +69,28 @@ export async function generateMetadata({ params: paramsPromise }: { params: Prom
 }
 
 export default async function NewsItemPage({ params: paramsPromise }: { params: Promise<{ slug: string }> }) {
-  try {
-    const params = await paramsPromise;
-    const { slug } = params
-    await requireSuperAdmin(`/news/${slug}`)
-    const article = await getContentItemBySlug(slug)
+  // No try/catch here: requireSuperAdmin (redirect) and notFound throw Next.js
+  // control-flow errors (NEXT_REDIRECT / NEXT_NOT_FOUND) that must propagate
+  // untouched — a generic catch would log them as false errors. Genuine errors
+  // surface through the route's error boundary.
+  const { slug } = await paramsPromise
+  await requireSuperAdmin(`/news/${slug}`)
+  const article = await getContentItemBySlug(slug)
 
-    if (!article) {
-      notFound()
-    }
-
-    // Get all article metadata for navigation
-    const allContent = await getAllContentMetadata()
-    const allNews = allContent.filter(item => item.itemType === ItemType.News);
-
-    // Find the current article's index
-    const currentIndex = allNews.findIndex((a) => a.slug === slug)
-
-    // Determine previous and next articles
-    const prevArticle = currentIndex > 0 ? allNews[currentIndex - 1] : null
-    const nextArticle = currentIndex < allNews.length - 1 ? allNews[currentIndex + 1] : null
-
-    return <ContentPage article={article} prevArticle={prevArticle} nextArticle={nextArticle} />
-  } catch (error) {
-    console.error('Error in NewsItemPage:', error)
-    throw error
+  if (!article) {
+    notFound()
   }
+
+  // Get all article metadata for navigation
+  const allContent = await getAllContentMetadata()
+  const allNews = allContent.filter(item => item.itemType === ItemType.News);
+
+  // Find the current article's index
+  const currentIndex = allNews.findIndex((a) => a.slug === slug)
+
+  // Determine previous and next articles
+  const prevArticle = currentIndex > 0 ? allNews[currentIndex - 1] : null
+  const nextArticle = currentIndex < allNews.length - 1 ? allNews[currentIndex + 1] : null
+
+  return <ContentPage article={article} prevArticle={prevArticle} nextArticle={nextArticle} />
 }
