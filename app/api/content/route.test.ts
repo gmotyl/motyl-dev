@@ -84,3 +84,47 @@ describe('GET /api/content — news is SuperAdmin-only', () => {
     expect(res.status).toBe(200)
   })
 })
+
+describe('GET /api/content — all→article downgrade for non-SuperAdmins', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('non-admin + contentType=all → getContentPageData called with contentType:article', async () => {
+    vi.mocked(auth).mockResolvedValue({ user: { isSuperAdmin: false } } as never)
+    const req = new NextRequest('http://localhost/api/content?contentType=all')
+    const res = await GET(req)
+    expect(res.status).toBe(200)
+    expect(getContentPageData).toHaveBeenCalledWith(
+      expect.objectContaining({ contentType: 'article' })
+    )
+  })
+
+  it('unauthenticated + contentType=all → getContentPageData called with contentType:article', async () => {
+    vi.mocked(auth).mockResolvedValue(null as never)
+    const req = new NextRequest('http://localhost/api/content?contentType=all')
+    const res = await GET(req)
+    expect(res.status).toBe(200)
+    expect(getContentPageData).toHaveBeenCalledWith(
+      expect.objectContaining({ contentType: 'article' })
+    )
+  })
+
+  it('SuperAdmin + contentType=all → getContentPageData called with contentType:all', async () => {
+    vi.mocked(auth).mockResolvedValue({ user: { isSuperAdmin: true } } as never)
+    const req = new NextRequest('http://localhost/api/content?contentType=all')
+    const res = await GET(req)
+    expect(res.status).toBe(200)
+    expect(getContentPageData).toHaveBeenCalledWith(
+      expect.objectContaining({ contentType: 'all' })
+    )
+  })
+
+  it('default (no contentType param) non-admin → getContentPageData called with contentType:article', async () => {
+    vi.mocked(auth).mockResolvedValue(null as never)
+    const req = new NextRequest('http://localhost/api/content')
+    const res = await GET(req)
+    expect(res.status).toBe(200)
+    expect(getContentPageData).toHaveBeenCalledWith(
+      expect.objectContaining({ contentType: 'article' })
+    )
+  })
+})
