@@ -4,17 +4,7 @@ import ContentPage from '@/components/content-page'
 import { ItemType } from '@/lib/types'
 import { getContentUrl } from '@/lib/urls'
 import { getOgImage } from '@/lib/og'
-
-// Force static generation at build time
-export const dynamic = 'force-static'
-export const dynamicParams = false // Return 404 for unknown slugs (don't generate on-demand)
-
-export async function generateStaticParams() {
-  const articles = (await getAllContentMetadata()).filter(p => p.itemType === ItemType.News);
-  return articles.map((article) => ({
-    slug: article.slug,
-  }))
-}
+import { requireSuperAdmin } from '@/lib/require-super-admin'
 
 export async function generateMetadata({ params: paramsPromise }: { params: Promise<{ slug: string }> }) {
   try {
@@ -82,6 +72,7 @@ export default async function NewsItemPage({ params: paramsPromise }: { params: 
   try {
     const params = await paramsPromise;
     const { slug } = params
+    await requireSuperAdmin(`/news/${slug}`)
     const article = await getContentItemBySlug(slug)
 
     if (!article) {
