@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import { auth } from '@/lib/auth'
 import { getUserViewedArticles } from '@/lib/article-views'
 import ReadAllNewsPageClient from './page.client'
+import { requireSuperAdmin } from '@/lib/require-super-admin'
 
 export const metadata = {
   title: 'Read All News - Motyl.dev',
@@ -10,6 +11,8 @@ export const metadata = {
 }
 
 export default async function ReadAllNewsPage() {
+  await requireSuperAdmin('/read-all-news')
+
   const session = await auth()
   let visitedSlugs: Set<string>
 
