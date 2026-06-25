@@ -2,6 +2,7 @@
 
 import { getContentPageData, type PageFilters } from '@/lib/articles'
 import { headers } from 'next/headers'
+import { auth } from '@/lib/auth'
 
 interface FilterState {
   page?: number
@@ -23,6 +24,14 @@ export async function getFilteredContent(filterState: FilterState) {
     requireHashtags,
     excludeHashtags,
   } = filterState
+
+  // News is SuperAdmin-only; reject any non-SuperAdmin request for news content.
+  if (contentType === 'news') {
+    const session = await auth()
+    if (!session?.user?.isSuperAdmin) {
+      throw new Error('Forbidden')
+    }
+  }
 
   const headersList = await headers()
   const visitedArticlesHeader = headersList.get('x-visited-articles')
