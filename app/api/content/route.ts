@@ -17,6 +17,13 @@ export async function GET(request: NextRequest) {
   const mode = searchParams.get('mode') as 'AND' | 'OR' | 'EXCLUDE' || 'AND'
   const includeContent = searchParams.get('includeContent') === 'true'
 
+  if (contentType === 'news') {
+    const session = await auth()
+    if (!session?.user?.isSuperAdmin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+  }
+
   let visitedSlugs = new Set<string>()
 
   if (showUnseen) {

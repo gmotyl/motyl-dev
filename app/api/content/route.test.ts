@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
+import { auth } from '@/lib/auth'
 
 vi.mock('@/lib/articles', () => ({
   getContentPageData: vi.fn(async () => ({
@@ -47,5 +48,39 @@ describe('GET /api/content — limit query param', () => {
     expect(getContentPageData).toHaveBeenCalledWith(
       expect.objectContaining({ limit: 20 })
     )
+  })
+})
+
+describe('GET /api/content — news is SuperAdmin-only', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('returns 403 for news when not authenticated', async () => {
+    vi.mocked(auth).mockResolvedValue(null as never)
+    const req = new NextRequest('http://localhost/api/content?contentType=news')
+    const res = await GET(req)
+    expect(res.status).toBe(403)
+    expect(getContentPageData).not.toHaveBeenCalled()
+  })
+
+  it('returns 403 for news when logged-in but not SuperAdmin', async () => {
+    vi.mocked(auth).mockResolvedValue({ user: { isSuperAdmin: false } } as never)
+    const req = new NextRequest('http://localhost/api/content?contentType=news')
+    const res = await GET(req)
+    expect(res.status).toBe(403)
+  })
+
+  it('returns 200 for news when SuperAdmin', async () => {
+    vi.mocked(auth).mockResolvedValue({ user: { isSuperAdmin: true } } as never)
+    const req = new NextRequest('http://localhost/api/content?contentType=news')
+    const res = await GET(req)
+    expect(res.status).toBe(200)
+    expect(getContentPageData).toHaveBeenCalled()
+  })
+
+  it('stays public for articles when not authenticated', async () => {
+    vi.mocked(auth).mockResolvedValue(null as never)
+    const req = new NextRequest('http://localhost/api/content?contentType=article')
+    const res = await GET(req)
+    expect(res.status).toBe(200)
   })
 })
