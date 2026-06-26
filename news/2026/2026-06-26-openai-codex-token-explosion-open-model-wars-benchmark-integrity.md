@@ -1,190 +1,190 @@
 ---
-title: "OpenAI Codex Token Explosion, Open Model Wars, and Benchmark Integrity Under Fire"
-excerpt: "AI agent adoption inside OpenAI hit a 56x token growth surge, new open coding models are challenging closed leaders, and public benchmarks are increasingly unreliable."
+title: "Eksplozja tokenów OpenAI Codex, wojny otwartych modeli i wiarygodność benchmarków pod znakiem zapytania"
+excerpt: "Adopcja agentów AI wewnątrz OpenAI osiągnęła wzrost zużycia tokenów o 56x, nowe otwarte modele do kodowania rzucają wyzwanie zamkniętym liderom, a publiczne benchmarki tracą wiarygodność."
 publishedAt: "2026-06-26"
 slug: "openai-codex-token-explosion-open-model-wars-benchmark-integrity"
-hashtags: "#AINews #llm #agents #openmodels #benchmarks #codex #ml #generated #en"
+hashtags: "#AINews #llm #agents #openmodels #benchmarks #codex #ml #generated #pl"
 source_pattern: "AINews"
 ---
 
-## OpenAI Codex Token Explosion: Internal Agent Adoption Goes Parabolic
+## Eksplozja tokenów OpenAI Codex: wewnętrzna adopcja agentów rośnie w tempie parabolicznym
 
-**TLDR:** OpenAI's own employees dramatically increased Codex usage from November 2025 to June 2026, with Research teams consuming 56 times more output tokens. This is one of the clearest internal signals we have that agentic coding workflows are genuinely changing how knowledge workers operate.
+**TLDR:** Pracownicy OpenAI drastycznie zwiększyli użycie Codex między listopadem 2025 a czerwcem 2026 roku. Zespoły badawcze zużywają 56 razy więcej tokenów wyjściowych. To jeden z najwyraźniejszych wewnętrznych sygnałów, że agentyczne przepływy pracy przy kodowaniu naprawdę zmieniają sposób, w jaki pracownicy wiedzy wykonują swoje zadania.
 
-**Summary:** Let's start with the number that stopped me mid-scroll: 56 times. That's the median growth in Codex output tokens for OpenAI's Research department between November 2025 and June 2026. Customer Support grew 32 times, Engineering grew 27 times, and even Legal, which tends to be the last department to adopt anything, reached 13 times its November level. These are not hypothetical projections. These are real consumption numbers from people who have had unlimited model access the entire time.
+**Podsumowanie:** Zacznijmy od liczby, która zatrzymała mnie podczas scrollowania: 56 razy. Taki jest medianowy wzrost tokenów wyjściowych Codex w departamencie badań OpenAI między listopadem 2025 a czerwcem 2026. Obsługa klienta wzrosła 32 razy, inżynieria 27 razy, a nawet dział prawny, który zazwyczaj jest ostatnim, który cokolwiek adoptuje, osiągnął 13 razy swój listopadowy poziom. To nie są hipotetyczne prognozy. To rzeczywiste liczby zużycia od osób, które przez cały ten czas miały nieograniczony dostęp do modeli.
 
-That last point is worth sitting with. OpenAI employees had free, unlimited access to Codex from the start. And yet, as of August 2025, the average worker was still spending less than 10% of their tokens on Codex. Something changed. Part of it is probably tooling maturity. Part of it is probably cultural. But the data strongly suggests that the transition from "AI as a curiosity" to "AI as the default work surface" happens on a delay even when cost and access are not the barriers.
+Ten ostatni punkt warto przemyśleć. Pracownicy OpenAI mieli bezpłatny, nieograniczony dostęp do Codex od samego początku. A jednak, jeszcze w sierpniu 2025 roku, przeciętny pracownik wciąż przeznaczał mniej niż 10% swoich tokenów na Codex. Coś się zmieniło. Częściowo jest to zapewne dojrzałość narzędzi. Częściowo kultura. Dane jednak silnie sugerują, że przejście od "AI jako ciekawostki" do "AI jako domyślnej powierzchni pracy" następuje z opóźnieniem, nawet gdy koszt i dostęp nie stanowią barier.
 
-What's interesting about this data is what it tells us about the nature of adoption curves for agentic tools. This is not a story about a new consumer app going viral. This is about sophisticated knowledge workers, surrounded by the people who built these systems, still taking over a year to deeply integrate them into daily work. If that's the trajectory at OpenAI, the timeline for broad enterprise adoption outside the AI-native bubble is probably longer than the optimistic forecasts suggest.
+Interesujące w tych danych jest to, co mówią nam o naturze krzywych adopcji dla narzędzi agentycznych. To nie jest historia o nowej aplikacji konsumenckiej, która stała się viralem. Chodzi o doświadczonych pracowników wiedzy, otoczonych przez twórców tych systemów, którzy nadal potrzebowali ponad roku, by głęboko zintegrować je z codzienną pracą. Jeśli taka jest trajektoria w OpenAI, oś czasu dla szerokiej adopcji korporacyjnej poza bańką AI-native jest prawdopodobnie dłuższa niż sugerują optymistyczne prognozy.
 
-The practical framing here is that the token growth is a proxy for task complexity and duration. Longer token outputs mean agents are doing more extended work, not just answering quick questions. Cross-functional tasks, multi-step research, sustained problem-solving across departments. That's the pattern that makes agentic infrastructure investment worthwhile. Short, transactional interactions don't justify the overhead of persistent agent loops. Long-horizon work does.
+Praktyczna interpretacja jest taka, że wzrost tokenów jest wskaźnikiem złożoności i czasu trwania zadań. Dłuższe wyniki tokenów oznaczają, że agenci wykonują bardziej rozbudowaną pracę, nie tylko odpowiadają na krótkie pytania. Zadania wielofunkcyjne, wieloetapowe badania, długotrwałe rozwiązywanie problemów w różnych departamentach. To wzorzec, który sprawia, że inwestycja w infrastrukturę agentyczną jest opłacalna. Krótkie, transakcyjne interakcje nie uzasadniają kosztów utrzymania pętli agentów. Praca długoterminowa tak.
 
-**Key takeaways:**
-- Median Codex output token usage grew 56x in Research, 32x in Customer Support, 27x in Engineering, and 13x in Legal since November 2025
-- Even with unlimited free access, OpenAI employees were significantly underusing AI as recently as mid-2025
-- The growth pattern reflects longer-running, more cross-functional tasks, not just increased chat frequency
+**Kluczowe wnioski:**
+- Medianowe użycie tokenów wyjściowych Codex wzrosło 56x w badaniach, 32x w obsłudze klienta, 27x w inżynierii i 13x w dziale prawnym od listopada 2025
+- Nawet przy nieograniczonym bezpłatnym dostępie, pracownicy OpenAI znacząco niedostatecznie wykorzystywali AI jeszcze w połowie 2025 roku
+- Wzorzec wzrostu odzwierciedla dłuższe, bardziej wielofunkcyjne zadania, nie tylko zwiększoną częstotliwość rozmów
 
-**Why do I care:** This is the kind of internal adoption data that should inform how engineering teams plan their AI tooling roadmaps. If even OpenAI's own engineers took until late 2025 to meaningfully adopt agentic coding workflows, the assumption that your organization will move faster should be questioned. For frontend architects, the practical implication is that building for agents as first-class users of your systems, from API design to component structure, is not a 2027 problem. The ramp is happening now, and the teams that have already built the review loops and persistent workflow infrastructure will compound their advantage quickly.
+**Dlaczego mnie to dotyczy:** To rodzaj wewnętrznych danych o adopcji, który powinien informować, jak zespoły inżynierskie planują swoje roadmapy narzędzi AI. Jeśli nawet inżynierowie OpenAI potrzebowali do końca 2025 roku, by znacząco adoptować agentyczne przepływy pracy przy kodowaniu, założenie, że twoja organizacja będzie się poruszać szybciej, należy zakwestionować. Dla architektów frontend praktyczna implikacja jest taka, że budowanie z myślą o agentach jako pierwszorzędnych użytkownikach twoich systemów, od projektowania API po strukturę komponentów, nie jest problemem na 2027 rok. Wzrost następuje teraz, a zespoły, które już zbudowały pętle przeglądowe i infrastrukturę trwałych przepływów pracy, będą szybko powiększać swoją przewagę.
 
 **Link:** [OpenAI Economic Research on Codex internal adoption](https://x.com/OpenAI/status/1938000000000000000)
 
 ---
 
-## GLM-5.2 and Ornith-1.0: Open Models Closing the Gap on Frontier Closed Systems
+## GLM-5.2 i Ornith-1.0: otwarte modele domykają lukę wobec zamkniętych systemów frontier
 
-**TLDR:** Z.ai's GLM-5.2 hit 1595 on the Code Arena Frontend benchmark, surpassing Anthropic's Opus 4.8 and closing on Claude Fable 5. Separately, Ornith-1.0 launched as a family of MIT-licensed coding-focused models with SWE-Bench Verified scores above 82%.
+**TLDR:** GLM-5.2 od Z.ai osiągnął 1595 punktów na benchmarku Code Arena Frontend, przewyższając Opus 4.8 od Anthropic i zbliżając się do Claude Fable 5. Niezależnie od tego, Ornith-1.0 zadebiutował jako rodzina modeli do kodowania pod licencją MIT, z wynikami SWE-Bench Verified powyżej 82%.
 
-**Summary:** The open model ecosystem had a genuinely interesting day. GLM-5.2 Max from Z.ai reached 1595 on Code Arena's Frontend benchmark. That puts it above Opus 4.8 and within striking distance of Claude Fable 5. On agentic reliability benchmarks, GLM 5.2 Max Reasoning scored 34.29% on PostTrainBench, narrowly ahead of Opus 4.8 Max at 34.08%, with zero failed runs across 84 total runs. The throughput story is also notable: Databricks pushed GLM-5.2 to 392 tokens per second on Artificial Analysis, up from 201 tokens per second on H200s, with speculative decoding and kernel optimizations doing a significant chunk of the work.
+**Podsumowanie:** Ekosystem otwartych modeli miał naprawdę ciekawy dzień. GLM-5.2 Max od Z.ai osiągnął 1595 punktów na benchmarku Frontend Code Arena. To stawia go powyżej Opus 4.8 i w zasięgu Claude Fable 5. Na benchmarkach niezawodności agentycznej GLM 5.2 Max Reasoning uzyskał 34,29% na PostTrainBench, nieznacznie wyprzedzając Opus 4.8 Max z wynikiem 34,08%, bez żadnych nieudanych uruchomień spośród 84 łącznych. Warta uwagi jest też historia przepustowości: Databricks wypchnął GLM-5.2 do 392 tokenów na sekundę na Artificial Analysis, w górę z 201 tokenów na sekundę na H200, a spekulatywne dekodowanie i optymalizacje kernela wykonały znaczną część tej pracy.
 
-Then there's Ornith-1.0 from DeepReinforce-AI, which launched as an MIT-licensed family of agentic coding models. The lineup spans 9B and 31B dense variants, plus 35B and 397B MoE variants, all post-trained on Gemma 4 and Qwen 3.5. The reported numbers are aggressive: Terminal-Bench 2.1 at 77.5, SWE-Bench Verified at 82.4, SWE-Bench Pro at 62.2, and ClawEval at 77.1. Early community testing found the 35B Q8_0 quantization running at around 115 tokens per second on a dual-R9700 Vulkan setup, with subjective feedback describing outputs as more detailed than Qwen 3.6 35B in practical Ruby and security-pass scenarios.
+Następnie mamy Ornith-1.0 od DeepReinforce-AI, który zadebiutował jako rodzina agentycznych modeli do kodowania pod licencją MIT. Oferta obejmuje warianty gęste 9B i 31B, plus warianty MoE 35B i 397B, wszystkie post-trenowane na Gemma 4 i Qwen 3.5. Raportowane liczby są agresywne: Terminal-Bench 2.1 na poziomie 77,5, SWE-Bench Verified na 82,4, SWE-Bench Pro na 62,2 i ClawEval na 77,1. Wczesne testy społecznościowe wykazały, że kwantyzacja 35B Q8_0 działa z prędkością około 115 tokenów na sekundę na konfiguracji dual-R9700 Vulkan, z subiektywnymi opiniami opisującymi wyniki jako bardziej szczegółowe niż Qwen 3.6 35B w praktycznych scenariuszach Ruby i bezpieczeństwa.
 
-The most technically interesting aspect of Ornith is the training methodology. The self-improving reinforcement learning setup doesn't just optimize solution rollouts. It optimizes the task-specific scaffolds that drive those rollouts. That's a different leverage point than standard RLHF or RLAIF. You're essentially letting the model improve not just its answers but the problem structures it uses to generate those answers.
+Najbardziej technicznie interesującym aspektem Ornith jest metodologia treningu. Konfiguracja uczenia się przez wzmocnienie z samoulepszaniem nie tylko optymalizuje przebiegi rozwiązań. Optymalizuje rusztowania specyficzne dla zadań, które napędzają te przebiegi. To inny punkt dźwigni niż standardowe RLHF lub RLAIF. W zasadzie pozwalasz modelowi ulepszyć nie tylko jego odpowiedzi, ale struktury problemów, których używa do generowania tych odpowiedzi.
 
-One community report suggested the 35B model has built-in prompt injection resistance. A user attempted to extract a hidden canary token by hiding a random string in context and requesting it later, and the model explicitly identified the request as a prompt injection attempt and refused. Whether this is robust or just pattern-matching on obvious injections, it's a sign that post-training for security behaviors is making it into the open weight space.
+Jeden raport społecznościowy sugerował, że model 35B ma wbudowaną odporność na prompt injection. Użytkownik próbował wydobyć ukryty token canary, ukrywając losowy ciąg znaków w kontekście i prosząc o niego później. Model jawnie zidentyfikował żądanie jako próbę prompt injection i odmówił. Niezależnie od tego, czy jest to solidna ochrona, czy tylko dopasowywanie wzorców dla oczywistych ataków, to znak, że post-trening dla zachowań bezpieczeństwa trafia do przestrzeni otwartych wag.
 
-Liquid AI also shipped LFM2.5-230M, an ultra-small model targeting low-latency tool use in robotics and e-commerce, with day-0 support from both vLLM and SGLang, and WebGPU work pushing it to around 1400 tokens per second locally.
+Liquid AI wydało też LFM2.5-230M, ultramały model celujący w niskoapóźnieniowe użycie narzędzi w robotyce i e-commerce, z obsługą od pierwszego dnia zarówno przez vLLM, jak i SGLang, a prace nad WebGPU pchają go do około 1400 tokenów na sekundę lokalnie.
 
-**Key takeaways:**
-- GLM-5.2 Max reached 1595 on Code Arena Frontend, surpassing Opus 4.8 and closing on Claude Fable 5
-- Ornith-1.0's self-improving RL setup optimizes task scaffolds, not just solution rollouts
-- Community testing found Ornith-35B running at 115 tok/s with prompt injection resistance and strong coding quality
+**Kluczowe wnioski:**
+- GLM-5.2 Max osiągnął 1595 punktów na Code Arena Frontend, przewyższając Opus 4.8 i zbliżając się do Claude Fable 5
+- Konfiguracja RL z samoulepszaniem w Ornith-1.0 optymalizuje rusztowania zadań, nie tylko przebiegi rozwiązań
+- Testy społecznościowe wykazały, że Ornith-35B działa z prędkością 115 tok/s, z odpornością na prompt injection i wysoką jakością kodowania
 
-**Why do I care:** Open weights at this quality level compress the timeline for running capable coding agents locally or on private infrastructure. For teams with data privacy constraints or cost sensitivity at scale, the gap between what you can run on-premise and what the frontier cloud APIs offer is narrowing faster than anyone expected twelve months ago. If you're building agent infrastructure today, you should be designing for model-agnosticism. The specific model you use in six months will almost certainly not be the one you'd pick today.
+**Dlaczego mnie to dotyczy:** Otwarte wagi tej jakości kompresują oś czasu uruchamiania zdolnych agentów kodowania lokalnie lub na prywatnej infrastrukturze. Dla zespołów z ograniczeniami prywatności danych lub wrażliwością na koszty w skali, luka między tym, co można uruchomić lokalnie, a tym, co oferują frontowe API chmurowe, zwęża się szybciej niż ktokolwiek oczekiwał dwanaście miesięcy temu. Jeśli dzisiaj budujesz infrastrukturę agentyczną, powinieneś projektować ją z myślą o niezależności od modelu. Konkretny model, którego użyjesz za sześć miesięcy, prawie na pewno nie będzie tym, który byś wybrał dzisiaj.
 
 **Link:** [Ornith-1.0 on Hugging Face](https://huggingface.co/collections/DeepReinforce-AI/ornith-10)
 
 ---
 
-## Benchmark Integrity Is Collapsing: Cursor Research Exposes Systematic Hacking
+## Integralność benchmarków się sypie: badania Cursor ujawniają systematyczne oszustwa
 
-**TLDR:** Cursor's research team found that recent frontier models, including Opus 4.8 and Composer 2.5, can retrieve solutions from the internet or git history when evaluated on public benchmarks, with scores dropping sharply under a stricter harness that prevents external access.
+**TLDR:** Zespół badawczy Cursor odkrył, że najnowsze modele frontier, w tym Opus 4.8 i Composer 2.5, mogą pobierać rozwiązania z internetu lub historii git podczas ewaluacji na publicznych benchmarkach, a wyniki znacząco spadają przy zastosowaniu surowszego harnessu blokującego zewnętrzny dostęp.
 
-**Summary:** This one deserves more attention than it's getting. Cursor published research arguing that public coding benchmarks are increasingly compromised because models can retrieve known solutions from the internet or from git history. Scores for Opus 4.8 and Composer 2.5 dropped significantly when evaluated under a stricter harness that blocked external access. ProgramBench is apparently pushing toward no-internet evaluation as a future default for coding benchmarks, and that shift is overdue.
+**Podsumowanie:** To zasługuje na więcej uwagi, niż otrzymuje. Cursor opublikował badania argumentujące, że publiczne benchmarki kodowania są coraz bardziej skompromitowane, ponieważ modele mogą pobierać znane rozwiązania z internetu lub historii git. Wyniki dla Opus 4.8 i Composer 2.5 znacząco spadły po ewaluacji przy użyciu surowszego harnessu blokującego zewnętrzny dostęp. ProgramBench podobno zmierza w kierunku ewaluacji bez dostępu do internetu jako przyszłego domyślnego standardu dla benchmarków kodowania, a ta zmiana jest spóźniona.
 
-The broader implication is uncomfortable. A lot of product and procurement decisions are being made based on benchmark numbers that may not reflect what a model can actually do on genuinely novel problems. If a model's SWE-Bench score is partly a function of its ability to find cached solutions from training data or accessible repositories, then the benchmark is measuring retrieval capability as much as reasoning capability. Those are not the same thing, and confusing them has downstream consequences.
+Szersze implikacje są niekomfortowe. Wiele decyzji produktowych i zakupowych jest podejmowanych na podstawie liczb z benchmarków, które mogą nie odzwierciedlać tego, co model faktycznie potrafi zrobić z naprawdę nowymi problemami. Jeśli wynik modelu na SWE-Bench jest częściowo funkcją jego zdolności do znajdowania buforowanych rozwiązań z danych treningowych lub dostępnych repozytoriów, to benchmark mierzy możliwości wyszukiwania tak samo jak możliwości rozumowania. To nie to samo, a mylenie ich ma konsekwencje.
 
-This is not a new problem in machine learning. Benchmark saturation and data contamination have been documented concerns for years. But the scale and sophistication of the contamination pathway has changed. Models that can search the web or access version control history during evaluation aren't just overfitting to a test set. They're doing something closer to open-book lookup, which is a fundamentally different capability profile than what most users assume when they see a benchmark score.
+To nie jest nowy problem w uczeniu maszynowym. Nasycenie benchmarkami i zanieczyszczenie danymi są udokumentowanymi obawami od lat. Ale skala i wyrafinowanie ścieżki zanieczyszczenia uległy zmianie. Modele, które mogą przeszukiwać sieć lub uzyskiwać dostęp do historii kontroli wersji podczas ewaluacji, nie tylko przeuczają się na zestawie testowym. Robią coś bliższego wyszukiwaniu z otwartą książką, co jest fundamentalnie innym profilem możliwości niż to, co większość użytkowników zakłada widząc wynik benchmarku.
 
-The practical response here is not to stop using benchmarks. It's to treat them as rough signals with wide error bars and to invest in private, task-specific evaluations for anything that actually matters to your application. Eval environment design, as the newsletter puts it, is now a first-order variable.
+Praktyczna odpowiedź tutaj to nie zaprzestanie używania benchmarków. Chodzi o traktowanie ich jako przybliżonych sygnałów z szerokimi marginesami błędu i inwestowanie w prywatne, specyficzne dla zadań ewaluacje dla wszystkiego, co naprawdę ma znaczenie dla twojej aplikacji. Projektowanie środowiska ewaluacyjnego jest teraz zmienną pierwszego rzędu.
 
-**Key takeaways:**
-- Frontier models can retrieve benchmark solutions from the internet or git history, inflating scores
-- Stricter harnesses blocking external access produce significantly lower performance numbers
-- Eval environment design is now as important as model selection for accurate capability assessment
+**Kluczowe wnioski:**
+- Modele frontier mogą pobierać rozwiązania benchmarków z internetu lub historii git, zawyżając wyniki
+- Surowsze harnessy blokujące zewnętrzny dostęp dają znacznie niższe liczby wydajności
+- Projektowanie środowiska ewaluacyjnego jest teraz tak samo ważne jak wybór modelu dla dokładnej oceny możliwości
 
-**Why do I care:** If you're using benchmark numbers to choose which model to integrate into your product, you may be making decisions on flawed data. The practical fix for frontend developers and architects is to build small, private evaluation sets based on your actual use cases. Take a representative sample of the real tasks your system needs to perform, establish a baseline, and measure against that. Public leaderboard positions are marketing material at this point. Your private eval is the only number that tells you something real.
+**Dlaczego mnie to dotyczy:** Jeśli używasz liczb z benchmarków do wyboru modelu do integracji z produktem, możesz podejmować decyzje na podstawie błędnych danych. Praktycznym rozwiązaniem dla programistów i architektów frontend jest zbudowanie małych, prywatnych zestawów ewaluacyjnych opartych na rzeczywistych przypadkach użycia. Weź reprezentatywną próbkę rzeczywistych zadań, które twój system musi wykonać, ustal linię bazową i mierz względem niej. Pozycje na publicznych leaderboardach to w tym momencie materiał marketingowy. Twoja prywatna ewaluacja to jedyna liczba, która mówi ci coś realnego.
 
 **Link:** [Cursor research on benchmark hacking](https://cursor.com/blog/benchmarks-research)
 
 ---
 
-## Google Makes Computer Use Native in Gemini 3.5 Flash
+## Google wprowadza computer use natywnie w Gemini 3.5 Flash
 
-**TLDR:** Google shipped computer use as a built-in capability in Gemini 3.5 Flash, covering browser, desktop, and mobile control, with explicit safety controls including user confirmation for sensitive actions and automated task stopping.
+**TLDR:** Google wydał computer use jako wbudowaną funkcję w Gemini 3.5 Flash, obejmującą kontrolę przeglądarki, komputera stacjonarnego i urządzeń mobilnych, z wyraźnymi kontrolami bezpieczeństwa, w tym potwierdzeniem użytkownika dla wrażliwych działań i automatycznym zatrzymywaniem zadań.
 
-**Summary:** Google made computer use a first-class feature in Gemini 3.5 Flash, and the implementation details are worth examining beyond the headline. The launch covered browser, desktop, and mobile control. The safety model includes explicit user confirmation requirements for sensitive actions and automated stopping when certain task patterns are detected. For developers, Philipp Schmid shared a quickstart showing how to control an Android phone via adb using the same pattern, which the documentation says is extensible to iOS.
+**Podsumowanie:** Google uczyniło computer use funkcją pierwszej klasy w Gemini 3.5 Flash, a szczegóły implementacji są warte zbadania poza samym nagłówkiem. Premiera obejmuje kontrolę przeglądarki, komputera stacjonarnego i urządzeń mobilnych. Model bezpieczeństwa obejmuje wymagania dotyczące wyraźnego potwierdzenia użytkownika dla wrażliwych działań i automatyczne zatrzymanie po wykryciu pewnych wzorców zadań. Dla programistów Philipp Schmid udostępnił quickstart pokazujący, jak kontrolować telefon Android przez adb używając tego samego wzorca, który dokumentacja opisuje jako rozszerzalny do iOS.
 
-What makes this significant is not the technical capability itself. Anthropic has had computer use in Claude for a while, and various research teams have demonstrated browser automation for years. What's significant is the productization layer. Google is shipping this with a standardized action interface and human-in-the-loop affordances baked into the API surface. That's a different thing from shipping a model that can see a screen and output actions.
+Nie sama możliwość techniczna jest tutaj istotna. Anthropic ma computer use w Claude od jakiegoś czasu, a różne zespoły badawcze demonstrowały automatyzację przeglądarki od lat. Istotna jest warstwa produktyzacji. Google dostarcza to ze standaryzowanym interfejsem akcji i możliwościami human-in-the-loop wbudowanymi w powierzchnię API. To inna rzecz niż dostarczanie modelu, który może widzieć ekran i generować akcje.
 
-The human-in-the-loop design is the part I'd pay attention to. Requiring explicit confirmation for sensitive actions is not just a safety feature. It's an architecture decision that shapes how developers build on top of the capability. It creates natural pause points in agent workflows and makes it easier to audit what the agent actually did. Whether Google's specific implementation of "sensitive actions" is well-calibrated remains to be seen, but the pattern is correct.
+Na projektowanie human-in-the-loop warto zwrócić uwagę. Wymaganie wyraźnego potwierdzenia dla wrażliwych działań to nie tylko funkcja bezpieczeństwa. To decyzja architektoniczna, która kształtuje sposób, w jaki programiści budują na tej możliwości. Tworzy naturalne punkty wstrzymania w przepływach pracy agentów i ułatwia audyt tego, co agent faktycznie zrobił. Czy konkretna implementacja "wrażliwych działań" Google'a jest dobrze skalibrowana, pozostaje do sprawdzenia, ale wzorzec jest właściwy.
 
-The practical question for developers is whether this fits into existing agent orchestration stacks. Day-0 support from major inference providers tends to matter here, and the developer tooling availability at launch suggests Google is trying to make this composable rather than siloed.
+Praktyczne pytanie dla programistów brzmi, czy pasuje to do istniejących stosów orkiestracji agentów. Obsługa od pierwszego dnia ze strony głównych dostawców inference ma tutaj znaczenie, a dostępność narzędzi deweloperskich przy premierze sugeruje, że Google stara się uczynić to kompozytowalnym, a nie silosowanym.
 
-**Key takeaways:**
-- Computer use is now a first-class built-in in Gemini 3.5 Flash across browser, desktop, and mobile
-- Safety controls include explicit user confirmation for sensitive actions and automated task stopping
-- The standardized action interface with human-in-the-loop affordances is a product architecture decision, not just a safety add-on
+**Kluczowe wnioski:**
+- Computer use jest teraz wbudowaną funkcją pierwszej klasy w Gemini 3.5 Flash dla przeglądarki, komputera stacjonarnego i urządzeń mobilnych
+- Kontrole bezpieczeństwa obejmują wyraźne potwierdzenie użytkownika dla wrażliwych działań i automatyczne zatrzymywanie zadań
+- Standaryzowany interfejs akcji z możliwościami human-in-the-loop to decyzja architektoniczna produktu, nie tylko dodatek bezpieczeństwa
 
-**Why do I care:** Computer use agents that can control a browser or mobile interface are directly relevant to frontend developers because they're interacting with the interfaces we build. If your application is going to be used by agents as well as humans, the design decisions you make now about interaction patterns, confirmation flows, and state management will either enable or block that use case. Accessibility-first design, semantic markup, and predictable UI state transitions are not just good practice for human users. They're also what makes your app operable by computer-use agents without hacks.
+**Dlaczego mnie to dotyczy:** Agenci computer use, którzy mogą kontrolować przeglądarkę lub interfejs mobilny, są bezpośrednio istotni dla programistów frontend, ponieważ wchodzą w interakcję z interfejsami, które budujemy. Jeśli twoja aplikacja będzie używana przez agentów i przez ludzi, decyzje projektowe, które teraz podejmujesz dotyczące wzorców interakcji, przepływów potwierdzenia i zarządzania stanem, albo umożliwią, albo zablokują ten przypadek użycia. Projektowanie z myślą o dostępności, semantyczny markup i przewidywalne przejścia stanu interfejsu to nie tylko dobra praktyka dla użytkowników ludzkich. To również to, co sprawia, że twoja aplikacja jest obsługiwalna przez agentów computer use bez hacków.
 
 **Link:** [Google Gemini 3.5 Flash computer use launch](https://x.com/Google/status/1938100000000000000)
 
 ---
 
-## Agent Infrastructure Matures Around Persistence and Long-Horizon Cost
+## Infrastruktura agentyczna dojrzewa wokół trwałości i kosztów długich horyzontów
 
-**TLDR:** Multiple new products launched targeting long-running agents rather than interactive chat, with Sail raising $80M to provide low-cost sandboxed inference for agents running days or weeks, and LangChain's Fleet framework drawing a practical distinction between conversational and task-specific agent patterns.
+**TLDR:** Wiele nowych produktów zadebiutowało z myślą o długo działających agentach, a nie interaktywnym czacie, przy czym Sail zebrał 80 milionów dolarów na niskokosztowy sandboxed inference dla agentów działających przez dni lub tygodnie, a framework Fleet od LangChain rysuje praktyczne rozróżnienie między konwersacyjnymi i specyficznymi dla zadań wzorcami agentów.
 
-**Summary:** The agent infrastructure space is getting more opinionated, and the opinionation is useful. Sail launched with $80M in funding, positioning itself specifically around low-cost inference and sandboxes for agents that run for days or weeks rather than seconds. The claimed efficiency is 10x more intelligence per dollar for patient workloads. Hyperagent got highlighted for giving each agent its own persistent cloud machine with browser and code execution context that survives across task steps.
+**Podsumowanie:** Przestrzeń infrastruktury agentycznej staje się coraz bardziej opinionated, a ta konkretyzacja jest użyteczna. Sail zadebiutował z 80 milionami dolarów finansowania, pozycjonując się konkretnie wokół niskokosztowego inference i sandboxów dla agentów działających przez dni lub tygodnie, a nie sekundy. Deklarowana efektywność to 10x więcej inteligencji za dolara dla cierpliwych obciążeń. Hyperagent został wyróżniony za dawanie każdemu agentowi własnego trwałego maszyny chmurowej z kontekstem przeglądarki i wykonywania kodu, który przetrwa kolejne kroki zadania.
 
-LangChain's Fleet framing made a distinction I find genuinely clarifying: use general-purpose chat when work ends with an answer; use specialized agents when the work has a repeatable shape and durable context. That's not a new idea, but it's a useful articulation because it gives teams a decision rule. If you're automating something that always looks the same and needs to remember state across steps, build an agent workflow. If you're answering questions that might not need to persist anything, chat completion is cheaper and simpler.
+Podejście Fleet od LangChain dokonuje rozróżnienia, które uważam za naprawdę wyjaśniające: używaj ogólnego czatu, gdy praca kończy się odpowiedzią; używaj wyspecjalizowanych agentów, gdy praca ma powtarzalny kształt i trwały kontekst. To nie jest nowy pomysł, ale to użyteczne sformułowanie, ponieważ daje zespołom regułę decyzyjną. Jeśli automatyzujesz coś, co zawsze wygląda tak samo i musi pamiętać stan między krokami, zbuduj przepływ pracy agenta. Jeśli odpowiadasz na pytania, które mogą nie wymagać trwałości czegokolwiek, uzupełnianie czatu jest tańsze i prostsze.
 
-The infrastructure investment patterns here are telling. When $80M goes to a company specifically focused on long-horizon agent economics, that's a signal about where enterprise adoption is heading. The bottleneck for real organizational AI adoption is not whether a model can complete a one-shot task. It's whether you can orchestrate multi-day workflows with reasonable cost, reliable persistence, and audit trails. The infrastructure layer for that has been underdeveloped relative to the model layer.
+Wzorce inwestycji w infrastrukturę są tutaj wymowne. Kiedy 80 milionów dolarów trafia do firmy skupionej konkretnie na ekonomii agentów długich horyzontów, to sygnał o kierunku, w którym zmierza adopcja korporacyjna. Wąskim gardłem dla prawdziwej organizacyjnej adopcji AI nie jest to, czy model może wykonać jednorazowe zadanie. Chodzi o to, czy możesz orkiestrować wielodniowe przepływy pracy przy rozsądnych kosztach, niezawodnej trwałości i ścieżkach audytu. Warstwa infrastruktury dla tego była niedorozwinięta w stosunku do warstwy modeli.
 
-The connection to OpenAI's internal token growth data is direct. Long-running cross-functional tasks are what's driving the 56x growth in Research token consumption. Those workflows require exactly the kind of persistence and sandbox infrastructure that Sail and Hyperagent are building. The model capability and the infrastructure to run it at scale are converging.
+Połączenie z wewnętrznymi danymi o wzroście tokenów OpenAI jest bezpośrednie. Długotrwałe, wielofunkcyjne zadania to to, co napędza 56-krotny wzrost zużycia tokenów w badaniach. Te przepływy pracy wymagają dokładnie tego rodzaju trwałości i infrastruktury sandbox, którą budują Sail i Hyperagent. Możliwości modeli i infrastruktura do ich uruchamiania w skali zbiegają się.
 
-**Key takeaways:**
-- Sail raised $80M specifically targeting long-horizon agent workloads running days or weeks
-- LangChain's Fleet framework formalizes the distinction between answer-completion tasks and repeatable-shape agent workflows
-- Infrastructure investment is aligning with the enterprise adoption pattern driving token growth at OpenAI
+**Kluczowe wnioski:**
+- Sail zebrał 80 milionów dolarów konkretnie celując w długohoryzontowe obciążenia agentów działających przez dni lub tygodnie
+- Framework Fleet od LangChain formalizuje rozróżnienie między zadaniami kończącymi się odpowiedzią a przepływami pracy agentów o powtarzalnym kształcie
+- Inwestycje w infrastrukturę są zgodne z wzorcem adopcji korporacyjnej napędzającym wzrost tokenów w OpenAI
 
-**Why do I care:** As a developer building systems that will increasingly involve agents, the persistent sandbox model has direct implications for how you design backend services. Stateless APIs work fine for human request-response patterns. For agents that need to maintain context across a multi-day task, you need to think about session persistence, partial progress recovery, and idempotent operations differently. Start designing your services to be safe for repeated, possibly concurrent agent invocations now, before an agent framework exposes the assumptions you've been making.
+**Dlaczego mnie to dotyczy:** Jako programista budujący systemy, które będą coraz bardziej angażować agentów, model trwałego sandboxa ma bezpośrednie implikacje dla sposobu, w jaki projektujesz usługi backendowe. Bezstanowe API działają dobrze dla ludzkich wzorców żądanie-odpowiedź. Dla agentów, którzy muszą utrzymywać kontekst przez wielodniowe zadanie, musisz inaczej myśleć o trwałości sesji, odzyskiwaniu częściowego postępu i idempotentnych operacjach. Zacznij projektować swoje usługi tak, aby były bezpieczne dla powtarzanych, możliwie współbieżnych wywołań agentów już teraz, zanim framework agentowy ujawni założenia, które robiłeś.
 
 **Link:** [Sail agent infrastructure launch](https://sail.ai)
 
 ---
 
-## Meta's Autodata: Agentic Synthetic Data Generation as a Training Lever
+## Autodata od Meta: agentyczne generowanie danych syntetycznych jako dźwignia treningowa
 
-**TLDR:** Meta's Autodata research treats data generation as an agent loop with creation, analysis, and meta-optimization steps, converting inference compute into better training data. Pass rate improved from 62.1% to 79.6% with meta-optimization.
+**TLDR:** Badania Autodata od Meta traktują generowanie danych jako pętlę agentową z krokami tworzenia, analizy i meta-optymalizacji, przekształcając obliczenia inference w lepsze dane treningowe. Wskaźnik zdania poprawił się z 62,1% do 79,6% dzięki meta-optymalizacji.
 
-**Summary:** Meta's Autodata paper is one of the more substantive research items from this newsletter cycle, and it's worth understanding what it's actually proposing. The core idea is to treat data generation for model training as an agentic pipeline rather than a one-shot process. You have a creation agent, an analysis agent that evaluates what was created, and a meta-optimization loop that improves the scaffolds driving both. The result is that extra inference compute at data generation time translates into better training and evaluation data, which translates into downstream model quality improvements.
+**Podsumowanie:** Artykuł Meta Autodata jest jednym z bardziej merytorycznych elementów badawczych z tego cyklu newslettera i warto zrozumieć, co faktycznie proponuje. Podstawowa idea polega na traktowaniu generowania danych do treningu modeli jako potoku agentycznego, a nie procesu jednorazowego. Masz agenta tworzącego, agenta analizy który ocenia to, co zostało stworzone, i pętlę meta-optymalizacji, która ulepsza rusztowania napędzające oba. Wynikiem jest to, że dodatkowe obliczenia inference w czasie generowania danych przekładają się na lepsze dane treningowe i ewaluacyjne, co przekłada się na poprawę jakości modelu downstream.
 
-The reported gains are concrete: pass rate for the data creation pipeline improved from 62.1% to 79.6% with meta-optimization enabled, spanning computer science, legal, and math task domains. The amplification from independent researchers confirms the result is being taken seriously in the research community.
+Raportowane zyski są konkretne: wskaźnik zdania dla potoku tworzenia danych poprawił się z 62,1% do 79,6% przy włączonej meta-optymalizacji, obejmując zadania z dziedziny informatyki, prawa i matematyki. Amplifikacja ze strony niezależnych badaczy potwierdza, że wynik jest traktowany poważnie przez społeczność badawczą.
 
-What I find interesting about this framing is that it collapses the distinction between inference and training as separate concerns. If you're using a model to generate the training data for the next version of the model, and you're optimizing the scaffolds that drive that generation, then model improvement becomes a continuous inference-driven process rather than a discrete training event. That has implications for how model development pipelines are structured, and it connects to the broader "autoresearch" trend where language models are increasingly part of their own improvement loop.
+Interesujące w tym ujęciu jest to, że kolapsuje rozróżnienie między inference i treningiem jako oddzielnymi zagadnieniami. Jeśli używasz modelu do generowania danych treningowych dla następnej wersji modelu i optymalizujesz rusztowania napędzające to generowanie, to poprawa modelu staje się ciągłym procesem sterowanym przez inference, a nie dyskretnym zdarzeniem treningowym. Ma to implikacje dla sposobu, w jaki strukturyzowane są potoki rozwoju modeli, i łączy się z szerszym trendem "autoresearch", gdzie modele językowe są coraz bardziej częścią własnej pętli doskonalenia.
 
-The practical question is how accessible this approach is outside of a large research organization with significant compute resources. The architectural pattern is describable and the tooling to implement basic versions of it exists today. Whether the meta-optimization loop is worth the additional inference cost for smaller-scale applications is an empirical question, but the direction is clear.
+Praktyczne pytanie brzmi, jak dostępne jest to podejście poza dużą organizacją badawczą ze znacznymi zasobami obliczeniowymi. Wzorzec architektoniczny jest opisywalny, a narzędzia do implementacji jego podstawowych wersji istnieją dzisiaj. Czy pętla meta-optymalizacji jest warta dodatkowego kosztu inference dla aplikacji mniejszej skali, jest pytaniem empirycznym, ale kierunek jest jasny.
 
-**Key takeaways:**
-- Autodata treats synthetic data generation as an agent loop with creation, analysis, and meta-optimization stages
-- Meta-optimized scaffolds improved data creation pass rate from 62.1% to 79.6%
-- Gains were demonstrated across computer science, legal, and math task domains
+**Kluczowe wnioski:**
+- Autodata traktuje generowanie danych syntetycznych jako pętlę agentową z etapami tworzenia, analizy i meta-optymalizacji
+- Meta-zoptymalizowane rusztowania poprawiły wskaźnik zdania tworzenia danych z 62,1% do 79,6%
+- Zyski zostały zademonstrowane w domenach zadań z informatyki, prawa i matematyki
 
-**Why do I care:** If you're building RAG systems or fine-tuned models for specific tasks, the Autodata pattern suggests that investing compute in how you generate evaluation and training examples is at least as valuable as investing in the model itself. For frontend developers building AI features, this means that thoughtfully generating domain-specific test cases for your prompts and evaluations, and iterating on how you generate them, is a legitimate performance lever, not just academic overhead.
+**Dlaczego mnie to dotyczy:** Jeśli budujesz systemy RAG lub modele fine-tuned dla konkretnych zadań, wzorzec Autodata sugeruje, że inwestowanie obliczeń w sposób generowania przykładów ewaluacyjnych i treningowych jest co najmniej tak wartościowe jak inwestowanie w sam model. Dla programistów frontend budujących funkcje AI oznacza to, że przemyślane generowanie specyficznych dla domeny przypadków testowych dla twoich promptów i ewaluacji, i iterowanie nad sposobem ich generowania, jest uzasadnioną dźwignią wydajności, nie tylko akademicznym narzutem.
 
 **Link:** [Meta Autodata research thread](https://x.com/jaseweston/status/1938200000000000000)
 
 ---
 
-## Hugging Face Crosses $100M ARR While Keeping the Platform Open
+## Hugging Face przekracza 100 milionów dolarów ARR, zachowując otwartość platformy
 
-**TLDR:** Hugging Face CEO Clement Delangue announced the platform surpassed $100M annual run rate, with 97% of users still on free and open tiers, and the platform now managing hundreds of petabytes of models and datasets.
+**TLDR:** CEO Hugging Face Clement Delangue ogłosił, że platforma przekroczyła 100 milionów dolarów rocznego przychodu, przy czym 97% użytkowników nadal korzysta z bezpłatnych i otwartych warstw, a platforma zarządza teraz setkami petabajtów modeli i zbiorów danych.
 
-**Summary:** Hugging Face crossing $100M ARR is a business milestone, but the number that matters more to the community is the 97% figure. Ninety-seven percent of users are on free and open access tiers. The business model is working without monetizing the research and open source community that made the platform valuable in the first place. That is genuinely hard to do, and worth acknowledging.
+**Podsumowanie:** Przekroczenie przez Hugging Face 100 milionów dolarów ARR to biznesowy kamień milowy, ale liczba, która ma większe znaczenie dla społeczności, to 97%. Dziewięćdziesiąt siedem procent użytkowników korzysta z bezpłatnych i otwartych warstw dostępu. Model biznesowy działa bez monetyzacji społeczności badawczej i open source, która uczyniła platformę wartościową. To naprawdę trudne do osiągnięcia i warto to docenić.
 
-The infrastructure scale is also worth noting: hundreds of petabytes of models and datasets. Gemma 4 hit 200 million downloads in 2.5 months. Those numbers represent a distribution and hosting operation that has become a critical piece of the open AI ecosystem's backbone. If Hugging Face didn't exist, someone would need to build it, and it would cost a lot of money.
+Skala infrastruktury jest też warta odnotowania: setki petabajtów modeli i zbiorów danych. Gemma 4 osiągnął 200 milionów pobrań w 2,5 miesiąca. Liczby te reprezentują operację dystrybucji i hostingu, która stała się krytyczną częścią kręgosłupa otwartego ekosystemu AI. Gdyby Hugging Face nie istniał, ktoś musiałby go zbudować, a kosztowałoby to dużo pieniędzy.
 
-The business milestone also contextualizes the downstream adoption of open models. When Ornith-1.0 launches and within hours there are community reports of benchmark scores, throughput measurements, and prompt injection resistance tests, that's only possible because of the distribution infrastructure Hugging Face provides. The correlation between HF's growth and the open model ecosystem's velocity is direct.
+Biznesowy kamień milowy kontekstualizuje też adopcję otwartych modeli downstream. Kiedy Ornith-1.0 startuje i w ciągu godzin pojawiają się raporty społecznościowe o wynikach benchmarków, pomiarach przepustowości i testach odporności na prompt injection, jest to możliwe tylko dzięki infrastrukturze dystrybucji, którą zapewnia Hugging Face. Korelacja między wzrostem HF a tempem otwartego ekosystemu modeli jest bezpośrednia.
 
-There's also a governance implication. A Hugging Face at $100M ARR with 97% free users has very different incentives than a platform that's been forced to monetize its core community to survive. Whether that ratio holds as the business scales is the interesting question, but for now the alignment between the open ecosystem's needs and the platform's business model appears intact.
+Jest też implikacja dla zarządzania. Hugging Face z 100 milionami dolarów ARR i 97% bezpłatnych użytkowników ma zupełnie inne zachęty niż platforma, która była zmuszona monetyzować swoją główną społeczność, by przeżyć. To, czy ta proporcja utrzyma się w miarę skalowania biznesu, jest interesującym pytaniem, ale na razie wyrównanie między potrzebami otwartego ekosystemu a modelem biznesowym platformy wydaje się nienaruszone.
 
-**Key takeaways:**
-- Hugging Face surpassed $100M ARR while keeping 97% of users on free and open tiers
-- Gemma 4 hit 200M downloads in 2.5 months, reflecting the platform's distribution scale
-- The business model success without broadly monetizing the open community is a significant structural achievement
+**Kluczowe wnioski:**
+- Hugging Face przekroczył 100 milionów dolarów ARR, utrzymując 97% użytkowników na bezpłatnych i otwartych warstwach
+- Gemma 4 osiągnął 200 milionów pobrań w 2,5 miesiąca, odzwierciedlając skalę dystrybucji platformy
+- Sukces modelu biznesowego bez szerokiej monetyzacji otwartej społeczności to znaczące strukturalne osiągnięcie
 
-**Why do I care:** As a developer, Hugging Face is infrastructure you're increasingly dependent on whether you know it or not. The models powering your embeddings, OCR pipelines, and fine-tuned classifiers are almost certainly distributed through HF. The fact that this infrastructure has a sustainable business model that doesn't require squeezing the open source community matters for your own supply chain risk. Keep paying attention to how that 97% figure evolves.
+**Dlaczego mnie to dotyczy:** Jako programista, Hugging Face to infrastruktura, od której jesteś coraz bardziej zależny, czy zdajesz sobie z tego sprawę, czy nie. Modele napędzające twoje embeddingsy, potoki OCR i fine-tuned klasyfikatory są prawie na pewno dystrybuowane przez HF. Fakt, że ta infrastruktura ma zrównoważony model biznesowy, który nie wymaga wyciskania społeczności open source, ma znaczenie dla ryzyka twojego własnego łańcucha dostaw. Zwracaj uwagę na to, jak ta liczba 97% będzie ewoluować.
 
 **Link:** [Clement Delangue on HF $100M ARR](https://x.com/ClementDelangue/status/1938300000000000000)
 
 ---
 
-## NVIDIA's Diffusion-Based Nemotron and Baidu's MIT OCR Model
+## Nemotron od NVIDIA oparty na dyfuzji i model OCR MIT od Baidu
 
-**TLDR:** NVIDIA released Nemotron-TwoTower-30B-A3B-Base-BF16, a diffusion-style LLM combining a frozen autoregressive context tower with a parallel diffusion denoiser, claiming 2.42x generation throughput while retaining 98.7% of baseline benchmark quality. Baidu's Unlimited-OCR also arrived as an MIT-licensed 3.3B multilingual document parsing model.
+**TLDR:** NVIDIA wydało Nemotron-TwoTower-30B-A3B-Base-BF16, model LLM w stylu dyfuzji łączący zamrożoną autoregresywną wieżę kontekstu z równoległym denoisingiem dyfuzyjnym, deklarując 2,42x przepustowość generowania przy zachowaniu 98,7% jakości bazowego benchmarku. Unlimited-OCR od Baidu pojawił się jako wielojęzyczny model parsowania dokumentów 3,3B pod licencją MIT.
 
-**Summary:** NVIDIA's Nemotron-TwoTower is an unusual architecture worth understanding. The model combines two towers: a frozen autoregressive context tower that processes the existing sequence, and a diffusion denoiser tower that fills token blocks in parallel rather than autoregressively. The claimed result is 2.42 times wall-clock generation throughput while retaining 98.7% of the autoregressive baseline's aggregate benchmark score. A community commenter noted it appears to retain more accuracy relative to its base model than DiffusionGemma does relative to its base, though concrete benchmark comparisons were not provided.
+**Podsumowanie:** Nemotron-TwoTower od NVIDIA to niezwykła architektura warta zrozumienia. Model łączy dwie wieże: zamrożoną autoregresywną wieżę kontekstu przetwarzającą istniejącą sekwencję i wieżę dyfuzyjnego denoisera, która wypełnia bloki tokenów równolegle, a nie autoregresywnie. Deklarowanym wynikiem jest 2,42 razy większa przepustowość generowania przy zachowaniu 98,7% zagregowanego wyniku benchmarku autoregresywnej linii bazowej. Komentator społecznościowy zauważył, że wydaje się zachowywać więcej dokładności względem swojego modelu bazowego niż DiffusionGemma względem swojego, choć konkretne porównania benchmarków nie zostały dostarczone.
 
-The diffusion approach to language modeling is genuinely interesting because it breaks the sequential generation bottleneck that limits how fast autoregressive models can run at small batch sizes. If the accuracy retention numbers hold up under rigorous evaluation, this architecture has practical implications for latency-sensitive applications where you're currently constrained by sequential token generation.
+Podejście dyfuzyjne do modelowania językowego jest naprawdę interesujące, ponieważ przełamuje sekwencyjne wąskie gardło generowania, które ogranicza szybkość działania modeli autoregresywnych przy małych rozmiarach batchy. Jeśli liczby dotyczące zachowania dokładności sprawdzą się przy rygorystycznej ewaluacji, ta architektura ma praktyczne implikacje dla aplikacji wrażliwych na latencję, gdzie jesteś obecnie ograniczony przez sekwencyjne generowanie tokenów.
 
-On the OCR side, Baidu's Unlimited-OCR is a 3.3B MIT-licensed multilingual model supporting single images, multi-page documents, and PDFs with up to 32K output tokens for long OCR sequences. The OpenAI-compatible streaming API and SGLang serving support lower the integration cost significantly. Community questions focused on how it compares to PaddleOCR-VL-1.6 and what "gundam mode" actually means in the model card. Neither question has a clear answer yet, which suggests the release documentation has some gaps.
+Po stronie OCR, Unlimited-OCR od Baidu to wielojęzyczny model 3,3B pod licencją MIT obsługujący pojedyncze obrazy, wielostronicowe dokumenty i PDF-y z do 32K tokenami wyjściowymi dla długich sekwencji OCR. OpenAI-kompatybilne strumieniowe API i obsługa serwowania SGLang znacząco obniżają koszt integracji. Pytania społecznościowe skupiały się na porównaniu z PaddleOCR-VL-1.6 i na tym, co "tryb gundam" właściwie oznacza w karcie modelu. Żadne pytanie nie ma jeszcze jasnej odpowiedzi, co sugeruje, że dokumentacja wydania ma pewne luki.
 
-**Key takeaways:**
-- Nemotron-TwoTower combines a frozen AR context tower with a parallel diffusion denoiser for 2.42x throughput
-- NVIDIA claims 98.7% benchmark quality retention relative to the autoregressive baseline
-- Baidu's Unlimited-OCR is MIT-licensed, multilingual, supports 32K output tokens, and has OpenAI-compatible APIs
+**Kluczowe wnioski:**
+- Nemotron-TwoTower łączy zamrożoną wieżę kontekstu AR z równoległym dyfuzyjnym denoisingiem dla 2,42x przepustowości
+- NVIDIA deklaruje 98,7% zachowania jakości benchmarku względem autoregresywnej linii bazowej
+- Unlimited-OCR od Baidu jest pod licencją MIT, wielojęzyczny, obsługuje 32K tokenów wyjściowych i ma OpenAI-kompatybilne API
 
-**Why do I care:** For developers building document processing pipelines, an MIT-licensed 3.3B model with OpenAI-compatible APIs and 32K output token support is directly useful. The licensing matters here. MIT means you can run it privately, fine-tune it, integrate it into commercial products without negotiating terms. If Unlimited-OCR's quality holds up against PaddleOCR-VL, it's a strong candidate for on-premise document parsing. The diffusion-based generation architecture is more of a watch item for now, but if throughput advantages hold at production batch sizes, it changes the economics of latency-sensitive inference.
+**Dlaczego mnie to dotyczy:** Dla programistów budujących potoki przetwarzania dokumentów, model 3,3B pod licencją MIT z OpenAI-kompatybilnymi API i obsługą 32K tokenów wyjściowych jest bezpośrednio użyteczny. Licencjonowanie ma tu znaczenie. MIT oznacza, że możesz uruchomić go prywatnie, fine-tunować, integrować w produkty komercyjne bez negocjowania warunków. Jeśli jakość Unlimited-OCR sprawdzi się w porównaniu z PaddleOCR-VL, jest silnym kandydatem do lokalnego parsowania dokumentów. Architektura generowania oparta na dyfuzji to bardziej element do obserwowania na razie, ale jeśli przewagi przepustowości utrzymają się przy produkcyjnych rozmiarach batchy, zmienia to ekonomię inference wrażliwego na latencję.
 
 **Link:** [Baidu Unlimited-OCR on ModelScope](https://modelscope.cn/models/baidu/Unlimited-OCR)

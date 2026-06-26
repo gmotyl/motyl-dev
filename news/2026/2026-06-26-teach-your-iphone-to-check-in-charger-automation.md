@@ -1,35 +1,35 @@
 ---
-title: "Teach Your iPhone to Check In: Building a Charger-Triggered Location Automation"
-excerpt: "A practical iPhone Shortcuts automation that sends your phone's location and a front-camera photo whenever it gets plugged into a charger."
+title: "Naucz iPhone'a meldować się: automatyzacja lokalizacji wyzwalana przez ładowarkę"
+excerpt: "Praktyczna automatyzacja w aplikacji Shortcuts, która wysyła lokalizację telefonu oraz zdjęcie z przedniej kamery za każdym razem, gdy podłączysz urządzenie do ładowania."
 publishedAt: "2026-06-26"
 slug: "teach-your-iphone-to-check-in-charger-automation"
-hashtags: "#TechTiff #iPhone #Shortcuts #Automation #Privacy #iOSTips #MobileProductivity #generated #en"
+hashtags: "#TechTiff #iPhone #Shortcuts #Automation #Privacy #iOSTips #MobileProductivity #generated #pl"
 source_pattern: "TechTiff"
 ---
 
-## Teach Your iPhone to Check In When Plugged In
+## Naucz iPhone'a meldować się po podłączeniu do ładowania
 
-**TLDR:** Using the iPhone Shortcuts app, you can build an automation that fires the moment your phone gets plugged into a charger. It takes a front-camera photo, grabs your current location, and sends both to you or an emergency contact. You flip it on before a trip, off when you get home.
+**TLDR:** Dzięki aplikacji Shortcuts możesz zbudować automatyzację, która uruchamia się w momencie podłączenia telefonu do ładowarki. Robi zdjęcie przednią kamerą, pobiera bieżącą lokalizację i wysyła oba te dane do ciebie lub osoby zaufanej. Włączasz ją przed wyjazdem, wyłączasz po powrocie do domu.
 
-**Summary:**
+**Podsumowanie:**
 
-Your iPhone already knows where it is. It has a camera, a GPS chip, and multiple ways to send you a message. What it lacks, by default, is a protocol. This shortcut gives it one.
+Twój iPhone już wie, gdzie się znajduje. Ma kamerę, chip GPS i wiele sposobów na wysłanie wiadomości. Brakuje mu jedynie domyślnego protokołu działania. Ten skrót właśnie go zapewnia.
 
-The automation is straightforward in concept. You create a new automation in the Shortcuts app, set the trigger to "Charger: Is Connected," and configure it to run immediately in the background with no notification to the user. The first two actions intentionally override network state: they turn Airplane Mode off and turn Cellular Data on. This is the clever part. If someone swiped your phone and tried to cut off its signal before plugging it in to charge, these steps silently undo that before anything else runs. If nothing was tampered with, they just fire and cost you nothing. It is a small piece of defensive engineering that takes about two seconds to think through and zero seconds to regret including.
+Automatyzacja jest prosta w założeniu. Tworzysz nową automatyzację w aplikacji Shortcuts, ustawiasz wyzwalacz na "Ładowarka: Podłączona" i konfigurujesz ją tak, by uruchamiała się natychmiast w tle bez powiadamiania użytkownika. Pierwsze dwie czynności celowo nadpisują stan sieci: wyłączają Tryb Samolotowy i włączają Dane Mobilne. To właśnie jest sprytny element całości. Jeśli ktoś ukradł telefon i próbował odciąć sygnał przed podłączeniem go do ładowania, te kroki po cichu cofają tę operację, zanim cokolwiek innego się wydarzy. Jeśli nic nie zostało naruszone, po prostu się wykonują i nie kosztują nic. To niewielki element defensywnego projektowania, który zajmuje może dwie sekundy namysłu, a nigdy nie będziesz żałować jego dodania.
 
-From there, the shortcut takes a front-camera photo with the preview hidden, so the process is invisible to whoever is holding the phone. Location gets pulled either from the photo's embedded EXIF data (if you have Location Services enabled for the Camera app) or from a separate Get Current Location action set to Best precision. Then the shortcut fires off an email, a text, a note, or an iCloud upload, whatever channel makes sense to you. The author sends herself an email with location and photo attached. That is a completely reasonable choice.
+Następnie skrót robi zdjęcie przednią kamerą z ukrytym podglądem, więc cały proces jest niewidoczny dla osoby trzymającej telefon. Lokalizacja jest pobierana albo z danych EXIF osadzonych w zdjęciu (jeśli masz włączone Usługi Lokalizacji dla aplikacji Aparat), albo z osobnej akcji "Pobierz bieżącą lokalizację" ustawionej na najwyższą precyzję. Następnie skrót wysyła e-mail, wiadomość tekstową, notatkę lub przesyła plik na iCloud, zależnie od tego, co jest dla ciebie wygodne. Autorka wysyła sobie e-maila z załączoną lokalizacją i zdjęciem. To w pełni rozsądne rozwiązanie.
 
-One thing worth calling out: iOS now shows a notification when an automation accesses the camera in the background. Apple added that transparency feature intentionally, and it means anyone picking up your phone will see a brief system alert. That is actually fine. The automation is not trying to be covert in a harmful way; it is trying to document who handled your device. The notification is a small side effect you accept.
+Warto zaznaczyć jedną rzecz: iOS wyświetla teraz powiadomienie, gdy automatyzacja uzyskuje dostęp do kamery w tle. Apple dodał tę funkcję transparentności celowo, co oznacza, że każda osoba podnosząca telefon zobaczy krótki alert systemowy. To jest tak naprawdę w porządku. Automatyzacja nie ma na celu działania w ukryciu w złośliwy sposób, jej zadaniem jest udokumentowanie, kto obsługiwał urządzenie. Powiadomienie to niewielki efekt uboczny, który po prostu akceptujesz.
 
-The mental model for using this is important. This is not something you leave enabled at all times. It runs while you travel. Before a trip, enable it. When you land back home, disable it. That operating discipline keeps it purposeful and avoids accumulating a pile of location-and-photo emails from your own kitchen counter.
+Ważny jest sposób myślenia o korzystaniu z tej funkcji. Nie chodzi o coś, co masz włączone cały czas. Uruchamiasz ją podczas podróży. Przed wyjazdem ją aktywujesz, po powrocie do domu dezaktywujesz. Taka dyscyplina operacyjna sprawia, że pozostaje celowa i pozwala uniknąć gromadzenia stosu e-maili z lokalizacją i zdjęciem zrobionych przy własnym kuchennym blacie.
 
-**Key takeaways:**
-- The "turn off Airplane Mode and turn on Cellular Data" steps at the start are the smartest part of the whole automation. They pre-empt the most obvious theft countermeasure.
-- iOS will show a camera-access notification when the shortcut runs in the background. This is expected behavior, not a bug.
-- You only need one of two location methods: pull coordinates from the photo's EXIF data if Camera location is enabled, or use Get Current Location if it is not.
-- This shortcut is intentionally manual to enable and disable. Treat it as travel mode, not always-on surveillance of yourself.
-- The Shortcuts app supports sending the result to texts, notes, shared albums, or iCloud in addition to email.
+**Kluczowe wnioski:**
+- Kroki "wyłącz Tryb Samolotowy i włącz Dane Mobilne" na początku to najmądrzejsza część całej automatyzacji. Wyprzedzają najbardziej oczywisty sposób sabotażu podczas kradzieży.
+- iOS wyświetli powiadomienie o dostępie do kamery, gdy skrót uruchomi się w tle. To oczekiwane zachowanie, nie błąd.
+- Potrzebujesz tylko jednej z dwóch metod lokalizacji: pobierz współrzędne z danych EXIF zdjęcia, jeśli lokalizacja w aparacie jest włączona, lub użyj akcji "Pobierz bieżącą lokalizację", jeśli nie jest.
+- Ten skrót jest celowo ręczny w uruchamianiu i wyłączaniu. Traktuj go jako tryb podróżny, a nie stały nadzór nad samym sobą.
+- Aplikacja Shortcuts obsługuje wysyłanie wyników przez SMS-y, notatki, udostępnione albumy lub iCloud, nie tylko przez e-mail.
 
-**Why do I care:** As someone who has spent time thinking about automation and developer experience, I find this shortcut genuinely interesting for a reason that goes beyond the travel use case. It is a clean example of composing basic primitives, network state, camera, location, messaging, into a meaningful behavior without writing a single line of code. The network reset step at the beginning is the kind of defensive thinking that a good developer would call "handling the unhappy path first." Most Shortcuts tutorials skip the edge cases. This one addresses the exact scenario the feature was built for. If you are building automation workflows for non-technical users, this is the pattern worth studying: short, single-purpose, with a clear on/off operating model and no ambient data collection. I would use this.
+**Dlaczego mnie to interesuje:** Jako osoba, która spędza czas na przemyśleniach dotyczących automatyzacji i doświadczeń deweloperów, uważam ten skrót za naprawdę ciekawy z powodu wykraczającego poza przypadek użycia podczas podróży. To czysty przykład łączenia podstawowych elementów: stanu sieci, kamery, lokalizacji i komunikacji, w sensowne zachowanie bez napisania ani jednej linii kodu. Krok resetowania sieci na początku to rodzaj defensywnego myślenia, który dobry deweloper nazwałby "obsługą najpierw nieszczęśliwej ścieżki". Większość poradników Shortcuts pomija przypadki brzegowe. Ten adresuje dokładnie scenariusz, dla którego funkcja została stworzona. Jeśli budujesz przepływy automatyzacji dla użytkowników bez wiedzy technicznej, ten wzorzec wart jest zgłębienia: krótki, jednozadaniowy, z jasnym modelem włączania i wyłączania oraz bez zbierania danych w tle. Sam bym z tego skorzystał.
 
 **Link:** [Teach Your iPhone to Check In](https://techtiff.substack.com/p/iphone-charger-automation?publication_id=4799331&post_id=203637488&isFreemail=true&triedRedirect=true)

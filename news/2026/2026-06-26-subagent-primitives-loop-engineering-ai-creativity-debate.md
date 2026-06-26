@@ -1,174 +1,174 @@
 ---
-title: "Subagent Primitives, Loop Engineering, and the AI Creativity Debate"
-excerpt: "A roundup of ideas from HackerNoon covering AI agent architecture, the death of prompt engineering, focus as environment design, PowerShell and Markdown as unlikely friends, and a sharp look at the A24 AI controversy."
+title: "Prymitywy subagentów, inżynieria pętli i debata o kreatywności AI"
+excerpt: "Przegląd artykułów z HackerNoon obejmujący architekturę agentów AI, koniec inżynierii promptów, skupienie jako projektowanie środowiska, PowerShell i Markdown jako nieoczekiwane duo, oraz krytyczne spojrzenie na kontrowersje AI wokół A24."
 publishedAt: "2026-06-25"
 slug: "subagent-primitives-loop-engineering-ai-creativity-debate"
-hashtags: "#HackerNoon #agents #architecture #typescript #powershell #productivity #llm-ops #generated #en"
+hashtags: "#HackerNoon #agents #architecture #typescript #powershell #productivity #llm-ops #generated #pl"
 source_pattern: "HackerNoon"
 ---
 
-## The Race to Build the Right Subagent Primitive
+## Wyścig o właściwy prymityw subagenta
 
-**TLDR:** Subagents are becoming one of the most important primitives in agentic systems, but there is no consensus yet on how to implement them correctly. Everyone is building them differently, and that fragmentation is the real story.
+**TLDR:** Subagenty stają się jednym z najważniejszych prymitywów w systemach agentowych, ale nie ma jeszcze konsensusu co do ich poprawnej implementacji. Każdy buduje je inaczej i to właśnie ta fragmentaryczność jest głównym problemem.
 
-**Summary:** When you start building agents that do real work, you quickly realize that a single agent looping through tasks is not the architecture you want. You want composable, specialized subagents that a coordinator can dispatch. That idea sounds clean on paper. The reality is that every major framework, every agentic harness, approaches this differently. Claude Code does it one way. LangGraph does it another. CrewAI has its own take. There is no shared primitive, no standard interface, no agreed-upon handshake between a parent agent and its children.
+**Podsumowanie:** Gdy zaczynasz budować agenty wykonujące realne zadania, szybko odkrywasz, że pojedynczy agent przetwarzający zadania w pętli to nie jest architektura, której szukasz. Potrzebujesz kompozycyjnych, wyspecjalizowanych subagentów, którymi koordynator może dysponować. W teorii brzmi to czysto. W praktyce każdy większy framework i każda platforma agentowa podchodzi do tego inaczej. Claude Code robi to w jeden sposób. LangGraph w inny. CrewAI ma własne podejście. Nie ma wspólnego prymitywu, standardowego interfejsu ani uzgodnionego protokołu komunikacji między agentem nadrzędnym a jego podrzędnymi.
 
-The author, writing under the handle @anson, makes a point that I think is genuinely important: because subagent tooling is so fragmented, orchestrators cannot assume anything about how their subagents behave. You cannot rely on a consistent context window handoff, consistent error reporting, or consistent cancellation semantics. This is not just a developer experience problem. It is an architecture problem, and it compounds badly at scale.
+Autor piszący pod pseudonimem @anson stawia tezę, którą uważam za naprawdę istotną: ponieważ narzędzia do subagentów są tak rozproszone, orkiestratory nie mogą zakładać niczego na temat zachowania swoich subagentów. Nie można polegać na spójnym przekazywaniu okna kontekstu, spójnym raportowaniu błędów ani spójnej semantyce anulowania. To nie jest tylko problem z doświadczeniem programisty, to problem architektoniczny, który nasila się wraz ze skalą systemu.
 
-What is being avoided here, though, is the harder question of whether standardization is even desirable at this stage. The diversity of implementations might actually be healthy. Different use cases have radically different latency tolerances, context requirements, and failure modes. A one-size-fits-all subagent primitive could calcify the wrong abstraction early. That said, the lack of any interoperability story is a real cost, and the industry is going to have to reckon with it.
+Artykuł omija jednak trudniejsze pytanie, czy standaryzacja jest w ogóle pożądana na tym etapie. Różnorodność implementacji może być zdrowa. Różne przypadki użycia mają radykalnie odmienną tolerancję na opóźnienia, wymagania dotyczące kontekstu i tryby awarii. Prymityw subagenta dopasowany do wszystkich mógłby zbyt wcześnie utrwalić błędną abstrakcję. Z drugiej strony brak jakiejkolwiek historii interoperacyjności to realny koszt, z którym branża będzie musiała się zmierzyć.
 
-The framing of "harness engineering" as its own discipline is worth noting. We spent years talking about prompt engineering as a standalone skill. Now we are already past that, talking about the structural engineering of the systems that run prompts. That is progress, even if it comes with new complexity.
+Warto zauważyć, że autorzy artykułu opisują "harness engineering" jako odrębną dyscyplinę. Przez lata rozmawialiśmy o inżynierii promptów jako samodzielnej umiejętności. Teraz jesteśmy już za tym etapem, rozmawiamy o inżynierii strukturalnej systemów uruchamiających prompty. To postęp, nawet jeśli wiąże się z nową złożonością.
 
-**Key takeaways:**
-- Subagent implementations vary widely across frameworks, making interoperability nearly impossible today
-- The absence of a standard primitive means orchestrators must defensively account for different agent behaviors
-- Harness engineering, the discipline of designing the scaffolding around LLM calls, is becoming its own specialty
-- Fragmentation may be premature to fix, but the cost of ignoring it grows with system complexity
+**Kluczowe wnioski:**
+- Implementacje subagentów znacznie różnią się między frameworkami, co dziś niemal uniemożliwia interoperacyjność
+- Brak standardowego prymitywu oznacza, że orkiestratory muszą defensywnie uwzględniać różne zachowania agentów
+- Harness engineering, czyli dyscyplina projektowania rusztowania wokół wywołań LLM, staje się własną specjalnością
+- Fragmentaryczność może być zbyt wcześnie, by ją naprawić, ale koszt jej ignorowania rośnie wraz ze złożonością systemu
 
-**Why do I care:** As someone who thinks a lot about system architecture, this is the conversation I want the industry to be having. We spent 18 months obsessing over which model to call. The real leverage now is in how you structure the calls, how you route failures, how you chain context across agents without blowing your token budget. Subagent design is where agentic systems either become reliable or become a mess of retry logic and silent failures.
+**Dlaczego mnie to interesuje:** Jako osoba dużo myśląca o architekturze systemów, właśnie tej rozmowy oczekuję od branży. Przez 18 miesięcy obsesyjnie skupialiśmy się na tym, który model wywoływać. Prawdziwa dźwignia leży teraz w tym, jak strukturyzować te wywołania, jak kierować awariami, jak łączyć kontekst między agentami bez wysadzania budżetu tokenowego. Projektowanie subagentów to miejsce, w którym systemy agentowe stają się albo niezawodne, albo zamieniają się w bałagan logiki ponownych prób i cichych awarii.
 
 **Link:** [The Race to Build the Right Subagent Primitive](https://hackernoon.com/the-race-to-build-the-right-subagent-primitive)
 
 ---
 
-## Prompt Engineering Is Dead. Long Live Loop Engineering
+## Inżynieria promptów umarła. Niech żyje inżynieria pętli
 
-**TLDR:** Prompt engineering as a standalone skill is being replaced by loop engineering, the practice of designing the control flow, feedback loops, and retry strategies that surround LLM calls. The author argues this is where the real leverage lives now.
+**TLDR:** Inżynieria promptów jako samodzielna umiejętność jest zastępowana przez inżynierię pętli, czyli praktykę projektowania przepływu sterowania, pętli zwrotnych i strategii ponownych prób otaczających wywołania LLM. Autor przekonuje, że to właśnie tutaj leży dziś prawdziwa dźwignia.
 
-**Summary:** Roma Armstrong, writing from the perspective of an AI architect, makes a claim that will irritate some people: the era of carefully crafted one-shot prompts is over. Not because prompts do not matter, but because prompts are now just one node in a larger system. What matters is how you structure the loop around that node.
+**Podsumowanie:** Roma Armstrong, piszący z perspektywy architekta AI, stawia tezę, która może irytować niektórych: era starannie opracowanych jednorazowych promptów dobiegła końca. Nie dlatego, że prompty nie mają znaczenia, ale dlatego, że są teraz tylko jednym węzłem w większym systemie. Liczy się to, jak strukturyzujesz pętlę wokół tego węzła.
 
-The argument is that agentic systems are feedback systems. You send a prompt, you get a response, you evaluate that response, you decide what to do next. The quality of that decision logic, the conditions under which you retry, reroute, escalate, or terminate, determines the reliability of your system far more than the wording of any individual prompt. Armstrong calls this loop engineering, and I think the framing is accurate even if the name is a bit fresh.
+Argument jest taki, że systemy agentowe to systemy sprzężenia zwrotnego. Wysyłasz prompt, dostajesz odpowiedź, oceniasz tę odpowiedź, decydujesz, co zrobić dalej. Jakość tej logiki decyzyjnej, warunki, w których ponawiasz próbę, przekierowujesz, eskalujesz lub kończysz, determinuje niezawodność systemu znacznie bardziej niż sformułowanie jakiegokolwiek pojedynczego promptu. Armstrong nazywa to inżynierią pętli i uważam, że sformułowanie jest trafne, nawet jeśli nazwa jest nieco świeża.
 
-What the article does not say loudly enough is that loop engineering is just control flow engineering applied to probabilistic systems. Developers who have written retry logic, circuit breakers, or state machines already know most of what loop engineering requires. The novel parts are handling the inherent non-determinism of LLM outputs and managing context across iterations without letting the prompt balloon.
+Czego artykuł nie mówi wystarczająco głośno, to że inżynieria pętli to po prostu inżynieria przepływu sterowania zastosowana do systemów probabilistycznych. Programiści, którzy pisali logikę ponownych prób, circuit breakery lub maszyny stanów, znają już większość tego, czego wymaga inżynieria pętli. Nowatorskimi elementami są obsługa wrodzonej niedeterministyczności wyników LLM oraz zarządzanie kontekstem między iteracjami bez nadmiernego rozbudowywania promptu.
 
-The piece is honest about one uncomfortable truth: most people building agentic systems today are not doing loop engineering deliberately. They are doing it accidentally, adding retries and conditional branches as they go, without a principled framework. That produces systems that work in demos and fall apart in production.
+Artykuł jest uczciwy w jednej niekomfortowej kwestii: większość osób budujących dziś systemy agentowe nie uprawia inżynierii pętli celowo. Robi to przypadkowo, dodając ponowne próby i gałęzie warunkowe w miarę postępów, bez żadnej zasadniczej struktury. To produkuje systemy działające na demonstracjach i rozpadające się w produkcji.
 
-**Key takeaways:**
-- Prompt quality matters less than the control flow that surrounds your LLM calls
-- Loop engineering means designing explicit feedback, evaluation, and branching logic for agentic systems
-- Most developers are already doing ad-hoc loop engineering without realizing it
-- Non-determinism is the fundamental challenge that separates loop engineering from classical control flow
+**Kluczowe wnioski:**
+- Jakość promptu ma mniejsze znaczenie niż przepływ sterowania otaczający wywołania LLM
+- Inżynieria pętli oznacza projektowanie jawnych pętli zwrotnych, ewaluacji i logiki rozgałęzień dla systemów agentowych
+- Większość programistów już robi ad-hoc inżynierię pętli, nie zdając sobie z tego sprawy
+- Niedeterministyczność to fundamentalne wyzwanie odróżniające inżynierię pętli od klasycznego przepływu sterowania
 
-**Why do I care:** This maps directly to how I think about building reliable tooling. The systems that have survived production are not the ones with the best prompts. They are the ones where someone thought carefully about what happens when the model gives you something unexpected, which it will. If you are building anything agentic, read this, then go look at your retry logic and ask yourself if you designed it or just accumulated it.
+**Dlaczego mnie to interesuje:** To bezpośrednio mapuje się na mój sposób myślenia o budowaniu niezawodnych narzędzi. Systemy, które przetrwały produkcję, to nie te z najlepszymi promptami, ale te, w których ktoś starannie przemyślał, co się dzieje, gdy model daje coś nieoczekiwanego, a to zawsze nastąpi. Jeśli budujesz cokolwiek agentowego, przeczytaj ten artykuł, a potem sprawdź swoją logikę ponownych prób i zapytaj siebie, czy ją zaprojektowałeś, czy po prostu nagromadziłeś.
 
 **Link:** [Prompt Engineering Is Dead. Long Live Loop Engineering](https://hackernoon.com/prompt-engineering-is-dead-long-live-loop-engineering-or-fractera-blog)
 
 ---
 
-## There Are Two Ways To Make Something Better
+## Są dwa sposoby na ulepszenie czegoś
 
-**TLDR:** Every improvement strategy falls into one of two camps: incremental iteration or radical replacement. Matt Trifiro argues these are not just different speeds, they are fundamentally incompatible approaches that require different organizational commitments.
+**TLDR:** Każda strategia ulepszania należy do jednego z dwóch obozów: przyrostowej iteracji lub radykalnej wymiany. Matt Trifiro przekonuje, że to nie są po prostu różne prędkości, ale fundamentalnie niekompatybilne podejścia wymagające odmiennego zaangażowania organizacyjnego.
 
-**Summary:** Matt Trifiro, editor of The Intent Layer, opens with a deceptively simple observation: there are two ways to make something better, and they do not get along. One is to iterate, to take what exists and improve it step by step. The other is to replace, to start from different assumptions and build something new. Both cost more than doing nothing. But they carry entirely different risk profiles, and treating them as interchangeable is an expensive mistake.
+**Podsumowanie:** Matt Trifiro, redaktor The Intent Layer, zaczyna od pozornie prostej obserwacji: są dwa sposoby na ulepszenie czegoś i nie lubią się ze sobą. Jeden to iteracja, wzięcie tego, co istnieje, i stopniowe ulepszanie. Drugi to zastąpienie, wychodzenie od innych założeń i budowanie czegoś nowego. Obydwa kosztują więcej niż nierobienie niczego, ale niosą zupełnie inne profile ryzyka, a traktowanie ich zamiennie to kosztowny błąd.
 
-The iteration path is safe in the sense that you always have a working system. You are never starting from zero. The feedback loops are tight. But iteration is also constrained by the original design decisions baked into whatever you started with. You can optimize a horse-drawn carriage indefinitely and never get a car. The replacement path breaks that constraint. It lets you rethink assumptions. But it introduces the very real risk that you build something that does not work, does not get adopted, or solves the wrong problem.
+Ścieżka iteracji jest bezpieczna w tym sensie, że zawsze masz działający system. Nigdy nie zaczynasz od zera. Pętle zwrotne są ciasne. Ale iteracja jest też ograniczona przez oryginalne decyzje projektowe wbudowane w to, od czego zacząłeś. Możesz bez końca optymalizować powóz i nigdy nie dostaniesz samochodu. Ścieżka wymiany usuwa to ograniczenie. Pozwala przemyśleć założenia. Ale wprowadza realne ryzyko zbudowania czegoś, co nie działa, nie zostaje zaadoptowane lub rozwiązuje niewłaściwy problem.
 
-What I find sharp about this piece is the organizational implication. Companies default to iteration because it feels responsible. It is measurable, it is reversible, and it does not require admitting that the current thing is fundamentally limited. Replacement requires someone with enough authority to say the current direction is a ceiling, not a floor. That conversation is politically harder than any technical challenge.
+To, co uważam za przenikliwe w tym artykule, to implikacje organizacyjne. Firmy domyślnie wybierają iterację, bo wydaje się odpowiedzialna. Jest mierzalna, odwracalna i nie wymaga przyznania, że obecna rzecz jest fundamentalnie ograniczona. Zastąpienie wymaga kogoś z wystarczającym autorytetem, by powiedzieć, że obecny kierunek to sufit, nie podłoga. Ta rozmowa jest politycznie trudniejsza niż jakiekolwiek wyzwanie techniczne.
 
-The article does not spend enough time on the third option, which is knowing when to do neither. Sometimes the right move is to stop improving something and let it die. But the two-path framework is still a useful forcing function for teams that are stuck.
+Artykuł nie poświęca wystarczająco dużo miejsca trzeciej opcji, czyli wiedzy, kiedy nie robić ani jednego, ani drugiego. Czasem właściwym ruchem jest zaprzestanie ulepszania czegoś i pozwolenie mu umrzeć. Ale dwuścieżkowy framework jest nadal użyteczną funkcją wymuszającą dla zespołów, które utknęły.
 
-**Key takeaways:**
-- Iteration and replacement are not the same kind of bet, and confusing them leads to misallocated effort
-- Iteration is bounded by original design assumptions, replacement removes those bounds but adds execution risk
-- Organizations default to iteration because it is politically safer, not because it is strategically correct
-- Choosing between them requires honest assessment of whether existing assumptions are a ceiling
+**Kluczowe wnioski:**
+- Iteracja i zastąpienie to nie ten sam rodzaj zakładu, a mylenie ich prowadzi do źle przydzielonych wysiłków
+- Iteracja jest ograniczona przez oryginalne założenia projektowe, zastąpienie usuwa te granice, ale dodaje ryzyko wykonania
+- Organizacje domyślnie wybierają iterację, bo jest politycznie bezpieczniejsza, a nie dlatego, że jest strategicznie słuszna
+- Wybór między nimi wymaga uczciwej oceny, czy istniejące założenia stanowią sufit
 
-**Why do I care:** Every large frontend codebase I have worked with eventually hits this exact decision. Do you migrate the component library incrementally, or do you blow it up and rebuild with current patterns? The teams that got this right were the ones who named the decision explicitly and chose deliberately. The ones that got it wrong were the ones who kept iterating past the point where iteration could still help.
+**Dlaczego mnie to interesuje:** Każda duża frontendowa baza kodu, z którą pracowałem, w końcu napotykała dokładnie tę decyzję. Czy migrować bibliotekę komponentów przyrostowo, czy wysadzić ją w powietrze i przebudować przy użyciu aktualnych wzorców? Zespoły, które to zrobiły dobrze, to te, które nazwały decyzję wprost i dokonały świadomego wyboru. Te, które zrobiły to źle, to te, które kontynuowały iterację poza punkt, w którym iteracja mogła jeszcze pomóc.
 
 **Link:** [There Are Two Ways To Make Something Better](https://hackernoon.com/there-are-two-ways-to-make-something-better)
 
 ---
 
-## A24's AI Backlash Is an Old Creative Argument in New Clothes
+## Sprzeciw wobec AI w A24 to stary twórczy argument w nowych szatach
 
-**TLDR:** When A24 used AI to assist with storyboarding, the creative community pushed back hard. Vanna W argues this reaction is not new, it is the same argument that appeared when photography threatened painting, when digital editing threatened film, and when sampling threatened composition.
+**TLDR:** Kiedy A24 użyło AI do wspomagania storyboardingu, środowisko twórcze zareagowało ostrą krytyką. Vanna W przekonuje, że ta reakcja nie jest nowa, to ten sam argument, który pojawiał się, gdy fotografia zagrażała malarstwu, gdy cyfrowa edycja zagrażała filmowi i gdy sampling zagrażał kompozycji.
 
-**Summary:** Vanna W, a Developer Relations Engineer at IBM, takes a deliberately historical lens to the A24 controversy. The film studio reportedly used AI-generated storyboards in its production process, and the response from parts of the creative community was sharp. The author's point is that the emotional structure of this backlash is identical to dozens of previous creative technology disputes.
+**Podsumowanie:** Vanna W, Developer Relations Engineer w IBM, przyjmuje celowo historyczną perspektywę na kontrowersje wokół A24. Studio filmowe podobno użyło storyboardów generowanych przez AI w swoim procesie produkcyjnym, a reakcja części środowiska twórczego była ostra. Teza autora jest taka, że emocjonalna struktura tego sprzeciwu jest identyczna z dziesiątkami wcześniejszych sporów o technologię twórczą.
 
-Photography did not kill painting. It changed what painting was for. Digital audio workstations did not kill musicians. They changed what musicianship looked like. Each time, the initial reaction was that machines were replacing human judgment, that the thing being automated was the thing that carried the real value. And each time, the argument eventually resolved not by one side winning, but by the definition of craft shifting.
+Fotografia nie zabiła malarstwa. Zmieniła to, do czego malarstwo służy. Cyfrowe stacje robocze do nagrywania dźwięku nie zabiły muzyków. Zmieniły to, jak wyglądało muzykostwo. Za każdym razem początkową reakcją było to, że maszyny zastępują ludzki osąd, że automatyzowana rzecz to ta, która niesie prawdziwą wartość. I za każdym razem argument ostatecznie rozwiązywał się nie przez zwycięstwo jednej strony, ale przez zmianę definicji rzemiosła.
 
-What I think the article handles well is the distinction between using AI as a tool within a creative process versus using AI to replace the judgment that makes creative decisions meaningful. Storyboarding is a specific skill, but it is also a thinking tool. A storyboard is how a director externalizes their spatial reasoning about a scene. If AI can generate a rough storyboard faster than a human, the question is not whether that is cheating. The question is whether the director is still doing the thinking, or whether they are accepting AI output as a substitute for it.
+To, co artykuł dobrze obsługuje, to rozróżnienie między używaniem AI jako narzędzia w procesie twórczym a używaniem AI do zastąpienia osądu, który nadaje twórczym decyzjom sens. Storyboarding to konkretna umiejętność, ale to też narzędzie do myślenia. Storyboard jest sposobem, w jaki reżyser eksternalizuje swoje przestrzenne rozumowanie o scenie. Jeśli AI może wygenerować wstępny storyboard szybciej niż człowiek, pytanie nie brzmi, czy to oszustwo. Pytanie brzmi, czy reżyser nadal wykonuje myślenie, czy akceptuje wynik AI jako substytut.
 
-The author does not fully resolve this, and I am not sure it is resolvable in the abstract. Context matters. Who is making the creative decisions, and what are they outsourcing? Those are the real questions, and they do not have universal answers.
+Autor nie rozwiązuje tego w pełni i nie jestem pewien, czy da się to rozwiązać w abstrakcji. Kontekst ma znaczenie. Kto podejmuje twórcze decyzje i co zleca na zewnątrz? To są prawdziwe pytania i nie mają uniwersalnych odpowiedzi.
 
-**Key takeaways:**
-- Creative backlash to AI follows a well-established historical pattern seen with every major creative technology
-- The meaningful question is not whether AI is used, but whether human creative judgment remains in the loop
-- Craft definitions shift over time in response to new tools, this is not a failure of the field
-- A24's situation highlights how process transparency matters as much as the tools themselves
+**Kluczowe wnioski:**
+- Twórczy sprzeciw wobec AI podąża za dobrze ugruntowanym historycznym wzorcem widocznym przy każdej ważnej technologii twórczej
+- Istotne pytanie nie brzmi, czy AI jest używane, ale czy ludzki osąd twórczy pozostaje w pętli
+- Definicje rzemiosła zmieniają się w czasie w odpowiedzi na nowe narzędzia, to nie jest porażka dziedziny
+- Sytuacja A24 uwypukla, że transparentność procesu ma takie samo znaczenie jak same narzędzia
 
-**Why do I care:** As someone who builds tools for developers, I think about this constantly. There is a version of AI-assisted coding where the developer is still thinking, still making architectural decisions, still understanding what the code does. And there is a version where the developer is a prompt writer who ships output they do not fully understand. One of those is using AI to do your work better. The other is something I am less comfortable calling engineering.
+**Dlaczego mnie to interesuje:** Jako osoba budująca narzędzia dla programistów, myślę o tym stale. Jest wersja programowania wspomaganego AI, w której programista nadal myśli, podejmuje decyzje architektoniczne, rozumie, co robi kod. I jest wersja, w której programista jest autorem promptów, który dostarcza wyniki, których w pełni nie rozumie. Jedna z nich to używanie AI do lepszego wykonywania pracy. Drugą nie czuję się komfortowo nazywać inżynierią.
 
 **Link:** [A24's AI Backlash Is an Old Creative Argument in New Clothes](https://hackernoon.com/a24s-ai-backlash-is-an-old-creative-argument-in-new-clothes)
 
 ---
 
-## Markdown and PowerShell Are a Surprisingly Good Match
+## Markdown i PowerShell to zaskakująco dobrane duo
 
-**TLDR:** PowerShell has a built-in Markdown parser that makes it straightforward to build a tiny static site generator in just a few lines of script. The author MrPowerShell walks through the combination and why it works better than you would expect.
+**TLDR:** PowerShell ma wbudowany parser Markdown, który sprawia, że zbudowanie prostego generatora stron statycznych w zaledwie kilku linijkach skryptu jest proste. Autor MrPowerShell przeprowadza przez to połączenie i wyjaśnia, dlaczego działa lepiej niż można by się spodziewać.
 
-**Summary:** MrPowerShell, a self-described platform engineer and polymath, opens with a statement I agree with completely: Markdown is everywhere, and it is everywhere because it is simple and it works. Plain text, minimal syntax, readable even before rendering. What the piece argues is that PowerShell is an underrated companion for working with Markdown files, partly because the language has native Markdown parsing built in via the ConvertFrom-Markdown cmdlet, and partly because PowerShell's pipeline model maps naturally onto the kind of file-processing work that static site generation requires.
+**Podsumowanie:** MrPowerShell, określający siebie mianem inżyniera platformy i polimatysta, zaczyna od stwierdzenia, z którym w pełni się zgadzam: Markdown jest wszędzie i jest wszędzie, ponieważ jest prosty i działa. Czysty tekst, minimalna składnia, czytelny nawet przed renderowaniem. Artykuł przekonuje, że PowerShell jest niedocenianym towarzyszem do pracy z plikami Markdown, częściowo dlatego, że język ma natywne parsowanie Markdown wbudowane w cmdlet ConvertFrom-Markdown, a częściowo dlatego, że model potokowy PowerShell naturalnie mapuje się na rodzaj pracy z plikami, jakiego wymaga generowanie stron statycznych.
 
-The walkthrough is practical. You loop over a directory of Markdown files, convert each one to HTML, write the output to a corresponding file, and you have a static site generator. No Node runtime, no build toolchain, no npm install. Just PowerShell and the file system. For documentation sites, internal wikis, or any context where you want to turn a folder of Markdown into browsable HTML without pulling in a full framework, this is a legitimate option.
+Opis jest praktyczny. Przechodzisz w pętli przez katalog plików Markdown, każdy konwertujesz na HTML, zapisujesz dane wyjściowe do odpowiedniego pliku i masz generator stron statycznych. Brak środowiska uruchomieniowego Node, brak łańcucha narzędzi do budowania, brak npm install. Tylko PowerShell i system plików. Dla stron z dokumentacją, wewnętrznych wiki lub dowolnego kontekstu, w którym chcesz zamienić folder Markdown w przeglądalne HTML bez wciągania pełnego frameworka, to jest legalna opcja.
 
-Where the article falls a little short is in not addressing the limitations head-on. ConvertFrom-Markdown does not support frontmatter, does not handle relative link rewriting, and does not have a templating story out of the box. For a real static site generator you need all of those things. What you get here is the core rendering loop, which is a fine foundation, but the gap between that and a usable tool is real work.
+Gdzie artykuł nieco zawodzi, to brak bezpośredniego omówienia ograniczeń. ConvertFrom-Markdown nie obsługuje frontmatter, nie zajmuje się przepisywaniem linków względnych i nie ma gotowego rozwiązania do szablonowania. Dla prawdziwego generatora stron statycznych potrzebujesz tego wszystkiego. Tu dostajesz podstawową pętlę renderowania, która jest niezłym fundamentem, ale luka między nią a użytecznym narzędziem to realna praca.
 
-That said, the broader point about PowerShell as a general-purpose scripting environment for text and file processing deserves more attention than it gets. PowerShell runs on Linux and Mac now. It is not just a Windows administration tool. If you are already running scripts in PowerShell, adding Markdown processing to that workflow is genuinely low friction.
+Mimo to szerszy punkt dotyczący PowerShell jako środowiska skryptowego ogólnego przeznaczenia do przetwarzania tekstu i plików zasługuje na więcej uwagi, niż dostaje. PowerShell działa teraz na Linux i Mac. To nie jest tylko narzędzie do administracji Windows. Jeśli już uruchamiasz skrypty w PowerShell, dodanie przetwarzania Markdown do tego przepływu pracy jest naprawdę mało skomplikowane.
 
-**Key takeaways:**
-- PowerShell includes a native ConvertFrom-Markdown cmdlet that handles basic HTML conversion without external dependencies
-- Building a minimal static site generator in PowerShell requires very little code if you only need core rendering
-- The approach has real limits: no frontmatter parsing, no link rewriting, no templating out of the box
-- PowerShell is cross-platform now and more capable as a general scripting environment than its reputation suggests
+**Kluczowe wnioski:**
+- PowerShell zawiera natywny cmdlet ConvertFrom-Markdown obsługujący podstawową konwersję HTML bez zewnętrznych zależności
+- Zbudowanie minimalnego generatora stron statycznych w PowerShell wymaga bardzo małej ilości kodu, jeśli potrzebujesz tylko podstawowego renderowania
+- Podejście ma realne ograniczenia: brak parsowania frontmatter, brak przepisywania linków, brak szablonowania po wyjęciu z pudełka
+- PowerShell jest teraz wieloplatformowy i bardziej zdolny jako ogólne środowisko skryptowe, niż sugeruje jego reputacja
 
-**Why do I care:** I have a soft spot for tools that do one thing with minimal ceremony. The best internal documentation tooling I have seen is often the kind that runs without a build step. If your team writes Markdown and you need to publish it somewhere, a 20-line PowerShell script that converts and copies files is a perfectly reasonable solution. You do not always need Astro.
+**Dlaczego mnie to interesuje:** Mam słabość do narzędzi, które robią jedną rzecz z minimalnym ceremoniałem. Najlepsza wewnętrzna dokumentacja, jaką widziałem, to często ta, która działa bez kroku budowania. Jeśli twój zespół pisze Markdown i musisz go gdzieś opublikować, 20-liniowy skrypt PowerShell konwertujący i kopiujący pliki to doskonale rozsądne rozwiązanie. Nie zawsze potrzebujesz Astro.
 
 **Link:** [Markdown and PowerShell Are a Surprisingly Good Match](https://hackernoon.com/markdown-and-powershell-are-a-surprisingly-good-match)
 
 ---
 
-## Focus Is Not Willpower. It's Environment Design
+## Skupienie to nie siła woli. To projektowanie środowiska
 
-**TLDR:** Matt Trifiro argues that the ability to focus deeply is not a character trait you either have or lack. It is an outcome of the environment you work in, and environments are designable.
+**TLDR:** Matt Trifiro przekonuje, że zdolność do głębokiego skupienia nie jest cechą charakteru, którą albo masz, albo nie. To wynik środowiska, w którym pracujesz, a środowiska można projektować.
 
-**Summary:** This is the second piece from Matt Trifiro in this newsletter, which tells you something about his output rate. The focus article tackles a problem that most knowledge workers have internalized as a personal failing: the inability to do deep work for sustained periods. Trifiro's reframe is that if you are unable to focus, the problem is probably not your discipline. It is your environment, and unlike discipline, environments can be engineered.
+**Podsumowanie:** To drugi artykuł Matta Trifiro w tym newsletterze, co mówi coś o jego tempie tworzenia. Artykuł o skupieniu porusza problem, który większość pracowników wiedzy zinternalizowała jako osobistą słabość: niemożność wykonywania głębokiej pracy przez dłuższe okresy. Trifiro przeformułowuje to w taki sposób: jeśli nie możesz się skupić, problem leży prawdopodobnie nie w twojej dyscyplinie, ale w twoim środowisku, a w przeciwieństwie do dyscypliny, środowiska można inżynierować.
 
-The argument draws on some familiar territory. The Eisenhower Matrix gets a mention. Meeting fatigue comes up. AI burnout, the specific exhaustion that comes from working in a context where tools are changing faster than you can learn them, gets named as a distinct phenomenon worth accounting for. None of this is new ground, but the synthesis is clean.
+Argument czerpie z dobrze znanych obszarów. Macierz Eisenhowera zostaje wspomniana. Pojawia się zmęczenie spotkaniami. AI burnout, specyficzne wyczerpanie wynikające z pracy w kontekście, gdzie narzędzia zmieniają się szybciej niż można się ich nauczyć, zostaje nazwany jako odrębne zjawisko warte uwzględnienia. Żaden z tych tematów nie jest nowym terenem, ale synteza jest czysta.
 
-What I find genuinely useful in the piece is the framing around defaults. Most work environments are designed for availability, not for focus. They optimize for response time. Slack, email, open-plan offices, meetings scheduled in 30-minute fragments, these are all environment features, and they all work against sustained attention. Changing them requires treating your working conditions as a system with intentional design choices, not as a neutral backdrop you have to overcome through willpower.
+To, co uważam za naprawdę użyteczne w artykule, to ujęcie dotyczące domyślnych ustawień. Większość środowisk pracy jest zaprojektowanych pod kątem dostępności, nie skupienia. Optymalizują czas odpowiedzi. Slack, email, biura z otwartą przestrzenią, spotkania zaplanowane w 30-minutowych fragmentach, to wszystko cechy środowiska i wszystkie działają przeciwko utrzymanej uwadze. Zmiana ich wymaga traktowania warunków pracy jako systemu z celowymi wyborami projektowymi, a nie jako neutralnego tła, które trzeba pokonać siłą woli.
 
-The article is light on specifics for actually redesigning your environment, which is where most of these pieces run out of useful advice. It diagnoses well and prescribes vaguely. But the core reframe, from personal failure to system design problem, is one that I think a lot of developers in high-interruption environments genuinely need to hear.
+Artykuł jest skąpy w szczegółach dotyczących faktycznego przeprojektowania środowiska, czyli tam, gdzie większość takich tekstów wyczerpuje swój użyteczny potencjał. Dobrze diagnozuje, ale przepisuje mgliście. Jednak podstawowe przeformułowanie, z osobistej porażki na problem projektowania systemu, to coś, co wielu programistów w środowiskach pełnych zakłóceń naprawdę musi usłyszeć.
 
-**Key takeaways:**
-- Inability to focus is more often a system problem than a character flaw
-- Environments that optimize for availability actively work against deep work
-- AI burnout is a real and distinct form of cognitive overload worth naming separately
-- Improving focus requires intentional redesign of working conditions, not more willpower
+**Kluczowe wnioski:**
+- Niemożność skupienia jest częściej problemem systemowym niż wadą charakteru
+- Środowiska optymalizujące pod kątem dostępności aktywnie działają przeciwko głębokiej pracy
+- AI burnout to realna i odrębna forma przeciążenia poznawczego warta osobnego nazwania
+- Poprawa skupienia wymaga celowego przeprojektowania warunków pracy, a nie więcej siły woli
 
-**Why do I care:** I have watched very capable engineers get steadily less productive as their communication load increased and their uninterrupted work time shrank. The answer is never to tell them to focus harder. It is to protect the conditions that make focus possible. That is a management and architecture decision, not a personal one.
+**Dlaczego mnie to interesuje:** Widziałem, jak bardzo zdolni inżynierowie stawali się stopniowo mniej produktywni, gdy ich obciążenie komunikacyjne rosło, a niezakłócony czas pracy malał. Odpowiedzią nigdy nie jest mówienie im, by skupiali się mocniej. Chodzi o ochronę warunków, które umożliwiają skupienie. To decyzja zarządcza i architektoniczna, a nie osobista.
 
 **Link:** [Focus Is Not Willpower. It's Environment Design](https://hackernoon.com/focus-is-not-willpower-its-environment-design)
 
 ---
 
-## Augmented Reality and Web3: The Infrastructure Waiting for Its Moment
+## Augmented Reality i Web3: infrastruktura czekająca na swój moment
 
-**TLDR:** The first wave of AR-Web3 convergence failed not because the vision was wrong but because the infrastructure was not ready. The author argues the infrastructure has now caught up, and a second wave is forming.
+**TLDR:** Pierwsza fala konwergencji AR-Web3 nie powiodła się nie dlatego, że wizja była błędna, ale dlatego, że infrastruktura nie była gotowa. Autor przekonuje, że infrastruktura nadgoniła i tworzy się druga fala.
 
-**Summary:** This piece, written by @quinnhillerich and featuring OVR as a case study, takes a revisionist look at the AR-Web3 space. The first wave of companies trying to build at this intersection ran into a consistent set of problems: hardware was too expensive and too limited, latency was too high for real-time spatial experiences, and blockchain transaction costs made micro-interactions economically impractical. The vision of persistent, user-owned digital overlays on physical space was coherent. The execution environment was not ready for it.
+**Podsumowanie:** Ten artykuł, napisany przez @quinnhillerich i prezentujący OVR jako case study, przyjmuje rewizjonistyczne spojrzenie na przestrzeń AR-Web3. Pierwsza fala firm próbujących budować na tym skrzyżowaniu napotykała spójny zestaw problemów: sprzęt był zbyt drogi i zbyt ograniczony, opóźnienia były zbyt duże dla doświadczeń przestrzennych w czasie rzeczywistym, a koszty transakcji blockchain sprawiały, że mikrointerakcje były ekonomicznie niepraktyczne. Wizja trwałych, należących do użytkowników cyfrowych nakładek na przestrzeń fizyczną była spójna. Środowisko wykonawcze nie było na to gotowe.
 
-The author points to OVR as an example of a company that survived the first wave by building a working business model rather than relying purely on speculative infrastructure. That distinction matters. Companies that bet everything on infrastructure being ready by a certain date largely did not make it. Companies that found near-term utility while the infrastructure caught up had a better survival rate.
+Autor wskazuje na OVR jako przykład firmy, która przetrwała pierwszą falę, budując działający model biznesowy zamiast polegać wyłącznie na spekulatywnej infrastrukturze. To rozróżnienie ma znaczenie. Firmy, które postawiły wszystko na gotowość infrastruktury do określonej daty, w większości nie przetrwały. Firmy, które znalazły krótkoterminową użyteczność, czekając na nadgonienie infrastruktury, miały lepszy wskaźnik przeżycia.
 
-The core claim is that compute, connectivity, and hardware have all improved enough that a second attempt is viable. Spatial computing hardware from Apple and others, lower latency networks, and more mature smart contract tooling have removed some of the blockers that killed first-wave companies. Whether that is enough is genuinely unclear, but the analysis of why the first wave failed is solid.
+Kluczowe twierdzenie jest takie, że obliczenia, łączność i sprzęt poprawiły się na tyle, że druga próba jest realna. Sprzętowe platformy do spatial computing od Apple i innych producentów, sieci o niższym opóźnieniu i dojrzalsze narzędzia do smart contracts usunęły część blokad, które zabiły firmy pierwszej fali. Czy to wystarczy, jest naprawdę niejasne, ale analiza tego, dlaczego pierwsza fala poniosła porażkę, jest solidna.
 
-What the article avoids is engaging with the user adoption problem, which is not primarily an infrastructure problem. People need compelling reasons to wear or carry AR hardware in daily life. The infrastructure being better does not automatically create those reasons.
+Artykuł unika jednak problemu adopcji przez użytkowników, który nie jest przede wszystkim problemem infrastrukturalnym. Ludzie potrzebują przekonujących powodów, by nosić lub nosić przy sobie sprzęt AR w codziennym życiu. Lepsza infrastruktura automatycznie nie tworzy tych powodów.
 
-**Key takeaways:**
-- The first AR-Web3 wave failed on infrastructure, not vision, hardware, latency, and costs were all limiting factors
-- OVR stands out as a survivor by building a real business model rather than waiting for infrastructure to mature
-- Improved spatial computing hardware and networks have removed some first-wave blockers
-- User adoption remains a separate, unsolved problem that better infrastructure alone does not address
+**Kluczowe wnioski:**
+- Pierwsza fala AR-Web3 poniosła porażkę z powodu infrastruktury, a nie wizji, sprzęt, opóźnienia i koszty były czynnikami ograniczającymi
+- OVR wyróżnia się jako ocalały, budując realny model biznesowy zamiast czekać na dojrzałość infrastruktury
+- Ulepszony sprzęt do spatial computing i sieci usunęły część blokad z pierwszej fali
+- Adopcja przez użytkowników pozostaje odrębnym, nierozwiązanym problemem, którego lepsza infrastruktura sama nie rozwiązuje
 
-**Why do I care:** From a web architecture perspective, the question of what spatial computing does to the frontend stack is interesting and underexplored. If persistent AR overlays become real, the rendering and state management problems are genuinely novel. But I am skeptical of timelines here. The infrastructure argument has been made before, and the missing piece has never been just the infrastructure.
+**Dlaczego mnie to interesuje:** Z perspektywy architektury webowej pytanie o to, co spatial computing robi z frontendem, jest interesujące i niedostatecznie zbadane. Jeśli trwałe nakładki AR staną się rzeczywistością, problemy z renderowaniem i zarządzaniem stanem są naprawdę nowe. Jestem jednak sceptyczny wobec harmonogramów. Argument o infrastrukturze był już wcześniej stawiany i brakującym elementem nigdy nie była tylko infrastruktura.
 
 **Link:** [Augmented Reality and Web3: The Infrastructure Waiting for Its Moment](https://hackernoon.com/augmented-reality-and-web3-the-infrastructure-waiting-for-its-moment)

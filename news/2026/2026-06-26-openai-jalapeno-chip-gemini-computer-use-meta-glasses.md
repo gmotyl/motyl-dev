@@ -1,140 +1,140 @@
 ---
-title: "OpenAI's Jalapeño Chip, Gemini 3.5 Flash Computer Use, and Meta's $299 AI Glasses"
-excerpt: "OpenAI and Broadcom unveiled custom silicon called Jalapeño, Google added computer use to Gemini 3.5 Flash, and Meta shipped AI glasses at $299."
+title: "Chip Jalapeño od OpenAI, computer use w Gemini 3.5 Flash i okulary Meta za $299"
+excerpt: "OpenAI i Broadcom zaprezentowali niestandardowy chip o nazwie Jalapeño, Google dodało obsługę computer use do Gemini 3.5 Flash, a Meta wypuściło okulary AI w cenie $299."
 publishedAt: "2026-06-25"
 slug: "openai-jalapeno-chip-gemini-computer-use-meta-glasses"
-hashtags: "#theaibreak #ai #chips #silicon #agents #computer-use #hardware #llm #generated #en"
+hashtags: "#theaibreak #ai #chips #silicon #agents #computer-use #hardware #llm #generated #pl"
 source_pattern: "The AI Break"
 ---
 
-## OpenAI and Broadcom Unveil Jalapeño, OpenAI's First Custom Inference Chip
+## OpenAI i Broadcom prezentują Jalapeño, pierwszy niestandardowy chip do inferencji stworzony przez OpenAI
 
-**TLDR:** OpenAI and Broadcom have revealed Jalapeño, OpenAI's first in-house custom inference chip. The chip promises significantly better performance per watt compared to off-the-shelf GPU options. This is a direct move to reduce dependency on Nvidia and control more of the inference stack.
+**TLDR:** OpenAI i Broadcom ujawniły Jalapeño, pierwszy autorski chip do inferencji opracowany przez OpenAI. Układ ten oferuje znacznie lepszą wydajność w przeliczeniu na wat w porównaniu z dostępnymi na rynku opcjami GPU. To bezpośredni ruch mający na celu zmniejszenie zależności od Nvidia i przejęcie kontroli nad większą częścią stosu inferencji.
 
-**Summary:** For years, OpenAI has been one of the largest buyers of Nvidia's hardware, spending enormous sums to keep ChatGPT running at scale. Jalapeño changes the calculus. Custom silicon designed specifically for inference workloads, built in partnership with Broadcom, means OpenAI can tune the chip to its own model architectures rather than working around a general-purpose GPU. The performance gains they're claiming are not just about raw speed, they are about cost. Inference at OpenAI's scale is where the real money goes, and shaving fractions of a cent per token across billions of daily requests translates to hundreds of millions of dollars.
+**Podsumowanie:** Przez lata OpenAI był jednym z największych nabywców sprzętu Nvidia, wydając ogromne sumy na utrzymanie ChatGPT działającego w skali. Jalapeño zmienia te kalkulacje. Niestandardowy chip zaprojektowany specjalnie pod kątem obciążeń inferencji, stworzony we współpracy z Broadcom, oznacza, że OpenAI może dostosowywać układ do własnych architektur modeli zamiast obchodzić ograniczenia ogólnego GPU. Deklarowane wzrosty wydajności dotyczą nie tylko surowej prędkości, ale przede wszystkim kosztów. Inferencja w skali OpenAI pochłania największe środki, a obniżenie kosztu o ułamki centa za token w miliardach dziennych zapytań przekłada się na setki milionów dolarów oszczędności.
 
-The partnership with Broadcom is interesting too. Broadcom has quietly become one of the most important custom chip designers in the industry, handling silicon for Google's TPUs among others. OpenAI joining that roster signals a maturation in how frontier AI labs think about their infrastructure. This is no longer a software problem with hardware as an afterthought. The chip is the product.
+Partnerstwo z Broadcom jest równie interesujące. Broadcom po cichu stał się jednym z najważniejszych projektantów niestandardowych chipów w branży, obsługując między innymi TPU dla Google. Dołączenie OpenAI do tego grona sygnalizuje dojrzewanie sposobu, w jaki czołowe laboratoria AI myślą o swojej infrastrukturze. To nie jest już problem oprogramowania z hardware'em jako dodatkiem. Chip jest produktem.
 
-What I find worth watching here is what happens to Nvidia's pricing power. The moment multiple major AI labs have credible alternatives, even as a hedge, Nvidia's leverage weakens. That pressure may already be baked into the market, but Jalapeño makes it concrete. OpenAI now has a path to telling Nvidia how much they're willing to pay, rather than paying whatever is asked.
+Warto obserwować, co stanie się z siłą negocjacyjną Nvidia w kwestii cen. W momencie, gdy kilka dużych laboratoriów AI dysponuje wiarygodnymi alternatywami, nawet jako zabezpieczeniem, pozycja Nvidia słabnie. Tę presję rynek mógł już wycenić, ale Jalapeño nadaje jej konkretny kształt. OpenAI ma teraz drogę do dyktowania Nvidia własnych warunków cenowych, zamiast płacić tyle, ile firma zażąda.
 
-There is a missing piece in the announcement though. We know almost nothing about the manufacturing process, TSMC involvement, or what generation of node this chip targets. Those details will matter enormously for whether Jalapeño is a genuine threat to Nvidia's H100 and B200 dominance or a longer-term bet still years from parity.
+W ogłoszeniu brakuje jednak jednego elementu. Nie wiemy niemal nic o procesie produkcyjnym, zaangażowaniu TSMC ani o tym, na jaki węzeł technologiczny ten chip jest skierowany. Te szczegóły będą miały ogromne znaczenie dla oceny, czy Jalapeño stanowi realne zagrożenie dla dominacji Nvidia H100 i B200, czy też jest długoterminowym zakładem, który przez lata nie osiągnie porównywalnej wydajności.
 
-**Key takeaways:**
-- OpenAI and Broadcom revealed Jalapeño, OpenAI's first custom inference chip targeting better performance than off-the-shelf GPUs.
-- This gives OpenAI a tool to reduce its dependence on Nvidia and lower the per-token cost of running its models at scale.
-- The move mirrors what Google did with TPUs, suggesting custom silicon is becoming standard practice for frontier AI labs.
+**Najważniejsze wnioski:**
+- OpenAI i Broadcom ujawniły Jalapeño, pierwszy niestandardowy chip do inferencji OpenAI, celujący w wydajność przewyższającą dostępne GPU.
+- Daje to OpenAI narzędzie do zmniejszenia zależności od Nvidia i obniżenia kosztu uruchamiania modeli w dużej skali per token.
+- Ruch ten naśladuje to, co Google zrobiło z TPU, sugerując, że niestandardowy silicon staje się standardową praktyką czołowych laboratoriów AI.
 
-**Why do I care:** From an architecture standpoint, this matters because inference costs directly shape what API pricing looks like for developers. When OpenAI cuts its compute costs, those savings may eventually flow down to lower API prices or higher rate limits. It also signals that the AI infrastructure layer is consolidating vertically. If you're building on top of OpenAI's APIs, your cost structure is increasingly tied to decisions made at the silicon level. Understanding that dependency is part of designing resilient systems.
-
-**Link:** [OpenAI Built Its Own Chip, and It's Called Jalapeño](https://theaibreak.substack.com/p/openai-built-its-own-chip-and-its?publication_id=1842292&post_id=203527187&isFreemail=true&triedRedirect=true)
-
----
-
-## Google Adds Computer Use to Gemini 3.5 Flash
-
-**TLDR:** Google has built computer use capabilities directly into Gemini 3.5 Flash, its affordable and fast model. Developers can now build agents that control browsers and desktop applications without needing a separate orchestration layer. This puts practical computer-controlling agents within reach of more projects.
-
-**Summary:** Computer use, the ability for an AI model to observe a screen and operate a keyboard and mouse, was previously something you associated with either Anthropic's Claude or bespoke research demos. Google baking it into Gemini 3.5 Flash changes the accessibility equation. Flash is cheap and fast, which matters a lot when you're designing an agent that might need to take dozens of steps through a browser workflow. Every step costs a round trip to the model, so inference price directly limits how ambitious your agent can be.
-
-What Google is doing here is making browser and desktop automation a mainstream developer capability rather than a niche research problem. The prior generation of browser automation relied on explicit selectors and structured APIs. Computer use flips that on its head. The model just looks at the screen like a human would and figures out where to click. That robustness comes at the cost of speed and reliability compared to a well-structured API, but it unlocks automation for the huge surface area of software that was never designed to be automated programmatically.
-
-There is a question worth asking that most coverage skips. Computer use works well in demos and controlled environments. In production, UI drift is brutal. A button moves, a modal appears unexpectedly, and the agent gets confused. The real challenge for teams building on this is not the initial demo, it is the long-tail of edge cases when the software you're automating updates its interface. Google has not said much about how Gemini 3.5 Flash handles recovery from unexpected states, and that is where the hard engineering work lives.
-
-**Key takeaways:**
-- Google embedded computer use natively into Gemini 3.5 Flash, allowing agents to control browsers and desktop apps.
-- The low cost and speed of Flash make it practical for multi-step agent workflows where each step requires a model call.
-- The main unsolved engineering challenge remains graceful recovery when the target software's UI changes unexpectedly.
-
-**Why do I care:** As a developer building tools and internal automation, computer use in a cheap fast model is genuinely useful. It means you can write agents that interact with legacy SaaS products that have no API, or automate browser-based workflows that would have required a full RPA platform two years ago. The practical concern is stability in CI/CD pipelines. If you're building an agent that runs Gemini 3.5 Flash to drive a browser, you need a serious strategy for handling UI regressions in the target application. That's not a Gemini problem, it's a product design problem for anyone shipping agents that depend on visual interfaces.
+**Dlaczego mnie to dotyczy:** Z perspektywy architektonicznej ma to znaczenie, ponieważ koszty inferencji bezpośrednio kształtują ceny API dla deweloperów. Kiedy OpenAI obniży koszty obliczeniowe, oszczędności mogą ostatecznie przełożyć się na niższe ceny API lub wyższe limity zapytań. Sygnalizuje to też pionową konsolidację warstwy infrastruktury AI. Jeśli budujesz na API OpenAI, twoja struktura kosztów jest coraz bardziej powiązana z decyzjami podejmowanymi na poziomie krzemowym. Zrozumienie tej zależności jest częścią projektowania odpornych systemów.
 
 **Link:** [OpenAI Built Its Own Chip, and It's Called Jalapeño](https://theaibreak.substack.com/p/openai-built-its-own-chip-and-its?publication_id=1842292&post_id=203527187&isFreemail=true&triedRedirect=true)
 
 ---
 
-## Perplexity Launches Computer for Counsel, an Enterprise Legal AI Agent
+## Google dodaje computer use do Gemini 3.5 Flash
 
-**TLDR:** Perplexity has released Computer for Counsel, an enterprise-grade legal AI agent that runs more than 20 models simultaneously and integrates with Microsoft 365 and case-law databases. The product targets legal teams who need AI that can reason across multiple sources rather than just search. This is a direct play into a market where accuracy and traceability are non-negotiable.
+**TLDR:** Google wbudowało możliwości computer use bezpośrednio w Gemini 3.5 Flash, swój tani i szybki model. Deweloperzy mogą teraz budować agentów kontrolujących przeglądarki i aplikacje desktopowe bez potrzeby osobnej warstwy orkiestracji. Stawiając praktycznych agentów sterujących komputerem w zasięgu większej liczby projektów.
 
-**Summary:** Legal is one of the few domains where AI can be genuinely transformative and genuinely dangerous at the same time. Hallucinated case citations have already caused real embarrassment for lawyers who trusted AI without verification. Perplexity's approach with Computer for Counsel is notable because running more than 20 models in parallel and integrating directly with case-law databases suggests the product is designed around retrieval accuracy, not just generation fluency.
+**Podsumowanie:** Computer use, czyli zdolność modelu AI do obserwowania ekranu i obsługi klawiatury oraz myszy, był wcześniej kojarzony albo z Claude od Anthropic, albo z niszowymi demonstracjami badawczymi. Wbudowanie tej funkcji przez Google w Gemini 3.5 Flash zmienia równanie dostępności. Flash jest tani i szybki, co ma ogromne znaczenie przy projektowaniu agenta, który może potrzebować dziesiątek kroków w przepływie pracy w przeglądarce. Każdy krok kosztuje rundę do modelu, więc cena inferencji bezpośrednio ogranicza ambicje agenta.
 
-The Microsoft 365 integration is smart positioning. Legal teams live in Outlook, Teams, and Word. If the agent can operate inside those tools and pull case-law context into a document without requiring a separate workflow, the friction to adoption drops considerably. That said, enterprise legal software has a famously long sales cycle and deeply entrenched incumbents like LexisNexis and Westlaw. Perplexity is betting that its search-native approach translates to legal research better than incumbents who are retrofitting AI onto decades-old products.
+Google sprawia, że automatyzacja przeglądarki i desktopa staje się standardową możliwością dla deweloperów, a nie niszowym problemem badawczym. Poprzednia generacja automatyzacji przeglądarki opierała się na jawnych selektorach i strukturyzowanych API. Computer use odwraca tę logikę. Model po prostu patrzy na ekran jak człowiek i sam określa, gdzie kliknąć. Ta solidność odbywa się kosztem szybkości i niezawodności w porównaniu z dobrze ustrukturyzowanym API, ale odblokowuje automatyzację dla ogromnej przestrzeni oprogramowania, które nigdy nie było projektowane z myślą o programowej automatyzacji.
 
-What is missing from the announcement is any detail about how the system handles citation verification or how it communicates uncertainty to users. For a product targeting lawyers, those are not nice-to-have features. They are core to professional liability. If Computer for Counsel hallucinates a case and a lawyer files a brief relying on it, the human is still the one facing bar complaints. The product has to earn trust slowly, one verified citation at a time.
+Warto zadać pytanie, które większość relacji pomija. Computer use działa dobrze w demonstracjach i kontrolowanych środowiskach. W produkcji dryft UI jest bezlitosny. Przycisk się przesuwa, pojawia się nieoczekiwany modal i agent się gubi. Prawdziwym wyzwaniem dla zespołów budujących na tej technologii nie jest początkowa demonstracja, lecz długi ogon przypadków brzegowych, gdy automatyzowane oprogramowanie aktualizuje swój interfejs. Google niewiele powiedziało o tym, jak Gemini 3.5 Flash radzi sobie z odzyskiwaniem po nieoczekiwanych stanach, a właśnie tam tkwi ciężka praca inżynierska.
 
-**Key takeaways:**
-- Perplexity launched Computer for Counsel, a legal AI agent running 20+ models with case-law and Microsoft 365 integrations.
-- The product targets enterprise legal teams who need accurate, traceable research rather than general-purpose AI chat.
-- The biggest unresolved question is how the system handles citation verification and communicates its own uncertainty to professional users.
+**Najważniejsze wnioski:**
+- Google wbudowało computer use natywnie w Gemini 3.5 Flash, pozwalając agentom kontrolować przeglądarki i aplikacje desktopowe.
+- Niski koszt i szybkość Flash sprawiają, że jest praktyczny w wieloetapowych przepływach pracy agentów, gdzie każdy krok wymaga wywołania modelu.
+- Głównym nierozwiązanym wyzwaniem inżynierskim pozostaje graceful recovery, gdy UI docelowego oprogramowania zmienia się nieoczekiwanie.
 
-**Why do I care:** Legal tooling is adjacent to developer tooling in more ways than it seems. Contracts, compliance documentation, privacy policies, and terms of service are all legal artifacts that engineering teams touch regularly. An AI agent that can reason accurately across case law and company documents could genuinely save hours on compliance review cycles. I'd want to see how it handles jurisdiction-specific questions and whether it surfaces confidence levels before I'd trust it in a professional context.
-
-**Link:** [OpenAI Built Its Own Chip, and It's Called Jalapeño](https://theaibreak.substack.com/p/openai-built-its-own-chip-and-its?publication_id=1842292&post_id=203527187&isFreemail=true&triedRedirect=true)
-
----
-
-## Meta and EssilorLuxottica Launch Meta Glasses at $299 with Muse Spark AI
-
-**TLDR:** Meta and EssilorLuxottica have released Meta Glasses starting at $299, featuring the new Muse Spark AI model built in. The glasses are designed as a wearable AI companion rather than a full AR display. At this price point, they could be the first AI wearable to reach meaningful consumer scale.
-
-**Summary:** The previous generation of Meta Ray-Bans was a proof of concept. They were interesting, a bit gimmicky, and sold well enough to justify a sequel. These new glasses with Muse Spark represent something more deliberate. Bundling a purpose-built AI model into eyewear at $299 is a specific product thesis: that ambient AI on your face, available without pulling out your phone, is worth paying for and wearing every day.
-
-Muse Spark being a custom model matters. Meta is not just routing requests to Llama through a Bluetooth connection to your phone. The model is presumably optimized for the constrained compute environment of a wearable, low latency, conversational, and tuned for the kinds of questions you ask when you're looking at something in the real world rather than sitting at a desk. That specificity is what separates a useful product from a demo.
-
-The EssilorLuxottica partnership also deserves more credit than it usually gets. Prescription lenses, distribution through opticians, and design credibility are all things that a tech company cannot build overnight. Meta has a supply chain and retail relationship that no other tech company has for this form factor. Apple's Vision Pro is extraordinary hardware that almost no one will ever own at its price point. Meta is going the opposite direction, and $299 with a recognizable frame design from Luxottica is a serious attempt at mass distribution.
-
-The question I keep coming back to is battery life and social acceptance. You can build the most useful AI into glasses and it will fail if people feel weird wearing them in public or if they die three hours into the day. Meta has not published runtime specs prominently, which is either oversight or something they'd rather you not think about before purchase.
-
-**Key takeaways:**
-- Meta and EssilorLuxottica launched Meta Glasses at $299, running a new purpose-built Muse Spark AI model.
-- The $299 price and Luxottica design partnership position these as a genuine attempt at mainstream AI wearable adoption.
-- Battery life and social acceptance in public spaces remain the two barriers that no spec sheet can fully answer before real-world use.
-
-**Why do I care:** Wearable AI that can observe context and answer questions without a screen is a different interaction model entirely. As someone who thinks about developer tools and interfaces, I'm interested in what happens when AI moves off the screen and into ambient computing. If these glasses reach millions of users, there will be demand for integrations, voice-first interfaces, and APIs that don't assume a keyboard. That's a new surface developers will need to design for, and it's worth paying attention to now rather than scrambling to catch up later.
+**Dlaczego mnie to dotyczy:** Jako deweloper budujący narzędzia i wewnętrzną automatyzację, computer use w tanim i szybkim modelu jest naprawdę użyteczny. Oznacza możliwość tworzenia agentów, którzy wchodzą w interakcję ze starszymi produktami SaaS bez API lub automatyzowania przepływów pracy w przeglądarce, które dwa lata temu wymagałyby pełnej platformy RPA. Praktyczną kwestią jest stabilność w pipeline'ach CI/CD. Jeśli budujesz agenta, który uruchamia Gemini 3.5 Flash do sterowania przeglądarką, potrzebujesz solidnej strategii obsługi regresji UI w docelowej aplikacji. To nie jest problem Gemini, to problem projektowania produktu dla każdego, kto dostarcza agentów zależnych od wizualnych interfejsów.
 
 **Link:** [OpenAI Built Its Own Chip, and It's Called Jalapeño](https://theaibreak.substack.com/p/openai-built-its-own-chip-and-its?publication_id=1842292&post_id=203527187&isFreemail=true&triedRedirect=true)
 
 ---
 
-## ByteDance Reveals Seedance 2.5: Native 30-Second 4K AI Video from a Single Prompt
+## Perplexity wprowadza Computer for Counsel, korporacyjnego agenta AI dla sektora prawnego
 
-**TLDR:** ByteDance has unveiled Seedance 2.5, a video generation model that produces native 30-second 4K clips from a single text prompt with no stitching between segments. The model accepts up to 50 reference images as inputs. This is a significant step past the 5-10 second clips that current video AI models typically produce.
+**TLDR:** Perplexity wydało Computer for Counsel, korporacyjnego agenta AI klasy enterprise dla sektora prawnego, który uruchamia jednocześnie ponad 20 modeli i integruje się z Microsoft 365 oraz bazami danych orzecznictwa. Produkt jest skierowany do zespołów prawnych potrzebujących AI zdolnego do rozumowania na wielu źródłach, a nie tylko wyszukiwania. To bezpośrednia ekspansja na rynek, gdzie dokładność i możliwość śledzenia źródeł są absolutnie konieczne.
 
-**Summary:** AI video generation has been stuck at the short-clip problem for a while. Most models top out at around five to ten seconds of coherent output before motion consistency degrades or the model loses track of what it was doing. Thirty seconds of native, un-stitched 4K content from a single prompt, if the claims hold up in real-world use, is a genuine leap in temporal coherence.
+**Podsumowanie:** Prawo to jedna z niewielu dziedzin, gdzie AI może być jednocześnie naprawdę transformacyjne i naprawdę niebezpieczne. Halucynowane cytowania spraw już przyniosły prawdziwą kompromitację prawnikom, którzy ufali AI bez weryfikacji. Podejście Perplexity w Computer for Counsel jest godne uwagi, bo uruchomienie ponad 20 modeli równolegle z bezpośrednią integracją z bazami orzecznictwa sugeruje, że produkt jest zaprojektowany wokół dokładności wyszukiwania, a nie tylko płynności generowania.
 
-The 50 reference image input is the feature I find most practically interesting. Video generation that can maintain visual consistency with a specific character, product, or setting across a 30-second clip is where commercial use cases live. Stock footage replacement, product demo videos, and social content creation all require consistency that prior models couldn't deliver without extensive post-processing. Fifty reference images is a lot of context to work with.
+Integracja z Microsoft 365 to inteligentne pozycjonowanie. Zespoły prawne żyją w Outlook, Teams i Word. Jeśli agent może działać wewnątrz tych narzędzi i wciągać kontekst prawny do dokumentu bez konieczności osobnego przepływu pracy, bariera adopcji znacznie spada. Niemniej jednak korporacyjne oprogramowanie prawne ma notoryczne długie cykle sprzedaży i głęboko ugruntowanych graczy, takich jak LexisNexis i Westlaw. Perplexity zakłada, że jego podejście nastawione na wyszukiwanie przekłada się na badania prawne lepiej niż u incumbentów, którzy retrofitują AI na dziesięcioletnie produkty.
 
-ByteDance building this makes sense strategically. TikTok's content engine runs on short video, and a model that can generate professional-quality clips for creators would be both a moat and a cost center. The question is whether this becomes a creator tool that TikTok uses internally, a standalone product, or an API that third-party developers can access. ByteDance's history with AI products suggests they will not be shy about distribution if the model performs.
+W ogłoszeniu brakuje szczegółów dotyczących sposobu weryfikacji cytowań przez system i komunikowania niepewności użytkownikom. Dla produktu skierowanego do prawników to nie są miłe dodatki, lecz elementy kluczowe dla odpowiedzialności zawodowej. Jeśli Computer for Counsel halucynuje sprawę, a prawnik złoży pozew się na niej opierając, to człowiek wciąż odpowiada przed izbą adwokacką. Produkt musi zdobywać zaufanie stopniowo, jedno zweryfikowane cytowanie na raz.
 
-There is an uncomfortable conversation the industry keeps deferring on AI video at this quality level. When 30-second 4K clips are indistinguishable from real footage, provenance and verification become infrastructure problems. ByteDance operates in a regulatory environment where that conversation is especially fraught. The technical achievement here is real. What happens with it is a separate and harder question.
+**Najważniejsze wnioski:**
+- Perplexity uruchomiło Computer for Counsel, agenta AI dla sektora prawnego uruchamiającego ponad 20 modeli z integracjami orzecznictwa i Microsoft 365.
+- Produkt kierowany jest do korporacyjnych zespołów prawnych potrzebujących dokładnych, możliwych do śledzenia badań, a nie ogólnego czatu AI.
+- Największym nierozwiązanym pytaniem pozostaje sposób obsługi weryfikacji cytowań i komunikowania własnej niepewności profesjonalnym użytkownikom.
 
-**Key takeaways:**
-- ByteDance revealed Seedance 2.5, generating un-stitched native 30-second 4K video from a single prompt with up to 50 reference inputs.
-- The jump from 5-10 second clips to 30 seconds of coherent output represents meaningful progress in temporal consistency for video AI.
-- Commercial use cases like product demos and creator tools become viable when reference-image consistency works at scale, but provenance and verification challenges grow alongside the capability.
-
-**Why do I care:** Video generation at this fidelity changes what small teams can ship. A two-person startup or a solo developer can now produce marketing video, demo content, or explainer material without a production budget. For anyone building developer tools or products that need visual content, that lowers the barrier to polished presentation significantly. The flip side is that attention to authenticity in technical content matters more now, not less. When anyone can generate a convincing demo video, the ones that show the real product actually running will stand out.
+**Dlaczego mnie to dotyczy:** Narzędzia prawne są bliższe narzędziom deweloperskim, niż się wydaje. Umowy, dokumentacja compliance, polityki prywatności i warunki korzystania z usług to artefakty prawne, z którymi regularnie stykają się zespoły inżynierskie. Agent AI potrafiący dokładnie rozumować na podstawie orzecznictwa i dokumentów firmowych mógłby naprawdę zaoszczędzić godziny w cyklach przeglądu compliance. Chciałbym zobaczyć, jak radzi sobie z pytaniami specyficznymi dla jurysdykcji i czy wyświetla poziomy pewności, zanim zaufałbym mu w kontekście profesjonalnym.
 
 **Link:** [OpenAI Built Its Own Chip, and It's Called Jalapeño](https://theaibreak.substack.com/p/openai-built-its-own-chip-and-its?publication_id=1842292&post_id=203527187&isFreemail=true&triedRedirect=true)
 
 ---
 
-## Qualcomm Acquires Modular for $3.92 Billion to Challenge Nvidia's CUDA Lock-In
+## Meta i EssilorLuxottica wprowadzają okulary Meta za $299 z modelem AI Muse Spark
 
-**TLDR:** Qualcomm has acquired AI software startup Modular for approximately $3.92 billion in an all-stock deal. Modular builds infrastructure that lets AI workloads run across Nvidia, AMD, and Qualcomm chips without being tied to any single vendor's SDK. The acquisition is a direct attempt to erode Nvidia's CUDA ecosystem advantage.
+**TLDR:** Meta i EssilorLuxottica wypuściły okulary Meta w cenie od $299, wyposażone w nowy model AI Muse Spark. Okulary są zaprojektowane jako wearable towarzysz AI, a nie pełnoprawny wyświetlacz AR. W tej cenie mogą być pierwszym urządzeniem AI do noszenia, które osiągnie znaczącą skalę konsumencką.
 
-**Summary:** CUDA lock-in is the real moat Nvidia has, not just the hardware. Once a company's AI training and inference pipelines are written against CUDA, switching to AMD or Qualcomm silicon requires rewriting software, revalidating results, and retraining teams. Modular's core product, the MAX platform and the Mojo programming language, was explicitly designed to break that dependency by providing a unified abstraction layer across hardware vendors.
+**Podsumowanie:** Poprzednia generacja Meta Ray-Ban była dowodem słuszności koncepcji. Były interesujące, trochę gadżeciarskie i sprzedawały się wystarczająco dobrze, by uzasadnić sequel. Te nowe okulary z Muse Spark reprezentują coś bardziej przemyślanego. Dołączenie specjalnie zaprojektowanego modelu AI do okularów za $299 to konkretna teza produktowa: że ambientowe AI na twarzy, dostępne bez wyjmowania telefonu, jest warte zapłaty i codziennego noszenia.
 
-Qualcomm buying Modular is an acknowledgment that winning the chip market requires winning the software ecosystem. Qualcomm already has competitive AI hardware, especially for edge inference on mobile devices and the Snapdragon line. What it has lacked is a story for developers who want to write once and deploy across hardware targets. Modular gives them that story, along with the engineers who built it.
+Fakt, że Muse Spark to niestandardowy model, ma znaczenie. Meta nie kieruje po prostu zapytań do Llamy przez połączenie Bluetooth z telefonem. Model jest prawdopodobnie zoptymalizowany pod kątem ograniczonego środowiska obliczeniowego wearable, zapewniając niskie opóźnienia, nastawienie na konwersację i dostosowanie do rodzaju pytań, jakie zadajesz, gdy patrzysz na coś w realnym świecie, a nie siedzisz przy biurku. Ta specyficzność odróżnia użyteczny produkt od demonstracji.
 
-The $3.92 billion price tag is significant for a company that had not yet achieved mainstream developer adoption. Qualcomm is paying not for current revenue but for the potential to use Modular's abstractions to commoditize the software layer that Nvidia currently owns. Whether that works depends on whether major AI labs and cloud providers adopt the Modular stack seriously, which requires trust and inertia to shift.
+Partnerstwo z EssilorLuxottica zasługuje na więcej uznania niż zwykle otrzymuje. Soczewki korekcyjne, dystrybucja przez optyki i wiarygodność designerska to rzeczy, których firma technologiczna nie zbuduje z dnia na dzień. Meta dysponuje łańcuchem dostaw i relacjami detalicznymi, których żadna inna firma technologiczna nie ma dla tego form factoru. Apple Vision Pro to niezwykły sprzęt, który w tej cenie niemal nikt nie kupi. Meta idzie w przeciwnym kierunku i $299 z rozpoznawalnym designem oprawek Luxottica to poważna próba masowej dystrybucji.
 
-Chris Lattner, Modular's founder and the creator of the LLVM compiler infrastructure and Swift, is the asset that does not show up on the balance sheet. Losing him from Modular, or retaining him inside Qualcomm, will determine whether this acquisition produces results or just produces headcount.
+Pytanie, do którego wciąż wracam, dotyczy czasu pracy na baterii i społecznej akceptacji. Można wbudować najbardziej użyteczne AI w okulary i tak poniesie porażkę, jeśli ludzie będą czuć się nieswojo nosząc je publicznie lub jeśli wyczerpią się po trzech godzinach użytkowania. Meta nie opublikowała prominentnie specyfikacji czasu pracy, co jest albo przeoczeniem, albo czymś, o czym wolałaby, żebyś nie myślał przed zakupem.
 
-**Key takeaways:**
-- Qualcomm acquired Modular for $3.92 billion to gain a cross-hardware AI software layer targeting Nvidia, AMD, and Qualcomm chips.
-- The deal is about software ecosystem strategy as much as hardware, aiming to reduce CUDA's grip on AI developer workflows.
-- The real bet is on whether Modular's abstraction layer achieves enough adoption to make Qualcomm's silicon a genuinely competitive alternative in production AI deployments.
+**Najważniejsze wnioski:**
+- Meta i EssilorLuxottica wprowadziły okulary Meta za $299, zasilane nowym modelem AI Muse Spark zaprojektowanym specjalnie do tego urządzenia.
+- Cena $299 i partnerstwo designerskie z Luxottica pozycjonują je jako poważną próbę masowej adopcji wearable AI.
+- Czas pracy na baterii i społeczna akceptacja w przestrzeniach publicznych pozostają dwoma barierami, których żadna specyfikacja techniczna nie może w pełni odpowiedzieć przed rzeczywistym użytkowaniem.
 
-**Why do I care:** For developers, this matters because toolchain fragmentation is a real cost. If Modular's approach gains traction, the choice of inference hardware becomes less consequential for the software you write, which is good for portability and vendor negotiation. The Mojo language and MAX inference engine are worth watching directly, separate from Qualcomm's strategy. If they deliver on the promise of Python-compatible high-performance AI kernels, that changes how teams optimize inference pipelines without requiring CUDA expertise.
+**Dlaczego mnie to dotyczy:** Wearable AI potrafiące obserwować kontekst i odpowiadać na pytania bez ekranu to zupełnie inny model interakcji. Jako osoba myśląca o narzędziach deweloperskich i interfejsach, interesuje mnie, co się stanie, gdy AI przeniesie się poza ekran do ambient computingu. Jeśli te okulary dotrą do milionów użytkowników, pojawi się zapotrzebowanie na integracje, interfejsy voice-first i API, które nie zakładają klawiatury. To nowa powierzchnia, którą deweloperzy będą musieli projektować, i warto zwrócić na to uwagę teraz, zamiast nadrabiać zaległości później.
+
+**Link:** [OpenAI Built Its Own Chip, and It's Called Jalapeño](https://theaibreak.substack.com/p/openai-built-its-own-chip-and-its?publication_id=1842292&post_id=203527187&isFreemail=true&triedRedirect=true)
+
+---
+
+## ByteDance prezentuje Seedance 2.5: natywne 30-sekundowe filmy 4K AI z jednego promptu
+
+**TLDR:** ByteDance ujawnił Seedance 2.5, model generowania wideo produkujący natywne 30-sekundowe klipy 4K z jednego promptu tekstowego, bez sklejania między segmentami. Model przyjmuje do 50 obrazów referencyjnych jako wejście. To znaczący krok poza 5-10 sekundowe klipy, które typowo generują obecne modele video AI.
+
+**Podsumowanie:** Generowanie wideo AI przez jakiś czas tkwiło w problemie krótkich klipów. Większość modeli osiąga maksymalnie pięć do dziesięciu sekund spójnego wyjścia, zanim spójność ruchu się degraduje lub model traci ślad tego, co robił. Trzydzieści sekund natywnego, niezlejanego contentu 4K z jednego promptu, jeśli twierdzenia sprawdzą się w rzeczywistym użyciu, to prawdziwy skok w spójności czasowej.
+
+Input 50 obrazów referencyjnych to funkcja, którą uważam za najbardziej praktycznie interesującą. Generowanie wideo utrzymujące spójność wizualną z konkretną postacią, produktem lub sceną przez 30-sekundowy klip to miejsce, gdzie żyją komercyjne przypadki użycia. Zastępowanie materiału stockowego, filmy demo produktów i tworzenie contentu w mediach społecznościowych wymagają spójności, której wcześniejsze modele nie mogły dostarczyć bez rozbudowanej post-produkcji. Pięćdziesiąt obrazów referencyjnych to dużo kontekstu do pracy.
+
+Strategiczne uzasadnienie dla ByteDance do zbudowania tego jest oczywiste. Silnik contentu TikToka opiera się na krótkim wideo, a model zdolny generować profesjonalnej jakości klipy dla twórców byłby jednocześnie rowem obronnym i centrum kosztów. Pytanie brzmi, czy stanie się narzędziem twórcy, z którego TikTok korzysta wewnętrznie, samodzielnym produktem, czy API dostępnym dla zewnętrznych deweloperów. Historia ByteDance z produktami AI sugeruje, że nie będzie nieśmiały w kwestii dystrybucji, jeśli model dobrze działa.
+
+W branży ciągnie się niewygodna rozmowa na temat wideo AI tej jakości, którą wciąż się odsuwa. Kiedy 30-sekundowe klipy 4K są nie do odróżnienia od prawdziwych nagrań, proweniencja i weryfikacja stają się problemami infrastrukturalnymi. ByteDance działa w środowisku regulacyjnym, gdzie ta rozmowa jest szczególnie skomplikowana. Osiągnięcie techniczne jest tutaj realne. Co się z nim stanie, to osobne i trudniejsze pytanie.
+
+**Najważniejsze wnioski:**
+- ByteDance ujawnił Seedance 2.5, generujący niezszyty natywny 30-sekundowy film 4K z jednego promptu przy do 50 wejściach referencyjnych.
+- Skok od 5-10 sekundowych klipów do 30 sekund spójnego wyjścia oznacza istotny postęp w spójności czasowej video AI.
+- Komercyjne przypadki użycia, takie jak dema produktów i narzędzia twórcy, stają się opłacalne, gdy spójność obrazów referencyjnych działa w skali, ale wyzwania związane z proweniencją i weryfikacją rosną równolegle z tą możliwością.
+
+**Dlaczego mnie to dotyczy:** Generowanie wideo na tym poziomie wierności zmienia to, co małe zespoły mogą dostarczyć. Dwuosobowy startup lub samodzielny deweloper może teraz tworzyć wideo marketingowe, treści demo lub materiały wyjaśniające bez budżetu produkcyjnego. Dla każdego budującego narzędzia deweloperskie lub produkty wymagające contentu wizualnego obniża to barierę dla dopracowanej prezentacji. Odwrotną stroną jest to, że uwaga na autentyczność w treściach technicznych ma teraz jeszcze większe znaczenie. Kiedy każdy może wygenerować przekonujące wideo demo, te pokazujące prawdziwy produkt faktycznie działający będą się wyróżniać.
+
+**Link:** [OpenAI Built Its Own Chip, and It's Called Jalapeño](https://theaibreak.substack.com/p/openai-built-its-own-chip-and-its?publication_id=1842292&post_id=203527187&isFreemail=true&triedRedirect=true)
+
+---
+
+## Qualcomm przejmuje Modular za $3,92 mld, by rzucić wyzwanie uzależnieniu od CUDA Nvidia
+
+**TLDR:** Qualcomm przejął startup AI Modular za około $3,92 mld w transakcji all-stock. Modular buduje infrastrukturę pozwalającą obciążeniom AI działać na chipach Nvidia, AMD i Qualcomm bez przywiązania do SDK jednego dostawcy. Przejęcie to bezpośrednia próba erozji przewagi ekosystemu CUDA Nvidia.
+
+**Podsumowanie:** Lock-in CUDA to prawdziwy rów obronny Nvidia, nie tylko hardware. Gdy pipeline'y trenowania i inferencji AI firmy są napisane przeciwko CUDA, przejście na silicon AMD lub Qualcomm wymaga przepisania oprogramowania, rewalidacji wyników i przeszkolenia zespołów. Główny produkt Modular, platforma MAX i język programowania Mojo, był wyraźnie zaprojektowany, by zerwać tę zależność poprzez dostarczenie ujednoliconej warstwy abstrakcji ponad dostawcami sprzętu.
+
+Kupno Modular przez Qualcomm to przyznanie, że wygranie rynku chipów wymaga wygrania ekosystemu oprogramowania. Qualcomm ma już konkurencyjny sprzęt AI, zwłaszcza do inferencji edge na urządzeniach mobilnych i linii Snapdragon. Czego brakowało mu, to narracja dla deweloperów, którzy chcą pisać raz i wdrażać na różnych celach sprzętowych. Modular daje im tę narrację wraz z inżynierami, którzy ją zbudowali.
+
+Cena $3,92 mld jest znacząca dla firmy, która nie osiągnęła jeszcze masowej adopcji wśród deweloperów. Qualcomm płaci nie za bieżące przychody, ale za potencjał wykorzystania abstrakcji Modular do utowarowienia warstwy oprogramowania, którą Nvidia aktualnie posiada. Czy to zadziała, zależy od tego, czy główne laboratoria AI i dostawcy chmury poważnie przyjmą stos Modular, co wymaga przesunięcia zaufania i inercji.
+
+Chris Lattner, założyciel Modular i twórca infrastruktury kompilatora LLVM oraz Swift, to zasób, który nie pojawia się w bilansie. Utrata go przez Modular lub zatrzymanie w Qualcomm zdecyduje, czy to przejęcie przyniesie wyniki, czy tylko powiększy zatrudnienie.
+
+**Najważniejsze wnioski:**
+- Qualcomm przejął Modular za $3,92 mld, by pozyskać wieloplatformową warstwę oprogramowania AI celującą w chipy Nvidia, AMD i Qualcomm.
+- Umowa dotyczy strategii ekosystemu oprogramowania nie mniej niż sprzętu, dążąc do osłabienia wpływu CUDA na przepływy pracy deweloperów AI.
+- Prawdziwy zakład polega na tym, czy warstwa abstrakcji Modular osiągnie wystarczającą adopcję, by silicon Qualcomm stał się naprawdę konkurencyjną alternatywą w produkcyjnych wdrożeniach AI.
+
+**Dlaczego mnie to dotyczy:** Dla deweloperów ma to znaczenie, bo fragmentacja toolchainów to realny koszt. Jeśli podejście Modular zyska trakję, wybór sprzętu do inferencji stanie się mniej istotny dla pisanego oprogramowania, co jest dobre dla przenośności i negocjacji z dostawcami. Język Mojo i silnik inferencji MAX warto obserwować bezpośrednio, niezależnie od strategii Qualcomm. Jeśli spełnią obietnicę kompatybilnych z Pythonem wydajnych kerneli AI, zmieni to sposób, w jaki zespoły optymalizują pipeline'y inferencji bez potrzeby wiedzy z zakresu CUDA.
 
 **Link:** [OpenAI Built Its Own Chip, and It's Called Jalapeño](https://theaibreak.substack.com/p/openai-built-its-own-chip-and-its?publication_id=1842292&post_id=203527187&isFreemail=true&triedRedirect=true)
