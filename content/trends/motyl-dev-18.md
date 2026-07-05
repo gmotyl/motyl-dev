@@ -17,12 +17,6 @@ AI isn’t triggering a job apocalypse; it’s shifting work toward higher‑jud
 **[We Measured the LLM Token Cost of 5 Frontend Frameworks: Angular Costs 38% More Than Svelte](https://hackernoon.com/we-measured-the-llm-token-cost-of-5-frontend-frameworks-angular-costs-38percent-more-than-svelte)**
 A genuinely novel benchmark: how expensive is each framework to feed to an LLM? Angular's verbosity shows up as a 38% token premium over Svelte. As agents write more of our code, this stops being a curiosity and starts being a cost line.
 
-**[Autoresearch: The feedback loop behind self-improving agents](https://www.latent.space/p/autoresearch-introspection?publication_id=1084089&post_id=204548385&isFreemail=true&triedRedirect=true)**
-A close look at the introspection loop that lets agents critique and refine their own research output. The interesting part isn't the autonomy, it's the scaffolding that keeps the loop from drifting.
-
-**[AIEWF Daily Dispatch: Autoresearch and the tension between AI and human agency](https://www.latent.space/p/aiewf-daily-dispatch-agency)**
-A companion dispatch that steps back from the mechanics to ask the harder question: when the agent runs the loop, what's left for us to decide? Worth reading alongside the piece above.
-
 **[The Complete Guide to Caveman](https://aifordevelopers.substack.com/p/the-complete-guide-to-caveman)**
 A deep dive into ultra-compressed prompting, stripping prose down to keywords to cut token cost without losing intent. Practical, and a little addictive once you start doing it.
 
