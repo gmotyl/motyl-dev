@@ -20,10 +20,10 @@ jobs:
           set -euo pipefail
           for i in $(seq 1 60); do
             DEPLOYMENT_ID=$(gh api "repos/${{ github.repository }}/deployments?sha=${{ github.sha }}" \
-              --jq '[.[] | select(.environment | test("production"; "i"))][0].id // empty')
+              --jq '[.[] | select(.environment | test("production"; "i"))][0].id // empty' || true)
             if [ -n "$DEPLOYMENT_ID" ]; then
               STATE=$(gh api "repos/${{ github.repository }}/deployments/$DEPLOYMENT_ID/statuses" \
-                --jq '.[0].state // empty')
+                --jq '.[0].state // empty' || true)
               echo "attempt $i: deployment $DEPLOYMENT_ID state=$STATE"
               [ "$STATE" = "success" ] && exit 0
               [ "$STATE" = "failure" ] || [ "$STATE" = "error" ] && { echo "deploy failed, skipping purge"; exit 1; }
