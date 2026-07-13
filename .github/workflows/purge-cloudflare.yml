@@ -1,0 +1,48 @@
+name: Purge Cloudflare cache on publish
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'articles/**'
+      - 'content/trends/**'
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    permissions:
+      deployments: read
+    steps:
+      - name: Wait for Vercel production deployment of this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            DEPLOYMENT_ID=$(gh api "repos/${{ github.repository }}/deployments?sha=${{ github.sha }}" \
+              --jq '[.[] | select(.environment | test("production"; "i"))][0].id // empty')
+            if [ -n "$DEPLOYMENT_ID" ]; then
+              STATE=$(gh api "repos/${{ github.repository }}/deployments/$DEPLOYMENT_ID/statuses" \
+                --jq '.[0].state // empty')
+              echo "attempt $i: deployment $DEPLOYMENT_ID state=$STATE"
+              [ "$STATE" = "success" ] && exit 0
+              [ "$STATE" = "failure" ] || [ "$STATE" = "error" ] && { echo "deploy failed, skipping purge"; exit 1; }
+            else
+              echo "attempt $i: no production deployment for ${{ github.sha }} yet"
+            fi
+            sleep 20
+          done
+          echo "timed out waiting for deployment" && exit 1
+
+      - name: Purge entire Cloudflare zone
+        env:
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -fsS -X POST \
+            "https://api.cloudflare.com/client/v4/zones/${CLOUDFLARE_ZONE_ID}/purge_cache" \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data '{"purge_everything":true}'
+          echo "Cloudflare cache purged"
