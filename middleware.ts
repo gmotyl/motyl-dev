@@ -35,7 +35,6 @@ export function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    '/articles/:path*',
     '/news/:path*',
     '/bookmarks/:path*',
     '/read-all-news/:path*',

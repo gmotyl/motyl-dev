@@ -33,3 +33,16 @@ describe('middleware — logged-out news gating', () => {
     expect(res.headers.get('location')).toBeNull()
   })
 })
+
+describe('middleware — matcher scope (ADR 0008)', () => {
+  it('does not include public article routes', async () => {
+    const { config } = await import('./middleware')
+    expect(config.matcher).not.toContain('/articles/:path*')
+    expect(config.matcher).toEqual([
+      '/news/:path*',
+      '/bookmarks/:path*',
+      '/read-all-news/:path*',
+      '/api/content',
+    ])
+  })
+})
