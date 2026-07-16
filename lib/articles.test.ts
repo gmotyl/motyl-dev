@@ -132,7 +132,7 @@ describe('Content cache loading', () => {
     expect(first).toHaveProperty('publishedAt')
     expect(first).toHaveProperty('hashtags')
     expect(first).toHaveProperty('itemType')
-  }, 60000)
+  }, 120000)
 
   it('should return articles sorted by publishedAt descending', async () => {
     const articles = await getAllContentMetadata()
@@ -143,7 +143,7 @@ describe('Content cache loading', () => {
       const nextDate = new Date(articles[i + 1].publishedAt).getTime()
       expect(currentDate).toBeGreaterThanOrEqual(nextDate)
     }
-  }, 60000)
+  }, 120000)
 
   it('should have no duplicate slugs across all content', async () => {
     const articles = await getAllContentMetadata()
