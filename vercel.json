@@ -6,53 +6,78 @@
     {
       "source": "/news",
       "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, s-maxage=3600, max-age=300, stale-while-revalidate=60"
-        },
-        {
-          "key": "CDN-Cache-Control",
-          "value": "max-age=3600"
-        }
-      ]
-    },
-    {
-      "source": "/articles",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, s-maxage=3600, max-age=300, stale-while-revalidate=60"
-        },
-        {
-          "key": "CDN-Cache-Control",
-          "value": "max-age=3600"
-        }
+        { "key": "Cache-Control", "value": "private, no-store" },
+        { "key": "CDN-Cache-Control", "value": "no-store" }
       ]
     },
     {
       "source": "/news/:slug*",
       "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, s-maxage=2592000, max-age=1800, stale-while-revalidate=60"
-        },
-        {
-          "key": "CDN-Cache-Control",
-          "value": "max-age=1800, stale-while-revalidate=60"
-        }
+        { "key": "Cache-Control", "value": "private, no-store" },
+        { "key": "CDN-Cache-Control", "value": "no-store" }
+      ]
+    },
+    {
+      "source": "/read-all-news",
+      "headers": [
+        { "key": "Cache-Control", "value": "private, no-store" },
+        { "key": "CDN-Cache-Control", "value": "no-store" }
+      ]
+    },
+    {
+      "source": "/articles",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=300, stale-while-revalidate=60" },
+        { "key": "CDN-Cache-Control", "value": "max-age=2592000, stale-while-revalidate=60" }
       ]
     },
     {
       "source": "/articles/:slug*",
       "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, s-maxage=2592000, max-age=1800, stale-while-revalidate=60"
-        },
-        {
-          "key": "CDN-Cache-Control",
-          "value": "max-age=1800, stale-while-revalidate=60"
-        }
+        { "key": "Cache-Control", "value": "public, max-age=1800, stale-while-revalidate=60" },
+        { "key": "CDN-Cache-Control", "value": "max-age=2592000, stale-while-revalidate=60" }
+      ]
+    },
+    {
+      "source": "/",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=300, stale-while-revalidate=60" },
+        { "key": "CDN-Cache-Control", "value": "max-age=2592000, stale-while-revalidate=60" }
+      ]
+    },
+    {
+      "source": "/newsletter",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=300, stale-while-revalidate=60" },
+        { "key": "CDN-Cache-Control", "value": "max-age=2592000, stale-while-revalidate=60" }
+      ]
+    },
+    {
+      "source": "/newsletter/:issue*",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=1800, stale-while-revalidate=60" },
+        { "key": "CDN-Cache-Control", "value": "max-age=2592000, stale-while-revalidate=60" }
+      ]
+    },
+    {
+      "source": "/sitemap.xml",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=300, stale-while-revalidate=60" },
+        { "key": "CDN-Cache-Control", "value": "max-age=2592000, stale-while-revalidate=60" }
+      ]
+    },
+    {
+      "source": "/about",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=300, stale-while-revalidate=60" },
+        { "key": "CDN-Cache-Control", "value": "max-age=2592000, stale-while-revalidate=60" }
+      ]
+    },
+    {
+      "source": "/privacy",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=300, stale-while-revalidate=60" },
+        { "key": "CDN-Cache-Control", "value": "max-age=2592000, stale-while-revalidate=60" }
       ]
     }
   ]
