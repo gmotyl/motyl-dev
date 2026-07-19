@@ -5,6 +5,7 @@ import Header from '@/components/header'
 import Footer from '@/components/footer'
 import ReactMarkdown from 'react-markdown'
 import { getAllNewsletters } from '@/lib/newsletter-issues'
+import { NewsletterCTA } from '@/components/newsletter-cta'
 import { vtName, vtImageName } from '@/lib/utils'
 
 export async function generateStaticParams() {
@@ -116,6 +117,12 @@ export default async function NewsletterIssuePage({
               {newsletter.content}
             </ReactMarkdown>
           </article>
+
+          {/* Subscribe */}
+          <NewsletterCTA
+            title="📬 Get the next issue in your inbox"
+            description="Frontend & AI, curated every week by Greg. No spam, unsubscribe anytime."
+          />
 
           {/* Navigation */}
           <nav className="mt-12 flex items-center justify-between border-t border-border/40 pt-6" aria-label="Issue navigation">

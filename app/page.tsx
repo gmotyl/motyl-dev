@@ -2,14 +2,12 @@ import Header from '@/components/header'
 import Footer from '@/components/footer'
 import NewsletterForm from '@/components/newsletter-form'
 import Link from 'next/link'
-import { Button } from '@/components/ui/button'
 import { getAllContentMetadata } from '@/lib/articles'
 import { ItemType } from '@/lib/types'
-import { getContentUrl } from '@/lib/urls'
-import { getOgImage } from '@/lib/og'
 import { getAllNewsletterMeta } from '@/lib/newsletter-issues'
-import Image from 'next/image'
-import { formatDate, vtName, vtImageName } from '@/lib/utils'
+import { NewsletterHero } from '@/components/newsletter-hero'
+import { NewsletterIssueCard } from '@/components/newsletter-issue-card'
+import { BlogArticleCard } from '@/components/blog-article-card'
 
 export const revalidate = 300 // ISR: revalidate every 5 min; vote counts update optimistically client-side
 
@@ -18,7 +16,9 @@ export default async function Home() {
     getAllContentMetadata(),
     getAllNewsletterMeta(),
   ])
-  const latestArticles = articles.filter((a) => a.itemType === ItemType.Article).slice(0, 6)
+  const latestArticles = articles.filter((a) => a.itemType === ItemType.Article).slice(0, 3)
+  const latestIssue = newsletters[0]
+  const recentIssues = newsletters.slice(1, 4)
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -36,7 +36,7 @@ export default async function Home() {
       />
       <Header />
       <main className="flex-1">
-        <div className="container max-w-3xl mx-auto px-4 py-12 md:py-16 space-y-12">
+        <div className="container max-w-6xl mx-auto px-4 py-10 md:py-14 space-y-14">
           {/* Hero */}
           <section className="space-y-3">
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
@@ -47,149 +47,75 @@ export default async function Home() {
             </p>
           </section>
 
-          {/* Latest newsletter banner */}
-          {newsletters.length > 0 && (
-            <Link
-              href={`/newsletter/${newsletters[0].issueNumber}`}
-              className="flex items-center gap-4 rounded-lg border border-primary/30 bg-primary/5 p-3 hover:border-primary/50 hover:bg-primary/10 transition-all duration-200"
-              style={{ viewTransitionName: vtName(`newsletter-${newsletters[0].issueNumber}`) }}
-            >
-              <div
-                className="flex-shrink-0 w-20 h-14 rounded overflow-hidden"
-                style={{
-                  viewTransitionName: vtImageName(`newsletter-${newsletters[0].issueNumber}`),
-                }}
-              >
-                <Image
-                  src={newsletters[0].image}
-                  alt={`Weekly #${newsletters[0].issueNumber}`}
-                  width={80}
-                  height={56}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="flex-1 min-w-0">
-                <span className="text-xs font-medium text-primary uppercase tracking-wide">
-                  Latest Issue
-                </span>
-                <p className="font-semibold truncate">
-                  motyl.dev Weekly #{newsletters[0].issueNumber}: {newsletters[0].weekLabel}
-                </p>
-              </div>
-              <span className="text-primary text-sm whitespace-nowrap">&rarr;</span>
-            </Link>
-          )}
+          {/* Latest issue — full-width feature */}
+          {latestIssue && <NewsletterHero issue={latestIssue} />}
 
-          {/* Newsletter */}
+          {/* Subscribe — kept high so it's visible without scrolling to the footer, esp. on mobile */}
           <section
             id="newsletter"
-            className="rounded-lg border border-primary/20 bg-primary/5 p-6 md:p-8 space-y-4 text-center"
+            className="rounded-2xl border border-primary/30 p-6 md:p-8 text-center bg-[radial-gradient(600px_200px_at_50%_0%,rgba(139,92,246,0.16),transparent_70%)]"
           >
-            <h2 className="text-2xl font-bold">📬 motyl.dev Weekly</h2>
-            <p className="text-muted-foreground max-w-sm mx-auto text-sm">
-              Get the best frontend & AI articles and tools delivered to your inbox every week. No
-              spam, unsubscribe anytime.
+            <h2 className="text-2xl font-bold tracking-tight">📬 Get motyl.dev Weekly</h2>
+            <p className="text-muted-foreground max-w-sm mx-auto text-sm mt-2 mb-5">
+              Frontend &amp; AI, curated every week. No spam, unsubscribe anytime.
             </p>
             <div className="max-w-sm mx-auto">
               <NewsletterForm />
             </div>
           </section>
 
-          {/* Latest Articles */}
-          {latestArticles.length > 0 && (
-            <section className="space-y-3">
-              <h2 className="text-xl font-semibold">📖 From The Blog</h2>
-              <div className="space-y-3">
-                {latestArticles.map((article) => (
-                  <Link
-                    key={article.slug}
-                    href={getContentUrl(article)}
-                    className="flex gap-4 rounded-lg border border-muted bg-background/50 p-4 hover:border-primary/30 hover:shadow-sm transition-all duration-200"
-                  >
-                    <div
-                      className="flex-shrink-0 w-40 h-24 rounded overflow-hidden"
-                      style={{ viewTransitionName: vtImageName(article.slug) }}
-                    >
-                      <Image
-                        src={getOgImage(article as { image?: string; hashtags: string[] })}
-                        alt={article.title}
-                        width={160}
-                        height={96}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3
-                        className="font-semibold hover:text-primary transition-colors"
-                        style={{ viewTransitionName: vtName(article.slug) }}
-                      >
-                        {article.title}
-                      </h3>
-                      {article.excerpt && (
-                        <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
-                          {article.excerpt}
-                        </p>
-                      )}
-                      <p className="mt-2 text-xs text-primary/60">
-                        {formatDate(article.publishedAt)}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
+          {/* Recent issues */}
+          {recentIssues.length > 0 && (
+            <section className="space-y-4">
+              <div className="flex items-end justify-between gap-4">
+                <div className="flex items-baseline gap-3">
+                  <h2 className="text-2xl font-bold tracking-tight">Recent issues</h2>
+                  <span className="font-mono text-sm text-muted-foreground">
+                    {newsletters.length} published
+                  </span>
+                </div>
+                <Link href="/newsletter" className="text-sm text-muted-foreground hover:text-foreground whitespace-nowrap">
+                  All issues →
+                </Link>
               </div>
-              <div className="text-right">
-                <Button asChild variant="ghost" size="sm">
-                  <Link href="/articles">View all articles →</Link>
-                </Button>
+              <p className="text-sm text-muted-foreground">
+                Weekly curated digest — the best frontend &amp; AI reads, by gut feeling and community upvotes.
+              </p>
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {recentIssues.map((issue) => (
+                  <NewsletterIssueCard key={issue.issueNumber} issue={issue} />
+                ))}
               </div>
             </section>
           )}
 
-          {/* Newsletter archive (last 5, skip latest since it's in banner) */}
-          {newsletters.length > 0 && (
-            <section className="space-y-3">
-              <h2 className="text-xl font-semibold">Past Issues</h2>
-              <div className="space-y-2">
-                {newsletters.slice(1, 6).map((issue) => (
-                  <Link
-                    key={issue.issueNumber}
-                    href={`/newsletter/${issue.issueNumber}`}
-                    className="flex items-center gap-4 rounded-lg border border-muted bg-background/50 p-3 hover:border-primary/30 hover:shadow-sm transition-all duration-200"
-                    style={{ viewTransitionName: vtName(`newsletter-${issue.issueNumber}`) }}
-                  >
-                    <div
-                      className="flex-shrink-0 w-16 h-11 rounded overflow-hidden"
-                      style={{ viewTransitionName: vtImageName(`newsletter-${issue.issueNumber}`) }}
-                    >
-                      <Image
-                        src={issue.image}
-                        alt={`Weekly #${issue.issueNumber}`}
-                        width={64}
-                        height={44}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <span className="flex-1 font-medium">Weekly #{issue.issueNumber}</span>
-                    <span className="text-sm text-muted-foreground whitespace-nowrap">
-                      {issue.weekLabel}
-                    </span>
-                  </Link>
+          {/* From the blog */}
+          {latestArticles.length > 0 && (
+            <section className="space-y-4 border-t border-border pt-12">
+              <div className="flex items-end justify-between gap-4">
+                <div className="flex items-baseline gap-3">
+                  <h2 className="text-2xl font-bold tracking-tight">From the blog</h2>
+                  <span className="font-mono text-sm text-muted-foreground">long-form</span>
+                </div>
+                <Link href="/articles" className="text-sm text-muted-foreground hover:text-foreground whitespace-nowrap">
+                  All articles →
+                </Link>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Deep dives on building with AI agents, dev tooling, and frontend — written, not curated.
+              </p>
+              <div className="flex flex-col gap-5">
+                {latestArticles.map((article) => (
+                  <BlogArticleCard key={article.slug} article={article} />
                 ))}
               </div>
-              {newsletters.length > 6 && (
-                <div className="text-right">
-                  <Button asChild variant="ghost" size="sm">
-                    <Link href="/newsletter">View all issues &rarr;</Link>
-                  </Button>
-                </div>
-              )}
             </section>
           )}
 
           {/* Support CTA */}
-          <section className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-6 md:p-8 space-y-4 text-center">
-            <h2 className="text-2xl font-bold">☕ Fuel Quality Content</h2>
-            <p className="text-muted-foreground max-w-sm mx-auto text-sm">
+          <section className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-8 text-center">
+            <h2 className="text-2xl font-bold tracking-tight">☕ Fuel Quality Content</h2>
+            <p className="text-muted-foreground max-w-sm mx-auto text-sm mt-2 mb-5">
               Help me keep sharing high-quality insights.
             </p>
             <div>

@@ -1,12 +1,12 @@
 import Link from 'next/link'
-import Image from 'next/image'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import { getAllNewsletterMeta } from '@/lib/newsletter-issues'
 import { getHomepageFeed } from '@/lib/trends'
 import NewsletterForm from '@/components/newsletter-form'
 import { NewsletterTabs } from '@/components/newsletter-tabs'
-import { vtName, vtImageName } from '@/lib/utils'
+import { NewsletterHero } from '@/components/newsletter-hero'
+import { NewsletterIssueCard } from '@/components/newsletter-issue-card'
 
 const title = 'Newsletter Archive - Motyl.dev'
 const description = 'Weekly curated digest of frontend & AI trends by Grzegorz Motyl.'
@@ -44,68 +44,42 @@ export default async function NewsletterArchive({ searchParams }: NewsletterArch
   const currentPage = Math.min(page, totalPages)
   const items = allMeta.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
 
+  // On page 1 the newest issue leads as a full-width hero; the rest fill the grid.
+  const featured = currentPage === 1 ? items[0] : undefined
+  const gridItems = featured ? items.slice(1) : items
+
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">
-        <div className="container max-w-3xl mx-auto px-4 py-12 md:py-16 space-y-8">
-          <section className="space-y-2">
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Newsletter</h1>
-            <p className="text-muted-foreground">
-              Weekly reads worth your time — curated by personal gut feeling and community upvotes.
-            </p>
+        <div className="container max-w-6xl mx-auto px-4 py-10 md:py-14 space-y-10">
+          <section className="flex flex-wrap items-end justify-between gap-4">
+            <div className="space-y-2">
+              <span className="font-mono text-xs font-bold uppercase tracking-[0.14em] text-primary">
+                Weekly digest
+              </span>
+              <h1 className="text-4xl md:text-5xl font-bold tracking-tight">Newsletter</h1>
+              <p className="text-muted-foreground max-w-xl">
+                Reads worth your time — curated by personal gut feeling and community upvotes.
+              </p>
+            </div>
+            <span className="font-mono text-sm text-muted-foreground whitespace-nowrap">
+              {allMeta.length} issues · every Sunday
+            </span>
           </section>
 
-          {/* Subscribe CTA */}
-          <section className="rounded-lg border border-primary/20 bg-primary/5 p-6 space-y-4 text-center">
-            <h2 className="text-xl font-bold">Get it in your inbox</h2>
-            <p className="text-muted-foreground text-sm max-w-sm mx-auto">
-              No spam, unsubscribe anytime.
-            </p>
-            <div className="max-w-sm mx-auto">
-              <NewsletterForm />
-            </div>
-          </section>
+          {/* Latest issue — full-width feature (page 1 only) */}
+          {featured && <NewsletterHero issue={featured} />}
 
           <NewsletterTabs
             archiveContent={
-              <>
-                {items.length === 0 ? (
-                  <p className="text-muted-foreground">No newsletters published yet.</p>
+              <div className="space-y-8 pt-2">
+                {gridItems.length === 0 ? (
+                  !featured && <p className="text-muted-foreground">No newsletters published yet.</p>
                 ) : (
-                  <div className="space-y-3">
-                    {items.map((issue) => (
-                      <Link
-                        key={issue.issueNumber}
-                        href={`/newsletter/${issue.issueNumber}`}
-                        className="flex items-center gap-4 rounded-lg border border-muted bg-background/50 p-3 hover:border-primary/30 hover:shadow-sm transition-all duration-200"
-                        style={{ viewTransitionName: vtName(`newsletter-${issue.issueNumber}`) }}
-                      >
-                        <div className="flex-shrink-0 w-20 h-14 rounded overflow-hidden" style={{ viewTransitionName: vtImageName(`newsletter-${issue.issueNumber}`) }}>
-                          <Image
-                            src={issue.image}
-                            alt={`Weekly #${issue.issueNumber}`}
-                            width={80}
-                            height={56}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h2 className="font-semibold">
-                            motyl.dev Weekly #{issue.issueNumber}
-                          </h2>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {issue.weekLabel}
-                          </p>
-                        </div>
-                        <time className="text-xs text-muted-foreground whitespace-nowrap" dateTime={issue.publishedAt}>
-                          {new Date(issue.publishedAt).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                          })}
-                        </time>
-                      </Link>
+                  <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                    {gridItems.map((issue) => (
+                      <NewsletterIssueCard key={issue.issueNumber} issue={issue} />
                     ))}
                   </div>
                 )}
@@ -138,10 +112,21 @@ export default async function NewsletterArchive({ searchParams }: NewsletterArch
                     )}
                   </nav>
                 )}
-              </>
+              </div>
             }
             trendingItems={feed.trendings}
           />
+
+          {/* Subscribe */}
+          <section className="rounded-2xl border border-primary/20 p-8 text-center bg-[radial-gradient(600px_200px_at_50%_0%,rgba(139,92,246,0.14),transparent_70%)]">
+            <h2 className="text-2xl font-bold tracking-tight">📬 Get it in your inbox</h2>
+            <p className="text-muted-foreground text-sm max-w-sm mx-auto mt-2 mb-5">
+              No spam, unsubscribe anytime.
+            </p>
+            <div className="max-w-sm mx-auto">
+              <NewsletterForm />
+            </div>
+          </section>
 
         </div>
       </main>
