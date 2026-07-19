@@ -75,7 +75,7 @@ export default async function NewsletterArchive({ searchParams }: NewsletterArch
             archiveContent={
               <div className="space-y-8 pt-2">
                 {gridItems.length === 0 ? (
-                  <p className="text-muted-foreground">No newsletters published yet.</p>
+                  !featured && <p className="text-muted-foreground">No newsletters published yet.</p>
                 ) : (
                   <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                     {gridItems.map((issue) => (

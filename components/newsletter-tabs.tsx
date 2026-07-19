@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useSession } from 'next-auth/react'
 import { TrendingList } from '@/components/trending-list'
 import { cn } from '@/lib/utils'
 
@@ -21,6 +22,14 @@ interface NewsletterTabsProps {
 
 export function NewsletterTabs({ archiveContent, trendingItems }: NewsletterTabsProps) {
   const [activeTab, setActiveTab] = useState<'newsletter' | 'trending'>('newsletter')
+  const { data: session } = useSession()
+  const isSuperAdmin = session?.user?.isSuperAdmin ?? false
+
+  // Trending is a SuperAdmin-only view. /newsletter is publicly cached, so this
+  // gate is client-side (never server-render session-specific tabs on this page).
+  if (!isSuperAdmin) {
+    return <div role="tabpanel">{archiveContent}</div>
+  }
 
   return (
     <>

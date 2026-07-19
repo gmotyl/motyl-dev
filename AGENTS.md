@@ -57,7 +57,7 @@ When you discover:
 ### Key Files
 
 - `lib/articles.ts` — Article CRUD, hashtag filtering, sorting
-- `app/page.tsx` — Landing page (hero, about, newsletter, testimonials)
+- `app/page.tsx` — Landing page (hero, latest issue, recent issues, from the blog, subscribe, support CTA)
 - `app/articles/page.tsx` — Article listing with hashtag filters
 - `components/ui/` — Radix UI primitives styled with Tailwind
 
@@ -144,11 +144,15 @@ After making changes:
 
 ### Modifying Landing Page
 
-Edit `app/page.tsx`:
-- Hero: lines 45-109
-- About: lines 111-163
-- Newsletter: lines 165-256
-- Testimonials: lines 303-378
+Edit `app/page.tsx` (dark editorial layout, `max-w-6xl`). Sections top-to-bottom:
+- Hero (title + tagline): `{/* Hero */}` ~line 40
+- Latest issue feature: `<NewsletterHero>` ~line 50
+- Recent issues (violet, image-top): `{/* Recent issues */}` ~line 53 — uses `NewsletterIssueCard`
+- From the blog (amber, image-left): `{/* From the blog */}` ~line 78 — uses `BlogArticleCard`
+- Subscribe: `{/* Subscribe */}` ~line 101
+- Support CTA: `{/* Support CTA */}` ~line 115
+
+Reusable cards live in `components/`: `newsletter-hero.tsx`, `newsletter-issue-card.tsx`, `blog-article-card.tsx` (shared with `/newsletter`). Newsletter issues = violet accent; blog articles = amber — keep them visually distinct.
 
 ---
 
