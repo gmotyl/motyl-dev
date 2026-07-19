@@ -542,27 +542,27 @@ export function ContentListing({
                     key={item.slug}
                     href={`${basePath}/${item.slug}`}
                     prefetch={false}
-                    className={`rounded-lg border backdrop-blur-sm transition-all duration-300 hover:shadow-md hover:border-primary/50 flex flex-col overflow-hidden ${
+                    className={`group rounded-xl border backdrop-blur-sm transition-all duration-300 hover:shadow-md hover:border-primary/50 flex flex-col overflow-hidden ${
                       visited ? 'visited-article' : 'unvisited-article'
                     } ${
                       isRemoving ? 'opacity-0 scale-95 max-h-0 !p-0 !m-0 !border-0 !gap-0 overflow-hidden' : 'opacity-100 scale-100'
                     }`}
                     style={isRemoving ? { transition: 'all 350ms ease-out' } : undefined}
                   >
-                    <div className="relative w-full overflow-hidden rounded-t-lg" style={{ aspectRatio: '16/7', viewTransitionName: vtImageName(item.slug) }}>
+                    <div className="relative w-full overflow-hidden" style={{ aspectRatio: '16/7', viewTransitionName: vtImageName(item.slug) }}>
                       <Image
                         src={getOgImage(item as { image?: string; hashtags: string[] })}
                         alt={item.title}
                         fill
-                        className="object-cover"
+                        className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                       />
                     </div>
                     <div className="p-6 flex flex-col flex-grow">
-                      <h2 className="article-title text-xl font-bold mb-2" style={{ viewTransitionName: vtName(item.slug) }}>{item.title}</h2>
+                      <div className="font-mono text-xs font-bold uppercase tracking-[0.1em] text-amber-500 mb-2">
+                        Article · {formatDate(item.publishedAt)}
+                      </div>
+                      <h2 className="article-title text-xl font-bold tracking-tight mb-2 text-balance" style={{ viewTransitionName: vtName(item.slug) }}>{item.title}</h2>
                       <p className="article-excerpt flex-grow line-clamp-3">{item.excerpt}</p>
-                      <p className="text-xs text-muted-foreground mt-auto">
-                        {formatDate(item.publishedAt)}
-                      </p>
                     </div>
                   </Link>
                 )
