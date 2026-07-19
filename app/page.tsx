@@ -50,6 +50,20 @@ export default async function Home() {
           {/* Latest issue — full-width feature */}
           {latestIssue && <NewsletterHero issue={latestIssue} />}
 
+          {/* Subscribe — kept high so it's visible without scrolling to the footer, esp. on mobile */}
+          <section
+            id="newsletter"
+            className="rounded-2xl border border-primary/30 p-6 md:p-8 text-center bg-[radial-gradient(600px_200px_at_50%_0%,rgba(139,92,246,0.16),transparent_70%)]"
+          >
+            <h2 className="text-2xl font-bold tracking-tight">📬 Get motyl.dev Weekly</h2>
+            <p className="text-muted-foreground max-w-sm mx-auto text-sm mt-2 mb-5">
+              Frontend &amp; AI, curated every week. No spam, unsubscribe anytime.
+            </p>
+            <div className="max-w-sm mx-auto">
+              <NewsletterForm />
+            </div>
+          </section>
+
           {/* Recent issues */}
           {recentIssues.length > 0 && (
             <section className="space-y-4">
@@ -97,20 +111,6 @@ export default async function Home() {
               </div>
             </section>
           )}
-
-          {/* Subscribe */}
-          <section
-            id="newsletter"
-            className="rounded-2xl border border-primary/20 p-8 text-center bg-[radial-gradient(600px_200px_at_50%_0%,rgba(139,92,246,0.14),transparent_70%)]"
-          >
-            <h2 className="text-2xl font-bold tracking-tight">📬 Get motyl.dev Weekly</h2>
-            <p className="text-muted-foreground max-w-sm mx-auto text-sm mt-2 mb-5">
-              Frontend &amp; AI, curated every week. No spam, unsubscribe anytime.
-            </p>
-            <div className="max-w-sm mx-auto">
-              <NewsletterForm />
-            </div>
-          </section>
 
           {/* Support CTA */}
           <section className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-8 text-center">
