@@ -1,0 +1,31 @@
+---
+title: "MAI od Microsoftu: sygnał, że wybór modelu AI się ustabilizuje"
+excerpt: "Microsoft zaczął kierować część ruchu produkcyjnego z GitHub Copilot, Excela i Outlooka do własnych mniejszych modeli MAI, co pokazuje, dokąd zmierza cała branża w kwestii wyboru modeli."
+publishedAt: "2026-07-25"
+slug: "microsoft-mai-routing-wybor-modeli-ai"
+hashtags: "#kilo #ai #llm #routing #generated #pl"
+---
+
+## Routing modeli MAI od Microsoftu
+
+**TLDR:** Satya Nadella opisał, jak Microsoft kieruje ruch produkcyjny w GitHub Copilot, Excelu i Outlooku do własnych, mniejszych modeli MAI, gdy tylko te dorównują modelom frontier na konkretnym zadaniu. Ważniejsza od samych modeli jest dyscyplina stojąca za tą decyzją: mierzyć jakość per zadanie, znać próg akceptowalności i nie płacić cen frontier za pracę, która ich nie wymaga.
+
+**Podsumowanie:** Microsoft zbudował rodzinę mniejszych, wyspecjalizowanych modeli MAI i doszkolił je na realnych obciążeniach produktowych. Zespół Excela raportuje parytet z GPT-5.6 na najczęstszych zadaniach klientów, działając na kartach klasy H100 i A100, a nie na najnowszych akceleratorach. W VS Code model MAI-Code-1-Flash ma wyższy wskaźnik akceptacji podpowiedzi i niższe zużycie tokenów niż zastępowane przez niego mniejsze modele frontier. To brzmi jak zwykły komunikat prasowy o benchmarkach, ale najciekawsza część historii dotyczy tego, co dzieje się pod spodem.
+
+Microsoft zbudował ewaluacje per zadanie, ustalił próg jakości dla każdego typu obciążenia i teraz kieruje zapytania do najtańszego modelu, który ten próg spełnia. Trudniejsze przypadki wciąż trafiają do modeli frontier. Nadella dodał przy tym istotną uwagę: ewaluacje powinny się poprawiać niezależnie od tego, czy dany model zostanie kiedyś usunięty ze stosu. To oznacza, że jeśli jakość twojego produktu zależy od roadmapy jednego dostawcy, tak naprawdę nie kontrolujesz ani kosztów, ani możliwości swojego systemu. Niewiele firm stać na trenowanie własnej rodziny modeli przeciwko własnej infrastrukturze produktowej, Microsoft może sobie na to pozwolić, ale generalizuje się nie sam model MAI, tylko właśnie ta dyscyplina: mierzyć jakość per zadanie, znać próg i przestać płacić ceny frontier tam, gdzie nie są potrzebne.
+
+Jedna z trafniejszych reakcji na wpis Nadelli zwróciła uwagę, że zespoły, które stawiają na jeden model frontier do wszystkiego, znajdują się w odwrotnej sytuacji. Nie mogą kierować ruchu inteligentnie, bo nie mają pomiarów, więc rachunek za frontier działa jak polisa ubezpieczeniowa przeciwko niewiedzy, gdzie leży próg jakości. To pokrywa się z rozmowami prowadzonymi w środowisku enterprise podczas tegorocznego Gartner APPS, gdzie pytanie przesunęło się z "jak sprawić, by developerzy używali AI" na "jak zrozumieć i kontrolować wydatki na AI".
+
+Autorzy Kilo od początku zakładali, że wybór modelu pozostanie niejednorodny, nie dlatego, że przewidzieli akurat MAI, ale dlatego, że dane z użytkowania od dawna na to wskazywały. Deweloperzy korzystający z Kilo uruchamiają ponad 500 modeli, a ich Leaderboard pokazuje, że różne modele wygrywają w kodowaniu, planowaniu, debugowaniu i pracy agentowej, przy czym rankingi zmieniają się wraz z aktualizacjami i cenami dostawców. Nie ma stabilnej odpowiedzi na pytanie "który model jest najlepszy", jest odpowiedź per zadanie i ma ona swoją datę ważności. Auto Model od Kilo próbuje to ogarnąć bez zamieniania śledzenia modeli w pracę na pół etatu: wybierasz tier, a Kilo kieruje każde zapytanie na podstawie benchmarków uruchamianych na bieżąco. Auto Efficient, najbliższy odpowiednik podejścia Microsoftu, klasyfikuje trudność zadania w kontekście danej sesji i kieruje je do najtańszego modelu, który udowodnił skuteczność na KiloBench, a gdy nie potrafi podjąć pewnej decyzji, wraca do tieru Balanced, więc jakość ma znany dolny próg. Na benchmarku Kilo osiąga to 71% wyniku publikowanego frontier przy 72% niższym koszcie.
+
+Microsoft trenuje własne modele przeciwko własnej infrastrukturze produktowej i nagradza je za wyniki ważne dla klientów, co jest innym podejściem niż routing między modelami zewnętrznych dostawców i dostępnym dla garstki firm. Wspólny mianownik to warstwa routingu oparta na ewaluacjach oraz przekonanie, że niezależność od jednego modelu warto sobie zaprojektować, niezależnie od tego, czy modele są własne, czy cudze, system powinien działać dalej, gdy jeden z nich zniknie. Nadella nazwał podejście Microsoftu wzorem dla innych firm AI-native i to trafna ocena, z zastrzeżeniem, że większość zespołów wdroży tylko połowę dotyczącą routingu, a modele kupi gotowe. Ekonomia i tak pcha w tym kierunku, bo gdy wydatki na tokeny stają się realną pozycją w budżecie, dopasowanie możliwości modelu do trudności zadania przestaje być optymalizacją, a staje się domyślnym oczekiwaniem.
+
+**Kluczowe wnioski:**
+- Microsoft kieruje ruch produkcyjny w Copilot, Excelu i Outlooku do własnych modeli MAI, gdy te spełniają próg jakości dla danego zadania, a trudniejsze przypadki nadal trafiają do modeli frontier
+- Najważniejsza jest dyscyplina pomiaru: ewaluacje per zadanie i znany próg jakości, a nie sam fakt posiadania własnych modeli
+- Firmy bez pomiarów per zadanie płacą za frontier jak za polisę ubezpieczeniową przeciwko niewiedzy, gdzie leży realny próg jakości
+- Podejście Kilo (Auto Model, Auto Efficient) opiera się na tej samej logice routingu opartego na benchmarkach, tylko dla modeli zewnętrznych dostawców zamiast własnych
+
+**Dlaczego mnie to obchodzi:** Jako ktoś, kto od lat patrzy na architekturę systemów pod kątem kosztów utrzymania, ten wpis Nadelli traktuję jako potwierdzenie czegoś, co i tak było widać w każdym większym wdrożeniu AI w firmie: jeden model do wszystkiego to wygodne uproszczenie na start, a nie strategia na dłuższą metę. Ciekawsze jest to, że temat przesuwa się z "który model wygrywa" na "jak w ogóle mierzyć, czy dany model wygrywa dla naszego konkretnego zadania", a to jest praca inżynierska, nie marketingowa. Zespoły, które nie zbudują sobie takich ewaluacji, będą płacić frontier ceny z czystego lęku przed regresją jakości, i to jest koszt, który da się policzyć, a mimo to rzadko ktoś go liczy.
+
+**Link:** [Microsoft's MAI Routing Is a Signal for How Model Selection Settles](https://blog.kilo.ai/p/microsofts-mai?publication_id=4363009&post_id=208352238&isFreemail=true&triedRedirect=true)
