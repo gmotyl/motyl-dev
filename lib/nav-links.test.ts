@@ -12,4 +12,14 @@ describe('getVisibleNavLinks', () => {
     const links = getVisibleNavLinks(true)
     expect(links.some(l => l.label === 'News')).toBe(true)
   })
+
+  it('hides the Trending link for non-SuperAdmins', () => {
+    const links = getVisibleNavLinks(false)
+    expect(links.some(l => l.href === '/trending')).toBe(false)
+  })
+
+  it('shows the Trending link for SuperAdmins', () => {
+    const links = getVisibleNavLinks(true)
+    expect(links.some(l => l.label === 'Trending' && l.href === '/trending')).toBe(true)
+  })
 })

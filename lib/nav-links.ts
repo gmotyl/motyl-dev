@@ -3,6 +3,7 @@ export const NAV_LINKS = [
   { label: 'Newsletter', href: '/newsletter' },
   { label: 'Blog', href: '/articles' },
   { label: 'News', href: '/news?unseen=true', superAdminOnly: true },
+  { label: 'Trending', href: '/trending', superAdminOnly: true },
   { label: 'About', href: '/about' },
 ] as const
 
