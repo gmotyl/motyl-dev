@@ -13,11 +13,12 @@ export function middleware(req: NextRequest) {
   const sessionToken = req.cookies.get('authjs.session-token') ||
                        req.cookies.get('__Secure-authjs.session-token')
 
-  // Logged-out gating: bookmarks + SuperAdmin-only news routes
+  // Logged-out gating: bookmarks + SuperAdmin-only news and trending routes
   const needsSession =
     pathname.startsWith('/bookmarks') ||
     pathname.startsWith('/news') ||
-    pathname.startsWith('/read-all-news')
+    pathname.startsWith('/read-all-news') ||
+    pathname.startsWith('/trending')
   if (needsSession && !sessionToken) {
     const target = pathname.startsWith('/bookmarks')
       ? new URL('/', req.url)
@@ -38,6 +39,7 @@ export const config = {
     '/news/:path*',
     '/bookmarks/:path*',
     '/read-all-news/:path*',
+    '/trending/:path*',
     '/api/content',
   ],
 }

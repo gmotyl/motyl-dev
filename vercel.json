@@ -25,6 +25,13 @@
       ]
     },
     {
+      "source": "/trending",
+      "headers": [
+        { "key": "Cache-Control", "value": "private, no-store" },
+        { "key": "CDN-Cache-Control", "value": "no-store" }
+      ]
+    },
+    {
       "source": "/articles",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=300, stale-while-revalidate=60" },
