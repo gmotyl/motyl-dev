@@ -32,6 +32,18 @@ describe('middleware — logged-out news gating', () => {
     const res = middleware(reqFor('/news', 'secure'))
     expect(res.headers.get('location')).toBeNull()
   })
+
+  it('redirects logged-out users away from /trending', () => {
+    const res = middleware(reqFor('/trending'))
+    expect(res.status).toBe(307)
+    expect(res.headers.get('location')).toContain('/api/auth/signin')
+    expect(res.headers.get('location')).toContain('callbackUrl=%2Ftrending')
+  })
+
+  it('lets logged-in users through to /trending', () => {
+    const res = middleware(reqFor('/trending', 'authjs'))
+    expect(res.headers.get('location')).toBeNull()
+  })
 })
 
 describe('middleware — matcher scope (ADR 0008)', () => {
@@ -42,6 +54,7 @@ describe('middleware — matcher scope (ADR 0008)', () => {
       '/news/:path*',
       '/bookmarks/:path*',
       '/read-all-news/:path*',
+      '/trending/:path*',
       '/api/content',
     ])
   })

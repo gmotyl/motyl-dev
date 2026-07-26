@@ -1,5 +1,7 @@
 # Cache HTML at Cloudflare via allowlist Cache Rule; purge explicitly on publish
 
+> **Current state lives in [docs/caching.md](../caching.md)** — route matrix, the Cloudflare rule as configured today, and the checklist for adding a route. This ADR records the decision and its reasoning; the reference doc records what is true now.
+
 ADR 0007 assumed Cloudflare honored `CDN-Cache-Control` and that deploys implicitly invalidated the edge. Production disproved both: Cloudflare returned `cf-cache-status: DYNAMIC` for `/`, `/articles` and `/news` (HTML is never cache-eligible without a Cache Rule), and Cloudflare knows nothing about Vercel deploys. Meanwhile bot traffic (~500K edge requests/month) passed straight through to Vercel, blowing the Edge CPU and Fluid CPU budgets on the free tier.
 
 Decision:

@@ -60,6 +60,7 @@ When you discover:
 - `app/page.tsx` — Landing page (hero, latest issue, recent issues, from the blog, subscribe, support CTA)
 - `app/articles/page.tsx` — Article listing with hashtag filters
 - `components/ui/` — Radix UI primitives styled with Tailwind
+- `docs/caching.md` — **read before touching `vercel.json`, `middleware.ts`, route segment config, or adding any route.** Public routes are edge-cached 30 days; private routes are `no-store` and stay off the Cloudflare allowlist. Half the config lives in the Cloudflare dashboard, not in this repo.
 
 ---
 
