@@ -14,14 +14,26 @@ const nextConfig: NextConfig = {
   },
   serverExternalPackages: ['edge-tts'],
   async redirects() {
+    // Legacy /articles/<news-slug> URLs have to land on /news/<slug>. Emitting one
+    // redirect per news item pushed the build past Vercel's 2048-route limit, so
+    // match everything that is *not* a real article slug in a single rule instead.
     const allContent = await getAllContent()
-    const newsItems = allContent.filter((item) => item.itemType === ItemType.News)
+    const articleSlugs = allContent
+      .filter((item) => item.itemType === ItemType.Article)
+      .map((item) => item.slug)
 
-    return newsItems.map((item) => ({
-      source: `/articles/${item.slug}`,
-      destination: `/news/${item.slug}`,
-      permanent: true,
-    }))
+    if (articleSlugs.length === 0) return []
+
+    const escaped = articleSlugs.map((slug) => slug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    const notAnArticle = escaped.map((slug) => `${slug}$`).join('|')
+
+    return [
+      {
+        source: `/articles/:slug((?!${notAnArticle}).*)`,
+        destination: '/news/:slug',
+        permanent: true,
+      },
+    ]
   },
   async headers() {
     return [
