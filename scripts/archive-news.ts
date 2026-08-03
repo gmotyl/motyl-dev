@@ -50,7 +50,8 @@ function readPublishedAt(file: string): Date | null {
   const end = raw.indexOf('\n---', 3)
   if (end < 0) return null
   const fm = raw.slice(3, end)
-  const m = fm.match(/^publishedAt:\s*['"]?([0-9]{4}-[0-9]{2}-[0-9]{2})/m)
+  // Some files quote the key too ('publishedAt': '2026-01-05')
+  const m = fm.match(/^['"]?publishedAt['"]?:\s*['"]?([0-9]{4}-[0-9]{2}-[0-9]{2})/m)
   if (!m) return null
   const d = new Date(m[1])
   return isNaN(d.getTime()) ? null : d
