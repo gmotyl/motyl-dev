@@ -1,0 +1,31 @@
+---
+title: "System się zepsuł, to czemu naprawia go użytkownik?"
+excerpt: "Self-checkout, weryfikacja tożsamości i rezerwacje na Airbnb łączy jedno: gdy proces się wywala, nikt nie mówi wyraźnie, kto ma prawo go odblokować. Ten numer rozkłada recovery flow na trzy konkretne pytania, które powinny paść zanim ktoś napisze kolejny 'spróbuj ponownie'."
+publishedAt: "2026-08-05"
+slug: "system-sie-zepsul-kto-naprawia"
+hashtags: "#unicornclub #ux #product #architecture #frontend #dx #generated #pl"
+source_pattern: "Unicorn Club"
+---
+
+## Kto naprawia system, kiedy system się psuje
+
+**TLDR:** Kiedy self-checkout, weryfikacja tożsamości albo rezerwacja się zawiesza, produkt rzadko mówi, kto właściwie ma prawo to odblokować, więc domyślnie robi to użytkownik, nawet gdy nie ma do tego żadnych narzędzi. Autor rozbija ten problem na trzy pytania: co faktycznie zawiodło, kto kontroluje zablokowany stan i czy w ogóle powinien istnieć override. Pokazuje na przykładach GOV.UK, Airbnb i GitHuba, że sam retry nie jest strategią odzyskiwania, tylko jej brakiem.
+
+**Summary:** Punktem wyjścia jest scena, którą każdy widział na własne oczy: skaner w self-checkout się zapycha, ekran mówi, żeby zeskanować jeszcze raz, wyjąć produkt albo zaczekać na obsługę. To banalny przykład, ale dobrze pokazuje różnicę między błędem, który należy do klienta, a awarią, którą wywołał system. Autor odwołuje się do badań nad self-service failure, w których sprawdzano, kto powinien wykonać pierwszy ruch po różnych typach awarii. Błąd spowodowany przez klienta, klient zaczyna naprawę. Awaria spowodowana przez technologię, naprawę zaczyna pracownik albo sam system. To rozróżnienie brzmi oczywiście, dopóki nie spróbujesz je zaimplementować w realnym produkcie, bo samo wskazanie, kto powinien zacząć, nie mówi jeszcze, kto może faktycznie zwolnić zablokowany stan.
+
+Najlepszym dowodem na to jest weryfikacja tożsamości. GOV.UK w swojej dokumentacji One Login jasno komunikuje, że aplikacja weryfikacyjna to jedna ścieżka, nie jedyna droga do celu, obok niej stoi opcja "udowodnij tożsamość w inny sposób". To jest projektowanie z założeniem, że jedna ścieżka się zablokuje i użytkownik musi mieć realną alternatywę, a nie tylko przycisk "spróbuj ponownie" prowadzący w tę samą ślepą uliczkę. Ale to wciąż dotyczy tylko osoby, która wykonuje weryfikację. Autor idzie dalej i pokazuje przypadek, w którym retry jednej osoby nie rozwiązuje problemu drugiej, bo obie są związane tym samym stanem.
+
+Tym przypadkiem jest Airbnb. Rezerwacja może wisieć jako pending, dopóki gość nie dokończy weryfikacji tożsamości, a w tym czasie te same daty są zablokowane dla innych potencjalnych gości. Krok weryfikacyjny formalnie należy do gościa, ale konsekwencje tego kroku spadają na kalendarz hosta, który nie ma żadnego wpływu na to, kiedy albo czy weryfikacja się zakończy. To jest moment, w którym pytanie "czy gość może spróbować ponownie" przestaje być wystarczające, bo host i tak nie odzyska kontroli nad swoim kalendarzem, nawet jeśli gość w końcu przejdzie weryfikację. Recovery designu nie można oceniać z perspektywy jednej strony transakcji, jeśli stan blokujący dotyka więcej niż jedną osobę.
+
+Kolejny fragment dotyczy granic, jakie ma support, i tu autor zdecydowanie odchodzi od intuicyjnej odpowiedzi "dajmy supportowi więcej uprawnień". GitHub w dokumentacji odzyskiwania konta jasno pisze, że użytkownik odzyskuje dostęp metodami przygotowanymi wcześniej, kodami zapasowymi, passkeyami, kluczami bezpieczeństwa albo zaufanymi urządzeniami. Jeśli wszystkie te metody przepadną, support nie wyłącza po prostu dwuczynnikowego uwierzytelniania, bo taki hidden override zniósłby obietnicę bezpieczeństwa dla wszystkich, nie tylko dla tego jednego zablokowanego konta. Wniosek jest twardy: recovery trzeba zaprojektować przed awarią, w momencie konfigurowania konta, a nie improwizować po fakcie przy telefonie do supportu. Z tego wynikają trzy konkretne pytania, które autor proponuje zadawać przy każdym self-service flow, które właśnie padło: co dokładnie zawiodło, kto kontroluje zablokowany stan i czy jakikolwiek override powinien w ogóle istnieć.
+
+**Key takeaways:**
+- Błąd użytkownika i awaria systemu wymagają innego pierwszego ruchu, ale to nie wystarcza, bo pytanie kluczowe brzmi, kto może odblokować stan, nie kto go spowodował.
+- Jedna ścieżka odzyskiwania to zawsze pułapka, GOV.UK stawia obok aplikacji alternatywną metodę weryfikacji z założenia, że ta pierwsza może się nie udać.
+- Stan blokujący często dotyka więcej niż jedną stronę, jak w Airbnb, gdzie weryfikacja gościa blokuje kalendarz hosta, więc recovery trzeba projektować dla obu stron, nie tylko dla tej, która widzi błąd.
+- Dawanie supportowi cichego override'a bywa gorsze niż brak recovery, bo obniża bezpieczeństwo systemu dla wszystkich, GitHub rozwiązuje to metodami przygotowanymi z góry, nie improwizacją po awarii.
+- Przed wdrożeniem kolejnego "spróbuj ponownie" warto zadać sobie trzy pytania: co zawiodło, kto kontroluje stan i czy override powinien istnieć w ogóle.
+
+**Why do I care:** Ten tekst trafia w coś, co jako architekt frontendowy widuję w każdym drugim projekcie: error state projektowany jako komunikat, nie jako proces. Wpisujemy w Figmie ekran z ikoną wykrzyknika i przyciskiem "Try again", zamykamy ticket i idziemy dalej, bez pytania, czy ten przycisk faktycznie prowadzi do rozwiązania, czy tylko odsyła użytkownika w tę samą pętlę. Rozdzielenie "kto ma zacząć naprawę" od "kto ma władzę ją zakończyć" to w zasadzie brakująca warstwa w większości error handlingu, jaki widziałem w produkcji, bo skupiamy się na obsłudze wyjątku w kodzie, a nie na tym, że za tym wyjątkiem stoi realna osoba bez żadnych narzędzi do odblokowania własnego stanu. Case z Airbnb szczególnie boli, bo pokazuje, że przy multi-party flow retry drugiej strony nie jest żadnym rozwiązaniem dla pierwszej, a to jest wzorzec, który w SaaSach z rolami (owner, member, guest) powtarza się bez końca. Jeśli projektujesz flow, w którym stan jednej osoby zależy od akcji drugiej, te trzy pytania z artykułu warto wkleić do definicji gotowości zadania, zanim ktoś napisze kolejny generyczny komunikat błędu.
+
+**Link:** [The system broke it. Why is the user fixing it?](https://unicornclub.dev/issues/2026-08-05-the-system-broke-it-why-is-the-user-fixing-it/)
