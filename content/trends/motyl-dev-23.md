@@ -17,36 +17,50 @@ This week, finally, I saw some interesting articles worth reading in the front-e
 ## ✨ Featured
 
 **[Your Agent Has Too Much Context](https://blog.kilo.ai/p/your-agent-has-too-much-context)**
-The counterintuitive observation up front: look at what the frontier labs actually ship, and each model generation carries _fewer_ baked-in instructions, not more — context pulled in deliberately beats a giant static rulebook. The practical split is the part worth stealing: let code and tests be the source of truth for how things _are_, and use instructions only for where you want to go. And enforce direction with structure rather than prose — a new folder tells an agent which pattern is current far more reliably than a paragraph saying so.
+The observation that opens the piece runs against instinct. Look at what the frontier labs actually ship, and each model generation comes with fewer baked-in instructions, not more. They pull context in when it is needed instead of maintaining one large static rulebook.
+
+The advice that follows is simple enough to use tomorrow. Let your code and your tests say how things are. Use your instructions file only to say where you want to go. And when you want the agent to follow a direction, change the structure rather than writing a paragraph about it. A new folder tells an agent which pattern is current far better than a sentence does.
 
 ## 🤖 AI
 
 **[A Complete Guide To AGENTS.md](https://www.aihero.dev/s/S8IqdG)**
-Matt Pocock on the same problem from the file's side. The instruction budget is real and it's spent on every request, so the ideal `AGENTS.md` is small, focused, and mostly points elsewhere. Best specific advice: describe capabilities, not file structure. Domain concepts ("organization" vs. "workspace") stay true for years; file paths are stale by Thursday, and a confidently wrong path sends the agent somewhere that doesn't exist.
+Matt Pocock looks at the same problem from the file's side. Every line in `AGENTS.md` is loaded on every single request, and a model can only follow so many instructions before it starts dropping them. So the file should be small, focused, and mostly point at other files.
+
+The most useful tip is to describe what the project does, not where its files live. Domain terms like "organization" or "workspace" stay accurate for years. File paths go stale in a week, and a wrong path sends the agent looking somewhere that no longer exists.
 
 **[Agentic Test Creation vs. AI Test Generation: What's the Difference?](https://hackernoon.com/agentic-test-creation-vs-ai-test-generation-whats-the-difference)**
-John Vester ran the first-wave approach — paste the ticket, get test cases, essentially ChatGPT with a QA skin — against a mature e-commerce regression suite and counted. Of 12 generated cases, seven already existed in the suite, two exercised an "Apply Discount" button that isn't in the product, and none linked back to a requirement. The model did exactly what it was asked. It just had no idea what was already there.
+John Vester tested the approach most of these tools use, where you paste in a ticket and get test cases back. He ran it against a mature e-commerce regression suite and counted what came out. Of the 12 cases it generated, seven already existed in the suite. Two of them tested an "Apply Discount" button that the product does not have. None were linked back to a requirement.
+
+The model did exactly what it was asked to do. It simply had no idea what was already there.
 
 ## 🛠️ Tools
 
 **[Introducing Kitesurf: the agent-first browser running in V8 isolates on Workers](https://blog.cloudflare.com/kitesurf/)**
-Cloudflare shelved "should we build a browser?" for years and finally said yes, with a narrower target: not humans, agents. Twelve weeks from first commit, it already passes 215,000+ Web Platform Tests, with the agent-relevant surface — DOM, CSS, selection, XHR — covered best. It speaks CDP, so Puppeteer, Playwright, or any MCP client works by adding `browser=kitesurf` to the endpoint. Free during beta, and they intend to open source it.
+Cloudflare had been asking itself whether to build a browser for years, and kept deciding against it. This time they went ahead, with a narrower goal: a browser for agents rather than for people.
+
+It is twelve weeks old and already passes over 215,000 Web Platform Tests, with the best coverage in the areas agents actually touch, like DOM, CSS, selection and XHR. It speaks CDP, so Puppeteer, Playwright or any MCP client works once you add `browser=kitesurf` to the endpoint. It is free while in beta, and they plan to open source it.
 
 **[use-webmcp-tool](https://github.com/GoogleChromeLabs/use-webmcp-tool)**
-A Chrome-maintained React hook that registers a WebMCP tool via `document.modelContext` and ties its lifetime to the component — the tool exists exactly as long as the UI that backs it. The inversion is the interesting bit: instead of an agent scraping your DOM and guessing, your page hands it typed actions. Spec is still experimental, and the hook feature-detects and no-ops everywhere the API is missing, so it's safe to try now.
+A React hook maintained by Chrome. It registers a WebMCP tool through `document.modelContext` and ties that tool's lifetime to the component, so the tool exists for exactly as long as the UI behind it.
+
+What I like here is the direction. Instead of an agent reading your DOM and guessing what it can do, your page tells it directly which actions it offers. The spec is still experimental, but the hook checks whether the API exists and does nothing when it doesn't, so you can add it today without breaking anything.
 
 ## 🎨 Frontend
 
 **[Why I don't recommend Tailwind CSS](https://en.andros.dev/blog/af3ee191/why-i-dont-recommend-tailwind-css/)**
-Unusually fair for the genre — it gives Wathan's defense its due (separation of concerns doesn't vanish, the arrow just reverses: your CSS depends on HTML, or your HTML depends on CSS) and concedes it holds inside component frameworks, where you'd already merged the layers yourself. The real argument lands in the conclusion: the live debate is no longer utilities vs. hand-written CSS, it's a utility layer vs. what the platform now ships — `@layer`, nesting, custom properties, `:has()`, container queries, `color-mix()`. The uncomfortable part being that Tailwind v4 is built on those same primitives.
+Andros is fair to the other side, which is rare in this discussion. He gives Adam Wathan's defense its due: separation of concerns doesn't disappear when you use utility classes, it just changes direction. With semantic CSS, your stylesheet depends on your HTML. With utilities, your HTML depends on your stylesheet. Either way the two are coupled. Inside React or Vue that argument holds, because you already put markup and styles in the same file. In a server-rendered project with templates, it holds a lot less.
+
+The conclusion is the part worth reading twice. The question is no longer utilities versus hand-written CSS. It is whether you need a utility layer at all, now that the browser gives you `@layer`, nesting, custom properties, `:has()`, container queries and `color-mix()`. Tailwind v4 is built on those same features.
 
 **[React 19 useActionState Explained](https://hackernoon.com/p/8-5-2026-newsletter)**
-A walkthrough of the hook that folds a form's pending flag, its error state, and its result into one call — the boilerplate three `useState`s and a `try/finally` that every form in every codebase had reimplemented slightly differently. Worth reading alongside `useFormStatus` if you're still hand-rolling submission state.
+A walkthrough of the hook that handles a form's pending flag, its error state and its result in a single call. It replaces the three `useState` calls and the `try/finally` that most of us have written over and over, a little differently every time. Read it together with `useFormStatus` if you still manage submission state by hand.
 
 ## 📰 Other
 
 **[Building Your Own Things Is Cool Too](https://thoughts.jock.pl/p/building-your-own-things-is-cool-too-2026)**
-The argument for building rather than assembling, made without romanticism — he's clear about the cost he's paying. The closing observation is the one I'd underline: you and I can both ask Claude for the same fix, and the model won't care which of us it's talking to. But one of us can read that diff, judge it, and push back; the other has to trust it. Same output, different category.
+An argument for building things yourself instead of assembling them from parts, and Pawel is honest about what that costs him in time.
+
+His closing point is the one I would underline. You and I can ask Claude for the same fix, and the model will not care which of us is asking. But one of us can read that diff, judge it and push back on it. The other has to trust it. The same code comes out either way, and the two situations are not the same.
 
 ---
 
