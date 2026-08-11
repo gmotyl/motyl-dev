@@ -3,7 +3,7 @@ title: "TanStack robi porządek z wykresami, Amazon płaci 860% więcej za agent
 excerpt: "Przegląd z daily.dev: nowa biblioteka do wykresów od TanStack, prawdziwe dane o zatrudnieniu w Big Tech kontra narracja o AI, Bun jako natywny entrypoint na Vercel, przegląd bibliotek schedulerów w React oraz automatyzacja publikacji bloga przez n8n."
 publishedAt: 2026-08-11
 slug: "tanstack-charts-ai-koszty-automatyzacja-bloga"
-hashtags: [#dailydev, #frontend, #webdev, #react, #performance, #ai, #architecture, #typescript, #generated, #pl]
+hashtags: "#dailydev #frontend #webdev #react #performance #ai #architecture #typescript #generated #pl"
 source_pattern: "daily.dev"
 ---
 
