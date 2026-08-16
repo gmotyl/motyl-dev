@@ -1,0 +1,34 @@
+---
+title: "11 sposobów na okiełznanie tokenów w agentach kodujących"
+excerpt: "Hierarchia kontekstu, subagenci płacący za czytanie, ADR-y zamiast grafów kodu i wyłączona pamięć automatyczna - jak ograniczyć zużycie tokenów w agentach kodujących bez utraty jakości pracy."
+publishedAt: "2026-08-05"
+slug: "11-context-engineering-tips-cut-coding-agent-tokens"
+hashtags: "#decodingai #ai #agents #llm #prompt-engineering #devtools #generated #pl"
+source_pattern: "Decoding AI"
+---
+
+## 11 sposobów na okiełznanie tokenów w agentach kodujących
+
+**TLDR:** Autor dzieli się jedenastoma nawykami, które trzymają zużycie tokenów w agentach kodujących pod kontrolą, mimo że pracuje na nich całymi dniami. Zamiast jednego wielkiego triku dostajemy zestaw małych decyzji architektonicznych: hierarchia dokumentów, rozdział planowania od wykonania, subagenci jako filtr informacji i twarde nie dla grafów kodu. Całość spięta jest jedną zasadą: kontekst to budżet uwagi, a nie magazyn na wszystko, co może się kiedyś przydać.
+
+**Summary:** Punkt wyjścia jest prosty i dobrze znany każdemu, kto pisał kiedyś dokumentację dla nowego w zespole: nie dawaj całej wiedzy naraz, dawaj spis treści. Autor buduje w AGENTS.md, wewnętrznych wiki i notatkach Obsidian hierarchie odnośników, dzięki czemu model najpierw przechodzi po tytułach, a plik ładuje tylko wtedy, gdy faktycznie czegoś w nim potrzebuje. To pokrywa się z tym, co OpenAI zrobiło ze swoim AGENTS.md: sprowadzili go do około stu linii spisu treści wskazującego na poukładane drzewo dokumentów, i tą metodą wygenerowali podobno milion linii kodu w Codexie. Ich fraza "dajcie Codexowi mapę, nie tysiącstronicową instrukcję" trafia w sedno całego artykułu.
+
+Drugi filtr to rozdzielenie planowania od wykonania. Planowanie jest tanie, wykonanie jest drogie, więc do zaplanowania używa się najmocniejszego dostępnego modelu, a do realizacji czegoś tańszego. Nigdy nie pada komenda w stylu "zaimplementuj X". Zamiast tego powstaje bardzo szczegółowy plan z architekturą, komponentami, interfejsami i przepływem danych, który słabszy model wykonuje praktycznie bez szans na pomyłkę. Plan jest dodatkowo przepuszczany przez cztery kategorie znanych i nieznanych niewiadomych, a model ma prawo dopytywać, żeby wyłapać martwe punkty jeszcze przed startem pracy. Wewnętrzna wiki działa tu jak indeks: plan odwołuje się do opisów trzydziestu dokumentów bez ładowania samych dokumentów, więc koszt kontekstowy zostaje bliski zeru.
+
+Trzeci mechanizm to subagenci jako tania warstwa filtrująca. Kiedy trzeba przetworzyć duży zbiór danych, w ruch idą Haiku albo Sonnet, które mogą spalić dziesiątki tysięcy tokenów na czytaniu, ale do głównego agenta wracają z destylatem rzędu tysiąca, dwóch tysięcy tokenów. Cały archiwum newslettera autor sklastrował właśnie w ten sposób, a kontekst głównego agenta prawie się nie ruszył. Do tego każda nowa funkcja produkuje trójkę artefaktów: listę zadań, ADR opisujący decyzję i wpis do glosariusza. ADR trzyma "czemu", glosariusz trzyma "co znaczy", i oba zostają jako kontekst dla przyszłych zmian, bez potrzeby przepisywania przy każdej modyfikacji kodu.
+
+Tu pojawia się najbardziej kontrowersyjna teza całego tekstu: żadnych grafów indeksujących kod. Kod i dokumentacja rozjeżdżają się praktycznie od razu, a utrzymywanie ich w synchronie kosztuje tokeny jeszcze przed tym, jak zdąży to zaboleć jako problem inżynierski. Cursor jest tu żywym kontrprzykładem, bo co kilka minut porównuje swój indeks embeddingów z hashami plików i douploadowuje różnice, co samo w sobie jest sporą warstwą złożoności. Claude Code i Codex robią to inaczej: parsują kod w czasie rzeczywistym przez glob i grep. Zamiast indeksować, autor woli myśleć o modularności, kształcie interfejsów i przepływie danych między komponentami, traktując to jako swój graf. Testem sanity jest pytanie, czy dany moduł da się wkleić do innego projektu i po prostu zadziała.
+
+Ostatnia część artykułu dotyczy samego narzędzia. Harness typu Claude Code wpycha do system promptu masę rzeczy, których i tak się nie używa, bo każda funkcja narzędzia, od powiadomień push po harmonogramy zadań, musi być gdzieś wspomniana, żeby model wiedział, że istnieje. Rozwiązaniem jest albo minimalistyczny agent w stylu Pi, rozszerzany pluginami, albo przycięcie własnego harnessu przez settings.json. Efekt u autora: na oknie kontekstu wielkości miliona tokenów payload zajmuje 21,4 tysiąca, z czego większość to system prompt i narzędzia systemowe, a 46 serwerów MCP kosztuje praktycznie zero, bo ładują się na żądanie. Do tego pamięć automatyczna typu MEMORY.md jest wyłączona, bo ciągłość i tak zapewniają commitowane artefakty jak AGENTS.md, ADR-y i glosariusz. Na deser wchodzi plugin Caveman, który tłumaczy komunikaty modelu na maksymalnie skrócony, "jaskiniowy" język, oraz trzy stałe reguły w AGENTS.md: usuwaj instrukcje zamiast dodawać nowe, używaj minimalnej liczby słów potrzebnej do osiągnięcia celu, a każdą nową regułę podpieraj konkretnym dobrym i złym przykładem.
+
+**Key takeaways:**
+- Buduj hierarchię kontekstu (AGENTS.md, wiki, spis treści), nie jeden wielki dokument, żeby model ładował tylko to, czego naprawdę potrzebuje.
+- Rozdziel planowanie od wykonania: najmocniejszy model robi szczegółowy plan, tańszy model go realizuje.
+- Subagenci (Haiku, Sonnet) mogą czytać dużo i zwracać mało, jeśli oddają głównemu agentowi tylko streszczenie.
+- Każda nowa funkcja powinna generować listę zadań, ADR i wpis do glosariusza jako trwały, tani kontekst na przyszłość.
+- Unikaj grafów i embeddingów indeksujących kod, bo szybko się rozjeżdżają z rzeczywistością, w to miejsce inwestuj w modularność i czyste interfejsy.
+- Przytnij system prompt swojego harnessu i rozważ wyłączenie automatycznej pamięci, jeśli masz commitowane artefakty jako źródło ciągłości.
+
+**Why do I care:** Z perspektywy kogoś, kto projektuje architektury frontendowe od lat, ten tekst brzmi znajomo, bo to w gruncie rzeczy te same zasady, które stosujemy przy dzieleniu monolitów na moduły: jasne interfejsy, minimalna sprzężenie, dokumentacja blisko decyzji, nie blisko implementacji. Najbardziej podpisuję się pod odrzuceniem grafów kodu jako źródła kontekstu, bo widziałem zbyt wiele projektów, gdzie dokumentacja architektury żyła własnym życiem, oddzielnym od repozytorium, i po pół roku była fikcją. ADR plus glosariusz plus dobrze zaprojektowane moduły to dokładnie ten sam pattern, tylko przeniesiony na potrzeby agentów LLM, i cieszy mnie, że community dochodzi do tych samych wniosków, do których dochodziliśmy już przy pracy z ludzkimi zespołami rozproszonymi. Jedyne, co bym dodał: to podejście wymaga dyscypliny na poziomie całego zespołu, nie tylko jednej osoby piszącej AGENTS.md, inaczej hierarchia kontekstu rozpada się szybciej niż jakikolwiek graf embeddingów.
+
+**Link:** [11 Tips to Run Coding Agents 24/7 on One Subscription](https://www.decodingai.com/p/11-context-engineering-tips-cut-coding-agent-tokens)

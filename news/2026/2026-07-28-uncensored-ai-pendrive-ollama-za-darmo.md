@@ -1,0 +1,34 @@
+---
+title: "Uncensowany AI na pendrivie za 30 dolarów, czyli marketing sprzedaje to, co i tak masz za darmo"
+excerpt: "Flash-drive'y z lokalnym, „odblokowanym” modelem AI to opakowany na nowo Ollama, za który ktoś każe sobie płacić dziesięciokrotność kosztu."
+publishedAt: "2026-07-28"
+slug: "uncensored-ai-pendrive-ollama-za-darmo"
+hashtags: "#HackerNoon #ai #llm #privacy #opensource #ollama #generated #pl"
+source_pattern: "HackerNoon"
+---
+
+## Nie musisz kupować uncensowanego AI na pendrivie
+
+**TLDR:** Na Instagramie i TikToku krążą reklamy pendrive'ów za 30 dolarów, które mają uruchamiać „prywatny, nieocenzurowany” model AI offline. W środku jest zwykły Ollama albo llama.cpp z pobranym za darmo modelem typu abliterated. Cały ten „produkt” da się odtworzyć samemu w dziesięć minut i bez wydawania grosza.
+
+**Summary:** Autorka zaczyna od reklamy, która ją złapała: agresywny montaż, industrialny bit, hasła migające na czarnym tle jak manifest, a nie prezentacja produktu. Pod całą tą otoczką kryje się odświeżony pendrive USB za 30 dolarów, który ma uruchamiać model językowy lokalnie, bez internetu i bez filtrów bezpieczeństwa. Sprawdziła, co faktycznie siedzi na takim dysku, i okazało się, że to Ollama albo llama.cpp, czyli darmowe narzędzia open source, plus abliterowana wersja jakiegoś mniejszego modelu z rodziny Qwen, Llama albo Gemma. Wszystko to można ściągnąć samemu, dziś wieczorem, za darmo.
+
+To, co mnie w tym najbardziej bawi, to rozkład argumentów sprzedażowych. Prywatność, bo dysk nie łączy się z siecią. Własność, bo płacisz raz, a nie w subskrypcji. Wolność od „cenzury”, czyli od zabezpieczeń, jakie ma każdy porządny model chatowy. Pierwszy argument jest prawdziwy, chatboty w chmurze faktycznie wysyłają twoje prompty na czyjeś serwery i to uzasadniona obawa. Tylko że do rozwiązania tego problemu nie trzeba kupować niczego. Ollama i LM Studio robią dokładnie to samo co ten dysk, tyle że za darmo i bez pośrednika, który dolicza sobie marżę rzędu kilkuset procent za plastikową obudowę i szybciej niż zajęłoby ci to samemu wygooglowanie instrukcji.
+
+Autorka idzie dalej i pokazuje, że nawet „darmowa wersja tej płatnej wersji” już istnieje jako projekt open source na GitHubie, z ponad 1600 gwiazdkami, który zamienia dowolny posiadany przez ciebie pendrive w dokładnie to samo urządzenie. Instalujesz raz, podłączony do sieci, wybierasz model z gotowego menu, a potem korzystasz offline tak samo jak z płatnej wersji. To jest ta część tekstu, która robi z reklamowanego „produktu” zwykłe pudełko na cudzą, darmową pracę.
+
+Najciekawszy fragment dotyczy jednak nie ceny, tylko tego, co faktycznie się usuwa z modelu podczas abliteracji. Autorka przywołuje badania z 2024 roku (ETH Zurich, MIT, Anthropic i niezależni badacze alignmentu), które pokazały, że odmowa wykonania szkodliwego polecenia nie jest jakąś nałożoną na model warstwą filtrów, tylko pojedynczym, dającym się zlokalizować kierunkiem w residual stream, czyli sygnale niosącym informację przez kolejne warstwy sieci. Usuń ten kierunek, a model przestaje odmawiać czegokolwiek, nie tylko kontrowersyjnych próśb. To wyjaśnienie jest solidne i rzadko się je widzi w tekstach popularnych, więc plus dla autorki, że po prostu to opisała zamiast machać rękami i pisać „jailbreak”.
+
+Tam, gdzie tekst już mnie mniej przekonuje, to ocena realnego ryzyka. Autorka słusznie zauważa, że kiedyś uruchomienie modelu bez treningu odmowy wymagało wiedzy: trzeba było wiedzieć, czym jest abliteracja, gdzie szukać takiego modelu na Hugging Face i jak skonfigurować llama.cpp. Ten próg wiedzy działał jako naturalny filtr, bo ludzie, którzy przez niego przechodzili, zwykle rozumieli, na co się piszą. Pendrive usuwa ten próg całkowicie, kupujesz za 30 dolarów gotowe rozwiązanie bez żadnej wiedzy technicznej. Zgoda, tylko że artykuł zatrzymuje się dokładnie w momencie, w którym robi się najciekawiej. Jakie realnie jest ryzyko modelu 4B czy 7B bez treningu bezpieczeństwa, uruchamianego lokalnie przez osobę bez żadnej wiedzy technicznej? Model tej wielkości nie zrobi nikomu krzywdy w zakresie broni chemicznej czy inżynierii wirusów, bo po prostu nie ma takiej wiedzy zakodowanej w wagach. Realne zagrożenia leżą raczej gdzie indziej: treści CSAM, granularna dezinformacja, phishing i socjotechnika pisane bez żadnych barier. Autorka o tym nie mówi wprost, tylko zostawia czytelnika z ogólnym „to niepokojące”, co jest trochę tanie jak na tekst, który przez cały czas stara się być rzeczowy.
+
+Drugą rzeczą, którą tekst konsekwentnie pomija, jest to, dlaczego ludzie w ogóle kupują gotowe pudełko zamiast zrobić to samo za darmo. Nie każdy, kto ogląda taką reklamę na Instagramie, chce w ogóle otwierać terminal. Sama autorka na końcu musi napisać krok po kroku instrukcję z pięcioma krokami i uwagami o tym, czym różni się model chmurowy od lokalnego, bo bez tego przeciętny odbiorca reklamy zgubiłby się już na etapie wyboru rozmiaru modelu. To pokazuje, że produkt sprzedaje nie tylko prywatność w cudzysłowie, ale też właśnie tę barierę wejścia, czyli dokładnie to, co autorka później nazywa problemem bezpieczeństwa. Innymi słowy: ten sam brak tarcia, który czyni zakup pendrive'a atrakcyjnym biznesowo, czyni go też ryzykownym z punktu widzenia bezpieczeństwa. Tekst nie łączy tych dwóch wątków, chociaż leżą obok siebie przez cały czas.
+
+**Key takeaways:**
+- Reklamowane pendrive'y z „nieocenzurowanym AI” to zwykle Ollama lub llama.cpp plus darmowy, abliterowany model, spakowane w tanią obudowę z kilkusetprocentową marżą
+- Odmowa wykonania szkodliwego polecenia w modelu językowym to konkretny, zlokalizowany kierunek w residual stream, a nie warstwa filtrów, dlatego da się go usunąć jednym zabiegiem (abliteracją)
+- Prawdziwe ryzyko takich produktów to nie moc obliczeniowa modelu, tylko zniesienie bariery wiedzy, przez którą wcześniej musiał przejść każdy, kto chciał uruchomić model bez zabezpieczeń
+- Postawienie własnego, prywatnego i darmowego lokalnego AI (Ollama lub LM Studio) zajmuje około dziesięciu minut i nie wymaga umiejętności programowania
+
+**Why do I care:** Z perspektywy kogoś, kto projektuje architektury i doradza w kwestiach wdrażania AI, ten tekst jest dobrym przypomnieniem, że „lokalny model” i „bezpieczny model” to dwie różne osie, które łatwo pomylić w rozmowie z klientem czy zarządem. Jeśli ktoś w organizacji chce postawić lokalny model dla wrażliwych danych, argument prywatności jest słuszny, ale trzeba osobno zadać pytanie, czy dany model ma w ogóle trening bezpieczeństwa, bo domyślne ściągnięcie czegoś z community namespace na Hugging Face może dać zespołowi narzędzie bez żadnych zabezpieczeń, o czym nikt nie pomyślał przy wyborze tagu modelu.
+
+**Link:** [Don't Buy an Uncensored AI on a Flash Drive: What You Can Do Instead](https://hackernoon.com/dont-buy-an-uncensored-ai-on-a-flash-drive-what-you-can-do-instead)
