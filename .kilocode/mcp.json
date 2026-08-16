@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "newsletter-ai": {
+      "command": "/root/git/prv/newsletter-ai/node_modules/.bin/tsx",
+      "args": ["/root/git/prv/newsletter-ai/src/mcp/index.ts"],
+      "cwd": "/root/git/prv/newsletter-ai/",
+      "env": {
+        "PROJECT_DIR": "/root/git/prv/newsletter-ai",
+        "OUTPUT_PATH": "/root/git/prv/motyl-dev/news/2026",
+        "NARRATOR_PERSONA": "Scott Hanselman"
+      }
+    }
+  }
+}

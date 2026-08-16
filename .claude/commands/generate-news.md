@@ -1,6 +1,6 @@
 ---
 description: Generate newsletter articles from mailbox
-allowed-tools: ["mcp__newsletter-ai__*", "Task"]
+allowed-tools: ["mcp__newsletter-ai__*"]
 argument-hint: [limit] [pattern]
 ---
 
@@ -83,107 +83,103 @@ When processing these newsletters:
    - Call `mcp__newsletter-ai__get_config` to get newsletter-ai MCP config
    - Call `mcp__newsletter-ai__get_prompt_template` to get PROMPT.md
 
-5. **Batch parallel processing**
+5. **For each newsletter (sequentially, automatically):**
 
-   BATCH_SIZE = 3 (process 3 newsletters at a time)
+   - Display: "Processing newsletter X of Y: [name]..."
 
-   Split newsletters into batches of 3:
+   **Check if newsletter uses body-only mode:**
+   - If newsletter name matches a body-only newsletter (e.g., "The Batch"):
+     - Display: "📋 [name] uses body-only mode (tracking URLs). Fetching body directly..."
+     - Skip link extraction and scraping
+     - Go directly to body retrieval (see body fallback below)
 
-   For each batch:
+   **Standard link extraction (for non-body-only newsletters):**
+   - Call `mcp__newsletter-ai__get_newsletter_links` to get links
+   - Display: "Scraping X articles..."
+   - For each link (in parallel when possible):
+     - Call `mcp__newsletter-ai__scrape_article` to get content
+     - If scraping fails, attempt **agent-browser fallback** for that link:
+       - Display: "⚠️ Scrape failed for [url], trying agent-browser..."
+       - Run: `agent-browser open <url> && agent-browser wait --load networkidle && agent-browser get text body`
+       - If agent-browser succeeds: use the extracted text as article content, display "✓ agent-browser fallback succeeded for [url]"
+       - If agent-browser also fails: log error and skip the link, continue
+     - Keep track of successfully scraped articles (via either method)
 
-   a) Display: "Processing batch X/Y (3 newsletters in parallel)..."
+   **Handle fallback scenario (or body-only mode):**
+   - If ALL links failed to scrape (including agent-browser fallback) OR the newsletter has 0 links OR newsletter is in body-only mode:
+     - If not body-only mode: Display: "⚠️ No articles could be scraped. Attempting to use newsletter body as fallback..."
+     - Call `mcp__newsletter-ai__get_newsletter_body` with the newsletter's UID
+     - If body is available:
+       - Display: "✓ Using newsletter body content"
+       - Use the bodyText or bodyHtml as content for article generation
+       - Mark this as a "body-based" article (different prompt approach)
+       - **IMPORTANT**: Extract any URLs from the newsletter body and add them as proper `**Link:**` entries after each topic section
+     - If body is NOT available:
+       - Display: "✗ Newsletter body not available. Skipping this newsletter."
+       - Continue to next newsletter
+   - Display: "Generating article content..."
+   - **Generate article content** using the prompt template:
+     - Replace `{NARRATOR_PERSONA}` with config.narratorPersona
+     - Replace `{OUTPUT_LANGUAGE}` with config.outputLanguage
+     - If using scraped articles:
+       - Replace `{NEWSLETTER_CONTENT}` with formatted articles (title, url, content for each)
+     - If using newsletter body (fallback):
+       - Replace `{NEWSLETTER_CONTENT}` with the raw newsletter body
+       - Adapt the prompt to handle body-based content (extract key topics, summarize sections, etc.)
+       - **CRITICAL**: Ensure each topic section ends with a proper `**Link:** [Title](URL)` line extracted from the newsletter body
+     - Generate markdown article with frontmatter following PROMPT.md format:
+       - Include `---` frontmatter with: title, excerpt, publishedAt, slug, hashtags
+       - Include TLDR section
+       - Include detailed summary for each article (or sections from body)
+       - Include key takeaways
+       - Include "Why do I care" commentary (senior frontend dev perspective) — LAST section before the link, per article
+       - **Each topic section MUST end with `**Link:** [Title](URL)` line**
+       - **IMPORTANT**: Do NOT include any "Co-Authored-By" attribution lines - these scare readers
+       - **IMPORTANT**: Do NOT include any "Generated with [Tool Name]" marketing lines - keep it clean and professional
+       - **IMPORTANT**: Write like a human from the start — apply these rules during generation:
+         - No em dashes (—); use commas or separate sentences instead
+         - No "rule of three" (avoid listing exactly three items just to seem thorough)
+         - No AI vocabulary: additionally, crucial, delve, highlight, landscape, pivotal, showcase, testament, underscore, vibrant, key (as adjective), foster, enhance
+         - No inflated significance: "marks a turning point", "reflects broader trends", "serves as a reminder"
+         - No promotional language: groundbreaking, stunning, breathtaking, boasts, nestled, renowned
+         - No vague attributions: "experts say", "industry observers note", "some argue"
+         - No negative parallelisms: "It's not just X, it's Y"
+         - No inline-header bullet lists (**Key:** description) — write in prose instead
+         - Vary sentence length: mix short punchy sentences with longer ones
+         - Have opinions — react to the content, don't just neutrally report it
+         - Use "I" when it fits naturally ("I keep thinking about...", "Here's what gets me...")
+         - Be specific: concrete details beat vague claims every time
+   - Call `mcp__newsletter-ai__save_article` with the generated content and newsletter name
+   - **CRITICAL: Track the newsletter UID that was used for this article generation**
+   - Display: "✅ Saved article to [filepath]"
 
-   b) Spawn 3 subagents in parallel (single message with 3 Task tool calls):
-      - Each Task call: subagent_type="general-purpose"
-      - Each Task prompt includes complete workflow instructions with:
-        - Newsletter data: UID, name, hashtags, body-only flag detection
-        - Config: narratorPersona, outputLanguage
-        - Full prompt template content
-        - Complete detailed workflow instructions
-
-      Each subagent should execute:
-      1. **Detect body-only mode**: If newsletter name contains "The Batch", skip link extraction
-      2. **Link extraction** (if not body-only):
-         - Call `mcp__newsletter-ai__get_newsletter_links(uid)` to get links
-         - For each link: Call `mcp__newsletter-ai__scrape_article(url)` (in parallel if possible)
-         - Track successfully scraped articles
-      3. **Fallback to body** (if all links failed OR 0 links OR body-only mode):
-         - Call `mcp__newsletter-ai__get_newsletter_body(uid)`
-         - If available: Use body content; Extract URLs from body for **Link:** entries
-         - If unavailable: Return error status
-      4. **Generate article content**:
-         - Replace `{NARRATOR_PERSONA}` with provided narratorPersona value
-         - Replace `{OUTPUT_LANGUAGE}` with provided outputLanguage value
-         - Replace `{NEWSLETTER_CONTENT}` with scraped articles or newsletter body
-         - Generate markdown with:
-           - Frontmatter: title, excerpt, publishedAt, slug, hashtags
-           - TLDR section
-           - Detailed summaries per topic
-           - Key takeaways
-           - "Why do I care" commentary (senior frontend dev perspective)
-           - Each topic ends with `**Link:** [Title](URL)`
-           - NO Co-Authored-By lines
-           - NO Generated-with lines
-           - Write like a human from the start — apply these rules during generation:
-             - No em dashes (—); use commas or separate sentences instead
-             - No "rule of three" (avoid listing exactly three items just to seem thorough)
-             - No AI vocabulary: additionally, crucial, delve, highlight, landscape, pivotal, showcase, testament, underscore, vibrant, key (as adjective), foster, enhance
-             - No inflated significance: "marks a turning point", "reflects broader trends", "serves as a reminder"
-             - No promotional language: groundbreaking, stunning, breathtaking, boasts, nestled, renowned
-             - No vague attributions: "experts say", "industry observers note", "some argue"
-             - No negative parallelisms: "It's not just X, it's Y"
-             - No inline-header bullet lists (**Key:** description) — write in prose instead
-             - Vary sentence length: mix short punchy sentences with longer ones
-             - Have opinions — react to the content, don't just neutrally report it
-             - Use "I" when it fits naturally ("I keep thinking about...", "Here's what gets me...")
-             - Be specific: concrete details beat vague claims every time
-      5. **Save article**:
-         - Call `mcp__newsletter-ai__save_article(content, newsletterName)`
-         - Return filepath
-      6. **Return result in exact format**:
-         ```
-         STATUS: success
-         UID: [uid]
-         FILEPATH: [filepath]
-         ```
-         Or on error:
-         ```
-         STATUS: error
-         UID: [uid]
-         ERROR: [error message]
-         ```
-
-   c) Wait for all subagents in batch to complete
-
-   d) Parse each subagent output:
-      - Extract STATUS, UID, FILEPATH, ERROR using string matching
-      - If STATUS=success:
-        - Add UID to processedUids array
-        - Add FILEPATH to savedArticles array
-        - Display: "✅ Saved: {FILEPATH}"
-      - If STATUS=error:
-        - Add UID to failedUids array
-        - Display: "❌ Failed (UID {UID}): {ERROR}"
+   **Handle useless/promotional newsletters:**
+   - If a newsletter is detected as promotional, sponsored, or contains no substantial content suitable for article generation, track its UID separately
+   - Such newsletters should still be marked as processed to avoid double processing in future runs
 
 6. **Mark processed newsletters as read/deleted**
 
-   - Only pass successfully processed UIDs (from processedUids array, not failedUids)
+   - Maintain a list of newsletter UIDs that were successfully used for article generation
+   - Also maintain a list of newsletter UIDs that were processed but deemed useless/promotional
+   - Combine both lists to create a comprehensive list of processed newsletter UIDs
    - Call `mcp__newsletter-ai__mark_newsletters_as_processed` with:
-     - uids: processedUids (array of successful UIDs only)
+     - uids: array of all newsletter UIDs that were processed (both useful and useless newsletters, but not all prepared newsletters)
      - safeMode: true if "safe" keyword was in arguments
    - This marks processed emails as read and optionally deletes them (unless safe mode)
-   - Display: "✅ Marked X newsletter(s) as processed"
-   - Show processed emails with subjects and deletion status if available
+   - Display: "✅ Marked X newsletter(s) as read [and deleted Y]"
 
 7. **Display summary**
 
-   - Show all generated articles with file paths
-   - If failedUids.length > 0:
-     - Display: "Failed newsletters: X"
-     - List failed newsletter names and error reasons
-   - Display total newsletters processed (successful + failed)
+   - Show list of all generated articles with file paths
+   - **Show processed emails with subjects** (from mark_newsletters_as_processed result):
+     - For each processed email, display: subject line (or pattern name if no subject), UID, and deletion status
+     - Example format:
+       - "📧 [DELETED] 'Your Weekly Newsletter - Nov 14' (UID: 87914)"
+       - "📧 [READ ONLY] 'Tech Updates for Today' (UID: 87729)"
+     - This helps identify which emails were deleted for potential recovery
+   - Confirm save location
    - Display total time taken
-   - If safe mode: Remind that emails were NOT deleted
+   - If safe mode: Display reminder that emails were NOT deleted
 
 8. **Commit and push**
 
@@ -194,12 +190,10 @@ When processing these newsletters:
 **Important:**
 
 - **Process automatically without user confirmation** - no prompts between steps
-- Process newsletters in batches of 3 using parallel subagents
-- Each subagent handles full workflow (scrape + generate + save)
-- Continue if individual newsletter fails (error isolation)
-- Scrape articles within each newsletter in parallel when possible
+- Process newsletters one at a time (sequentially)
+- Scrape articles in parallel when possible for speed
 - Respect the user's specified limit
-- Show clear progress indicators for each batch and newsletter
-- Handle errors gracefully - only successful UIDs marked as processed
-- Skip articles that fail to scrape rather than stopping the newsletter
+- Show clear progress indicators for each step
+- Handle errors gracefully and continue with remaining newsletters/articles if one fails
+- Skip articles that fail to scrape rather than stopping the entire process
 - Do NOT mention `{NARRATOR_PERSONA}` or persona name in generated articles

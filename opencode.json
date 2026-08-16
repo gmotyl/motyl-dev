@@ -1,0 +1,18 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "newsletter-ai": {
+      "type": "local",
+      "command": [
+        "/root/git/prv/newsletter-ai/node_modules/.bin/tsx",
+        "/root/git/prv/newsletter-ai/src/mcp/index.ts"
+      ],
+      "enabled": true,
+      "environment": {
+        "PROJECT_DIR": "/root/git/prv/newsletter-ai",
+        "OUTPUT_PATH": "/root/git/prv/motyl-dev/news/2026",
+        "NARRATOR_PERSONA": "Scott Hanselman"
+      }
+    }
+  }
+}
