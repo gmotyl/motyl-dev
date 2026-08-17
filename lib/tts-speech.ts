@@ -51,15 +51,21 @@ const ACRONYM_LETTER_MAP: Record<string, string> = {
 
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
-const applyTechnicalNameMappings = (text: string): string => {
-  const names = Object.keys(TECHNICAL_NAME_MAP).sort((a, b) => b.length - a.length)
+export const replaceWholeWordMappings = (
+  text: string,
+  mappings: Readonly<Record<string, string>>
+): string => {
+  const names = Object.keys(mappings).sort((a, b) => b.length - a.length)
   const pattern = new RegExp(
     `(?<![\\p{L}\\p{N}_])(${names.map(escapeRegExp).join('|')})(?![\\p{L}\\p{N}_])`,
     'gu'
   )
 
-  return text.replace(pattern, (name) => TECHNICAL_NAME_MAP[name])
+  return text.replace(pattern, (name) => mappings[name])
 }
+
+const applyTechnicalNameMappings = (text: string): string =>
+  replaceWholeWordMappings(text, TECHNICAL_NAME_MAP)
 
 const spellOutAcronyms = (text: string): string =>
   text.replace(/(?<![\p{L}\p{N}_])([A-Z]{2,})(?![\p{L}\p{N}_])/gu, (acronym) =>
@@ -83,8 +89,13 @@ const stripMarkdown = (text: string): string =>
   stripHashtagMetadata(stripFrontmatter(text))
     .replace(/<!--[\s\S]*?-->/g, '')
     .replace(/^\s*```[^\n]*\r?\n?|\r?\n?\s*```\s*$/gm, '')
+    .replace(
+      /^[ \t]{0,3}\[[^\]\r\n]+\]:[ \t]*(?:<[^>\r\n]*>|[^\s]+)(?:[ \t]+(?:"[^"\r\n]*"|'[^'\r\n]*'|\([^\)\r\n]*\)))?[ \t]*$/gm,
+      ''
+    )
     .replace(/!\[([^\]]*)\]\(\s*(?:<[^>]*>|[^)]*)\)/g, '$1')
     .replace(/\[([^\]]+)\]\(\s*(?:<[^>]*>|[^)]*)\)/g, '$1')
+    .replace(/\[([^\]\r\n]+)\]\[[^\]\r\n]*\]/g, '$1')
     .replace(/https?:\/\/[^\s)>]+/gi, '')
     .replace(/^\s{0,3}#{1,6}\s+/gm, '')
     .replace(/^\s*(?:[-*+]\s+|\d+[.)]\s+)/gm, '')

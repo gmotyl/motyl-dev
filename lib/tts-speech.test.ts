@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   prepareSpeechSections,
   prepareSpeechText,
+  replaceWholeWordMappings,
   splitReviewedSections,
 } from './tts-speech'
 
@@ -81,6 +82,15 @@ hashtags: "#pl #ai"
     )
   })
 
+  it('keeps reference-link labels while removing definitions and destinations', () => {
+    const source = `Read [the guide][guide] and [the endpoint][api].
+
+[guide]: https://example.com/guide "Guide"
+[api]: <https://example.com/api> (API docs)`
+
+    expect(prepareSpeechText(source)).toBe('Read the guide and the endpoint.')
+  })
+
   it('uses approved longest matching phonetic replacements without changing unknown words', () => {
     const source = 'AI i GPT 5.6 działają z React oraz Microsoft. Unknown AIx.'
 
@@ -88,6 +98,15 @@ hashtags: "#pl #ai"
       'ej-aj i dżi-pi-ti 5.6 działają z reakt oraz mikrosoft. Unknown AIx.'
     )
     expect(source).toBe('AI i GPT 5.6 działają z React oraz Microsoft. Unknown AIx.')
+  })
+
+  it('replaces overlapping mappings longest-first and transforms each match once', () => {
+    expect(
+      replaceWholeWordMappings('React Native oraz React.', {
+        React: 'R',
+        'React Native': 'React',
+      })
+    ).toBe('React oraz R.')
   })
 })
 
