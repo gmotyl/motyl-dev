@@ -1,12 +1,31 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { Mock } from 'vitest'
 import ReadAllNewsPage from './page.client'
 import { ItemType } from '@/lib/types'
 
 const mockUseContinuousReader = vi.fn()
-let latestReaderItems: any[] = []
-let latestReaderOptions: any
+const playbackEvents: string[] = []
+type ReaderItem = { sourceSlug: string; title: string }
+type ReaderOptions = { onItemChange?: (item: ReaderItem, index: number) => void }
+type ReaderAction = Mock<() => void>
+type ReaderHarness = {
+  isPlaying: boolean
+  isBuffering: boolean
+  currentIndex: number
+  currentItem: ReaderItem | undefined
+  play: ReaderAction
+  pause: ReaderAction
+  next: ReaderAction
+  playFromHere: Mock<(index: number) => void>
+  complete: ReaderAction
+}
+
+let latestReaderItems: ReaderItem[] = []
+let latestReaderOptions: ReaderOptions | undefined
+let latestReaderHarness: ReaderHarness
+let readerIndex = 0
 let intersectionCallback: ((entries: Array<{ isIntersecting: boolean }>) => void) | undefined
 
 vi.mock('next-auth/react', () => ({
@@ -26,15 +45,40 @@ vi.mock('@/hooks/use-section-visibility', () => ({
 }))
 
 vi.mock('@/hooks/use-continuous-reader', () => ({
-  useContinuousReader: (items: any[], options: any) => {
+  useContinuousReader: (items: ReaderItem[], options: ReaderOptions) => {
     latestReaderItems = items
     latestReaderOptions = options
+    const play = vi.fn(() => { playbackEvents.push('play') })
+    const selectAndPlay = (index: number) => {
+      const item = items[index]
+      if (!item) return
+      readerIndex = index
+      options.onItemChange?.(item, index)
+      play()
+    }
+    latestReaderHarness = {
+      isPlaying: false,
+      isBuffering: false,
+      currentIndex: readerIndex,
+      currentItem: items[readerIndex],
+      play,
+      pause: vi.fn(),
+      next: vi.fn(() => selectAndPlay(readerIndex + 1)),
+      playFromHere: vi.fn((index: number) => selectAndPlay(index)),
+      complete: vi.fn(() => selectAndPlay(readerIndex + 1)),
+    }
+    mockUseContinuousReader.mockReturnValue(latestReaderHarness)
     return mockUseContinuousReader(items, options)
   },
 }))
 
 vi.mock('@/components/continuous-reader-controls', () => ({
-  ContinuousReaderControls: ({ onPlayPause, onNext, onMarkRead, canNext = true }: any) => (
+  ContinuousReaderControls: ({ onPlayPause, onNext, onMarkRead, canNext = true }: {
+    onPlayPause: () => void
+    onNext: () => void
+    onMarkRead?: () => void
+    canNext?: boolean
+  }) => (
     <div role="group" aria-label="Continuous reader controls">
       <button onClick={onMarkRead}>Mark read</button>
       <button onClick={onPlayPause}>Play</button>
@@ -44,14 +88,21 @@ vi.mock('@/components/continuous-reader-controls', () => ({
 }))
 
 vi.mock('@/components/markdown-content', () => ({
-  MarkdownContent: ({ content, reader }: any) => (
+  MarkdownContent: ({ content, reader }: {
+    content: string
+    reader?: { onPlayFromHere: (index: number) => void }
+  }) => (
     <div>
-      {Array.from(content.matchAll(/^##\s+(.+)$/gm)).map((match: RegExpMatchArray) => (
-        <h2 key={match[1]} id={match[1].toLowerCase().replaceAll(' ', '-')}>
-          {match[1]}
-        </h2>
+      {Array.from(content.matchAll(/^##\s+(.+)$/gm)).map((match, index) => (
+        <div key={match[1]}>
+          <h2 id={match[1].toLowerCase().replaceAll(' ', '-')}>{match[1]}</h2>
+          {reader && (
+            <button onClick={() => reader.onPlayFromHere(index)}>
+              Play from here: {match[1]}
+            </button>
+          )}
+        </div>
       ))}
-      {reader && <button onClick={() => reader.onPlayFromHere(0)}>Play from here</button>}
     </div>
   ),
 }))
@@ -95,17 +146,11 @@ describe('ReadAllNewsPage continuous reader', () => {
     vi.stubGlobal('IntersectionObserver', MockIntersectionObserver)
     latestReaderItems = []
     latestReaderOptions = undefined
+    latestReaderHarness = undefined as unknown as ReaderHarness
+    readerIndex = 0
+    playbackEvents.length = 0
     intersectionCallback = undefined
     mockUseContinuousReader.mockReset()
-    mockUseContinuousReader.mockReturnValue({
-      isPlaying: false,
-      isBuffering: false,
-      currentIndex: 0,
-      play: vi.fn(),
-      pause: vi.fn(),
-      next: vi.fn(),
-      playFromHere: vi.fn(),
-    })
   })
 
   it('queues Read All News sections in rendered order', () => {
@@ -121,15 +166,58 @@ describe('ReadAllNewsPage continuous reader', () => {
     ])
   })
 
-  it('scrolls the selected section into view before playback', async () => {
-    const scrollIntoView = vi.fn()
-    HTMLElement.prototype.scrollIntoView = scrollIntoView
+  it('scrolls the selected section before direct playback', async () => {
+    HTMLElement.prototype.scrollIntoView = function (this: HTMLElement) {
+      playbackEvents.push(`scroll:${this.id}`)
+    }
 
     render(<ReadAllNewsPage initialItems={items(1)} totalItems={1} />)
 
-    act(() => latestReaderOptions.onItemChange(latestReaderItems[1], 1))
+    latestReaderHarness.play.mockImplementation(() => playbackEvents.push('play'))
+    await userEvent.click(screen.getByRole('button', { name: 'Play' }))
 
-    await waitFor(() => expect(scrollIntoView).toHaveBeenCalled())
+    expect(playbackEvents).toEqual(['scroll:section-1a', 'play'])
+  })
+
+  it('scrolls the selected heading before direct section start', async () => {
+    HTMLElement.prototype.scrollIntoView = function (this: HTMLElement) {
+      playbackEvents.push(`scroll:${this.id}`)
+    }
+
+    render(<ReadAllNewsPage initialItems={items(1)} totalItems={1} />)
+
+    latestReaderHarness.play.mockImplementation(() => playbackEvents.push('play'))
+    await userEvent.click(screen.getByRole('button', { name: 'Play from here: Section 1B' }))
+
+    expect(playbackEvents).toEqual(['scroll:section-1b', 'play'])
+    expect(document.getElementById('section-1b')).toBeInTheDocument()
+  })
+
+  it('scrolls the next heading before playback', async () => {
+    HTMLElement.prototype.scrollIntoView = function (this: HTMLElement) {
+      playbackEvents.push(`scroll:${this.id}`)
+    }
+
+    render(<ReadAllNewsPage initialItems={items(1)} totalItems={1} />)
+
+    latestReaderHarness.play.mockImplementation(() => playbackEvents.push('play'))
+    await userEvent.click(within(screen.getByRole('group', { name: 'Continuous reader controls' })).getByRole('button', { name: 'Next' }))
+
+    expect(playbackEvents).toEqual(['scroll:section-1b', 'play'])
+    expect(document.getElementById('section-1b')).toBeInTheDocument()
+  })
+
+  it('scrolls the next heading before automatically advancing playback', async () => {
+    HTMLElement.prototype.scrollIntoView = function (this: HTMLElement) {
+      playbackEvents.push(`scroll:${this.id}`)
+    }
+
+    render(<ReadAllNewsPage initialItems={items(1)} totalItems={1} />)
+
+    latestReaderHarness.play.mockImplementation(() => playbackEvents.push('play'))
+    act(() => latestReaderHarness.complete())
+
+    await waitFor(() => expect(playbackEvents).toEqual(['scroll:section-1b', 'play']))
     expect(document.getElementById('section-1b')).toBeInTheDocument()
   })
 

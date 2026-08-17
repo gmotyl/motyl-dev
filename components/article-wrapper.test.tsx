@@ -7,6 +7,7 @@ import { ItemType } from '@/lib/types'
 const mockUseContinuousReader = vi.fn()
 let latestReaderItems: any[] = []
 let latestReaderOptions: any
+let latestTTSProps: { voice?: string } | undefined
 
 vi.mock('@/hooks/use-continuous-reader', () => ({
   useContinuousReader: (items: any[], options: any) => {
@@ -33,7 +34,10 @@ vi.mock('@/components/share-ai-button', () => ({
 }))
 
 vi.mock('@/components/tts-player', () => ({
-  TTSPlayer: () => <div data-testid="compact-player" />,
+  TTSPlayer: (props: { voice?: string }) => {
+    latestTTSProps = props
+    return <div data-testid="compact-player" />
+  },
 }))
 
 vi.mock('@/components/continuous-reader-controls', () => ({
@@ -67,18 +71,19 @@ const makeReaderState = () => ({
   playFromHere: vi.fn(),
 })
 
-const article = (itemType: ItemType) => ({
+const article = (itemType: ItemType, hashtags = ['#en']) => ({
   slug: 'news-one',
   title: 'News One',
   content: '# News One\n\n## First section\n\nFirst text.\n\n## Second section\n\nSecond text.',
   itemType,
-  hashtags: ['#en'],
+  hashtags,
 })
 
 describe('ArticleWrapper', () => {
   beforeEach(() => {
     latestReaderItems = []
     latestReaderOptions = undefined
+    latestTTSProps = undefined
     mockUseContinuousReader.mockReset()
     mockUseContinuousReader.mockReturnValue(makeReaderState())
   })
@@ -98,10 +103,11 @@ describe('ArticleWrapper', () => {
   })
 
   it('does not add continuous reader controls to a Blog Article', () => {
-    render(<ArticleWrapper article={article(ItemType.Article)} translatePrompt="prompt" />)
+    render(<ArticleWrapper article={article(ItemType.Article, ['pl'])} translatePrompt="prompt" />)
 
     expect(screen.queryByRole('group', { name: 'Continuous reader controls' })).not.toBeInTheDocument()
     expect(screen.getByTestId('blog-markdown')).toBeInTheDocument()
     expect(screen.getByTestId('compact-player')).toBeInTheDocument()
+    expect(latestTTSProps?.voice).toBe('pl-PL-MarekNeural')
   })
 })

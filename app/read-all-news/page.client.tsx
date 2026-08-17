@@ -59,6 +59,16 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
 
   const reader = useContinuousReader(speechSections, { onItemChange: scrollToSection })
 
+  const handlePlayPause = useCallback(() => {
+    if (reader.isPlaying) {
+      reader.pause()
+      return
+    }
+
+    if (reader.currentItem) scrollToSection(reader.currentItem)
+    reader.play()
+  }, [reader, scrollToSection])
+
   const loadMoreRef = useRef<HTMLDivElement>(null)
   // Refs so fetchMore can read current values without stale closures or extra deps
   const itemsRef = useRef<ContentItem[]>(initialItems)
@@ -344,7 +354,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
             markReadDisabled={scrolledPastSlugs.size === 0}
             canNext={reader.currentIndex < speechSections.length - 1}
             onMarkRead={() => { setPendingNavUrl(null); setDialogOpen(true) }}
-            onPlayPause={() => (reader.isPlaying ? reader.pause() : reader.play())}
+            onPlayPause={handlePlayPause}
             onNext={reader.next}
           />
         )}

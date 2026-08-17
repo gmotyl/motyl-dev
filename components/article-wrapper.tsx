@@ -12,6 +12,7 @@ import { filterHiddenSections, type SectionType } from '@/lib/section-filter'
 import { ItemType } from '@/lib/types'
 import { getContentCategory } from '@/lib/og'
 import { prepareSpeechSections } from '@/lib/tts-speech'
+import { detectLanguageFromHashtags } from '@/lib/tts'
 import { useSectionVisibility } from '@/hooks/use-section-visibility'
 
 interface ArticleWrapperProps {
@@ -33,6 +34,8 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
   const filteredContent = useMemo(() => {
     return isNews ? filterHiddenSections(article.content, hiddenSections) : article.content
   }, [article.content, hiddenSections, isNews])
+
+  const voice = detectLanguageFromHashtags(article.hashtags)
 
   const speechSections = useMemo(
     () => isNews
@@ -81,7 +84,7 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
           />
         )}
         {!isNews && (
-          <TTSPlayer content={filteredContent} title={article.title} compact />
+          <TTSPlayer content={filteredContent} title={article.title} voice={voice} compact />
         )}
       </div>
 
