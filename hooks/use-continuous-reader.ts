@@ -56,11 +56,13 @@ export function useContinuousReader(
   const playback = useTTS(items[currentIndex]?.speechText ?? '', {
     voice: getStoredTtsVoice(),
     onComplete: useCallback(() => {
+      if (currentIndexRef.current !== currentIndex) return
+
       const nextIndex = currentIndexRef.current + 1
       if (nextIndex < itemsRef.current.length) {
         selectAndStart(nextIndex, true)
       }
-    }, [selectAndStart]),
+    }, [currentIndex, selectAndStart]),
     onError: useCallback((nextError: Error) => {
       playbackRef.current?.stop()
       setError(nextError)

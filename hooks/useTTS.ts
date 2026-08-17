@@ -119,6 +119,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   const pauseOffsetRef = useRef<number>(0)
   const currentChunkBufferRef = useRef<AudioBuffer | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
+  const requestGenerationRef = useRef(0)
   const animationFrameRef = useRef<number | null>(null)
   const isPlayingRef = useRef(false)
   const currentChunkIndexRef = useRef(0)
@@ -128,6 +129,12 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   const bufferCacheRef = useRef<Map<number, AudioBuffer>>(new Map())
   // Track in-flight fetches to avoid duplicate requests
   const fetchingRef = useRef<Set<number>>(new Set())
+
+  const invalidatePendingRequests = useCallback(() => {
+    requestGenerationRef.current += 1
+    abortControllerRef.current?.abort()
+    abortControllerRef.current = null
+  }, [])
 
   const getAudioContext = useCallback(() => {
     if (!audioContextRef.current) {
@@ -156,7 +163,13 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         }
         audioContext.decodeAudioData(
           arrayBuffer,
-          (buffer) => resolve(buffer),
+          (buffer) => {
+            if (signal.aborted) {
+              reject(new DOMException('Aborted', 'AbortError'))
+              return
+            }
+            resolve(buffer)
+          },
           (error) => reject(new Error(`Failed to decode audio: ${error}`))
         )
       })
@@ -166,20 +179,20 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
   // Fill the buffer cache for chunks [startIndex .. startIndex + BUFFER_AHEAD)
   const fillBuffer = useCallback(
-    (startIndex: number) => {
-      if (!abortControllerRef.current) return
+    (startIndex: number, generation: number, signal: AbortSignal) => {
+      if (generation !== requestGenerationRef.current || signal.aborted) return
 
       const end = Math.min(startIndex + BUFFER_AHEAD, chunksRef.current.length)
       for (let i = startIndex; i < end; i++) {
         if (bufferCacheRef.current.has(i) || fetchingRef.current.has(i)) continue
 
         fetchingRef.current.add(i)
-        const signal = abortControllerRef.current!.signal
 
         fetchAudioBuffer(chunksRef.current[i], signal)
           .then((buffer) => {
-            bufferCacheRef.current.set(i, buffer)
             fetchingRef.current.delete(i)
+            if (generation !== requestGenerationRef.current || signal.aborted) return
+            bufferCacheRef.current.set(i, buffer)
           })
           .catch((err) => {
             fetchingRef.current.delete(i)
@@ -221,7 +234,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
   // Play a single chunk
   const playChunk = useCallback(
-    async (index: number, offset = 0) => {
+    async (index: number, offset: number, generation: number, signal: AbortSignal) => {
+      if (generation !== requestGenerationRef.current || signal.aborted) return
+
       if (index >= chunksRef.current.length) {
         // All chunks played
         isPlayingRef.current = false
@@ -229,10 +244,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
           cancelAnimationFrame(animationFrameRef.current)
           animationFrameRef.current = null
         }
-        if (abortControllerRef.current) {
-          abortControllerRef.current.abort()
-          abortControllerRef.current = null
-        }
+        invalidatePendingRequests()
         setState((prev) => ({ ...prev, isPlaying: false, progress: 100 }))
         onComplete?.()
 
@@ -250,10 +262,12 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         await audioContext.resume()
       }
 
+      if (generation !== requestGenerationRef.current || signal.aborted) return
+
       currentChunkIndexRef.current = index
 
       // Eagerly start buffering upcoming chunks
-      fillBuffer(index + 1)
+      fillBuffer(index + 1, generation, signal)
 
       let buffer: AudioBuffer
 
@@ -268,25 +282,28 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         // Not buffered yet — fetch inline and show buffering state
         setState((prev) => ({ ...prev, isBuffering: true }))
 
-        if (!abortControllerRef.current) return
         try {
-          buffer = await fetchAudioBuffer(
-            chunksRef.current[index],
-            abortControllerRef.current.signal
-          )
+          buffer = await fetchAudioBuffer(chunksRef.current[index], signal)
         } catch (error) {
-          if ((error as Error).name === 'AbortError') return
+          if (
+            generation !== requestGenerationRef.current ||
+            signal.aborted ||
+            (error as Error).name === 'AbortError'
+          ) return
           console.warn(`[TTS] Chunk ${index} failed:`, error)
           isPlayingRef.current = false
-          abortControllerRef.current?.abort()
-          abortControllerRef.current = null
+          invalidatePendingRequests()
           setState((prev) => ({ ...prev, isPlaying: false, isBuffering: false }))
           onError?.(error as Error)
           return
         }
       }
 
-      if (!isPlayingRef.current) return // Stopped while fetching
+      if (
+        generation !== requestGenerationRef.current ||
+        signal.aborted ||
+        !isPlayingRef.current
+      ) return // Stopped while fetching
 
       setState((prev) => ({ ...prev, isBuffering: false, currentChunkIndex: index }))
 
@@ -301,9 +318,13 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
       source.onended = () => {
         try { source.disconnect() } catch (_) { /* already disconnected */ }
-        if (!isPlayingRef.current) return
+        if (
+          !isPlayingRef.current ||
+          generation !== requestGenerationRef.current ||
+          signal.aborted
+        ) return
         completedCharsRef.current += charCountsRef.current[index] || 0
-        playChunk(index + 1)
+        void playChunk(index + 1, 0, generation, signal)
       }
 
       source.start(0, offset)
@@ -312,7 +333,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         animationFrameRef.current = requestAnimationFrame(updateProgress)
       }
     },
-    [fetchAudioBuffer, fillBuffer, getAudioContext, onComplete, onError, updateProgress]
+    [fetchAudioBuffer, fillBuffer, getAudioContext, invalidatePendingRequests, onComplete, onError, updateProgress]
   )
 
   // Play / resume
@@ -335,23 +356,32 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
     voiceRef.current = voice || null
     isPlayingRef.current = true
-    abortControllerRef.current = new AbortController()
+    const generation = requestGenerationRef.current + 1
+    requestGenerationRef.current = generation
+    const abortController = new AbortController()
+    abortControllerRef.current = abortController
+    const signal = abortController.signal
 
     setState((prev) => ({ ...prev, isPlaying: true, isBuffering: true }))
 
     // Pre-buffer: fetch the first few chunks before starting playback
     const startIdx = currentChunkIndexRef.current
     const preBufferEnd = Math.min(startIdx + BUFFER_AHEAD, chunksRef.current.length)
-    const signal = abortControllerRef.current.signal
 
     // Fetch first chunk (must have it to start playing)
     if (pauseOffsetRef.current === 0 && !bufferCacheRef.current.has(startIdx)) {
       try {
         const buf = await fetchAudioBuffer(chunksRef.current[startIdx], signal)
+        if (generation !== requestGenerationRef.current || signal.aborted) return
         bufferCacheRef.current.set(startIdx, buf)
       } catch (error) {
-        if ((error as Error).name === 'AbortError') return
+        if (
+          generation !== requestGenerationRef.current ||
+          signal.aborted ||
+          (error as Error).name === 'AbortError'
+        ) return
         isPlayingRef.current = false
+        invalidatePendingRequests()
         onError?.(error as Error)
         setState((prev) => ({ ...prev, isPlaying: false, isBuffering: false }))
         return
@@ -364,8 +394,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         fetchingRef.current.add(i)
         fetchAudioBuffer(chunksRef.current[i], signal)
           .then((buf) => {
-            bufferCacheRef.current.set(i, buf)
             fetchingRef.current.delete(i)
+            if (generation !== requestGenerationRef.current || signal.aborted) return
+            bufferCacheRef.current.set(i, buf)
           })
           .catch(() => { fetchingRef.current.delete(i) })
       }
@@ -375,12 +406,13 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
     const offset = pauseOffsetRef.current
     pauseOffsetRef.current = 0
-    playChunk(startIdx, offset)
-  }, [content, fetchAudioBuffer, onError, playChunk, voice])
+    void playChunk(startIdx, offset, generation, signal)
+  }, [content, fetchAudioBuffer, invalidatePendingRequests, onError, playChunk, voice])
 
   // Pause
   const pause = useCallback(() => {
     isPlayingRef.current = false
+    invalidatePendingRequests()
 
     if (audioContextRef.current && currentChunkDurationRef.current > 0) {
       const elapsed = audioContextRef.current.currentTime - currentChunkStartTimeRef.current
@@ -395,11 +427,6 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       currentSourceRef.current = null
     }
 
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-      abortControllerRef.current = null
-    }
-
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current)
       animationFrameRef.current = null
@@ -410,7 +437,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     }
 
     setState((prev) => ({ ...prev, isPlaying: false }))
-  }, [])
+  }, [invalidatePendingRequests])
 
   // Stop
   const stop = useCallback(() => {

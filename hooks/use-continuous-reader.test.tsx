@@ -105,6 +105,25 @@ describe('useContinuousReader', () => {
     expect(ttsMock.calls.at(-1)?.content).toBe('prepared speech 1')
   })
 
+  it('ignores a stale completion after Next starts the new item', async () => {
+    const { result } = renderHook(() =>
+      useContinuousReader([makeItem(0), makeItem(1), makeItem(2)])
+    )
+
+    act(() => result.current.play())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+
+    const firstItemOptions = ttsMock.calls[0]?.options
+
+    act(() => result.current.next())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledTimes(2))
+
+    act(() => (firstItemOptions?.onComplete as () => void)())
+
+    expect(result.current.currentIndex).toBe(1)
+    expect(ttsMock.playback.play).toHaveBeenCalledTimes(2)
+  })
+
   it('automatically advances on completion', async () => {
     const onItemChange = vi.fn()
     const { result } = renderHook(() =>
