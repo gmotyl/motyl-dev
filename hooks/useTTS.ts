@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { detectLanguageFromContent } from '@/lib/tts'
 import { synthesizeSpeech } from '@/lib/tts-client'
 
-interface TTSState {
+export interface TTSState {
   isPlaying: boolean
   isBuffering: boolean
   progress: number
@@ -14,11 +14,18 @@ interface TTSState {
   totalChunks: number
 }
 
-interface UseTTSOptions {
+export interface UseTTSOptions {
   voice?: string
   onProgress?: (progress: number) => void
   onComplete?: () => void
   onError?: (error: Error) => void
+}
+
+export interface TTSPlayback extends TTSState {
+  play: () => Promise<void>
+  pause: () => void
+  stop: () => void
+  resume: () => Promise<void>
 }
 
 const detectLanguage = detectLanguageFromContent
@@ -269,13 +276,12 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
           )
         } catch (error) {
           if ((error as Error).name === 'AbortError') return
-          console.warn(`[TTS] Chunk ${index} failed, skipping:`, error)
-          // Skip failed chunk and continue with next
-          if (isPlayingRef.current) {
-            completedCharsRef.current += charCountsRef.current[index] || 0
-            setState((prev) => ({ ...prev, isBuffering: false }))
-            playChunk(index + 1)
-          }
+          console.warn(`[TTS] Chunk ${index} failed:`, error)
+          isPlayingRef.current = false
+          abortControllerRef.current?.abort()
+          abortControllerRef.current = null
+          setState((prev) => ({ ...prev, isPlaying: false, isBuffering: false }))
+          onError?.(error as Error)
           return
         }
       }
@@ -442,13 +448,15 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     }
   }, [stop])
 
-  return {
+  const playback: TTSPlayback = {
     ...state,
     play,
     pause,
     stop,
     resume: play,
   }
+
+  return playback
 }
 
 export default useTTS
