@@ -2,7 +2,18 @@
 
 Generated candidate inventory from Polish News Articles tagged `#pl`.
 
-Pending human approval. This document proposes candidates only; it contains no production phonetic mappings.
+## Approved runtime policy
+
+The runtime does not use the full generated candidate inventory. It detects consecutive uppercase acronym tokens generically and spells their letters with Polish TTS phonetics (`AI` → `ej-aj`, `GPT` → `dżi-pi-ti`). Only explicit whole-word exceptions belong in the separate extensible technical-name map.
+
+Approved technical-name entries:
+
+- `React` → `reakt`
+- `Microsoft` → `mikrosoft`
+
+Unknown terms remain unchanged, and the source Markdown is never rewritten; these mappings apply only to synthesized speech text.
+
+The sections below remain a candidate inventory for future review and are not production mappings.
 
 ## Acronyms
 
