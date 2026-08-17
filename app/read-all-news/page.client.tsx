@@ -1,20 +1,23 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
-import { MarkdownWithCTA } from '@/components/markdown-with-cta'
+import { ContinuousReaderControls } from '@/components/continuous-reader-controls'
+import { MarkdownContent } from '@/components/markdown-content'
 import { filterHiddenSections, type SectionType } from '@/lib/section-filter'
 import { ItemType } from '@/lib/types'
 import { ContentItem } from '@/lib/articles'
+import { useContinuousReader } from '@/hooks/use-continuous-reader'
 import { MarkReadDialog } from '@/components/mark-read-dialog'
 import { SectionVisibilityDialog } from '@/components/article-section-toggle'
 import { useSectionVisibility } from '@/hooks/use-section-visibility'
 import { BookCheck, ChevronDown, Copy, Check, Settings } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { prepareSpeechSections } from '@/lib/tts-speech'
 
 interface ReadAllNewsPageProps {
   initialItems: ContentItem[]
@@ -35,6 +38,26 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
   const [exportState, setExportState] = useState<'idle' | 'working' | 'done' | 'error'>('idle')
 
   const { hiddenSections, toggleSection, isHydrated } = useSectionVisibility()
+
+  const speechSections = useMemo(
+    () => prepareSpeechSections(items.map((item) => ({
+      slug: item.slug,
+      title: item.title,
+      content: filterHiddenSections(item.content, hiddenSections),
+    }))),
+    [items, hiddenSections]
+  )
+
+  const scrollToSection = useCallback((section: { title: string }) => {
+    const id = section.title
+      .trim()
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s-]/gu, '')
+      .replace(/\s+/g, '-')
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
+
+  const reader = useContinuousReader(speechSections, { onItemChange: scrollToSection })
 
   const loadMoreRef = useRef<HTMLDivElement>(null)
   // Refs so fetchMore can read current values without stale closures or extra deps
@@ -310,9 +333,21 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
       <Header />
       <main className="flex-1 container py-8 px-4 pb-48 sm:pb-8 max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold mb-2">Read all news</h1>
-        <p className="text-muted-foreground mb-8">
+            <p className="text-muted-foreground mb-8">
           Scroll through unvisited articles. Mark them as read when you're done.
         </p>
+
+        {items.length > 0 && (
+          <ContinuousReaderControls
+            isPlaying={reader.isPlaying}
+            isBuffering={reader.isBuffering}
+            markReadDisabled={scrolledPastSlugs.size === 0}
+            canNext={reader.currentIndex < speechSections.length - 1}
+            onMarkRead={() => { setPendingNavUrl(null); setDialogOpen(true) }}
+            onPlayPause={() => (reader.isPlaying ? reader.pause() : reader.play())}
+            onNext={reader.next}
+          />
+        )}
 
         {items.length === 0 ? (
           <div className="text-center py-12">
@@ -337,6 +372,8 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
                   onScrolledPast={handleScrolledPast}
                   isLast={index === items.length - 1}
                   hiddenSections={hiddenSections}
+                  reader={reader}
+                  speechSections={speechSections}
                 />
               ))}
             </div>
@@ -441,11 +478,15 @@ function FullArticle({
   onScrolledPast,
   isLast,
   hiddenSections,
+  reader,
+  speechSections,
 }: {
   item: ContentItem
   onScrolledPast: (slug: string) => void
   isLast: boolean
   hiddenSections: Set<SectionType>
+  reader: ReturnType<typeof useContinuousReader>
+  speechSections: ReturnType<typeof prepareSpeechSections>
 }) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const hasTriggeredRef = useRef(false)
@@ -490,11 +531,19 @@ function FullArticle({
       </div>
 
       {/* Full article content */}
-      <MarkdownWithCTA
+      <MarkdownContent
         content={filteredContent}
         itemType={ItemType.News}
-        articleSlug={item.slug}
         patternName={item.sourcePattern}
+        reader={{
+          onPlayFromHere: reader.playFromHere,
+          getSectionIndex: (heading) => {
+            const index = speechSections.findIndex(
+              (section) => section.sourceSlug === item.slug && section.title === heading
+            )
+            return index < 0 ? null : index
+          },
+        }}
       />
 
       {/* Bottom boundary marker for scroll tracking */}
