@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { SpeechSection } from '@/lib/tts-speech'
 import { TTS_VOICE_STORAGE_KEY } from '@/lib/tts-voices'
@@ -7,6 +7,7 @@ import { useContinuousReader } from './use-continuous-reader'
 
 const ttsMock = vi.hoisted(() => {
   let latestOptions: Record<string, unknown> | undefined
+  let useActualTTS = false
   const calls: Array<{ content: string; options: Record<string, unknown> }> = []
   const playback = {
     isPlaying: false,
@@ -34,15 +35,68 @@ const ttsMock = vi.hoisted(() => {
       playback.stop.mockClear()
       playback.resume.mockClear()
     },
-    useTTS: vi.fn((content: string, options: Record<string, unknown>) => {
-      latestOptions = options
-      calls.push({ content, options })
+    useTTS: vi.fn((content: string, options: unknown) => {
+      const normalizedOptions = options as Record<string, unknown>
+      latestOptions = normalizedOptions
+      calls.push({ content, options: normalizedOptions })
       return playback
     }),
+    get useActualTTS() {
+      return useActualTTS
+    },
+    set useActualTTS(value: boolean) {
+      useActualTTS = value
+    },
   }
 })
 
-vi.mock('./useTTS', () => ({ useTTS: ttsMock.useTTS }))
+const ttsClientMock = vi.hoisted(() => ({
+  synthesizeSpeech: vi.fn(),
+}))
+
+vi.mock('@/lib/tts-client', () => ({
+  synthesizeSpeech: ttsClientMock.synthesizeSpeech,
+}))
+
+vi.mock('./useTTS', async () => {
+  const actual = await vi.importActual<typeof import('./useTTS')>('./useTTS')
+
+  return {
+    ...actual,
+    useTTS: (...args: Parameters<typeof actual.useTTS>) =>
+      ttsMock.useActualTTS
+        ? actual.useTTS(...args)
+        : ttsMock.useTTS(args[0], args[1]),
+  }
+})
+
+const deferred = <T,>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve
+  })
+
+  return { promise, resolve }
+}
+
+const setupPendingSynthesis = () => {
+  const requests: Array<ReturnType<typeof deferred<ArrayBuffer>>> = []
+  const events: string[] = []
+  const originalAbort = AbortController.prototype.abort
+
+  vi.spyOn(AbortController.prototype, 'abort').mockImplementation(function () {
+    events.push('abort')
+    return originalAbort.call(this)
+  })
+  ttsClientMock.synthesizeSpeech.mockImplementation((text: string) => {
+    events.push(`synthesize:${text}`)
+    const request = deferred<ArrayBuffer>()
+    requests.push(request)
+    return request.promise
+  })
+
+  return { events, requests }
+}
 
 const makeItem = (index: number): SpeechSection => ({
   sourceSlug: `news-${index}`,
@@ -53,11 +107,17 @@ const makeItem = (index: number): SpeechSection => ({
 })
 
 describe('useContinuousReader', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
   beforeEach(() => {
     localStorage.clear()
     localStorage.setItem(TTS_VOICE_STORAGE_KEY, 'pl-PL-ZofiaNeural')
     ttsMock.reset()
     ttsMock.useTTS.mockClear()
+    ttsMock.useActualTTS = false
+    ttsClientMock.synthesizeSpeech.mockReset()
   })
 
   it('starts a queue item with prepared speech text and selected voice', async () => {
@@ -122,6 +182,76 @@ describe('useContinuousReader', () => {
 
     expect(result.current.currentIndex).toBe(1)
     expect(ttsMock.playback.play).toHaveBeenCalledTimes(2)
+  })
+
+  it('invalidates pending synthesis before Next and ignores its stale resolution', async () => {
+    ttsMock.useActualTTS = true
+    const { events, requests } = setupPendingSynthesis()
+    const { result } = renderHook(() =>
+      useContinuousReader([makeItem(0), makeItem(1), makeItem(2)])
+    )
+
+    act(() => result.current.play())
+    await waitFor(() => expect(requests).toHaveLength(1))
+
+    act(() => result.current.next())
+    await waitFor(() => {
+      expect(requests).toHaveLength(2)
+      expect(result.current.isPlaying).toBe(true)
+      expect(result.current.isBuffering).toBe(true)
+    })
+
+    expect(events).toEqual([
+      'synthesize:prepared speech 0',
+      'abort',
+      'synthesize:prepared speech 1',
+    ])
+    expect(result.current.currentIndex).toBe(1)
+
+    await act(async () => {
+      requests[0].resolve(new ArrayBuffer(0))
+      await Promise.resolve()
+    })
+
+    expect(result.current.currentIndex).toBe(1)
+    expect(result.current.isPlaying).toBe(true)
+    expect(result.current.isBuffering).toBe(true)
+    expect(requests).toHaveLength(2)
+  })
+
+  it('invalidates pending synthesis before direct playFrom and ignores its stale resolution', async () => {
+    ttsMock.useActualTTS = true
+    const { events, requests } = setupPendingSynthesis()
+    const { result } = renderHook(() =>
+      useContinuousReader([makeItem(0), makeItem(1), makeItem(2)])
+    )
+
+    act(() => result.current.play())
+    await waitFor(() => expect(requests).toHaveLength(1))
+
+    act(() => result.current.playFrom(2))
+    await waitFor(() => {
+      expect(requests).toHaveLength(2)
+      expect(result.current.isPlaying).toBe(true)
+      expect(result.current.isBuffering).toBe(true)
+    })
+
+    expect(events).toEqual([
+      'synthesize:prepared speech 0',
+      'abort',
+      'synthesize:prepared speech 2',
+    ])
+    expect(result.current.currentIndex).toBe(2)
+
+    await act(async () => {
+      requests[0].resolve(new ArrayBuffer(0))
+      await Promise.resolve()
+    })
+
+    expect(result.current.currentIndex).toBe(2)
+    expect(result.current.isPlaying).toBe(true)
+    expect(result.current.isBuffering).toBe(true)
+    expect(requests).toHaveLength(2)
   })
 
   it('automatically advances on completion', async () => {
