@@ -84,7 +84,7 @@ const setupPendingSynthesis = () => {
   const events: string[] = []
   const originalAbort = AbortController.prototype.abort
 
-  vi.spyOn(AbortController.prototype, 'abort').mockImplementation(function () {
+  vi.spyOn(AbortController.prototype, 'abort').mockImplementation(function (this: AbortController) {
     events.push('abort')
     return originalAbort.call(this)
   })
