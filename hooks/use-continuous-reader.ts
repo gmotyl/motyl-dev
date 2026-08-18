@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { SpeechSection } from '@/lib/tts-speech'
+import { splitIntoChunks } from '@/lib/tts-chunks'
+import { prefetchSpeech } from '@/lib/tts-client'
 import { DEFAULT_TTS_VOICE, getStoredTtsVoice, TTS_VOICE_CHANGE_EVENT, type TtsVoice } from '@/lib/tts-voices'
 import { useTTS } from './useTTS'
 import type { TTSPlayback } from './useTTS'
@@ -23,6 +25,9 @@ export function useContinuousReader(
   const onItemChangeRef = useRef(onItemChange)
   const pendingStartRef = useRef<number | null>(null)
   const playbackRef = useRef<TTSPlayback | null>(null)
+  // Tracks the section index for which the next-section prefetch has fired, so
+  // it warms the following section's first chunk at most once per section.
+  const prefetchedForIndexRef = useRef<number | null>(null)
   const [voice, setVoice] = useState<TtsVoice>(DEFAULT_TTS_VOICE)
 
   useEffect(() => {
@@ -31,6 +36,8 @@ export function useContinuousReader(
 
   useEffect(() => {
     currentIndexRef.current = currentIndex
+    // Reset the once-per-section prefetch guard on every section change.
+    prefetchedForIndexRef.current = null
   }, [currentIndex])
 
   useEffect(() => {
@@ -79,6 +86,18 @@ export function useContinuousReader(
 
   const playback = useTTS(items[currentIndex]?.speechText ?? '', {
     voice,
+    onProgress: useCallback((progress: number) => {
+      if (progress < 70) return
+
+      const index = currentIndexRef.current
+      const nextIndex = index + 1
+      if (nextIndex >= itemsRef.current.length) return
+      if (prefetchedForIndexRef.current === index) return
+
+      prefetchedForIndexRef.current = index
+      const nextText = itemsRef.current[nextIndex]?.speechText ?? ''
+      prefetchSpeech(splitIntoChunks(nextText)[0] ?? '', { voice })
+    }, [voice]),
     onComplete: useCallback(() => {
       if (currentIndexRef.current !== currentIndex) return
 

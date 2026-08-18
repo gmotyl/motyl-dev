@@ -52,10 +52,12 @@ const ttsMock = vi.hoisted(() => {
 
 const ttsClientMock = vi.hoisted(() => ({
   synthesizeSpeech: vi.fn(),
+  prefetchSpeech: vi.fn(),
 }))
 
 vi.mock('@/lib/tts-client', () => ({
   synthesizeSpeech: ttsClientMock.synthesizeSpeech,
+  prefetchSpeech: ttsClientMock.prefetchSpeech,
 }))
 
 vi.mock('./useTTS', async () => {
@@ -120,6 +122,7 @@ describe('useContinuousReader', () => {
     ttsMock.playback.isPlaying = false
     ttsMock.playback.isBuffering = false
     ttsClientMock.synthesizeSpeech.mockReset()
+    ttsClientMock.prefetchSpeech.mockReset()
   })
 
   it('starts a queue item with prepared speech text and selected voice', async () => {
@@ -361,6 +364,42 @@ describe('useContinuousReader', () => {
 
     expect(result.current.currentIndex).toBe(1)
     expect(onItemChange).toHaveBeenLastCalledWith(makeItem(1), 1)
+  })
+
+  it('reader prefetches the next section\'s first chunk once when progress passes the threshold', async () => {
+    const { result } = renderHook(() =>
+      useContinuousReader([makeItem(0), makeItem(1)])
+    )
+
+    act(() => result.current.play())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+    await waitFor(() => expect(ttsMock.getLatestOptions()?.voice).toBe('pl-PL-ZofiaNeural'))
+
+    const onProgress = () => ttsMock.getLatestOptions()?.onProgress as (progress: number) => void
+
+    // Below threshold: no prefetch yet.
+    act(() => onProgress()(50))
+    expect(ttsClientMock.prefetchSpeech).not.toHaveBeenCalled()
+
+    // Crossing the threshold fires exactly once for this section...
+    act(() => onProgress()(70))
+    act(() => onProgress()(85))
+
+    expect(ttsClientMock.prefetchSpeech).toHaveBeenCalledTimes(1)
+    expect(ttsClientMock.prefetchSpeech).toHaveBeenCalledWith('prepared speech 1', {
+      voice: 'pl-PL-ZofiaNeural',
+    })
+  })
+
+  it('does not prefetch past the last section', async () => {
+    const { result } = renderHook(() => useContinuousReader([makeItem(0)]))
+
+    act(() => result.current.play())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+
+    act(() => (ttsMock.getLatestOptions()?.onProgress as (progress: number) => void)(90))
+
+    expect(ttsClientMock.prefetchSpeech).not.toHaveBeenCalled()
   })
 
   it('stops with a retryable error on synthesis failure', async () => {
