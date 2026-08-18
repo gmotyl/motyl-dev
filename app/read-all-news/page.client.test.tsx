@@ -73,15 +73,17 @@ vi.mock('@/hooks/use-continuous-reader', () => ({
 }))
 
 vi.mock('@/components/continuous-reader-controls', () => ({
-  ContinuousReaderControls: ({ onPlayPause, onNext, onMarkRead, canNext = true }: {
+  ContinuousReaderControls: ({ onPlayPause, onNext, onMarkRead, canNext = true, canPlay = true, markReadDisabled = false }: {
     onPlayPause: () => void
     onNext: () => void
     onMarkRead?: () => void
     canNext?: boolean
+    canPlay?: boolean
+    markReadDisabled?: boolean
   }) => (
     <div role="group" aria-label="Continuous reader controls">
-      <button onClick={onMarkRead}>Mark read</button>
-      <button onClick={onPlayPause}>Play</button>
+      <button onClick={onMarkRead} disabled={markReadDisabled}>Mark read</button>
+      <button onClick={onPlayPause} disabled={!canPlay}>Play</button>
       <button onClick={onNext} disabled={!canNext}>Next</button>
     </div>
   ),
@@ -248,5 +250,27 @@ describe('ReadAllNewsPage continuous reader', () => {
       'news-1', 'news-1', 'news-2', 'news-2',
     ]))
     expect(screen.getByText('News 2')).toBeInTheDocument()
+  })
+
+  it('Read All News renders a single floating reader bar whose Next calls reader.next', async () => {
+    render(<ReadAllNewsPage initialItems={items(2)} totalItems={2} />)
+
+    expect(document.querySelectorAll('[data-reader-floating]')).toHaveLength(1)
+
+    await userEvent.click(
+      within(screen.getByRole('group', { name: 'Continuous reader controls' }))
+        .getByRole('button', { name: 'Next' }),
+    )
+    expect(latestReaderHarness.next).toHaveBeenCalled()
+  })
+
+  it('Read All News Mark read stays disabled until an article is scrolled past', () => {
+    render(<ReadAllNewsPage initialItems={items(1)} totalItems={1} />)
+
+    expect(screen.getByRole('button', { name: 'Mark read' })).toBeDisabled()
+
+    act(() => intersectionCallback?.([{ isIntersecting: true }]))
+
+    expect(screen.getByRole('button', { name: 'Mark read' })).toBeEnabled()
   })
 })

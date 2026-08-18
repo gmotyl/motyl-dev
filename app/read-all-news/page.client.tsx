@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
-import { ContinuousReaderControls } from '@/components/continuous-reader-controls'
+import { ReaderControlBar } from '@/components/reader-control-bar'
 import { MarkdownContent } from '@/components/markdown-content'
 import { filterHiddenSections, type SectionType } from '@/lib/section-filter'
 import { ItemType } from '@/lib/types'
@@ -396,20 +396,16 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
       </div>
 
       {items.length > 0 && (
-        <div
-          data-reader-floating
-          className="fixed bottom-16 left-2 right-2 z-40 rounded-xl border border-border bg-background/95 p-2 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:bottom-6 sm:left-auto sm:right-4 sm:w-[min(42rem,calc(100vw-2rem))]"
-        >
-          <ContinuousReaderControls
-            isPlaying={reader.isPlaying}
-            isBuffering={reader.isBuffering}
-            markReadDisabled={scrolledPastSlugs.size === 0}
-            canNext={reader.currentIndex < speechSections.length - 1}
-            onMarkRead={() => { setPendingNavUrl(null); setDialogOpen(true) }}
-            onPlayPause={handlePlayPause}
-            onNext={reader.next}
-          />
-        </div>
+        <ReaderControlBar
+          isPlaying={reader.isPlaying}
+          isBuffering={reader.isBuffering}
+          markReadDisabled={scrolledPastSlugs.size === 0}
+          canPlay={speechSections.length > 0}
+          canNext={reader.canNext}
+          onMarkRead={() => { setPendingNavUrl(null); setDialogOpen(true) }}
+          onPlayPause={handlePlayPause}
+          onNext={reader.next}
+        />
       )}
 
       {/* Section visibility dialog */}

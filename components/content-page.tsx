@@ -93,7 +93,7 @@ export default async function ContentPage({ article, prevArticle, nextArticle }:
       <ArticleViewTracker slug={article.slug} />
       <ArticleScrollHandler />
       <Header />
-      <main className="flex-1 container py-10">
+      <main className={`flex-1 container py-10${isNewsArticle ? ' pb-40 sm:pb-0' : ''}`}>
         <article className="max-w-3xl mx-auto">
           <Breadcrumb
             items={[

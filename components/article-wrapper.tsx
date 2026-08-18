@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from 'react'
 import { ArticleSectionToggle } from '@/components/article-section-toggle'
-import { ContinuousReaderControls } from '@/components/continuous-reader-controls'
+import { ReaderControlBar } from '@/components/reader-control-bar'
 import { MarkdownContent } from '@/components/markdown-content'
 import { MarkdownWithCTA } from '@/components/markdown-with-cta'
 import { ShareAIButton } from '@/components/share-ai-button'
@@ -79,21 +79,23 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
           desktopSuccessMessage="Copied! Open ChatGPT or Gemini, paste, and use Read Aloud"
         />
 
-        {isNews && (
-          <ContinuousReaderControls
-            isPlaying={reader.isPlaying}
-            isBuffering={reader.isBuffering}
-            markReadDisabled
-            canNext={reader.currentIndex < speechSections.length - 1}
-            onPlayPause={() => (reader.isPlaying ? reader.pause() : reader.play())}
-            onNext={reader.next}
-            onMarkRead={() => undefined}
-          />
-        )}
         {!isNews && (
           <TTSPlayer content={filteredContent} title={article.title} voice={voice} compact />
         )}
       </div>
+
+      {isNews && (
+        <ReaderControlBar
+          markReadDisabled
+          canPlay={speechSections.length > 0}
+          canNext={reader.canNext}
+          isPlaying={reader.isPlaying}
+          isBuffering={reader.isBuffering}
+          onPlayPause={() => (reader.isPlaying ? reader.pause() : reader.play())}
+          onNext={reader.next}
+          onMarkRead={() => undefined}
+        />
+      )}
 
       {isNews ? (
         <MarkdownContent
