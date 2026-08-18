@@ -1,14 +1,18 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { ArticleSectionToggle } from '@/components/article-section-toggle'
+import { ContinuousReaderControls } from '@/components/continuous-reader-controls'
+import { MarkdownContent } from '@/components/markdown-content'
 import { MarkdownWithCTA } from '@/components/markdown-with-cta'
 import { ShareAIButton } from '@/components/share-ai-button'
 import { TTSPlayer } from '@/components/tts-player'
+import { useContinuousReader } from '@/hooks/use-continuous-reader'
 import { filterHiddenSections, type SectionType } from '@/lib/section-filter'
 import { ItemType } from '@/lib/types'
-import { detectLanguageFromHashtags } from '@/lib/tts'
 import { getContentCategory } from '@/lib/og'
+import { prepareSpeechSections, stripMarkdown, type SpeechSection } from '@/lib/tts-speech'
+import { detectLanguageFromHashtags } from '@/lib/tts'
 import { useSectionVisibility } from '@/hooks/use-section-visibility'
 
 interface ArticleWrapperProps {
@@ -33,6 +37,25 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
 
   const voice = detectLanguageFromHashtags(article.hashtags)
 
+  const speechSections = useMemo(
+    () => isNews
+      ? prepareSpeechSections([{ slug: article.slug, title: article.title, content: filteredContent }])
+      : [],
+    [article.slug, article.title, filteredContent, isNews]
+  )
+
+  const scrollToSection = useCallback((section: SpeechSection, index: number) => {
+    const title = stripMarkdown(section.title)
+    const occurrence = speechSections
+      .slice(0, index)
+      .filter((candidate) => stripMarkdown(candidate.title) === title).length
+    const matches = Array.from(document.querySelectorAll<HTMLElement>('.prose h2'))
+      .filter((heading) => stripMarkdown(heading.textContent ?? '') === title)
+    matches[occurrence]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [speechSections])
+
+  const reader = useContinuousReader(speechSections, { onItemChange: scrollToSection })
+
   return (
     <>
       {isNews && isHydrated && (
@@ -50,16 +73,47 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
           desktopSuccessMessage="Copied! Open ChatGPT or Gemini, paste, and use Read Aloud"
         />
 
-        <TTSPlayer content={filteredContent} title={article.title} voice={voice} compact />
+        {isNews && (
+          <ContinuousReaderControls
+            isPlaying={reader.isPlaying}
+            isBuffering={reader.isBuffering}
+            markReadDisabled
+            canNext={reader.currentIndex < speechSections.length - 1}
+            onPlayPause={() => (reader.isPlaying ? reader.pause() : reader.play())}
+            onNext={reader.next}
+            onMarkRead={() => undefined}
+          />
+        )}
+        {!isNews && (
+          <TTSPlayer content={filteredContent} title={article.title} voice={voice} compact />
+        )}
       </div>
 
-      <MarkdownWithCTA
-        content={filteredContent}
-        itemType={article.itemType}
-        articleSlug={article.slug}
-        category={getContentCategory(article.hashtags ?? [])}
-        patternName={article.sourcePattern}
-      />
+      {isNews ? (
+        <MarkdownContent
+          content={filteredContent}
+          itemType={article.itemType}
+          category={getContentCategory(article.hashtags ?? [])}
+          patternName={article.sourcePattern}
+          reader={{
+            onPlayFromHere: reader.playFromHere,
+            getSectionIndex: (heading) => {
+              const index = speechSections.findIndex(
+                (section) => stripMarkdown(section.title) === stripMarkdown(heading)
+              )
+              return index < 0 ? null : index
+            },
+          }}
+        />
+      ) : (
+        <MarkdownWithCTA
+          content={filteredContent}
+          itemType={article.itemType}
+          articleSlug={article.slug}
+          category={getContentCategory(article.hashtags ?? [])}
+          patternName={article.sourcePattern}
+        />
+      )}
     </>
   )
 }

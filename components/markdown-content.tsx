@@ -6,7 +6,8 @@ import remarkGfm from 'remark-gfm'
 import * as emoji from 'node-emoji'
 import { ShareAIButton } from '@/components/share-ai-button'
 import { VoteButton } from '@/components/vote-button'
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { SectionPlayFromHere } from '@/components/section-play-from-here'
+import { Children, isValidElement, lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import type { Components } from 'react-markdown'
 import { ItemType, type ItemTypeValue } from '@/lib/types'
 import type { ContentCategory } from '@/lib/og'
@@ -18,9 +19,29 @@ interface MarkdownContentProps {
   itemType?: ItemTypeValue
   category?: ContentCategory
   patternName?: string
+  reader?: MarkdownReaderOptions
 }
 
-export function MarkdownContent({ content, itemType, category, patternName }: MarkdownContentProps) {
+export interface MarkdownReaderOptions {
+  enabled?: boolean
+  onPlayFromHere: (sectionIndex: number) => void
+  getSectionIndex?: (heading: string) => number | null | undefined
+}
+
+function getHeadingText(children: ReactNode): string {
+  return Children.toArray(children)
+    .map((child) => {
+      if (typeof child === 'string' || typeof child === 'number') return String(child)
+      if (isValidElement<{ children?: ReactNode }>(child)) {
+        return getHeadingText(child.props.children)
+      }
+      return ''
+    })
+    .join('')
+    .trim()
+}
+
+export function MarkdownContent({ content, itemType, category, patternName, reader }: MarkdownContentProps) {
   const isNews = itemType === ItemType.News
   const [summaryPrompt, setSummaryPrompt] = useState<string>('')
 
@@ -39,6 +60,24 @@ export function MarkdownContent({ content, itemType, category, patternName }: Ma
   const contentWithEmojis = emoji.emojify(contentCleaned)
 
   const components: Components = {
+    h2: ({ children, ...props }) => {
+      const heading = getHeadingText(children)
+      const readerEnabled = reader?.enabled !== false && Boolean(reader?.onPlayFromHere)
+      const resolvedIndex = reader?.getSectionIndex?.(heading)
+      const sectionIndex = readerEnabled ? resolvedIndex : undefined
+
+      return (
+        <>
+          <h2 {...props}>{children}</h2>
+          {readerEnabled && sectionIndex !== undefined && sectionIndex !== null && (
+            <SectionPlayFromHere
+              sectionIndex={sectionIndex}
+              onPlayFromHere={reader!.onPlayFromHere}
+            />
+          )}
+        </>
+      )
+    },
     a: ({ href, children, ...props }) => {
       const isExternal = href?.startsWith('http://') || href?.startsWith('https://')
       const title = typeof children === 'string' ? children : ''

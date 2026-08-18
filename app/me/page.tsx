@@ -19,6 +19,7 @@ import Header from "@/components/header"
 import Footer from "@/components/footer"
 import { useInstallPrompt } from "@/hooks/use-install-prompt"
 import { TrendsResetPanel } from "@/components/trends-reset-panel"
+import TtsVoiceSettings from "@/components/tts-voice-settings"
 
 interface MenuLinkProps {
   href: string
@@ -188,21 +189,22 @@ export default function MePage() {
         )}
 
         {/* App Section */}
-        {canInstall && (
-          <section className="space-y-3 mb-8">
-            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider px-1">
-              App
-            </h3>
-            <div className="space-y-2">
+        <section className="space-y-3 mb-8">
+          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider px-1">
+            App
+          </h3>
+          <div className="space-y-2">
+            {session && <TtsVoiceSettings />}
+            {canInstall && (
               <MenuButton
                 icon={Download}
                 label="Install App"
                 description="Add to your home screen"
                 onClick={handleInstallClick}
               />
-            </div>
-          </section>
-        )}
+            )}
+          </div>
+        </section>
 
         {/* Sign Out */}
         {session && (
