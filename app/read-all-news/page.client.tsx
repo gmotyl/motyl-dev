@@ -18,6 +18,7 @@ import { useSectionVisibility } from '@/hooks/use-section-visibility'
 import { Copy, Check, Settings } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { prepareSpeechSections, stripMarkdown, type SpeechSection } from '@/lib/tts-speech'
+import { headingToId } from '@/lib/heading-slug'
 
 interface ReadAllNewsPageProps {
   initialItems: ContentItem[]
@@ -56,9 +57,14 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
       .slice(0, index)
       .filter((candidate) => candidate.sourceSlug === section.sourceSlug)
       .filter((candidate) => stripMarkdown(candidate.title) === title).length
-    const matches = Array.from(article?.querySelectorAll<HTMLElement>('h2') ?? [])
-      .filter((heading) => stripMarkdown(heading.textContent ?? '') === title)
-    matches[occurrence]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const headings = Array.from(article?.querySelectorAll<HTMLElement>('h2') ?? [])
+    // First occurrence carries the plain rehype-slug id; later duplicates get -1/-2
+    // suffixes, so fall back to textContent matching for those.
+    const target = (occurrence === 0
+      ? headings.find((heading) => heading.id === headingToId(title))
+      : undefined)
+      ?? headings.filter((heading) => stripMarkdown(heading.textContent ?? '') === title)[occurrence]
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [speechSections])
 
   const reader = useContinuousReader(speechSections, { onItemChange: scrollToSection })

@@ -12,6 +12,7 @@ import { filterHiddenSections, type SectionType } from '@/lib/section-filter'
 import { ItemType } from '@/lib/types'
 import { getContentCategory } from '@/lib/og'
 import { prepareSpeechSections, stripMarkdown, type SpeechSection } from '@/lib/tts-speech'
+import { headingToId } from '@/lib/heading-slug'
 import { detectLanguageFromHashtags } from '@/lib/tts'
 import { useSectionVisibility } from '@/hooks/use-section-visibility'
 
@@ -49,9 +50,14 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
     const occurrence = speechSections
       .slice(0, index)
       .filter((candidate) => stripMarkdown(candidate.title) === title).length
-    const matches = Array.from(document.querySelectorAll<HTMLElement>('.prose h2'))
-      .filter((heading) => stripMarkdown(heading.textContent ?? '') === title)
-    matches[occurrence]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const headings = Array.from(document.querySelectorAll<HTMLElement>('.prose h2'))
+    // First occurrence carries the plain rehype-slug id; later duplicates get -1/-2
+    // suffixes, so fall back to textContent matching for those.
+    const target = (occurrence === 0
+      ? headings.find((heading) => heading.id === headingToId(title))
+      : undefined)
+      ?? headings.filter((heading) => stripMarkdown(heading.textContent ?? '') === title)[occurrence]
+    target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [speechSections])
 
   const reader = useContinuousReader(speechSections, { onItemChange: scrollToSection })
