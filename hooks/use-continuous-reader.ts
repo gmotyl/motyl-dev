@@ -15,8 +15,10 @@ export function useContinuousReader(
   { onItemChange }: ContinuousReaderOptions = {}
 ) {
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [previewIndex, setPreviewIndex] = useState(0)
   const [error, setError] = useState<Error | null>(null)
   const currentIndexRef = useRef(0)
+  const previewIndexRef = useRef(0)
   const itemsRef = useRef(items)
   const onItemChangeRef = useRef(onItemChange)
   const pendingStartRef = useRef<number | null>(null)
@@ -30,6 +32,10 @@ export function useContinuousReader(
   useEffect(() => {
     currentIndexRef.current = currentIndex
   }, [currentIndex])
+
+  useEffect(() => {
+    previewIndexRef.current = previewIndex
+  }, [previewIndex])
 
   useEffect(() => {
     itemsRef.current = items
@@ -52,6 +58,9 @@ export function useContinuousReader(
   const selectAndStart = useCallback((index: number, reportChange: boolean) => {
     const selectedItem = itemsRef.current[index]
     if (!selectedItem) return
+
+    previewIndexRef.current = index
+    setPreviewIndex(index)
 
     playbackRef.current?.stop()
     setError(null)
@@ -97,6 +106,8 @@ export function useContinuousReader(
 
   const play = useCallback(() => {
     setError(null)
+    previewIndexRef.current = currentIndexRef.current
+    setPreviewIndex(currentIndexRef.current)
     void playbackRef.current?.play()
   }, [])
 
@@ -105,8 +116,38 @@ export function useContinuousReader(
   }, [])
 
   const next = useCallback(() => {
-    selectAndStart(currentIndexRef.current + 1, true)
-  }, [selectAndStart])
+    const currentItems = itemsRef.current
+    const lastIndex = currentItems.length - 1
+    if (lastIndex < 0) return
+
+    const audioActive = Boolean(
+      playbackRef.current?.isPlaying || playbackRef.current?.isBuffering
+    )
+
+    if (audioActive) {
+      // Non-interrupting soft advance: move the eye/scroll only. The current
+      // section keeps playing; auto-advance still continues to currentIndex + 1.
+      const nextPreview = Math.min(previewIndexRef.current + 1, lastIndex)
+      previewIndexRef.current = nextPreview
+      setPreviewIndex(nextPreview)
+      const previewItem = currentItems[nextPreview]
+      if (previewItem) onItemChangeRef.current?.(previewItem, nextPreview)
+      return
+    }
+
+    // Audio not active: select the next section as the pending start without
+    // starting playback. Pressing Play afterwards begins at that section.
+    const nextIndex = Math.min(currentIndexRef.current + 1, lastIndex)
+    const nextItem = currentItems[nextIndex]
+    if (!nextItem) return
+
+    previewIndexRef.current = nextIndex
+    setPreviewIndex(nextIndex)
+    if (nextIndex !== currentIndexRef.current) {
+      setCurrentIndex(nextIndex)
+    }
+    onItemChangeRef.current?.(nextItem, nextIndex)
+  }, [])
 
   const playFrom = useCallback(
     (index: number) => {
@@ -132,6 +173,8 @@ export function useContinuousReader(
     resume: playbackResume,
   } = playback
 
+  const canNext = Math.max(currentIndex, previewIndex) < items.length - 1
+
   return useMemo(() => ({
     isPlaying,
     isBuffering,
@@ -148,13 +191,14 @@ export function useContinuousReader(
     currentItem: items[currentIndex],
     error,
     next,
+    canNext,
     playFrom,
     playFromHere: playFrom,
     retry,
   }), [
     isPlaying, isBuffering, progress, currentTime, totalEstimatedTime,
     currentChunkIndex, totalChunks, playbackStop, playbackResume, currentIndex,
-    items, error, play, pause, next,
+    items, error, play, pause, next, canNext,
     playFrom, retry,
   ])
 }

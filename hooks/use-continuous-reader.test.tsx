@@ -117,6 +117,8 @@ describe('useContinuousReader', () => {
     ttsMock.reset()
     ttsMock.useTTS.mockClear()
     ttsMock.useActualTTS = false
+    ttsMock.playback.isPlaying = false
+    ttsMock.playback.isBuffering = false
     ttsClientMock.synthesizeSpeech.mockReset()
   })
 
@@ -171,26 +173,92 @@ describe('useContinuousReader', () => {
     expect(ttsMock.playback.play).toHaveBeenCalledTimes(2)
   })
 
-  it('cancels active playback before starting Next', async () => {
+  it('next while playing scrolls to the next section without stopping or restarting audio', async () => {
+    const onItemChange = vi.fn()
+    const { result } = renderHook(() =>
+      useContinuousReader([makeItem(0), makeItem(1), makeItem(2)], { onItemChange })
+    )
+
+    act(() => result.current.play())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+    onItemChange.mockClear()
+
+    ttsMock.playback.isPlaying = true
+    act(() => result.current.next())
+
+    expect(ttsMock.playback.stop).not.toHaveBeenCalled()
+    expect(ttsMock.playback.play).toHaveBeenCalledOnce()
+    expect(result.current.currentIndex).toBe(0)
+    expect(onItemChange).toHaveBeenCalledTimes(1)
+    expect(onItemChange).toHaveBeenLastCalledWith(makeItem(1), 1)
+  })
+
+  it('next while stopped selects the next section without starting playback', async () => {
+    const onItemChange = vi.fn()
+    const { result } = renderHook(() =>
+      useContinuousReader([makeItem(0), makeItem(1)], { onItemChange })
+    )
+
+    act(() => result.current.next())
+
+    expect(result.current.currentIndex).toBe(1)
+    expect(ttsMock.playback.play).not.toHaveBeenCalled()
+    expect(ttsMock.playback.stop).not.toHaveBeenCalled()
+    expect(onItemChange).toHaveBeenLastCalledWith(makeItem(1), 1)
+  })
+
+  it('auto-advance still plays the next section when the current one completes', async () => {
+    const onItemChange = vi.fn()
+    const { result } = renderHook(() =>
+      useContinuousReader([makeItem(0), makeItem(1)], { onItemChange })
+    )
+
+    act(() => result.current.play())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+
+    act(() => (ttsMock.getLatestOptions()?.onComplete as () => void)())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledTimes(2))
+
+    expect(result.current.currentIndex).toBe(1)
+    expect(ttsMock.calls.at(-1)?.content).toBe('prepared speech 1')
+    expect(onItemChange).toHaveBeenLastCalledWith(makeItem(1), 1)
+  })
+
+  it('playFrom still interrupts and starts immediately at the target section', async () => {
     const events: string[] = []
     ttsMock.playback.stop.mockImplementation(() => events.push('stop'))
     ttsMock.playback.play.mockImplementation(async () => {
       events.push('play')
     })
-    const { result } = renderHook(() => useContinuousReader([makeItem(0), makeItem(1)]))
+    const { result } = renderHook(() =>
+      useContinuousReader([makeItem(0), makeItem(1), makeItem(2)])
+    )
 
     act(() => result.current.play())
     await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
 
-    act(() => result.current.next())
+    act(() => result.current.playFrom(2))
     await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledTimes(2))
 
     expect(events).toEqual(['play', 'stop', 'play'])
-    expect(result.current.currentIndex).toBe(1)
-    expect(ttsMock.calls.at(-1)?.content).toBe('prepared speech 1')
+    expect(result.current.currentIndex).toBe(2)
+    expect(ttsMock.calls.at(-1)?.content).toBe('prepared speech 2')
   })
 
-  it('ignores a stale completion after Next starts the new item', async () => {
+  it('canNext is false at the last section and true otherwise', () => {
+    const single = renderHook(() => useContinuousReader([makeItem(0)]))
+    expect(single.result.current.canNext).toBe(false)
+
+    const { result } = renderHook(() =>
+      useContinuousReader([makeItem(0), makeItem(1)])
+    )
+    expect(result.current.canNext).toBe(true)
+
+    act(() => result.current.playFrom(1))
+    expect(result.current.canNext).toBe(false)
+  })
+
+  it('ignores a stale completion after playFrom starts the new item', async () => {
     const { result } = renderHook(() =>
       useContinuousReader([makeItem(0), makeItem(1), makeItem(2)])
     )
@@ -200,7 +268,7 @@ describe('useContinuousReader', () => {
 
     const firstItemOptions = ttsMock.calls[0]?.options
 
-    act(() => result.current.next())
+    act(() => result.current.playFrom(1))
     await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledTimes(2))
 
     act(() => (firstItemOptions?.onComplete as () => void)())
@@ -209,7 +277,7 @@ describe('useContinuousReader', () => {
     expect(ttsMock.playback.play).toHaveBeenCalledTimes(2)
   })
 
-  it('invalidates pending synthesis before Next and ignores its stale resolution', async () => {
+  it('invalidates pending synthesis before direct playFrom during Next flow and ignores its stale resolution', async () => {
     ttsMock.useActualTTS = true
     const { events, requests } = setupPendingSynthesis()
     const { result } = renderHook(() =>
@@ -219,7 +287,7 @@ describe('useContinuousReader', () => {
     act(() => result.current.play())
     await waitFor(() => expect(requests).toHaveLength(1))
 
-    act(() => result.current.next())
+    act(() => result.current.playFrom(1))
     await waitFor(() => {
       expect(requests).toHaveLength(2)
       expect(result.current.isPlaying).toBe(true)
