@@ -8,6 +8,7 @@ export interface ContinuousReaderControlsProps {
   isPlaying: boolean
   isBuffering?: boolean
   markReadDisabled?: boolean
+  canPlay?: boolean
   canNext?: boolean
   onMarkRead?: () => void
   onPlayPause: () => void
@@ -19,6 +20,7 @@ export function ContinuousReaderControls({
   isPlaying,
   isBuffering = false,
   markReadDisabled = false,
+  canPlay = true,
   canNext = true,
   onMarkRead,
   onPlayPause,
@@ -48,6 +50,7 @@ export function ContinuousReaderControls({
         type="button"
         variant={isPlaying ? 'default' : 'outline'}
         onClick={onPlayPause}
+        disabled={!canPlay}
         className="min-h-[56px] flex-1 gap-2"
         aria-label={isPlaying ? 'Pause' : 'Play'}
         aria-pressed={isPlaying}

@@ -37,6 +37,37 @@ describe('ContinuousReaderControls', () => {
     expect(screen.getByRole('button', { name: 'Mark read' })).toBeDisabled()
   })
 
+  it('disables Play/Pause when canPlay is false', () => {
+    render(
+      <ContinuousReaderControls
+        isPlaying={false}
+        canPlay={false}
+        onPlayPause={vi.fn()}
+        onNext={vi.fn()}
+        onMarkRead={vi.fn()}
+      />
+    )
+
+    const playPause = document.querySelector('[data-reader-action="play-pause"]')
+    expect(playPause).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Mark read' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled()
+  })
+
+  it('keeps Play/Pause enabled by default when canPlay is omitted', () => {
+    render(
+      <ContinuousReaderControls
+        isPlaying={false}
+        onPlayPause={vi.fn()}
+        onNext={vi.fn()}
+        onMarkRead={vi.fn()}
+      />
+    )
+
+    const playPause = document.querySelector('[data-reader-action="play-pause"]')
+    expect(playPause).toBeEnabled()
+  })
+
   it('renders an active Mark read action for Read All News', async () => {
     const user = userEvent.setup()
     const onMarkRead = vi.fn()
