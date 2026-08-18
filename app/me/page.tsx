@@ -194,7 +194,7 @@ export default function MePage() {
             App
           </h3>
           <div className="space-y-2">
-            <TtsVoiceSettings />
+            {session && <TtsVoiceSettings />}
             {canInstall && (
               <MenuButton
                 icon={Download}

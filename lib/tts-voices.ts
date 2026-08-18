@@ -1,4 +1,5 @@
 export const TTS_VOICE_STORAGE_KEY = 'tts-voice'
+export const TTS_VOICE_CHANGE_EVENT = 'tts-voice-change'
 export const DEFAULT_TTS_VOICE = 'en-AU-WilliamMultilingualNeural'
 
 export const TTS_VOICES = [
@@ -47,11 +48,29 @@ function getBrowserStorage(): Storage | null {
 }
 
 export function getStoredTtsVoice(): TtsVoice {
-  return resolveTtsVoice(getBrowserStorage()?.getItem(TTS_VOICE_STORAGE_KEY))
+  const storage = getBrowserStorage()
+  if (!storage) return DEFAULT_TTS_VOICE
+
+  try {
+    return resolveTtsVoice(storage.getItem(TTS_VOICE_STORAGE_KEY))
+  } catch {
+    return DEFAULT_TTS_VOICE
+  }
 }
 
 export function setStoredTtsVoice(value: string): TtsVoice {
-  const voice = resolveTtsVoice(value)
-  getBrowserStorage()?.setItem(TTS_VOICE_STORAGE_KEY, voice)
+  if (!isSupportedTtsVoice(value)) return getStoredTtsVoice()
+
+  const voice = value
+  try {
+    getBrowserStorage()?.setItem(TTS_VOICE_STORAGE_KEY, voice)
+  } catch {
+    // Preferences remain usable when browser storage is unavailable.
+  }
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(TTS_VOICE_CHANGE_EVENT))
+  }
+
   return voice
 }

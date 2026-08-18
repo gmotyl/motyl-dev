@@ -11,7 +11,7 @@ import { useContinuousReader } from '@/hooks/use-continuous-reader'
 import { filterHiddenSections, type SectionType } from '@/lib/section-filter'
 import { ItemType } from '@/lib/types'
 import { getContentCategory } from '@/lib/og'
-import { prepareSpeechSections } from '@/lib/tts-speech'
+import { prepareSpeechSections, stripMarkdown, type SpeechSection } from '@/lib/tts-speech'
 import { detectLanguageFromHashtags } from '@/lib/tts'
 import { useSectionVisibility } from '@/hooks/use-section-visibility'
 
@@ -44,14 +44,15 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
     [article.slug, article.title, filteredContent, isNews]
   )
 
-  const scrollToSection = useCallback((section: { title: string }) => {
-    const id = section.title
-      .trim()
-      .toLowerCase()
-      .replace(/[^\p{L}\p{N}\s-]/gu, '')
-      .replace(/\s+/g, '-')
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [])
+  const scrollToSection = useCallback((section: SpeechSection, index: number) => {
+    const title = stripMarkdown(section.title)
+    const occurrence = speechSections
+      .slice(0, index)
+      .filter((candidate) => stripMarkdown(candidate.title) === title).length
+    const matches = Array.from(document.querySelectorAll<HTMLElement>('.prose h2'))
+      .filter((heading) => stripMarkdown(heading.textContent ?? '') === title)
+    matches[occurrence]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [speechSections])
 
   const reader = useContinuousReader(speechSections, { onItemChange: scrollToSection })
 
@@ -97,7 +98,9 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
           reader={{
             onPlayFromHere: reader.playFromHere,
             getSectionIndex: (heading) => {
-              const index = speechSections.findIndex((section) => section.title === heading)
+              const index = speechSections.findIndex(
+                (section) => stripMarkdown(section.title) === stripMarkdown(heading)
+              )
               return index < 0 ? null : index
             },
           }}

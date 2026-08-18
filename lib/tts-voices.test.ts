@@ -4,6 +4,7 @@ import {
   TTS_VOICES,
   getStoredTtsVoice,
   isSupportedTtsVoice,
+  setStoredTtsVoice,
 } from './tts-voices'
 
 describe('TTS voice preferences', () => {
@@ -33,5 +34,12 @@ describe('TTS voice preferences', () => {
     localStorage.setItem(TTS_VOICE_STORAGE_KEY, 'en-GB-RyanNeural')
 
     expect(getStoredTtsVoice()).toBe(DEFAULT_TTS_VOICE)
+  })
+
+  it('does not overwrite a valid stored voice for an unsupported selection', () => {
+    localStorage.setItem(TTS_VOICE_STORAGE_KEY, 'pl-PL-ZofiaNeural')
+
+    expect(setStoredTtsVoice('en-GB-RyanNeural')).toBe('pl-PL-ZofiaNeural')
+    expect(localStorage.getItem(TTS_VOICE_STORAGE_KEY)).toBe('pl-PL-ZofiaNeural')
   })
 })

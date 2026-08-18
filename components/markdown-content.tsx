@@ -26,7 +26,6 @@ export interface MarkdownReaderOptions {
   enabled?: boolean
   onPlayFromHere: (sectionIndex: number) => void
   getSectionIndex?: (heading: string) => number | null | undefined
-  sectionIndexOffset?: number
 }
 
 function getHeadingText(children: ReactNode): string {
@@ -45,7 +44,6 @@ function getHeadingText(children: ReactNode): string {
 export function MarkdownContent({ content, itemType, category, patternName, reader }: MarkdownContentProps) {
   const isNews = itemType === ItemType.News
   const [summaryPrompt, setSummaryPrompt] = useState<string>('')
-  let readerHeadingIndex = 0
 
   // Fetch TRANSLATE_PROMPT.md on mount
   useEffect(() => {
@@ -66,9 +64,7 @@ export function MarkdownContent({ content, itemType, category, patternName, read
       const heading = getHeadingText(children)
       const readerEnabled = reader?.enabled !== false && Boolean(reader?.onPlayFromHere)
       const resolvedIndex = reader?.getSectionIndex?.(heading)
-      const sectionIndex = readerEnabled
-        ? resolvedIndex ?? (reader?.sectionIndexOffset ?? 0) + readerHeadingIndex++
-        : undefined
+      const sectionIndex = readerEnabled ? resolvedIndex : undefined
 
       return (
         <>

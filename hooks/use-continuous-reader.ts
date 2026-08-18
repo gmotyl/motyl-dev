@@ -1,8 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { SpeechSection } from '@/lib/tts-speech'
-import { getStoredTtsVoice } from '@/lib/tts-voices'
+import { getStoredTtsVoice, TTS_VOICE_CHANGE_EVENT, type TtsVoice } from '@/lib/tts-voices'
 import { useTTS } from './useTTS'
 import type { TTSPlayback } from './useTTS'
 
@@ -21,6 +21,7 @@ export function useContinuousReader(
   const onItemChangeRef = useRef(onItemChange)
   const pendingStartRef = useRef<number | null>(null)
   const playbackRef = useRef<TTSPlayback | null>(null)
+  const [voice, setVoice] = useState<TtsVoice>(() => getStoredTtsVoice())
 
   useEffect(() => {
     currentIndexRef.current = currentIndex
@@ -33,6 +34,16 @@ export function useContinuousReader(
   useEffect(() => {
     onItemChangeRef.current = onItemChange
   }, [onItemChange])
+
+  useEffect(() => {
+    const syncVoice = () => setVoice(getStoredTtsVoice())
+    window.addEventListener(TTS_VOICE_CHANGE_EVENT, syncVoice)
+    window.addEventListener('storage', syncVoice)
+    return () => {
+      window.removeEventListener(TTS_VOICE_CHANGE_EVENT, syncVoice)
+      window.removeEventListener('storage', syncVoice)
+    }
+  }, [])
 
   const selectAndStart = useCallback((index: number, reportChange: boolean) => {
     const selectedItem = itemsRef.current[index]
@@ -54,7 +65,7 @@ export function useContinuousReader(
   }, [])
 
   const playback = useTTS(items[currentIndex]?.speechText ?? '', {
-    voice: getStoredTtsVoice(),
+    voice,
     onComplete: useCallback(() => {
       if (currentIndexRef.current !== currentIndex) return
 
@@ -69,7 +80,9 @@ export function useContinuousReader(
     }, []),
   })
 
-  playbackRef.current = playback
+  useEffect(() => {
+    playbackRef.current = playback
+  }, [playback])
 
   useEffect(() => {
     if (pendingStartRef.current !== currentIndex) return
@@ -103,18 +116,43 @@ export function useContinuousReader(
     void playbackRef.current?.play()
   }, [])
 
-  return {
-    ...playback,
+  const {
+    isPlaying,
+    isBuffering,
+    progress,
+    currentTime,
+    totalEstimatedTime,
+    currentChunkIndex,
+    totalChunks,
+    stop: playbackStop,
+    resume: playbackResume,
+  } = playback
+
+  return useMemo(() => ({
+    isPlaying,
+    isBuffering,
+    progress,
+    currentTime,
+    totalEstimatedTime,
+    currentChunkIndex,
+    totalChunks,
+    play,
+    pause,
+    stop: playbackStop,
+    resume: playbackResume,
     currentIndex,
     currentItem: items[currentIndex],
     error,
-    play,
-    pause,
     next,
     playFrom,
     playFromHere: playFrom,
     retry,
-  }
+  }), [
+    isPlaying, isBuffering, progress, currentTime, totalEstimatedTime,
+    currentChunkIndex, totalChunks, playbackStop, playbackResume, currentIndex,
+    items, error, play, pause, next,
+    playFrom, retry,
+  ])
 }
 
 export default useContinuousReader

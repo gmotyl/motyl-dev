@@ -15,7 +15,7 @@ hashtags: "#pl #generated"
 
 ## Polish article
 
-API i GPT 5.6 działają w React. OpenAI rozwija server-side narzędzia.
+API i GPT 5.6 działają w React. GPT-5.6 jest nowszą wersją. OpenAI rozwija server-side narzędzia.
 API wraca w kolejnym zdaniu.
 
 [link](https://example.com/GPT-8.8) oraz \`MARKDOWNONLY\` nie powinny trafić do propozycji.
@@ -39,9 +39,10 @@ describe('extractPolishTtsCandidates', () => {
     expect(result.acronyms).toEqual(expect.arrayContaining([
       expect.objectContaining({ term: 'API', frequency: 2 }),
     ]))
-    expect(result['model/version']).toEqual([
+    expect(result['model/version']).toEqual(expect.arrayContaining([
       expect.objectContaining({ term: 'GPT 5.6', frequency: 1 }),
-    ])
+      expect.objectContaining({ term: 'GPT-5.6', frequency: 1 }),
+    ]))
     expect(result['technical-name']).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ term: 'React' }),

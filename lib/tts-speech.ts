@@ -85,7 +85,7 @@ const stripHashtagMetadata = (text: string): string =>
     .join('\n')
     .replace(/(?<![\p{L}\p{N}_])#[\p{L}\p{N}_-]+/gu, '')
 
-const stripMarkdown = (text: string): string =>
+export const stripMarkdown = (text: string): string =>
   stripHashtagMetadata(stripFrontmatter(text))
     .replace(/<!--[\s\S]*?-->/g, '')
     .replace(/^\s*```[^\n]*\r?\n?|\r?\n?\s*```\s*$/gm, '')
@@ -96,7 +96,7 @@ const stripMarkdown = (text: string): string =>
     .replace(/!\[([^\]]*)\]\(\s*(?:<[^>]*>|[^)]*)\)/g, '$1')
     .replace(/\[([^\]]+)\]\(\s*(?:<[^>]*>|[^)]*)\)/g, '$1')
     .replace(/\[([^\]\r\n]+)\]\[[^\]\r\n]*\]/g, '$1')
-    .replace(/https?:\/\/[^\s)>]+/gi, '')
+    .replace(/https?:\/\/[^\s)>]+/gi, (url) => url.match(/[.,!?;:]+$/)?.[0] ?? '')
     .replace(/^\s{0,3}#{1,6}\s+/gm, '')
     .replace(/^\s*(?:[-*+]\s+|\d+[.)]\s+)/gm, '')
     .replace(/^\s*>\s?/gm, '')
@@ -114,7 +114,7 @@ export function splitReviewedSections(sources: readonly SpeechSource[]): Reviewe
   const sections: ReviewedSection[] = []
 
   for (const source of sources) {
-    const sectionPattern = /^##[ \t]+(.+?)\s*$([\s\S]*?)(?=^##[ \t]+|(?![\s\S]))/gm
+    const sectionPattern = /^##[ \t]+(.+?)[ \t]*\r?$([\s\S]*?)(?=^##[ \t]+|(?![\s\S]))/gm
     let match: RegExpExecArray | null
     let isFirstSection = true
 

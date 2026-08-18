@@ -17,7 +17,7 @@ import { SectionVisibilityDialog } from '@/components/article-section-toggle'
 import { useSectionVisibility } from '@/hooks/use-section-visibility'
 import { BookCheck, ChevronDown, Copy, Check, Settings } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
-import { prepareSpeechSections } from '@/lib/tts-speech'
+import { prepareSpeechSections, stripMarkdown, type SpeechSection } from '@/lib/tts-speech'
 
 interface ReadAllNewsPageProps {
   initialItems: ContentItem[]
@@ -48,14 +48,18 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
     [items, hiddenSections]
   )
 
-  const scrollToSection = useCallback((section: { title: string }) => {
-    const id = section.title
-      .trim()
-      .toLowerCase()
-      .replace(/[^\p{L}\p{N}\s-]/gu, '')
-      .replace(/\s+/g, '-')
-    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, [])
+  const scrollToSection = useCallback((section: SpeechSection, index: number) => {
+    const title = stripMarkdown(section.title)
+    const article = Array.from(document.querySelectorAll<HTMLElement>('article[data-reader-article]'))
+      .find((candidate) => candidate.dataset.readerArticle === section.sourceSlug)
+    const occurrence = speechSections
+      .slice(0, index)
+      .filter((candidate) => candidate.sourceSlug === section.sourceSlug)
+      .filter((candidate) => stripMarkdown(candidate.title) === title).length
+    const matches = Array.from(article?.querySelectorAll<HTMLElement>('h2') ?? [])
+      .filter((heading) => stripMarkdown(heading.textContent ?? '') === title)
+    matches[occurrence]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [speechSections])
 
   const reader = useContinuousReader(speechSections, { onItemChange: scrollToSection })
 
@@ -65,7 +69,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
       return
     }
 
-    if (reader.currentItem) scrollToSection(reader.currentItem)
+    if (reader.currentItem) scrollToSection(reader.currentItem, reader.currentIndex)
     reader.play()
   }, [reader, scrollToSection])
 
@@ -343,7 +347,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
       <Header />
       <main className="flex-1 container py-8 px-4 pb-48 sm:pb-8 max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold mb-2">Read all news</h1>
-            <p className="text-muted-foreground mb-8">
+        <p className="text-muted-foreground mb-8">
           Scroll through unvisited articles. Mark them as read when you're done.
         </p>
 
@@ -522,7 +526,7 @@ function FullArticle({
   }, [item.slug, onScrolledPast])
 
   return (
-    <article className="py-8">
+    <article className="py-8" data-reader-article={item.slug}>
       {/* Article header */}
       <div className="mb-4">
         <Link href={`/news/${item.slug}`} prefetch={false}>
@@ -549,7 +553,8 @@ function FullArticle({
           onPlayFromHere: reader.playFromHere,
           getSectionIndex: (heading) => {
             const index = speechSections.findIndex(
-              (section) => section.sourceSlug === item.slug && section.title === heading
+              (section) => section.sourceSlug === item.slug
+                && stripMarkdown(section.title) === stripMarkdown(heading)
             )
             return index < 0 ? null : index
           },

@@ -100,7 +100,7 @@ function visibleMarkdown(body: string): string {
     .replace(/<https?:\/\/[^>]+>/gi, ' ')
     .replace(/https?:\/\/[^\s)\]>]+/gi, ' ')
     .replace(/`[^`\r\n]*`/g, ' ')
-    .replace(/(?:^|\s)#[\p{L}\p{N}_-]+/gu, '$1')
+    .replace(/(?:^|\s)#[\p{L}\p{N}_-]+/gmu, '$1')
     .replace(/[>*_~]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
@@ -138,7 +138,7 @@ function collectCandidates(
   groups: Map<CandidateGroup, Map<string, TtsCandidate>>
 ): void {
   const modelVersionPattern =
-    /\b([A-Za-z][A-Za-z0-9]*(?:[.-][A-Za-z0-9]+)*)(\s+|-)?(\d+\.\d+(?:[.-]\d+)*)\b/g
+    /\b([A-Za-z][A-Za-z0-9]*(?:\.[A-Za-z0-9]+)*)(\s+|-)(\d+\.\d+(?:[.-]\d+)*)\b/g
   for (const match of text.matchAll(modelVersionPattern)) {
     const separator = match[2]?.trim() === '-' ? '-' : ' '
     addCandidate(groups, 'model/version', `${match[1]}${separator}${match[3]}`, file)
@@ -160,7 +160,12 @@ function collectCandidates(
 
   const hyphenatedPattern = /\b[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)+\b/g
   for (const match of text.matchAll(hyphenatedPattern)) {
-    addCandidate(groups, 'hyphenated', match[0], file)
+    const end = (match.index ?? 0) + match[0].length
+    const isModelVersionPrefix =
+      /^[A-Za-z][A-Za-z0-9]*-\d+$/.test(match[0]) && /^\.\d/.test(text.slice(end))
+    if (!isModelVersionPrefix) {
+      addCandidate(groups, 'hyphenated', match[0], file)
+    }
   }
 }
 

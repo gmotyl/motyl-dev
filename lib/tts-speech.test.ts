@@ -91,6 +91,12 @@ hashtags: "#pl #ai"
     expect(prepareSpeechText(source)).toBe('Read the guide and the endpoint.')
   })
 
+  it('keeps sentence punctuation after stripped URL destinations', () => {
+    expect(prepareSpeechText('Visit https://example.com/news. Then continue.')).toBe(
+      'Visit . Then continue.'
+    )
+  })
+
   it('uses approved longest matching phonetic replacements without changing unknown words', () => {
     const source = 'AI i GPT 5.6 działają z React oraz Microsoft. Unknown AIx.'
 
@@ -128,5 +134,15 @@ React działa.`,
       'Dzisiejsze wiadomości ej-aj w praktyce ej-aj pomaga.',
       'reakt rośnie reakt działa.',
     ])
+  })
+
+  it('splits sections with Windows line endings', () => {
+    const sections = splitReviewedSections([{
+      slug: 'news',
+      title: 'Wiadomości',
+      content: '## Pierwszy temat\r\nTreść.\r\n\r\n## Drugi temat\r\nDalsza treść.',
+    }])
+
+    expect(sections.map((section) => section.title)).toEqual(['Pierwszy temat', 'Drugi temat'])
   })
 })
