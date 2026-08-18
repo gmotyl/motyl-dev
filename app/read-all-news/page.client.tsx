@@ -15,7 +15,7 @@ import { useContinuousReader } from '@/hooks/use-continuous-reader'
 import { MarkReadDialog } from '@/components/mark-read-dialog'
 import { SectionVisibilityDialog } from '@/components/article-section-toggle'
 import { useSectionVisibility } from '@/hooks/use-section-visibility'
-import { BookCheck, ChevronDown, Copy, Check, Settings } from 'lucide-react'
+import { Copy, Check, Settings } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { prepareSpeechSections, stripMarkdown, type SpeechSection } from '@/lib/tts-speech'
 
@@ -174,41 +174,6 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
     }
   }, [loading, hasMore])
 
-  // Jump to the next subarticle title (mobile "Next" button).
-  // Each subarticle ends with a "**Link:**" line and is followed by another <h2>,
-  // so finding the next h2 below the viewport top lands the user on the next title.
-  const NEXT_THRESHOLD = 80
-  const findNextHeading = useCallback(() => {
-    const headings = document.querySelectorAll<HTMLElement>('main h2')
-    for (const h of Array.from(headings)) {
-      if (h.getBoundingClientRect().top > NEXT_THRESHOLD) return h
-    }
-    return null
-  }, [])
-
-  const handleScrollNext = useCallback(() => {
-    const next = findNextHeading()
-    if (next) {
-      next.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    } else {
-      window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' })
-    }
-  }, [findNextHeading])
-
-  // Track whether there's a next heading ahead; drives the disabled state of the
-  // mobile "Next" button. Recompute on scroll, resize, and when items change.
-  const [hasNext, setHasNext] = useState(false)
-  useEffect(() => {
-    const update = () => setHasNext(findNextHeading() !== null || hasMore)
-    update()
-    window.addEventListener('scroll', update, { passive: true })
-    window.addEventListener('resize', update)
-    return () => {
-      window.removeEventListener('scroll', update)
-      window.removeEventListener('resize', update)
-    }
-  }, [findNextHeading, items.length, hasMore])
-
   // Track scrolled-past articles
   const handleScrolledPast = useCallback((slug: string) => {
     setScrolledPastSlugs(prev => {
@@ -351,18 +316,6 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
           Scroll through unvisited articles. Mark them as read when you're done.
         </p>
 
-        {items.length > 0 && (
-          <ContinuousReaderControls
-            isPlaying={reader.isPlaying}
-            isBuffering={reader.isBuffering}
-            markReadDisabled={scrolledPastSlugs.size === 0}
-            canNext={reader.currentIndex < speechSections.length - 1}
-            onMarkRead={() => { setPendingNavUrl(null); setDialogOpen(true) }}
-            onPlayPause={handlePlayPause}
-            onNext={reader.next}
-          />
-        )}
-
         {items.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground text-lg">
@@ -406,8 +359,8 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
       </main>
       <Footer />
 
-      {/* Floating buttons (settings + desktop mark-read pill) */}
-      <div className="fixed bottom-44 sm:bottom-6 right-4 z-40 flex flex-col items-end gap-3">
+      {/* Floating utility buttons */}
+      <div className="fixed bottom-[11rem] sm:bottom-[7rem] right-4 z-40 flex flex-col items-end gap-3">
         {/* Settings button — wait for hydration so toggle has localStorage state */}
         {isHydrated && (
           <button
@@ -434,37 +387,24 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
           </button>
         )}
 
-        {/* Mark-read button (desktop only — mobile uses bottom bar) */}
-        {scrolledPastSlugs.size > 0 && (
-          <button
-            onClick={() => { setPendingNavUrl(null); setDialogOpen(true) }}
-            className="hidden sm:flex items-center gap-2 bg-primary text-primary-foreground px-4 py-3 rounded-full shadow-lg hover:bg-primary/90 transition-colors"
-          >
-            <BookCheck className="h-5 w-5" />
-            <span className="font-medium">Mark read ({scrolledPastSlugs.size})</span>
-          </button>
-        )}
       </div>
 
-      {/* Mobile bottom action bar: Mark read + Next. Sits above the bottom-nav (h-16). */}
-      <div className="sm:hidden fixed bottom-16 left-0 right-0 z-40 flex border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <button
-          onClick={() => { setPendingNavUrl(null); setDialogOpen(true) }}
-          disabled={scrolledPastSlugs.size === 0}
-          className="flex-1 flex items-center justify-center gap-2 py-8 text-base font-medium text-foreground border-r border-border disabled:opacity-40 disabled:cursor-not-allowed active:bg-muted/40"
+      {items.length > 0 && (
+        <div
+          data-reader-floating
+          className="fixed bottom-16 left-2 right-2 z-40 rounded-xl border border-border bg-background/95 p-2 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:bottom-6 sm:left-auto sm:right-4 sm:w-[min(42rem,calc(100vw-2rem))]"
         >
-          <BookCheck className="h-6 w-6" />
-          <span>Mark read{scrolledPastSlugs.size > 0 ? ` (${scrolledPastSlugs.size})` : ''}</span>
-        </button>
-        <button
-          onClick={handleScrollNext}
-          disabled={!hasNext}
-          className="flex-1 flex items-center justify-center gap-2 py-8 text-base font-medium bg-primary text-primary-foreground disabled:opacity-40 disabled:cursor-not-allowed active:bg-primary/80"
-        >
-          <span>Next</span>
-          <ChevronDown className="h-6 w-6" />
-        </button>
-      </div>
+          <ContinuousReaderControls
+            isPlaying={reader.isPlaying}
+            isBuffering={reader.isBuffering}
+            markReadDisabled={scrolledPastSlugs.size === 0}
+            canNext={reader.currentIndex < speechSections.length - 1}
+            onMarkRead={() => { setPendingNavUrl(null); setDialogOpen(true) }}
+            onPlayPause={handlePlayPause}
+            onNext={reader.next}
+          />
+        </div>
+      )}
 
       {/* Section visibility dialog */}
       <SectionVisibilityDialog

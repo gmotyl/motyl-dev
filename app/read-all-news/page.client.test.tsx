@@ -166,6 +166,19 @@ describe('ReadAllNewsPage continuous reader', () => {
     ])
   })
 
+  it('keeps one reader control group in a fixed floating panel', () => {
+    render(<ReadAllNewsPage initialItems={items(1)} totalItems={1} />)
+
+    const floatingPanel = document.querySelector('[data-reader-floating]')
+    expect(floatingPanel).toHaveClass('fixed')
+    expect(within(screen.getByRole('main')).queryByRole('group', {
+      name: 'Continuous reader controls',
+    })).not.toBeInTheDocument()
+    expect(floatingPanel).toContainElement(screen.getByRole('group', {
+      name: 'Continuous reader controls',
+    }))
+  })
+
   it('scrolls the selected section before direct playback', async () => {
     HTMLElement.prototype.scrollIntoView = function (this: HTMLElement) {
       playbackEvents.push(`scroll:${this.id}`)
