@@ -2,7 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { SpeechSection } from '@/lib/tts-speech'
-import { setStoredTtsVoice, TTS_VOICE_STORAGE_KEY } from '@/lib/tts-voices'
+import { DEFAULT_TTS_VOICE, setStoredTtsVoice, TTS_VOICE_STORAGE_KEY } from '@/lib/tts-voices'
 import { useContinuousReader } from './use-continuous-reader'
 
 const ttsMock = vi.hoisted(() => {
@@ -142,6 +142,20 @@ describe('useContinuousReader', () => {
       expect(ttsMock.calls.at(-1)?.options.voice).toBe('en-US-EmmaMultilingualNeural')
     })
     expect(result.current.currentIndex).toBe(0)
+  })
+
+  it('passes the default voice to useTTS on the first render', () => {
+    renderHook(() => useContinuousReader([makeItem(0)]))
+
+    expect(ttsMock.calls[0]?.options.voice).toBe(DEFAULT_TTS_VOICE)
+  })
+
+  it('applies the stored voice to useTTS after mount', async () => {
+    renderHook(() => useContinuousReader([makeItem(0)]))
+
+    await waitFor(() => {
+      expect(ttsMock.getLatestOptions()?.voice).toBe('pl-PL-ZofiaNeural')
+    })
   })
 
   it('pauses and resumes the active item', async () => {

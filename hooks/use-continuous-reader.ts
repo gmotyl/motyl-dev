@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { SpeechSection } from '@/lib/tts-speech'
-import { getStoredTtsVoice, TTS_VOICE_CHANGE_EVENT, type TtsVoice } from '@/lib/tts-voices'
+import { DEFAULT_TTS_VOICE, getStoredTtsVoice, TTS_VOICE_CHANGE_EVENT, type TtsVoice } from '@/lib/tts-voices'
 import { useTTS } from './useTTS'
 import type { TTSPlayback } from './useTTS'
 
@@ -21,7 +21,11 @@ export function useContinuousReader(
   const onItemChangeRef = useRef(onItemChange)
   const pendingStartRef = useRef<number | null>(null)
   const playbackRef = useRef<TTSPlayback | null>(null)
-  const [voice, setVoice] = useState<TtsVoice>(() => getStoredTtsVoice())
+  const [voice, setVoice] = useState<TtsVoice>(DEFAULT_TTS_VOICE)
+
+  useEffect(() => {
+    setVoice(getStoredTtsVoice())
+  }, [])
 
   useEffect(() => {
     currentIndexRef.current = currentIndex
