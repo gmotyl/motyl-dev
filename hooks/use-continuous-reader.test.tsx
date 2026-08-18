@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { SpeechSection } from '@/lib/tts-speech'
+import { splitIntoChunks } from '@/lib/tts-chunks'
 import { DEFAULT_TTS_VOICE, setStoredTtsVoice, TTS_VOICE_STORAGE_KEY } from '@/lib/tts-voices'
 import { useContinuousReader } from './use-continuous-reader'
 
@@ -376,16 +377,20 @@ describe('useContinuousReader', () => {
     await waitFor(() => expect(ttsMock.getLatestOptions()?.voice).toBe('pl-PL-ZofiaNeural'))
 
     const onProgress = () => ttsMock.getLatestOptions()?.onProgress as (progress: number) => void
+    // Only the next-section (section 1) progress prefetch matters here; the
+    // section-0 mount preload is a separate path.
+    const nextSectionCalls = () =>
+      ttsClientMock.prefetchSpeech.mock.calls.filter(([chunk]) => chunk === 'prepared speech 1')
 
-    // Below threshold: no prefetch yet.
+    // Below threshold: no next-section prefetch yet.
     act(() => onProgress()(50))
-    expect(ttsClientMock.prefetchSpeech).not.toHaveBeenCalled()
+    expect(nextSectionCalls()).toHaveLength(0)
 
     // Crossing the threshold fires exactly once for this section...
     act(() => onProgress()(70))
     act(() => onProgress()(85))
 
-    expect(ttsClientMock.prefetchSpeech).toHaveBeenCalledTimes(1)
+    expect(nextSectionCalls()).toHaveLength(1)
     expect(ttsClientMock.prefetchSpeech).toHaveBeenCalledWith('prepared speech 1', {
       voice: 'pl-PL-ZofiaNeural',
     })
@@ -397,7 +402,40 @@ describe('useContinuousReader', () => {
     act(() => result.current.play())
     await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
 
+    // Ignore the section-0 mount preload; assert progress adds no next-section prefetch.
+    ttsClientMock.prefetchSpeech.mockClear()
+
     act(() => (ttsMock.getLatestOptions()?.onProgress as (progress: number) => void)(90))
+
+    expect(ttsClientMock.prefetchSpeech).not.toHaveBeenCalled()
+  })
+
+  it('preloads the first section\'s first chunk once on mount', async () => {
+    const { rerender } = renderHook(() =>
+      useContinuousReader([makeItem(0), makeItem(1)])
+    )
+
+    // Mount warms section 0's first chunk exactly once, with the resolved voice.
+    await waitFor(() => {
+      expect(ttsClientMock.prefetchSpeech).toHaveBeenCalledWith(
+        splitIntoChunks('prepared speech 0')[0] ?? '',
+        { voice: DEFAULT_TTS_VOICE }
+      )
+    })
+
+    // The stored voice resolves post-mount (Task 3). That voice change must not
+    // re-fire the first-section preload.
+    act(() => setStoredTtsVoice('en-US-EmmaMultilingualNeural'))
+    rerender()
+
+    const sectionZeroCalls = ttsClientMock.prefetchSpeech.mock.calls.filter(
+      ([chunk]) => chunk === 'prepared speech 0'
+    )
+    expect(sectionZeroCalls).toHaveLength(1)
+  })
+
+  it('does not preload when there are no sections', () => {
+    renderHook(() => useContinuousReader([]))
 
     expect(ttsClientMock.prefetchSpeech).not.toHaveBeenCalled()
   })

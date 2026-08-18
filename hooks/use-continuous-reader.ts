@@ -28,11 +28,27 @@ export function useContinuousReader(
   // Tracks the section index for which the next-section prefetch has fired, so
   // it warms the following section's first chunk at most once per section.
   const prefetchedForIndexRef = useRef<number | null>(null)
+  // Tracks the first section's text already warmed by the mount preload, so it
+  // fires once per distinct first-section content and does not re-fire when the
+  // stored voice resolves right after mount.
+  const preloadedFirstTextRef = useRef<string | null>(null)
   const [voice, setVoice] = useState<TtsVoice>(DEFAULT_TTS_VOICE)
 
   useEffect(() => {
     setVoice(getStoredTtsVoice())
   }, [])
+
+  // Warm the first section's first chunk as soon as the reader has sections, so
+  // the very first Play is near-instant. Guarded on the first section's text
+  // (not voice) so the post-mount stored-voice update does not re-trigger it.
+  useEffect(() => {
+    const firstText = items[0]?.speechText
+    if (!firstText) return
+    if (preloadedFirstTextRef.current === firstText) return
+
+    preloadedFirstTextRef.current = firstText
+    prefetchSpeech(splitIntoChunks(firstText)[0] ?? '', { voice })
+  }, [items, voice])
 
   useEffect(() => {
     currentIndexRef.current = currentIndex
