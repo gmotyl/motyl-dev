@@ -8,7 +8,7 @@ import { MarkdownWithCTA } from '@/components/markdown-with-cta'
 import { ShareAIButton } from '@/components/share-ai-button'
 import { TTSPlayer } from '@/components/tts-player'
 import { useContinuousReader } from '@/hooks/use-continuous-reader'
-import { filterHiddenSections, type SectionType } from '@/lib/section-filter'
+import { filterHiddenSections } from '@/lib/section-filter'
 import { ItemType } from '@/lib/types'
 import { getContentCategory } from '@/lib/og'
 import { prepareSpeechSections, stripMarkdown, type SpeechSection } from '@/lib/tts-speech'
@@ -87,10 +87,9 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
         )
         return index < 0 ? null : index
       },
-      currentSectionIndex: activeSectionIndex,
       currentSectionId,
     }),
-    [reader.playFromHere, speechSections, activeSectionIndex, currentSectionId]
+    [reader.playFromHere, speechSections, currentSectionId]
   )
 
   return (

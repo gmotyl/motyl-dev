@@ -468,8 +468,13 @@ function FullArticle({
     : null
 
   // Stable identity so the memoized MarkdownContent is not re-rendered by the
-  // reader's ~60fps progress ticks. Only re-created when playback wiring, the
-  // section set, the owning article, or the active section changes.
+  // reader's ~60fps progress ticks. Highlight is keyed ONLY by `currentSectionId`
+  // (null for every article except the one owning the active section), NOT by the
+  // global `activeSectionIndex`. This is deliberate: depending on activeSectionIndex
+  // would change this memo for EVERY article on every section advance, forcing all
+  // articles' react-markdown to re-render synchronously (a ~278ms main-thread block
+  // on read-all-news that instantly follows "Play from here"). Keyed on
+  // currentSectionId, only the owning article re-renders.
   const markdownReader = useMemo(
     () => ({
       onPlayFromHere: reader.playFromHere,
@@ -480,10 +485,9 @@ function FullArticle({
         )
         return index < 0 ? null : index
       },
-      currentSectionIndex: activeSectionIndex,
       currentSectionId,
     }),
-    [reader.playFromHere, speechSections, item.slug, activeSectionIndex, currentSectionId]
+    [reader.playFromHere, speechSections, item.slug, currentSectionId]
   )
 
   useEffect(() => {
