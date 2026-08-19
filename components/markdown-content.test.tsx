@@ -41,8 +41,14 @@ describe('MarkdownContent current-section highlight', () => {
       />,
     )
 
-    expect(screen.getByRole('heading', { level: 2, name: 'First section' })).toHaveClass('text-yellow-400')
-    expect(screen.getByRole('heading', { level: 2, name: 'Second section' })).not.toHaveClass('text-yellow-400')
+    // The important text color + background must override the prose heading rule.
+    const current = screen.getByRole('heading', { level: 2, name: 'First section' })
+    expect(current).toHaveClass('!text-yellow-400')
+    expect(current).toHaveClass('bg-yellow-400/10')
+
+    const other = screen.getByRole('heading', { level: 2, name: 'Second section' })
+    expect(other).not.toHaveClass('!text-yellow-400')
+    expect(other).not.toHaveClass('bg-yellow-400/10')
   })
 
   it('does not highlight any heading when no section is active', () => {
@@ -57,7 +63,10 @@ describe('MarkdownContent current-section highlight', () => {
       />,
     )
 
-    expect(screen.getByRole('heading', { level: 2, name: 'First section' })).not.toHaveClass('text-yellow-400')
-    expect(screen.getByRole('heading', { level: 2, name: 'Second section' })).not.toHaveClass('text-yellow-400')
+    for (const name of ['First section', 'Second section']) {
+      const heading = screen.getByRole('heading', { level: 2, name })
+      expect(heading).not.toHaveClass('!text-yellow-400')
+      expect(heading).not.toHaveClass('bg-yellow-400/10')
+    }
   })
 })

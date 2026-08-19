@@ -77,7 +77,7 @@ export const MarkdownContent = memo(function MarkdownContent({ content, itemType
 
       return (
         <>
-          <h2 {...props} className={cn(props.className, isCurrent && 'text-yellow-400 transition-colors')}>{children}</h2>
+          <h2 {...props} className={cn(props.className, isCurrent && '!text-yellow-400 bg-yellow-400/10 rounded-md px-2 -mx-2 transition-colors')}>{children}</h2>
           {readerEnabled && sectionIndex !== undefined && sectionIndex !== null && (
             <SectionPlayFromHere
               sectionIndex={sectionIndex}
