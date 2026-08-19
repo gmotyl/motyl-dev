@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useTTS } from './useTTS'
+import { synthesizeSpeech } from '@/lib/tts-client'
 
 // Mock the synthesis client so no real network / edge-tts is touched.
 vi.mock('@/lib/tts-client', () => ({
@@ -68,12 +69,22 @@ class FakeAudioContext {
     return new FakeBufferSource() as unknown as AudioBufferSourceNode
   }
 
+  // Tracks buffers already handed to decodeAudioData. The real WebAudio
+  // decodeAudioData DETACHES its input, so decoding the same instance again
+  // throws DataCloneError. We model that: a second decode of the same
+  // ArrayBuffer instance throws synchronously, exactly like the browser.
+  private decodedBuffers = new WeakSet<ArrayBuffer>()
+
   // Callback form, matching useTTS's usage.
   decodeAudioData(
-    _buffer: ArrayBuffer,
+    buffer: ArrayBuffer,
     onSuccess: (b: AudioBuffer) => void,
     _onError?: (e: unknown) => void
   ) {
+    if (this.decodedBuffers.has(buffer)) {
+      throw new DOMException('Cannot decode detached ArrayBuffer', 'DataCloneError')
+    }
+    this.decodedBuffers.add(buffer)
     // Resolve on a microtask so play()'s fetch chain completes before any
     // macrotask (the pending suspend) fires.
     Promise.resolve().then(() => onSuccess(new FakeAudioBuffer() as unknown as AudioBuffer))
@@ -161,5 +172,36 @@ describe('useTTS play-from-here interruption', () => {
       await new Promise((r) => setTimeout(r, 5))
     })
     expect(ctx.state).toBe('running')
+  })
+})
+
+describe('useTTS replay with a cached (shared) synthesis buffer', () => {
+  it('decodes a copy so a replayed chunk does not fail with detached ArrayBuffer', async () => {
+    // Model lib/tts-client's synthesis cache: the SAME ArrayBuffer instance is
+    // returned to every caller for a given voice+text. decodeAudioData detaches
+    // its input, so useTTS must decode a COPY or the second play (play-from-here
+    // clears the decoded-buffer cache and re-fetches the same cached buffer)
+    // throws "Cannot decode detached ArrayBuffer".
+    const shared = new ArrayBuffer(8)
+    vi.mocked(synthesizeSpeech).mockResolvedValue(shared)
+
+    const { result } = renderHook(() => useTTS('Hello world.'))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(sequence.filter((e) => e === 'start').length).toBe(1))
+
+    // Replay the same content (as play-from-here does): stop() clears the
+    // decoded-buffer cache, so play() re-fetches the same cached `shared` buffer
+    // and decodes it again. With slice(0) this succeeds; without it, throws.
+    await act(async () => {
+      result.current.stop()
+      await result.current.play()
+    })
+    await flushMicrotasks()
+
+    await waitFor(() => expect(sequence.filter((e) => e === 'start').length).toBe(2))
+    expect(result.current.isPlaying).toBe(true)
   })
 })

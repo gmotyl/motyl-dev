@@ -104,8 +104,22 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
           reject(new DOMException('Aborted', 'AbortError'))
           return
         }
+        // decodeAudioData DETACHES (neuters) the ArrayBuffer it receives. The
+        // synthesis cache (lib/tts-client) hands the SAME ArrayBuffer instance
+        // to every caller for a given voice+text, so decoding the cached buffer
+        // would detach it and any later decode of the same chunk — replay,
+        // play-from-here (stop() clears the decoded-buffer cache but not the
+        // synthesis cache), or prefetch-then-play — throws "Cannot decode
+        // detached ArrayBuffer". Decode a copy so the cached buffer stays intact.
+        let decodable: ArrayBuffer
+        try {
+          decodable = arrayBuffer.slice(0)
+        } catch (error) {
+          reject(error as Error)
+          return
+        }
         audioContext.decodeAudioData(
-          arrayBuffer,
+          decodable,
           (buffer) => {
             if (signal.aborted) {
               reject(new DOMException('Aborted', 'AbortError'))
