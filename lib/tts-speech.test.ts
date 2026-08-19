@@ -71,11 +71,23 @@ describe('normalizeVersionNumbers', () => {
     expect(normalizeVersionNumbers('1.2.3.4')).toBe('1 2 3 4')
   })
 
-  it('normalizeVersionNumbers leaves two-part decimals unchanged', () => {
-    expect(normalizeVersionNumbers('5.6')).toBe('5.6')
-    expect(normalizeVersionNumbers('16.3')).toBe('16.3')
-    expect(normalizeVersionNumbers('Next.js 16.3')).toBe('Next.js 16.3')
+  it('normalizeVersionNumbers now normalizes two-part version numbers', () => {
+    expect(normalizeVersionNumbers('5.6')).toBe('5 6')
+    expect(normalizeVersionNumbers('16.3')).toBe('16 3')
+    expect(normalizeVersionNumbers('Next.js 16.3')).toBe('Next.js 16 3')
+  })
+
+  it('normalizeVersionNumbers allows groups up to five digits', () => {
+    expect(normalizeVersionNumbers('12345.6')).toBe('12345 6')
+  })
+
+  it('normalizeVersionNumbers leaves numbers with a 6+ digit group unchanged', () => {
+    expect(normalizeVersionNumbers('123456.7')).toBe('123456.7')
+  })
+
+  it('normalizeVersionNumbers leaves comma decimals and plain integers unchanged', () => {
     expect(normalizeVersionNumbers('42')).toBe('42')
+    expect(normalizeVersionNumbers('3,14')).toBe('3,14')
     expect(normalizeVersionNumbers('Wersja 3,14 liczby')).toBe('Wersja 3,14 liczby')
   })
 })
@@ -83,6 +95,10 @@ describe('normalizeVersionNumbers', () => {
 describe('prepareSpeechText', () => {
   it('prepareSpeechText normalizes semver version numbers', () => {
     expect(prepareSpeechText('Wersja 3.6.3 wychodzi')).toContain('3 6 3')
+  })
+
+  it('prepareSpeechText normalizes two-part version numbers in prose', () => {
+    expect(prepareSpeechText('GPT 5.6 jest')).toContain('5 6')
   })
 
 
@@ -126,7 +142,7 @@ hashtags: "#pl #ai"
     const source = 'AI i GPT 5.6 działają z React oraz Microsoft. Unknown AIx.'
 
     expect(prepareSpeechText(source)).toBe(
-      'ej-aj i dżi-pi-ti 5.6 działają z reakt oraz mikrosoft. Unknown AIx.'
+      'ej-aj i dżi-pi-ti 5 6 działają z reakt oraz mikrosoft. Unknown AIx.'
     )
     expect(source).toBe('AI i GPT 5.6 działają z React oraz Microsoft. Unknown AIx.')
   })
