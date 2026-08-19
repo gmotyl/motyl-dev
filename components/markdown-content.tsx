@@ -29,6 +29,12 @@ export interface MarkdownReaderOptions {
   getSectionIndex?: (heading: string) => number | null | undefined
   /** Section index currently being read, so its heading can be highlighted. */
   currentSectionIndex?: number | null
+  /**
+   * rehype-slug id of the section currently being read. Preferred over
+   * currentSectionIndex for the highlight because it matches the same way the
+   * working scroll does (by element id), avoiding brittle heading-text matches.
+   */
+  currentSectionId?: string | null
 }
 
 function getHeadingText(children: ReactNode): string {
@@ -73,7 +79,9 @@ export const MarkdownContent = memo(function MarkdownContent({ content, itemType
       const readerEnabled = reader?.enabled !== false && Boolean(reader?.onPlayFromHere)
       const resolvedIndex = reader?.getSectionIndex?.(heading)
       const sectionIndex = readerEnabled ? resolvedIndex : undefined
-      const isCurrent = sectionIndex != null && sectionIndex === reader?.currentSectionIndex
+      const isCurrent =
+        (reader?.currentSectionId != null && props.id === reader.currentSectionId) ||
+        (sectionIndex != null && sectionIndex === reader?.currentSectionIndex)
 
       return (
         <>

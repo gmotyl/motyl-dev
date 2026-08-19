@@ -459,6 +459,14 @@ function FullArticle({
   const readingActive = reader.isPlaying || reader.isBuffering || (reader.progress > 0 && reader.progress < 100)
   const activeSectionIndex = readingActive ? reader.currentIndex : null
 
+  // Highlight by heading id (mirrors the working scroll, which matches by
+  // element id). Only highlight when the active section belongs to this article.
+  // Section-stable: changes only on section advance, not on 60fps progress ticks.
+  const activeSection = activeSectionIndex != null ? speechSections[activeSectionIndex] : undefined
+  const currentSectionId = activeSection && activeSection.sourceSlug === item.slug
+    ? headingToId(stripMarkdown(activeSection.title))
+    : null
+
   // Stable identity so the memoized MarkdownContent is not re-rendered by the
   // reader's ~60fps progress ticks. Only re-created when playback wiring, the
   // section set, the owning article, or the active section changes.
@@ -473,8 +481,9 @@ function FullArticle({
         return index < 0 ? null : index
       },
       currentSectionIndex: activeSectionIndex,
+      currentSectionId,
     }),
-    [reader.playFromHere, speechSections, item.slug, activeSectionIndex]
+    [reader.playFromHere, speechSections, item.slug, activeSectionIndex, currentSectionId]
   )
 
   useEffect(() => {

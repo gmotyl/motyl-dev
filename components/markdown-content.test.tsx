@@ -69,4 +69,48 @@ describe('MarkdownContent current-section highlight', () => {
       expect(heading).not.toHaveClass('bg-yellow-400/10')
     }
   })
+
+  // rehype-slug assigns ids from heading text: "Why It Matters" -> "why-it-matters".
+  // This mirrors the working scroll, which matches by element id.
+  const idContent = '## Why It Matters\n\nMatters text.\n\n## Later On\n\nLater text.'
+
+  it('highlights the heading whose rehype-slug id matches currentSectionId', () => {
+    render(
+      <MarkdownContent
+        content={idContent}
+        reader={{
+          onPlayFromHere: vi.fn(),
+          currentSectionId: 'why-it-matters',
+        }}
+      />,
+    )
+
+    const current = screen.getByRole('heading', { level: 2, name: 'Why It Matters' })
+    expect(current).toHaveClass('!text-yellow-400')
+    expect(current).toHaveClass('bg-yellow-400/10')
+
+    const other = screen.getByRole('heading', { level: 2, name: 'Later On' })
+    expect(other).not.toHaveClass('!text-yellow-400')
+    expect(other).not.toHaveClass('bg-yellow-400/10')
+  })
+
+  it('does not highlight when neither id nor index matches', () => {
+    render(
+      <MarkdownContent
+        content={idContent}
+        reader={{
+          onPlayFromHere: vi.fn(),
+          getSectionIndex: () => null,
+          currentSectionId: 'no-such-id',
+          currentSectionIndex: 99,
+        }}
+      />,
+    )
+
+    for (const name of ['Why It Matters', 'Later On']) {
+      const heading = screen.getByRole('heading', { level: 2, name })
+      expect(heading).not.toHaveClass('!text-yellow-400')
+      expect(heading).not.toHaveClass('bg-yellow-400/10')
+    }
+  })
 })

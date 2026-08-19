@@ -69,6 +69,12 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
   const readingActive = reader.isPlaying || reader.isBuffering || (reader.progress > 0 && reader.progress < 100)
   const activeSectionIndex = readingActive ? reader.currentIndex : null
 
+  // Highlight by heading id (mirrors the working scroll, which matches by
+  // element id). Section-stable: only changes when the active section / section
+  // set changes, so it does not reintroduce 60fps re-renders.
+  const activeSection = activeSectionIndex != null ? speechSections[activeSectionIndex] : undefined
+  const currentSectionId = activeSection ? headingToId(stripMarkdown(activeSection.title)) : null
+
   // Stable identity so the memoized MarkdownContent is not re-rendered by the
   // reader's ~60fps progress ticks. Only re-created when playback wiring, the
   // section set, or the active section actually changes.
@@ -82,8 +88,9 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
         return index < 0 ? null : index
       },
       currentSectionIndex: activeSectionIndex,
+      currentSectionId,
     }),
-    [reader.playFromHere, speechSections, activeSectionIndex]
+    [reader.playFromHere, speechSections, activeSectionIndex, currentSectionId]
   )
 
   return (
