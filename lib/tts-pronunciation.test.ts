@@ -33,4 +33,38 @@ describe('applyPronunciation', () => {
   it('transforms multiple occurrences in a sentence', () => {
     expect(applyPronunciation('Nowe benchmarki Reacta')).toBe('Nowe benczmarki reakta')
   })
+
+  it('fixes English c-words (Polish would read leading "c" as "ts")', () => {
+    expect(applyPronunciation('cache')).toBe('kesz')
+    expect(applyPronunciation("cache'owania")).toBe("kesz'owania")
+    expect(applyPronunciation('commit')).toBe('komit')
+    expect(applyPronunciation('commitowanego')).toBe('komitowanego')
+    expect(applyPronunciation('Cursora')).toBe('kersora')
+  })
+
+  it('applies the codex guard before the shorter code stem (longest-first)', () => {
+    expect(applyPronunciation('Codex')).toBe('kodeks')
+    expect(applyPronunciation('Claude Code')).toBe('klod koud')
+  })
+
+  it('applies cloudflare before the shorter cloud stem', () => {
+    expect(applyPronunciation('Cloudflare')).toBe('klałdfler')
+    expect(applyPronunciation('Google Cloud')).toBe('Google klałd')
+  })
+
+  it('matches multi-word phrase keys and preserves inflection', () => {
+    expect(applyPronunciation('pull requesty')).toBe('pul rikłesty')
+    expect(applyPronunciation('open source')).toBe('oupen sors')
+    expect(applyPronunciation('Hugging Face')).toBe('haging fejs')
+  })
+
+  it('does not corrupt the Polish word "facet" (no bare face stem)', () => {
+    expect(applyPronunciation('facet')).toBe('facet')
+  })
+
+  it('preserves Polish inflection on new stems', () => {
+    expect(applyPronunciation('frameworku')).toBe('frejmłerku')
+    expect(applyPronunciation('deploya')).toBe('diploja')
+    expect(applyPronunciation('bugi')).toBe('bagi')
+  })
 })

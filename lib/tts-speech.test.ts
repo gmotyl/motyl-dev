@@ -124,12 +124,12 @@ hashtags: "#pl #ai"
   })
 
   it('keeps reference-link labels while removing definitions and destinations', () => {
-    const source = `Read [the guide][guide] and [the endpoint][api].
+    const source = `Read [the guide][guide] and [the manual][api].
 
 [guide]: https://example.com/guide "Guide"
 [api]: <https://example.com/api> (API docs)`
 
-    expect(prepareSpeechText(source)).toBe('Read the guide and the endpoint.')
+    expect(prepareSpeechText(source)).toBe('Read the guide and the manual.')
   })
 
   it('keeps sentence punctuation after stripped URL destinations', () => {
