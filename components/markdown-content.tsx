@@ -87,7 +87,9 @@ export const MarkdownContent = memo(function MarkdownContent({ content, itemType
     const ranges: { id: string; start: number; end: number }[] = []
     let inFence = false
     lines.forEach((line, i) => {
-      if (/^\s*```/.test(line)) {
+      // Toggle on both CommonMark fence styles (``` and ~~~) so a `##` line
+      // inside a fenced code block is never mistaken for a section boundary.
+      if (/^\s*(```|~~~)/.test(line)) {
         inFence = !inFence
         return
       }

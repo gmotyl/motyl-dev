@@ -17,6 +17,12 @@ export interface TTSState {
 
 export interface UseTTSOptions {
   voice?: string
+  /**
+   * Fired on EVERY requestAnimationFrame tick during playback (~60Hz) with the
+   * 0–100 progress percent — intentionally NOT throttled, so the continuous
+   * reader's prefetch threshold sees continuous progress. Keep the handler
+   * cheap; do not do heavy work here or it runs 60×/second.
+   */
   onProgress?: (progress: number) => void
   onComplete?: () => void
   onError?: (error: Error) => void
@@ -111,11 +117,13 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         // play-from-here (stop() clears the decoded-buffer cache but not the
         // synthesis cache), or prefetch-then-play — throws "Cannot decode
         // detached ArrayBuffer". Decode a copy so the cached buffer stays intact.
+        // slice(0) can throw if the buffer is already detached; reject with the
+        // same prefix shape as the decode error path for consistent triage.
         let decodable: ArrayBuffer
         try {
           decodable = arrayBuffer.slice(0)
         } catch (error) {
-          reject(error as Error)
+          reject(new Error(`Failed to copy audio buffer for decode: ${error}`))
           return
         }
         audioContext.decodeAudioData(

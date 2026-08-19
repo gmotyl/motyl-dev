@@ -99,6 +99,12 @@ export async function synthesizeSpeech(
   text: string,
   options: TTSOptions = {}
 ): Promise<ArrayBuffer> {
+  if (!text || !text.trim()) {
+    // Surface the failure to the caller instead of caching an empty/garbage
+    // buffer forever (prefetchSpeech guards this earlier; this protects direct callers).
+    throw new Error('synthesizeSpeech: empty text')
+  }
+
   const voice = options.voice || DEFAULT_VOICE
   const key = cacheKey(voice, text)
 

@@ -26,8 +26,13 @@ import { signIn } from "next-auth/react"
  * 4. Restart dev server
  */
 export function DevSignInButton() {
-  // Only show in development with DEV_AUTH_BYPASS enabled
-  if (process.env.NEXT_PUBLIC_DEV_AUTH_BYPASS !== "true") {
+  // Only show in development with DEV_AUTH_BYPASS enabled. The NODE_ENV check is
+  // a defensive guard so this one-click superadmin login can never render in a
+  // production build even if NEXT_PUBLIC_DEV_AUTH_BYPASS is misconfigured/leaked.
+  if (
+    process.env.NODE_ENV !== "development" ||
+    process.env.NEXT_PUBLIC_DEV_AUTH_BYPASS !== "true"
+  ) {
     return null
   }
 

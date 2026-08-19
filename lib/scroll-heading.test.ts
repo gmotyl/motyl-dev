@@ -10,6 +10,7 @@ const makeEl = (top: number): ScrollTarget => ({
 describe('scrollHeadingIntoView', () => {
   afterEach(() => {
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   it('scrolls so the heading top lands at ratio*viewport (default 0.7)', () => {

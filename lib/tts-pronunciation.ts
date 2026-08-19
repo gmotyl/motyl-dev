@@ -6,7 +6,9 @@
  * trailing Polish inflection is preserved. E.g. 'benchmark':'benczmark' turns
  * "benchmarki" into "benczmarki". Values should be lowercase Polish phonetic spelling.
  */
-export const PRONUNCIATION_MAP: Record<string, string> = {
+export const PRONUNCIATION_MAP: Readonly<Record<string, string>> = Object.freeze({
+  tldr: '..',
+  summary: ',,',
   benchmark: 'benczmark',
   react: 'reakt',
   microsoft: 'mikrosoft',
@@ -29,14 +31,33 @@ export const PRONUNCIATION_MAP: Record<string, string> = {
   chrome: 'krołm',
 
   // Product / library names
-  github: 'githab',
+  spacexai: 'spejs eks ej aj',
+  OpenAI: 'oupen ej aj',
+  gpt: 'dżi pi ti',
+  chatgpyt: 'czat dżi pi ti',
+  mac: 'mak',
+  macu: 'maku',
+  macbook: 'makbuk',
+  macos: 'makos',
+  ios: 'aj os',
+  android: 'endroid',
+  windows: 'łindous',
+  linux: 'linuks',
+  github: 'git chab',
   gemini: 'dżemini',
   vercel: 'wersel',
   deepseek: 'dipsik',
   tailwind: 'tejlłind',
   typescript: 'tajpskrypt',
+  usememo: 'juz memo',
+  usecallback: 'juz kolbek',
+  useeffect: 'juz efekt',
+  usestate: 'juz stejt',
+  useref: 'juz ref',
+  compiler: 'kompajler',
 
   // Jargon
+  githuba: 'git chaba',
   framework: 'frejmłerk',
   workflow: 'łerkflou',
   runtime: 'rantajm',
@@ -65,10 +86,11 @@ export const PRONUNCIATION_MAP: Record<string, string> = {
   edge: 'edż',
   bug: 'bag',
   reasoning: 'rizoning',
+  vram: 'fał ram',
 
   // Multi-word phrases (safe: longest-key-first beats the component words;
   // the phrase also avoids the `face`→"facet" collision of a bare `face` stem)
   'pull request': 'pul rikłest',
   'open source': 'oupen sors',
   'hugging face': 'haging fejs',
-}
+})
