@@ -1,3 +1,5 @@
+import { PRONUNCIATION_MAP } from '@/lib/tts-pronunciation'
+
 export interface SpeechSource {
   slug: string
   title: string
@@ -13,11 +15,6 @@ export interface ReviewedSection {
 
 export interface SpeechSection extends ReviewedSection {
   speechText: string
-}
-
-const TECHNICAL_NAME_MAP: Record<string, string> = {
-  Microsoft: 'mikrosoft',
-  React: 'reakt',
 }
 
 const ACRONYM_LETTER_MAP: Record<string, string> = {
@@ -64,8 +61,16 @@ export const replaceWholeWordMappings = (
   return text.replace(pattern, (name) => mappings[name])
 }
 
-const applyTechnicalNameMappings = (text: string): string =>
-  replaceWholeWordMappings(text, TECHNICAL_NAME_MAP)
+export const applyPronunciation = (text: string): string => {
+  const keys = Object.keys(PRONUNCIATION_MAP).sort((a, b) => b.length - a.length)
+  let out = text
+  for (const key of keys) {
+    // word-start boundary; capture trailing Polish letters (inflection) to preserve them
+    const re = new RegExp(`(?<![\\p{L}\\p{N}_])${escapeRegExp(key)}(\\p{L}*)`, 'giu')
+    out = out.replace(re, (_m, suffix: string) => PRONUNCIATION_MAP[key] + suffix)
+  }
+  return out
+}
 
 const spellOutAcronyms = (text: string): string =>
   text.replace(/(?<![\p{L}\p{N}_])([A-Z]{2,})(?![\p{L}\p{N}_])/gu, (acronym) =>
@@ -111,7 +116,7 @@ export const stripMarkdown = (text: string): string =>
 
 export function prepareSpeechText(markdown: string): string {
   return spellOutAcronyms(
-    applyTechnicalNameMappings(normalizeVersionNumbers(stripMarkdown(markdown)))
+    applyPronunciation(normalizeVersionNumbers(stripMarkdown(markdown)))
   )
 }
 

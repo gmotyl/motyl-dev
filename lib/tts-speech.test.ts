@@ -155,6 +155,10 @@ hashtags: "#pl #ai"
       })
     ).toBe('React oraz R.')
   })
+
+  it('applies inflection-aware pronunciation for English stems', () => {
+    expect(prepareSpeechText('Nowe benchmarki Reacta')).toBe('Nowe benczmarki reakta')
+  })
 })
 
 describe('prepareSpeechSections', () => {
