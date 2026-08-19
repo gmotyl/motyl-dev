@@ -94,6 +94,42 @@ describe('MarkdownContent current-section highlight', () => {
     expect(other).not.toHaveClass('bg-yellow-400/10')
   })
 
+  const linkContent =
+    '## Why It Matters\n\nSee [the source](https://example.com/x) here.\n\n## Later On\n\nOther [second link](https://example.com/y).'
+
+  it('highlights a link inside the current section and leaves other sections’ links plain', () => {
+    render(
+      <MarkdownContent
+        content={linkContent}
+        reader={{
+          onPlayFromHere: vi.fn(),
+          currentSectionId: 'why-it-matters',
+        }}
+      />,
+    )
+
+    const current = screen.getByRole('link', { name: 'the source' })
+    expect(current).toHaveClass('ring-2')
+    expect(current).toHaveClass('bg-yellow-400/10')
+
+    const other = screen.getByRole('link', { name: 'second link' })
+    expect(other).not.toHaveClass('ring-2')
+    expect(other).not.toHaveClass('bg-yellow-400/10')
+  })
+
+  it('does not highlight any link when no section is active', () => {
+    render(
+      <MarkdownContent
+        content={linkContent}
+        reader={{ onPlayFromHere: vi.fn(), currentSectionId: null }}
+      />,
+    )
+
+    for (const name of ['the source', 'second link']) {
+      expect(screen.getByRole('link', { name })).not.toHaveClass('ring-2')
+    }
+  })
+
   it('does not highlight when neither id nor index matches', () => {
     render(
       <MarkdownContent
