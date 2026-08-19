@@ -17,35 +17,6 @@ export interface SpeechSection extends ReviewedSection {
   speechText: string
 }
 
-const ACRONYM_LETTER_MAP: Record<string, string> = {
-  A: 'ej',
-  B: 'bi',
-  C: 'si',
-  D: 'di',
-  E: 'i',
-  F: 'ef',
-  G: 'dżi',
-  H: 'ejcz',
-  I: 'aj',
-  J: 'dżej',
-  K: 'kej',
-  L: 'el',
-  M: 'em',
-  N: 'en',
-  O: 'oł',
-  P: 'pi',
-  Q: 'kiu',
-  R: 'ar',
-  S: 'es',
-  T: 'ti',
-  U: 'ju',
-  V: 'wi',
-  W: 'dabliu',
-  X: 'eks',
-  Y: 'łaj',
-  Z: 'zi',
-}
-
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
 export const replaceWholeWordMappings = (
@@ -71,14 +42,6 @@ export const applyPronunciation = (text: string): string => {
   }
   return out
 }
-
-const spellOutAcronyms = (text: string): string =>
-  text.replace(/(?<![\p{L}\p{N}_])([A-Z]{2,})(?![\p{L}\p{N}_])/gu, (acronym) =>
-    acronym
-      .split('')
-      .map((letter) => ACRONYM_LETTER_MAP[letter] ?? letter)
-      .join('-')
-  )
 
 export const normalizeVersionNumbers = (text: string): string =>
   text.replace(/(?<!\d)\d{1,5}(?:\.\d{1,5})+(?!\d)/g, (token) => token.replace(/\./g, ' '))
@@ -115,9 +78,10 @@ export const stripMarkdown = (text: string): string =>
     .trim()
 
 export function prepareSpeechText(markdown: string): string {
-  return spellOutAcronyms(
-    applyPronunciation(normalizeVersionNumbers(stripMarkdown(markdown)))
-  )
+  // No acronym letter-spelling: the TTS voice reads acronyms like "CTO" more
+  // naturally on its own than a hyphenated spell-out. Only the pronunciation
+  // map (for terms the voice genuinely mangles) is applied.
+  return applyPronunciation(normalizeVersionNumbers(stripMarkdown(markdown)))
 }
 
 export function splitReviewedSections(sources: readonly SpeechSource[]): ReviewedSection[] {

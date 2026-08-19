@@ -139,15 +139,16 @@ hashtags: "#pl #ai"
   })
 
   it('uses approved longest matching phonetic replacements without changing unknown words', () => {
-    const source = 'AI i GPT 5.6 działają z React oraz Microsoft. Unknown AIx.'
+    const source = 'AI i GPT 5.6 działają z React oraz Microsoft. Unknown Xyzzy.'
 
-    // GPT is now a PRONUNCIATION_MAP entry ('dżi pi ti'), applied before the
-    // acronym speller, so it reads with spaces rather than the speller's hyphens.
-    // 'AI' (no map entry) still exercises the acronym speller -> 'ej-aj'.
+    // Acronyms are NOT letter-spelled — spelling was removed; specific acronyms
+    // live in PRONUNCIATION_MAP instead. Only the map applies: AI -> 'ej aj',
+    // GPT -> 'dżi pi ti', React -> reakt, Microsoft -> mikrosoft; version
+    // 5.6 -> '5 6'. 'Xyzzy' (no map stem) is left untouched.
     expect(prepareSpeechText(source)).toBe(
-      'ej-aj i dżi pi ti 5 6 działają z reakt oraz mikrosoft. Unknown AIx.'
+      'ej aj i dżi pi ti 5 6 działają z reakt oraz mikrosoft. Unknown Xyzzy.'
     )
-    expect(source).toBe('AI i GPT 5.6 działają z React oraz Microsoft. Unknown AIx.')
+    expect(source).toBe('AI i GPT 5.6 działają z React oraz Microsoft. Unknown Xyzzy.')
   })
 
   it('replaces overlapping mappings longest-first and transforms each match once', () => {
@@ -179,7 +180,7 @@ React działa.`,
     ])
 
     expect(sections.map((section) => section.speechText)).toEqual([
-      'Dzisiejsze wiadomości ej-aj w praktyce ej-aj pomaga.',
+      'Dzisiejsze wiadomości ej aj w praktyce ej aj pomaga.',
       'reakt rośnie reakt działa.',
     ])
   })

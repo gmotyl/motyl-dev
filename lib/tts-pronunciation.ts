@@ -31,10 +31,11 @@ export const PRONUNCIATION_MAP: Readonly<Record<string, string>> = Object.freeze
   chrome: 'krołm',
 
   // Product / library names
+  ai: 'ej aj',
   spacexai: 'spejs eks ej aj',
-  OpenAI: 'oupen ej aj',
+  openai: 'oupen ej aj',
   gpt: 'dżi pi ti',
-  chatgpyt: 'czat dżi pi ti',
+  chatgpt: 'czat dżi pi ti',
   mac: 'mak',
   macu: 'maku',
   macbook: 'makbuk',
@@ -55,6 +56,7 @@ export const PRONUNCIATION_MAP: Readonly<Record<string, string>> = Object.freeze
   usestate: 'juz stejt',
   useref: 'juz ref',
   compiler: 'kompajler',
+  nvidia: 'en widia',
 
   // Jargon
   githuba: 'git chaba',
