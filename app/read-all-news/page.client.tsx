@@ -64,7 +64,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
       ? headings.find((heading) => heading.id === headingToId(title))
       : undefined)
       ?? headings.filter((heading) => stripMarkdown(heading.textContent ?? '') === title)[occurrence]
-    target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    target?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }, [speechSections])
 
   const reader = useContinuousReader(speechSections, { onItemChange: scrollToSection })
@@ -452,9 +452,15 @@ function FullArticle({
     [item.content, hiddenSections]
   )
 
+  // Section-stable: only changes on section advance / play / pause, NOT on the
+  // ~60fps progress ticks. reader.currentIndex uses the same global section
+  // scheme as getSectionIndex below.
+  const readingActive = reader.isPlaying || reader.isBuffering || (reader.progress > 0 && reader.progress < 100)
+  const activeSectionIndex = readingActive ? reader.currentIndex : null
+
   // Stable identity so the memoized MarkdownContent is not re-rendered by the
   // reader's ~60fps progress ticks. Only re-created when playback wiring, the
-  // section set, or the owning article changes.
+  // section set, the owning article, or the active section changes.
   const markdownReader = useMemo(
     () => ({
       onPlayFromHere: reader.playFromHere,
@@ -465,8 +471,9 @@ function FullArticle({
         )
         return index < 0 ? null : index
       },
+      currentSectionIndex: activeSectionIndex,
     }),
-    [reader.playFromHere, speechSections, item.slug]
+    [reader.playFromHere, speechSections, item.slug, activeSectionIndex]
   )
 
   useEffect(() => {

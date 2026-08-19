@@ -11,6 +11,7 @@ import { Children, isValidElement, lazy, memo, Suspense, useEffect, useState, ty
 import type { Components } from 'react-markdown'
 import { ItemType, type ItemTypeValue } from '@/lib/types'
 import type { ContentCategory } from '@/lib/og'
+import { cn } from '@/lib/utils'
 
 const MermaidDiagram = lazy(() => import('@/components/mermaid-diagram').then(m => ({ default: m.MermaidDiagram })))
 
@@ -26,6 +27,8 @@ export interface MarkdownReaderOptions {
   enabled?: boolean
   onPlayFromHere: (sectionIndex: number) => void
   getSectionIndex?: (heading: string) => number | null | undefined
+  /** Section index currently being read, so its heading can be highlighted. */
+  currentSectionIndex?: number | null
 }
 
 function getHeadingText(children: ReactNode): string {
@@ -70,10 +73,11 @@ export const MarkdownContent = memo(function MarkdownContent({ content, itemType
       const readerEnabled = reader?.enabled !== false && Boolean(reader?.onPlayFromHere)
       const resolvedIndex = reader?.getSectionIndex?.(heading)
       const sectionIndex = readerEnabled ? resolvedIndex : undefined
+      const isCurrent = sectionIndex != null && sectionIndex === reader?.currentSectionIndex
 
       return (
         <>
-          <h2 {...props}>{children}</h2>
+          <h2 {...props} className={cn(props.className, isCurrent && 'text-yellow-400 transition-colors')}>{children}</h2>
           {readerEnabled && sectionIndex !== undefined && sectionIndex !== null && (
             <SectionPlayFromHere
               sectionIndex={sectionIndex}

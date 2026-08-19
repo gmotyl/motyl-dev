@@ -29,6 +29,7 @@ function makeReader(overrides: Partial<{
   isPlaying: boolean
   progress: number
   currentTime: number
+  currentIndex: number
   playFromHere: (index: number) => void
 }> = {}) {
   return {
@@ -95,7 +96,9 @@ describe('ArticleWrapper markdown re-render churn', () => {
   })
 
   it('does not re-render MarkdownContent on a progress-only tick', () => {
-    readerReturn = makeReader({ isPlaying: false, progress: 0, currentTime: 0 })
+    // Baseline: already playing the same section. The active-section highlight is
+    // section-stable, so from here only genuine section changes may re-render.
+    readerReturn = makeReader({ isPlaying: true, progress: 0.42, currentTime: 3.1 })
     const { rerender } = render(
       <ArticleWrapper article={article} translatePrompt="prompt" />,
     )
@@ -104,19 +107,35 @@ describe('ArticleWrapper markdown re-render churn', () => {
     expect(rendersAfterMount).toBeGreaterThan(0)
     const readerAtMount = h.readerProps[rendersAfterMount - 1]
 
-    // Progress tick: new reader state object (isPlaying/progress/currentTime
-    // change) but playFromHere identity preserved — exactly what the rAF loop
-    // produces during playback.
-    readerReturn = makeReader({ isPlaying: true, progress: 0.42, currentTime: 3.1 })
+    // Progress tick: new reader state object (progress/currentTime change) but
+    // playFromHere identity AND currentIndex preserved — exactly what the rAF
+    // loop produces during playback of one section.
+    readerReturn = makeReader({ isPlaying: true, progress: 0.77, currentTime: 6.2 })
     rerender(<ArticleWrapper article={article} translatePrompt="prompt" />)
 
     // A second progress tick, to be thorough.
-    readerReturn = makeReader({ isPlaying: true, progress: 0.77, currentTime: 6.2 })
+    readerReturn = makeReader({ isPlaying: true, progress: 0.9, currentTime: 8.0 })
     rerender(<ArticleWrapper article={article} translatePrompt="prompt" />)
 
     expect(h.readerProps.length).toBe(rendersAfterMount)
     // And the reader options object identity is stable across those ticks.
     expect(h.readerProps[h.readerProps.length - 1]).toBe(readerAtMount)
+  })
+
+  it('re-renders MarkdownContent when the active section advances', () => {
+    readerReturn = makeReader({ isPlaying: true, progress: 0.5, currentIndex: 0 })
+    const { rerender } = render(
+      <ArticleWrapper article={article} translatePrompt="prompt" />,
+    )
+    const rendersAfterMount = h.readerProps.length
+
+    // Section advance: currentIndex changes -> activeSectionIndex changes -> the
+    // memoized markdownReader identity changes -> MarkdownContent re-renders so
+    // the yellow current-section highlight moves.
+    readerReturn = makeReader({ isPlaying: true, progress: 0.1, currentIndex: 1 })
+    rerender(<ArticleWrapper article={article} translatePrompt="prompt" />)
+
+    expect(h.readerProps.length).toBe(rendersAfterMount + 1)
   })
 
   it('does re-render MarkdownContent when playFromHere identity changes', () => {

@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MarkdownContent } from './markdown-content'
 
 // Guards the performance contract: MarkdownContent must be wrapped in React.memo
@@ -11,5 +12,52 @@ describe('MarkdownContent memoization', () => {
     expect((MarkdownContent as unknown as { $$typeof?: symbol }).$$typeof).toBe(
       Symbol.for('react.memo'),
     )
+  })
+})
+
+describe('MarkdownContent current-section highlight', () => {
+  beforeEach(() => {
+    // The component fetches TRANSLATE_PROMPT.md on mount; keep it quiet.
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ text: () => Promise.resolve('') })))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  const content = '## First section\n\nFirst text.\n\n## Second section\n\nSecond text.'
+  const getSectionIndex = (heading: string) =>
+    heading === 'First section' ? 0 : heading === 'Second section' ? 1 : null
+
+  it('highlights the current section heading in yellow and leaves others plain', () => {
+    render(
+      <MarkdownContent
+        content={content}
+        reader={{
+          onPlayFromHere: vi.fn(),
+          getSectionIndex,
+          currentSectionIndex: 0,
+        }}
+      />,
+    )
+
+    expect(screen.getByRole('heading', { level: 2, name: 'First section' })).toHaveClass('text-yellow-400')
+    expect(screen.getByRole('heading', { level: 2, name: 'Second section' })).not.toHaveClass('text-yellow-400')
+  })
+
+  it('does not highlight any heading when no section is active', () => {
+    render(
+      <MarkdownContent
+        content={content}
+        reader={{
+          onPlayFromHere: vi.fn(),
+          getSectionIndex,
+          currentSectionIndex: null,
+        }}
+      />,
+    )
+
+    expect(screen.getByRole('heading', { level: 2, name: 'First section' })).not.toHaveClass('text-yellow-400')
+    expect(screen.getByRole('heading', { level: 2, name: 'Second section' })).not.toHaveClass('text-yellow-400')
   })
 })

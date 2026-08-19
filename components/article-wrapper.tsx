@@ -57,14 +57,20 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
       ? headings.find((heading) => heading.id === headingToId(title))
       : undefined)
       ?? headings.filter((heading) => stripMarkdown(heading.textContent ?? '') === title)[occurrence]
-    target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    target?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }, [speechSections])
 
   const reader = useContinuousReader(speechSections, { onItemChange: scrollToSection })
 
+  // Section-stable: only changes on section advance / play / pause, NOT on the
+  // ~60fps progress ticks, so passing it to the memoized MarkdownContent below
+  // does not reintroduce 60fps re-renders.
+  const readingActive = reader.isPlaying || reader.isBuffering || (reader.progress > 0 && reader.progress < 100)
+  const activeSectionIndex = readingActive ? reader.currentIndex : null
+
   // Stable identity so the memoized MarkdownContent is not re-rendered by the
-  // reader's ~60fps progress ticks. Only re-created when playback wiring or the
-  // section set actually changes.
+  // reader's ~60fps progress ticks. Only re-created when playback wiring, the
+  // section set, or the active section actually changes.
   const markdownReader = useMemo(
     () => ({
       onPlayFromHere: reader.playFromHere,
@@ -74,8 +80,9 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
         )
         return index < 0 ? null : index
       },
+      currentSectionIndex: activeSectionIndex,
     }),
-    [reader.playFromHere, speechSections]
+    [reader.playFromHere, speechSections, activeSectionIndex]
   )
 
   return (

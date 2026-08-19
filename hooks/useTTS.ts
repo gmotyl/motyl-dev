@@ -64,6 +64,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   const isPlayingRef = useRef(false)
   const currentChunkIndexRef = useRef(0)
   const voiceRef = useRef<string | null>(null)
+  // Last integer percent emitted to setState, so progress-driven re-renders fire
+  // at most ~1/percent instead of on every ~60fps rAF tick (hover flicker fix).
+  const lastEmittedPctRef = useRef(-1)
 
   // Buffer cache: pre-fetched AudioBuffers keyed by chunk index
   const bufferCacheRef = useRef<Map<number, AudioBuffer>>(new Map())
@@ -158,14 +161,24 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     const currentProgress = completedChars + currentChunkChars * chunkProgress
     const totalProgress = (currentProgress / totalCharsRef.current) * 100
 
-    setState((prev) => ({
-      ...prev,
-      progress: Math.min(totalProgress, 100),
-      currentTime: prev.totalEstimatedTime * (totalProgress / 100),
-      currentChunkIndex: currentChunkIndexRef.current,
-    }))
+    const clamped = Math.min(totalProgress, 100)
+    // Emit progress to callers EVERY frame — the reader's prefetch threshold
+    // depends on it.
+    onProgress?.(clamped)
 
-    onProgress?.(Math.min(totalProgress, 100))
+    // Only re-render (setState) when the rounded percent actually changes,
+    // cutting progress-driven re-renders from ~60/sec to ~1 per 1%. This keeps
+    // the backdrop-blur reader bar from re-rendering at 60fps (hover flicker).
+    const pct = Math.round(clamped)
+    if (pct !== lastEmittedPctRef.current) {
+      lastEmittedPctRef.current = pct
+      setState((prev) => ({
+        ...prev,
+        progress: clamped,
+        currentTime: prev.totalEstimatedTime * (clamped / 100),
+        currentChunkIndex: currentChunkIndexRef.current,
+      }))
+    }
 
     if (isPlayingRef.current) {
       animationFrameRef.current = requestAnimationFrame(updateProgress)
@@ -301,6 +314,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
     voiceRef.current = voice || null
     isPlayingRef.current = true
+    lastEmittedPctRef.current = -1
     const generation = requestGenerationRef.current + 1
     requestGenerationRef.current = generation
     const abortController = new AbortController()
@@ -397,6 +411,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     pauseOffsetRef.current = 0
     bufferCacheRef.current.clear()
     fetchingRef.current.clear()
+    lastEmittedPctRef.current = -1
 
     setState({
       isPlaying: false,
