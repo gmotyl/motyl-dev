@@ -205,3 +205,36 @@ describe('useTTS replay with a cached (shared) synthesis buffer', () => {
     expect(result.current.isPlaying).toBe(true)
   })
 })
+
+describe('useTTS units option', () => {
+  it('plays the provided units in order instead of length-chunking the content', async () => {
+    vi.mocked(synthesizeSpeech).mockClear()
+    const units = ['Title unit', 'TLDR unit here.', 'Body chunk text.']
+
+    const { result } = renderHook(() =>
+      useTTS('prepared flattened content that would otherwise be one chunk', { units })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(sequence).toContain('start'))
+
+    // First synthesis is the tiny title unit, not the whole content.
+    expect(vi.mocked(synthesizeSpeech).mock.calls[0][0]).toBe('Title unit')
+    expect(result.current.totalChunks).toBe(3)
+  })
+
+  it('falls back to length-chunking when units is empty or omitted', async () => {
+    vi.mocked(synthesizeSpeech).mockClear()
+
+    const { result } = renderHook(() => useTTS('Just one sentence.', { units: [] }))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(sequence).toContain('start'))
+
+    expect(vi.mocked(synthesizeSpeech).mock.calls[0][0]).toBe('Just one sentence.')
+  })
+})

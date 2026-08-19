@@ -18,6 +18,14 @@ export interface TTSState {
 export interface UseTTSOptions {
   voice?: string
   /**
+   * Pre-split speech units for `content`, in play order (title → TLDR → body
+   * chunks — see `splitIntoSpeechUnits`). When provided and non-empty, these are
+   * used verbatim as the chunk list instead of `splitIntoChunks(content)`, so
+   * the first spoken unit is tiny (fast-start) and matches the strings the
+   * prebuffer ladder warms. Must correspond to `content` (same section).
+   */
+  units?: string[]
+  /**
    * Fired on EVERY requestAnimationFrame tick during playback (~60Hz) with the
    * 0–100 progress percent — intentionally NOT throttled, so the continuous
    * reader's prefetch threshold sees continuous progress. Keep the handler
@@ -41,7 +49,12 @@ const detectLanguage = detectLanguageFromContent
 const BUFFER_AHEAD = 2
 
 export function useTTS(content: string, options: UseTTSOptions = {}) {
-  const { voice, onProgress, onComplete, onError } = options
+  const { voice, units, onProgress, onComplete, onError } = options
+
+  // Latest units, read inside play() without adding array-identity churn to its
+  // deps (the caller passes a fresh array per render).
+  const unitsRef = useRef<string[] | undefined>(units)
+  unitsRef.current = units
 
   const [state, setState] = useState<TTSState>({
     isPlaying: false,
@@ -320,9 +333,15 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   const play = useCallback(async () => {
     if (isPlayingRef.current) return
 
-    // Initialize chunks on first play or after completion reset
+    // Initialize chunks on first play or after completion reset. Prefer
+    // pre-split speech units (title → TLDR → body) when the caller supplies
+    // them; otherwise fall back to length-based chunking of the raw content.
     if (chunksRef.current.length === 0) {
-      chunksRef.current = splitIntoChunks(content)
+      const providedUnits = unitsRef.current
+      chunksRef.current =
+        providedUnits && providedUnits.length > 0
+          ? providedUnits
+          : splitIntoChunks(content)
       charCountsRef.current = chunksRef.current.map((c) => c.length)
       totalCharsRef.current = charCountsRef.current.reduce((a, b) => a + b, 0)
 
