@@ -13,6 +13,7 @@ import { ItemType } from '@/lib/types'
 import { getContentCategory } from '@/lib/og'
 import { prepareSpeechSections, stripMarkdown, type SpeechSection } from '@/lib/tts-speech'
 import { headingToId } from '@/lib/heading-slug'
+import { scrollHeadingIntoView } from '@/lib/scroll-heading'
 import { detectLanguageFromHashtags } from '@/lib/tts'
 import { useSectionVisibility } from '@/hooks/use-section-visibility'
 
@@ -57,7 +58,7 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
       ? headings.find((heading) => heading.id === headingToId(title))
       : undefined)
       ?? headings.filter((heading) => stripMarkdown(heading.textContent ?? '') === title)[occurrence]
-    target?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    scrollHeadingIntoView(target)
   }, [speechSections])
 
   const reader = useContinuousReader(speechSections, { onItemChange: scrollToSection })

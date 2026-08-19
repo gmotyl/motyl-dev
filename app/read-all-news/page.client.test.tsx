@@ -5,6 +5,12 @@ import type { Mock } from 'vitest'
 import ReadAllNewsPage from './page.client'
 import { ItemType } from '@/lib/types'
 
+// The reader no longer calls scrollIntoView; it delegates to this helper.
+// Mock it so scroll-order tests can record which heading scrolled (el.id)
+// and assert scroll fires before playback.
+const { scrollHeadingIntoView } = vi.hoisted(() => ({ scrollHeadingIntoView: vi.fn() }))
+vi.mock('@/lib/scroll-heading', () => ({ scrollHeadingIntoView }))
+
 const mockUseContinuousReader = vi.fn()
 const playbackEvents: string[] = []
 type ReaderItem = { sourceSlug: string; title: string }
@@ -153,6 +159,10 @@ describe('ReadAllNewsPage continuous reader', () => {
     playbackEvents.length = 0
     intersectionCallback = undefined
     mockUseContinuousReader.mockReset()
+    scrollHeadingIntoView.mockReset()
+    scrollHeadingIntoView.mockImplementation((el?: HTMLElement | null) => {
+      if (el) playbackEvents.push(`scroll:${el.id}`)
+    })
   })
 
   it('queues Read All News sections in rendered order', () => {
@@ -182,10 +192,6 @@ describe('ReadAllNewsPage continuous reader', () => {
   })
 
   it('scrolls the selected section before direct playback', async () => {
-    HTMLElement.prototype.scrollIntoView = function (this: HTMLElement) {
-      playbackEvents.push(`scroll:${this.id}`)
-    }
-
     render(<ReadAllNewsPage initialItems={items(1)} totalItems={1} />)
 
     latestReaderHarness.play.mockImplementation(() => playbackEvents.push('play'))
@@ -195,10 +201,6 @@ describe('ReadAllNewsPage continuous reader', () => {
   })
 
   it('scrolls the selected heading before direct section start', async () => {
-    HTMLElement.prototype.scrollIntoView = function (this: HTMLElement) {
-      playbackEvents.push(`scroll:${this.id}`)
-    }
-
     render(<ReadAllNewsPage initialItems={items(1)} totalItems={1} />)
 
     latestReaderHarness.play.mockImplementation(() => playbackEvents.push('play'))
@@ -209,10 +211,6 @@ describe('ReadAllNewsPage continuous reader', () => {
   })
 
   it('scrolls the next heading before playback', async () => {
-    HTMLElement.prototype.scrollIntoView = function (this: HTMLElement) {
-      playbackEvents.push(`scroll:${this.id}`)
-    }
-
     render(<ReadAllNewsPage initialItems={items(1)} totalItems={1} />)
 
     latestReaderHarness.play.mockImplementation(() => playbackEvents.push('play'))
@@ -223,10 +221,6 @@ describe('ReadAllNewsPage continuous reader', () => {
   })
 
   it('scrolls the next heading before automatically advancing playback', async () => {
-    HTMLElement.prototype.scrollIntoView = function (this: HTMLElement) {
-      playbackEvents.push(`scroll:${this.id}`)
-    }
-
     render(<ReadAllNewsPage initialItems={items(1)} totalItems={1} />)
 
     latestReaderHarness.play.mockImplementation(() => playbackEvents.push('play'))
