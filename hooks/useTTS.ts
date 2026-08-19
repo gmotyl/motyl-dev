@@ -198,9 +198,14 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       }
 
       const audioContext = getAudioContext()
-      if (audioContext.state === 'suspended') {
-        await audioContext.resume()
-      }
+      // Resume unconditionally. `pause()`/`stop()` call `suspend()` without
+      // awaiting it, so on the play-from-here path the suspend can still be
+      // in flight here with `state` reading 'running'. A conditional resume
+      // would then be skipped and the pending suspend would freeze the audio.
+      // WebAudio processes suspend/resume control messages in call order, so a
+      // resume queued after an in-flight suspend leaves the context running;
+      // resume() on an already-running context is a no-op that resolves at once.
+      await audioContext.resume()
 
       if (generation !== requestGenerationRef.current || signal.aborted) return
 
