@@ -5,7 +5,7 @@
 // every motyl-* cache from older versions, so stale HTML/assets cached by
 // a previous SW cannot outlive a deploy of this file.
 
-const CACHE_VERSION = 'motyl-v2.0.0';
+const CACHE_VERSION = 'motyl-v2.1.0';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const ARTICLE_CACHE = `${CACHE_VERSION}-articles`;
@@ -76,6 +76,15 @@ self.addEventListener('fetch', (event) => {
 
   // Skip chrome-extension and other non-http(s) requests
   if (!url.protocol.startsWith('http')) {
+    return;
+  }
+
+  // Dev (localhost): bypass the SW entirely. Cache-first on /_next/ hashed
+  // chunks silently serves stale JS after every rebuild, masking code changes
+  // and breaking HMR — the source of repeated "the fix isn't showing" bugs.
+  // Returning without respondWith lets the browser fetch normally, so the
+  // running dev server is always the source of truth.
+  if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
     return;
   }
 
