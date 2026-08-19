@@ -75,6 +75,9 @@ const spellOutAcronyms = (text: string): string =>
       .join('-')
   )
 
+export const normalizeVersionNumbers = (text: string): string =>
+  text.replace(/\d+(?:\.\d+){2,}/g, (token) => token.replace(/\./g, ' '))
+
 const stripFrontmatter = (text: string): string =>
   text.replace(/^---\s*\r?\n[\s\S]*?\r?\n---\s*(?:\r?\n|$)/, '')
 
@@ -107,7 +110,9 @@ export const stripMarkdown = (text: string): string =>
     .trim()
 
 export function prepareSpeechText(markdown: string): string {
-  return spellOutAcronyms(applyTechnicalNameMappings(stripMarkdown(markdown)))
+  return spellOutAcronyms(
+    applyTechnicalNameMappings(normalizeVersionNumbers(stripMarkdown(markdown)))
+  )
 }
 
 export function splitReviewedSections(sources: readonly SpeechSource[]): ReviewedSection[] {

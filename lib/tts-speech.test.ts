@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  normalizeVersionNumbers,
   prepareSpeechSections,
   prepareSpeechText,
   replaceWholeWordMappings,
@@ -60,7 +61,31 @@ Druga treść.`,
   })
 })
 
+describe('normalizeVersionNumbers', () => {
+  it('normalizeVersionNumbers reads 3.6.3 as space-separated numbers', () => {
+    expect(normalizeVersionNumbers('3.6.3')).toBe('3 6 3')
+    expect(normalizeVersionNumbers('10.6.3')).toBe('10 6 3')
+  })
+
+  it('normalizeVersionNumbers handles four-part versions', () => {
+    expect(normalizeVersionNumbers('1.2.3.4')).toBe('1 2 3 4')
+  })
+
+  it('normalizeVersionNumbers leaves two-part decimals unchanged', () => {
+    expect(normalizeVersionNumbers('5.6')).toBe('5.6')
+    expect(normalizeVersionNumbers('16.3')).toBe('16.3')
+    expect(normalizeVersionNumbers('Next.js 16.3')).toBe('Next.js 16.3')
+    expect(normalizeVersionNumbers('42')).toBe('42')
+    expect(normalizeVersionNumbers('Wersja 3,14 liczby')).toBe('Wersja 3,14 liczby')
+  })
+})
+
 describe('prepareSpeechText', () => {
+  it('prepareSpeechText normalizes semver version numbers', () => {
+    expect(prepareSpeechText('Wersja 3.6.3 wychodzi')).toContain('3 6 3')
+  })
+
+
   it('prepares spoken text without tags Markdown syntax or URL destinations', () => {
     const source = `---
 title: Ukryty tytuł
