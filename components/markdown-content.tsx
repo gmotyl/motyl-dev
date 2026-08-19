@@ -7,7 +7,7 @@ import * as emoji from 'node-emoji'
 import { ShareAIButton } from '@/components/share-ai-button'
 import { VoteButton } from '@/components/vote-button'
 import { SectionPlayFromHere } from '@/components/section-play-from-here'
-import { Children, isValidElement, lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
+import { Children, isValidElement, lazy, memo, Suspense, useEffect, useState, type ReactNode } from 'react'
 import type { Components } from 'react-markdown'
 import { ItemType, type ItemTypeValue } from '@/lib/types'
 import type { ContentCategory } from '@/lib/og'
@@ -41,7 +41,12 @@ function getHeadingText(children: ReactNode): string {
     .trim()
 }
 
-export function MarkdownContent({ content, itemType, category, patternName, reader }: MarkdownContentProps) {
+// Memoized so the host reader component's ~60fps progress ticks (which re-render
+// the article subtree) do not re-render react-markdown + the SectionPlayFromHere
+// buttons. Callers must pass a referentially stable `reader` prop (see call sites)
+// for this to take effect. memo only blocks re-render from unchanged parent props,
+// so the internal summaryPrompt state/effect below still works normally.
+export const MarkdownContent = memo(function MarkdownContent({ content, itemType, category, patternName, reader }: MarkdownContentProps) {
   const isNews = itemType === ItemType.News
   const [summaryPrompt, setSummaryPrompt] = useState<string>('')
 
@@ -151,4 +156,4 @@ export function MarkdownContent({ content, itemType, category, patternName, read
       </ReactMarkdown>
     </div>
   )
-}
+})

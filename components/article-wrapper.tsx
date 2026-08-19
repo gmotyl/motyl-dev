@@ -62,6 +62,22 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
 
   const reader = useContinuousReader(speechSections, { onItemChange: scrollToSection })
 
+  // Stable identity so the memoized MarkdownContent is not re-rendered by the
+  // reader's ~60fps progress ticks. Only re-created when playback wiring or the
+  // section set actually changes.
+  const markdownReader = useMemo(
+    () => ({
+      onPlayFromHere: reader.playFromHere,
+      getSectionIndex: (heading: string) => {
+        const index = speechSections.findIndex(
+          (section) => stripMarkdown(section.title) === stripMarkdown(heading)
+        )
+        return index < 0 ? null : index
+      },
+    }),
+    [reader.playFromHere, speechSections]
+  )
+
   return (
     <>
       {isNews && isHydrated && (
@@ -103,15 +119,7 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
           itemType={article.itemType}
           category={getContentCategory(article.hashtags ?? [])}
           patternName={article.sourcePattern}
-          reader={{
-            onPlayFromHere: reader.playFromHere,
-            getSectionIndex: (heading) => {
-              const index = speechSections.findIndex(
-                (section) => stripMarkdown(section.title) === stripMarkdown(heading)
-              )
-              return index < 0 ? null : index
-            },
-          }}
+          reader={markdownReader}
         />
       ) : (
         <MarkdownWithCTA

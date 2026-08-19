@@ -447,7 +447,27 @@ function FullArticle({
   const bottomRef = useRef<HTMLDivElement>(null)
   const hasTriggeredRef = useRef(false)
 
-  const filteredContent = filterHiddenSections(item.content, hiddenSections)
+  const filteredContent = useMemo(
+    () => filterHiddenSections(item.content, hiddenSections),
+    [item.content, hiddenSections]
+  )
+
+  // Stable identity so the memoized MarkdownContent is not re-rendered by the
+  // reader's ~60fps progress ticks. Only re-created when playback wiring, the
+  // section set, or the owning article changes.
+  const markdownReader = useMemo(
+    () => ({
+      onPlayFromHere: reader.playFromHere,
+      getSectionIndex: (heading: string) => {
+        const index = speechSections.findIndex(
+          (section) => section.sourceSlug === item.slug
+            && stripMarkdown(section.title) === stripMarkdown(heading)
+        )
+        return index < 0 ? null : index
+      },
+    }),
+    [reader.playFromHere, speechSections, item.slug]
+  )
 
   useEffect(() => {
     if (hasTriggeredRef.current || !bottomRef.current) return
@@ -491,16 +511,7 @@ function FullArticle({
         content={filteredContent}
         itemType={ItemType.News}
         patternName={item.sourcePattern}
-        reader={{
-          onPlayFromHere: reader.playFromHere,
-          getSectionIndex: (heading) => {
-            const index = speechSections.findIndex(
-              (section) => section.sourceSlug === item.slug
-                && stripMarkdown(section.title) === stripMarkdown(heading)
-            )
-            return index < 0 ? null : index
-          },
-        }}
+        reader={markdownReader}
       />
 
       {/* Bottom boundary marker for scroll tracking */}
