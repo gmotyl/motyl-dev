@@ -7,10 +7,13 @@ import * as emoji from 'node-emoji'
 import { ShareAIButton } from '@/components/share-ai-button'
 import { VoteButton } from '@/components/vote-button'
 import { SectionPlayFromHere } from '@/components/section-play-from-here'
-import { Children, isValidElement, lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
+import { Children, isValidElement, lazy, memo, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Components } from 'react-markdown'
+import GithubSlugger from 'github-slugger'
 import { ItemType, type ItemTypeValue } from '@/lib/types'
 import type { ContentCategory } from '@/lib/og'
+import { stripMarkdown } from '@/lib/tts-speech'
+import { cn } from '@/lib/utils'
 
 const MermaidDiagram = lazy(() => import('@/components/mermaid-diagram').then(m => ({ default: m.MermaidDiagram })))
 
@@ -26,6 +29,14 @@ export interface MarkdownReaderOptions {
   enabled?: boolean
   onPlayFromHere: (sectionIndex: number) => void
   getSectionIndex?: (heading: string) => number | null | undefined
+  /** Section index currently being read, so its heading can be highlighted. */
+  currentSectionIndex?: number | null
+  /**
+   * rehype-slug id of the section currently being read. Preferred over
+   * currentSectionIndex for the highlight because it matches the same way the
+   * working scroll does (by element id), avoiding brittle heading-text matches.
+   */
+  currentSectionId?: string | null
 }
 
 function getHeadingText(children: ReactNode): string {
@@ -41,7 +52,12 @@ function getHeadingText(children: ReactNode): string {
     .trim()
 }
 
-export function MarkdownContent({ content, itemType, category, patternName, reader }: MarkdownContentProps) {
+// Memoized so the host reader component's ~60fps progress ticks (which re-render
+// the article subtree) do not re-render react-markdown + the SectionPlayFromHere
+// buttons. Callers must pass a referentially stable `reader` prop (see call sites)
+// for this to take effect. memo only blocks re-render from unchanged parent props,
+// so the internal summaryPrompt state/effect below still works normally.
+export const MarkdownContent = memo(function MarkdownContent({ content, itemType, category, patternName, reader }: MarkdownContentProps) {
   const isNews = itemType === ItemType.News
   const [summaryPrompt, setSummaryPrompt] = useState<string>('')
 
@@ -59,16 +75,55 @@ export function MarkdownContent({ content, itemType, category, patternName, read
   // Process emojis
   const contentWithEmojis = emoji.emojify(contentCleaned)
 
+  // Line ranges [start, end) each `##` section governs, keyed by the rehype-slug
+  // id of its heading. Lets a link be mapped to its enclosing section so it can
+  // be highlighted in lockstep with the section heading (the bottom "Link:" of
+  // the current section). A shared slugger mirrors rehype-slug's dedup so ids
+  // match the rendered <h2 id>. Computed on the same string react-markdown
+  // renders, so node.position line numbers line up.
+  const sectionRanges = useMemo(() => {
+    const slugger = new GithubSlugger()
+    const lines = contentWithEmojis.split('\n')
+    const ranges: { id: string; start: number; end: number }[] = []
+    let inFence = false
+    lines.forEach((line, i) => {
+      // Toggle on both CommonMark fence styles (``` and ~~~) so a `##` line
+      // inside a fenced code block is never mistaken for a section boundary.
+      if (/^\s*(```|~~~)/.test(line)) {
+        inFence = !inFence
+        return
+      }
+      if (inFence) return
+      const match = /^(#{1,6})\s+(.+?)\s*$/.exec(line)
+      if (!match) return
+      const id = slugger.slug(stripMarkdown(match[2]))
+      if (match[1].length !== 2) return // only ## defines a reader section boundary
+      if (ranges.length > 0) ranges[ranges.length - 1].end = i + 1
+      ranges.push({ id, start: i + 1, end: Number.POSITIVE_INFINITY })
+    })
+    return ranges
+  }, [contentWithEmojis])
+
+  const isLinkInCurrentSection = (node: unknown): boolean => {
+    const line = (node as { position?: { start?: { line?: number } } } | undefined)?.position?.start?.line
+    if (line == null || reader?.currentSectionId == null) return false
+    const section = sectionRanges.find((range) => line >= range.start && line < range.end)
+    return section != null && section.id === reader.currentSectionId
+  }
+
   const components: Components = {
     h2: ({ children, ...props }) => {
       const heading = getHeadingText(children)
       const readerEnabled = reader?.enabled !== false && Boolean(reader?.onPlayFromHere)
       const resolvedIndex = reader?.getSectionIndex?.(heading)
       const sectionIndex = readerEnabled ? resolvedIndex : undefined
+      const isCurrent =
+        (reader?.currentSectionId != null && props.id === reader.currentSectionId) ||
+        (sectionIndex != null && sectionIndex === reader?.currentSectionIndex)
 
       return (
         <>
-          <h2 {...props}>{children}</h2>
+          <h2 {...props} className={cn(props.className, isCurrent && '!text-yellow-400 bg-yellow-400/10 rounded-md px-2 -mx-2 transition-colors')}>{children}</h2>
           {readerEnabled && sectionIndex !== undefined && sectionIndex !== null && (
             <SectionPlayFromHere
               sectionIndex={sectionIndex}
@@ -78,13 +133,15 @@ export function MarkdownContent({ content, itemType, category, patternName, read
         </>
       )
     },
-    a: ({ href, children, ...props }) => {
+    a: ({ href, children, node, ...props }) => {
       const isExternal = href?.startsWith('http://') || href?.startsWith('https://')
       const title = typeof children === 'string' ? children : ''
+      const linkIsCurrent = isLinkInCurrentSection(node)
+      const linkHighlight = linkIsCurrent && 'ring-2 ring-yellow-400/70 bg-yellow-400/10 rounded-md px-1 transition-colors'
 
       if (isExternal && summaryPrompt && isNews) {
         return (
-          <span className="inline-flex items-center gap-2 not-prose">
+          <span className={cn('inline-flex items-center gap-2 not-prose', linkHighlight)}>
             <VoteButton
               linkUrl={href!}
               title={title}
@@ -109,7 +166,7 @@ export function MarkdownContent({ content, itemType, category, patternName, read
         )
       }
 
-      return <a href={href} {...props}>{children}</a>
+      return <a href={href} {...props} className={cn(props.className, linkHighlight)}>{children}</a>
     },
     code: ({ className, children, ...props }) => {
       if (/language-mermaid/.test(className || '')) {
@@ -151,4 +208,4 @@ export function MarkdownContent({ content, itemType, category, patternName, read
       </ReactMarkdown>
     </div>
   )
-}
+})

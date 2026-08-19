@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import { Button } from '@/components/ui/button'
-import { ContinuousReaderControls } from '@/components/continuous-reader-controls'
+import { ReaderControlBar } from '@/components/reader-control-bar'
 import { MarkdownContent } from '@/components/markdown-content'
 import { filterHiddenSections, type SectionType } from '@/lib/section-filter'
 import { ItemType } from '@/lib/types'
@@ -18,6 +18,8 @@ import { useSectionVisibility } from '@/hooks/use-section-visibility'
 import { Copy, Check, Settings } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { prepareSpeechSections, stripMarkdown, type SpeechSection } from '@/lib/tts-speech'
+import { headingToId } from '@/lib/heading-slug'
+import { scrollHeadingIntoView } from '@/lib/scroll-heading'
 
 interface ReadAllNewsPageProps {
   initialItems: ContentItem[]
@@ -56,9 +58,14 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
       .slice(0, index)
       .filter((candidate) => candidate.sourceSlug === section.sourceSlug)
       .filter((candidate) => stripMarkdown(candidate.title) === title).length
-    const matches = Array.from(article?.querySelectorAll<HTMLElement>('h2') ?? [])
-      .filter((heading) => stripMarkdown(heading.textContent ?? '') === title)
-    matches[occurrence]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const headings = Array.from(article?.querySelectorAll<HTMLElement>('h2') ?? [])
+    // First occurrence carries the plain rehype-slug id; later duplicates get -1/-2
+    // suffixes, so fall back to textContent matching for those.
+    const target = (occurrence === 0
+      ? headings.find((heading) => heading.id === headingToId(title))
+      : undefined)
+      ?? headings.filter((heading) => stripMarkdown(heading.textContent ?? '') === title)[occurrence]
+    scrollHeadingIntoView(target)
   }, [speechSections])
 
   const reader = useContinuousReader(speechSections, { onItemChange: scrollToSection })
@@ -390,20 +397,16 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
       </div>
 
       {items.length > 0 && (
-        <div
-          data-reader-floating
-          className="fixed bottom-16 left-2 right-2 z-40 rounded-xl border border-border bg-background/95 p-2 shadow-2xl backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:bottom-6 sm:left-auto sm:right-4 sm:w-[min(42rem,calc(100vw-2rem))]"
-        >
-          <ContinuousReaderControls
-            isPlaying={reader.isPlaying}
-            isBuffering={reader.isBuffering}
-            markReadDisabled={scrolledPastSlugs.size === 0}
-            canNext={reader.currentIndex < speechSections.length - 1}
-            onMarkRead={() => { setPendingNavUrl(null); setDialogOpen(true) }}
-            onPlayPause={handlePlayPause}
-            onNext={reader.next}
-          />
-        </div>
+        <ReaderControlBar
+          isPlaying={reader.isPlaying}
+          isBuffering={reader.isBuffering}
+          markReadDisabled={scrolledPastSlugs.size === 0}
+          canPlay={speechSections.length > 0}
+          canNext={reader.canNext}
+          onMarkRead={() => { setPendingNavUrl(null); setDialogOpen(true) }}
+          onPlayPause={handlePlayPause}
+          onNext={reader.next}
+        />
       )}
 
       {/* Section visibility dialog */}
@@ -445,7 +448,47 @@ function FullArticle({
   const bottomRef = useRef<HTMLDivElement>(null)
   const hasTriggeredRef = useRef(false)
 
-  const filteredContent = filterHiddenSections(item.content, hiddenSections)
+  const filteredContent = useMemo(
+    () => filterHiddenSections(item.content, hiddenSections),
+    [item.content, hiddenSections]
+  )
+
+  // Section-stable: only changes on section advance / play / pause, NOT on the
+  // ~60fps progress ticks. reader.currentIndex uses the same global section
+  // scheme as getSectionIndex below.
+  const readingActive = reader.isPlaying || reader.isBuffering || (reader.progress > 0 && reader.progress < 100)
+  const activeSectionIndex = readingActive ? reader.currentIndex : null
+
+  // Highlight by heading id (mirrors the working scroll, which matches by
+  // element id). Only highlight when the active section belongs to this article.
+  // Section-stable: changes only on section advance, not on 60fps progress ticks.
+  const activeSection = activeSectionIndex != null ? speechSections[activeSectionIndex] : undefined
+  const currentSectionId = activeSection && activeSection.sourceSlug === item.slug
+    ? headingToId(stripMarkdown(activeSection.title))
+    : null
+
+  // Stable identity so the memoized MarkdownContent is not re-rendered by the
+  // reader's ~60fps progress ticks. Highlight is keyed ONLY by `currentSectionId`
+  // (null for every article except the one owning the active section), NOT by the
+  // global `activeSectionIndex`. This is deliberate: depending on activeSectionIndex
+  // would change this memo for EVERY article on every section advance, forcing all
+  // articles' react-markdown to re-render synchronously (a ~278ms main-thread block
+  // on read-all-news that instantly follows "Play from here"). Keyed on
+  // currentSectionId, only the owning article re-renders.
+  const markdownReader = useMemo(
+    () => ({
+      onPlayFromHere: reader.playFromHere,
+      getSectionIndex: (heading: string) => {
+        const index = speechSections.findIndex(
+          (section) => section.sourceSlug === item.slug
+            && stripMarkdown(section.title) === stripMarkdown(heading)
+        )
+        return index < 0 ? null : index
+      },
+      currentSectionId,
+    }),
+    [reader.playFromHere, speechSections, item.slug, currentSectionId]
+  )
 
   useEffect(() => {
     if (hasTriggeredRef.current || !bottomRef.current) return
@@ -489,16 +532,7 @@ function FullArticle({
         content={filteredContent}
         itemType={ItemType.News}
         patternName={item.sourcePattern}
-        reader={{
-          onPlayFromHere: reader.playFromHere,
-          getSectionIndex: (heading) => {
-            const index = speechSections.findIndex(
-              (section) => section.sourceSlug === item.slug
-                && stripMarkdown(section.title) === stripMarkdown(heading)
-            )
-            return index < 0 ? null : index
-          },
-        }}
+        reader={markdownReader}
       />
 
       {/* Bottom boundary marker for scroll tracking */}

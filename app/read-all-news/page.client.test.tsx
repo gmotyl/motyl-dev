@@ -5,6 +5,12 @@ import type { Mock } from 'vitest'
 import ReadAllNewsPage from './page.client'
 import { ItemType } from '@/lib/types'
 
+// The reader no longer calls scrollIntoView; it delegates to this helper.
+// Mock it so scroll-order tests can record which heading scrolled (el.id)
+// and assert scroll fires before playback.
+const { scrollHeadingIntoView } = vi.hoisted(() => ({ scrollHeadingIntoView: vi.fn() }))
+vi.mock('@/lib/scroll-heading', () => ({ scrollHeadingIntoView }))
+
 const mockUseContinuousReader = vi.fn()
 const playbackEvents: string[] = []
 type ReaderItem = { sourceSlug: string; title: string }
@@ -73,15 +79,17 @@ vi.mock('@/hooks/use-continuous-reader', () => ({
 }))
 
 vi.mock('@/components/continuous-reader-controls', () => ({
-  ContinuousReaderControls: ({ onPlayPause, onNext, onMarkRead, canNext = true }: {
+  ContinuousReaderControls: ({ onPlayPause, onNext, onMarkRead, canNext = true, canPlay = true, markReadDisabled = false }: {
     onPlayPause: () => void
     onNext: () => void
     onMarkRead?: () => void
     canNext?: boolean
+    canPlay?: boolean
+    markReadDisabled?: boolean
   }) => (
     <div role="group" aria-label="Continuous reader controls">
-      <button onClick={onMarkRead}>Mark read</button>
-      <button onClick={onPlayPause}>Play</button>
+      <button onClick={onMarkRead} disabled={markReadDisabled}>Mark read</button>
+      <button onClick={onPlayPause} disabled={!canPlay}>Play</button>
       <button onClick={onNext} disabled={!canNext}>Next</button>
     </div>
   ),
@@ -151,6 +159,10 @@ describe('ReadAllNewsPage continuous reader', () => {
     playbackEvents.length = 0
     intersectionCallback = undefined
     mockUseContinuousReader.mockReset()
+    scrollHeadingIntoView.mockReset()
+    scrollHeadingIntoView.mockImplementation((el?: HTMLElement | null) => {
+      if (el) playbackEvents.push(`scroll:${el.id}`)
+    })
   })
 
   it('queues Read All News sections in rendered order', () => {
@@ -180,10 +192,6 @@ describe('ReadAllNewsPage continuous reader', () => {
   })
 
   it('scrolls the selected section before direct playback', async () => {
-    HTMLElement.prototype.scrollIntoView = function (this: HTMLElement) {
-      playbackEvents.push(`scroll:${this.id}`)
-    }
-
     render(<ReadAllNewsPage initialItems={items(1)} totalItems={1} />)
 
     latestReaderHarness.play.mockImplementation(() => playbackEvents.push('play'))
@@ -193,10 +201,6 @@ describe('ReadAllNewsPage continuous reader', () => {
   })
 
   it('scrolls the selected heading before direct section start', async () => {
-    HTMLElement.prototype.scrollIntoView = function (this: HTMLElement) {
-      playbackEvents.push(`scroll:${this.id}`)
-    }
-
     render(<ReadAllNewsPage initialItems={items(1)} totalItems={1} />)
 
     latestReaderHarness.play.mockImplementation(() => playbackEvents.push('play'))
@@ -207,10 +211,6 @@ describe('ReadAllNewsPage continuous reader', () => {
   })
 
   it('scrolls the next heading before playback', async () => {
-    HTMLElement.prototype.scrollIntoView = function (this: HTMLElement) {
-      playbackEvents.push(`scroll:${this.id}`)
-    }
-
     render(<ReadAllNewsPage initialItems={items(1)} totalItems={1} />)
 
     latestReaderHarness.play.mockImplementation(() => playbackEvents.push('play'))
@@ -221,10 +221,6 @@ describe('ReadAllNewsPage continuous reader', () => {
   })
 
   it('scrolls the next heading before automatically advancing playback', async () => {
-    HTMLElement.prototype.scrollIntoView = function (this: HTMLElement) {
-      playbackEvents.push(`scroll:${this.id}`)
-    }
-
     render(<ReadAllNewsPage initialItems={items(1)} totalItems={1} />)
 
     latestReaderHarness.play.mockImplementation(() => playbackEvents.push('play'))
@@ -248,5 +244,27 @@ describe('ReadAllNewsPage continuous reader', () => {
       'news-1', 'news-1', 'news-2', 'news-2',
     ]))
     expect(screen.getByText('News 2')).toBeInTheDocument()
+  })
+
+  it('Read All News renders a single floating reader bar whose Next calls reader.next', async () => {
+    render(<ReadAllNewsPage initialItems={items(2)} totalItems={2} />)
+
+    expect(document.querySelectorAll('[data-reader-floating]')).toHaveLength(1)
+
+    await userEvent.click(
+      within(screen.getByRole('group', { name: 'Continuous reader controls' }))
+        .getByRole('button', { name: 'Next' }),
+    )
+    expect(latestReaderHarness.next).toHaveBeenCalled()
+  })
+
+  it('Read All News Mark read stays disabled until an article is scrolled past', () => {
+    render(<ReadAllNewsPage initialItems={items(1)} totalItems={1} />)
+
+    expect(screen.getByRole('button', { name: 'Mark read' })).toBeDisabled()
+
+    act(() => intersectionCallback?.([{ isIntersecting: true }]))
+
+    expect(screen.getByRole('button', { name: 'Mark read' })).toBeEnabled()
   })
 })

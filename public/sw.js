@@ -5,7 +5,7 @@
 // every motyl-* cache from older versions, so stale HTML/assets cached by
 // a previous SW cannot outlive a deploy of this file.
 
-const CACHE_VERSION = 'motyl-v2.0.0';
+const CACHE_VERSION = 'motyl-v2.1.1';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const ARTICLE_CACHE = `${CACHE_VERSION}-articles`;
@@ -64,6 +64,19 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// True for hostnames served by a local dev server, where the SW must never
+// serve cached assets. Matches localhost + *.localhost, loopback/any-bind IPs,
+// and RFC1918 private-LAN ranges (10/8, 172.16-31/12, 192.168/16, 169.254/16).
+function isDevHost(hostname) {
+  if (hostname === 'localhost' || hostname.endsWith('.localhost')) return true;
+  if (hostname === '127.0.0.1' || hostname === '0.0.0.0' || hostname === '::1') return true;
+  if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)) return true;
+  if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(hostname)) return true;
+  if (/^169\.254\.\d{1,3}\.\d{1,3}$/.test(hostname)) return true;
+  if (/^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/.test(hostname)) return true;
+  return false;
+}
+
 // Fetch event - implement caching strategies
 self.addEventListener('fetch', (event) => {
   const { request } = event;
@@ -76,6 +89,17 @@ self.addEventListener('fetch', (event) => {
 
   // Skip chrome-extension and other non-http(s) requests
   if (!url.protocol.startsWith('http')) {
+    return;
+  }
+
+  // Dev hosts: bypass the SW entirely. Cache-first on /_next/ hashed chunks
+  // silently serves stale JS after every rebuild, masking code changes and
+  // breaking HMR — the source of repeated "the fix isn't showing" bugs.
+  // Returning without respondWith lets the browser fetch normally, so the
+  // running dev server is always the source of truth. Covers localhost and its
+  // subdomains (e.g. api.localhost), the loopback/any-bind IPs, and private-LAN
+  // addresses (so testing on a phone over the LAN also gets fresh JS).
+  if (isDevHost(url.hostname)) {
     return;
   }
 

@@ -2,16 +2,18 @@
 
 import { useCallback, useMemo } from 'react'
 import { ArticleSectionToggle } from '@/components/article-section-toggle'
-import { ContinuousReaderControls } from '@/components/continuous-reader-controls'
+import { ReaderControlBar } from '@/components/reader-control-bar'
 import { MarkdownContent } from '@/components/markdown-content'
 import { MarkdownWithCTA } from '@/components/markdown-with-cta'
 import { ShareAIButton } from '@/components/share-ai-button'
 import { TTSPlayer } from '@/components/tts-player'
 import { useContinuousReader } from '@/hooks/use-continuous-reader'
-import { filterHiddenSections, type SectionType } from '@/lib/section-filter'
+import { filterHiddenSections } from '@/lib/section-filter'
 import { ItemType } from '@/lib/types'
 import { getContentCategory } from '@/lib/og'
 import { prepareSpeechSections, stripMarkdown, type SpeechSection } from '@/lib/tts-speech'
+import { headingToId } from '@/lib/heading-slug'
+import { scrollHeadingIntoView } from '@/lib/scroll-heading'
 import { detectLanguageFromHashtags } from '@/lib/tts'
 import { useSectionVisibility } from '@/hooks/use-section-visibility'
 
@@ -49,12 +51,46 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
     const occurrence = speechSections
       .slice(0, index)
       .filter((candidate) => stripMarkdown(candidate.title) === title).length
-    const matches = Array.from(document.querySelectorAll<HTMLElement>('.prose h2'))
-      .filter((heading) => stripMarkdown(heading.textContent ?? '') === title)
-    matches[occurrence]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const headings = Array.from(document.querySelectorAll<HTMLElement>('.prose h2'))
+    // First occurrence carries the plain rehype-slug id; later duplicates get -1/-2
+    // suffixes, so fall back to textContent matching for those.
+    const target = (occurrence === 0
+      ? headings.find((heading) => heading.id === headingToId(title))
+      : undefined)
+      ?? headings.filter((heading) => stripMarkdown(heading.textContent ?? '') === title)[occurrence]
+    scrollHeadingIntoView(target)
   }, [speechSections])
 
   const reader = useContinuousReader(speechSections, { onItemChange: scrollToSection })
+
+  // Section-stable: only changes on section advance / play / pause, NOT on the
+  // ~60fps progress ticks, so passing it to the memoized MarkdownContent below
+  // does not reintroduce 60fps re-renders.
+  const readingActive = reader.isPlaying || reader.isBuffering || (reader.progress > 0 && reader.progress < 100)
+  const activeSectionIndex = readingActive ? reader.currentIndex : null
+
+  // Highlight by heading id (mirrors the working scroll, which matches by
+  // element id). Section-stable: only changes when the active section / section
+  // set changes, so it does not reintroduce 60fps re-renders.
+  const activeSection = activeSectionIndex != null ? speechSections[activeSectionIndex] : undefined
+  const currentSectionId = activeSection ? headingToId(stripMarkdown(activeSection.title)) : null
+
+  // Stable identity so the memoized MarkdownContent is not re-rendered by the
+  // reader's ~60fps progress ticks. Only re-created when playback wiring, the
+  // section set, or the active section actually changes.
+  const markdownReader = useMemo(
+    () => ({
+      onPlayFromHere: reader.playFromHere,
+      getSectionIndex: (heading: string) => {
+        const index = speechSections.findIndex(
+          (section) => stripMarkdown(section.title) === stripMarkdown(heading)
+        )
+        return index < 0 ? null : index
+      },
+      currentSectionId,
+    }),
+    [reader.playFromHere, speechSections, currentSectionId]
+  )
 
   return (
     <>
@@ -73,21 +109,23 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
           desktopSuccessMessage="Copied! Open ChatGPT or Gemini, paste, and use Read Aloud"
         />
 
-        {isNews && (
-          <ContinuousReaderControls
-            isPlaying={reader.isPlaying}
-            isBuffering={reader.isBuffering}
-            markReadDisabled
-            canNext={reader.currentIndex < speechSections.length - 1}
-            onPlayPause={() => (reader.isPlaying ? reader.pause() : reader.play())}
-            onNext={reader.next}
-            onMarkRead={() => undefined}
-          />
-        )}
         {!isNews && (
           <TTSPlayer content={filteredContent} title={article.title} voice={voice} compact />
         )}
       </div>
+
+      {isNews && (
+        <ReaderControlBar
+          markReadDisabled
+          canPlay={speechSections.length > 0}
+          canNext={reader.canNext}
+          isPlaying={reader.isPlaying}
+          isBuffering={reader.isBuffering}
+          onPlayPause={() => (reader.isPlaying ? reader.pause() : reader.play())}
+          onNext={reader.next}
+          onMarkRead={() => undefined}
+        />
+      )}
 
       {isNews ? (
         <MarkdownContent
@@ -95,15 +133,7 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
           itemType={article.itemType}
           category={getContentCategory(article.hashtags ?? [])}
           patternName={article.sourcePattern}
-          reader={{
-            onPlayFromHere: reader.playFromHere,
-            getSectionIndex: (heading) => {
-              const index = speechSections.findIndex(
-                (section) => stripMarkdown(section.title) === stripMarkdown(heading)
-              )
-              return index < 0 ? null : index
-            },
-          }}
+          reader={markdownReader}
         />
       ) : (
         <MarkdownWithCTA

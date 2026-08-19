@@ -145,6 +145,9 @@ importers:
       fs:
         specifier: latest
         version: 0.0.1-security
+      github-slugger:
+        specifier: ^2.0.0
+        version: 2.0.0
       gray-matter:
         specifier: latest
         version: 4.0.3

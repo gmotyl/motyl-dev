@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { detectLanguageFromContent } from '@/lib/tts'
+import { splitIntoChunks } from '@/lib/tts-chunks'
 import { synthesizeSpeech } from '@/lib/tts-client'
 
 export interface TTSState {
@@ -16,6 +17,12 @@ export interface TTSState {
 
 export interface UseTTSOptions {
   voice?: string
+  /**
+   * Fired on EVERY requestAnimationFrame tick during playback (~60Hz) with the
+   * 0–100 progress percent — intentionally NOT throttled, so the continuous
+   * reader's prefetch threshold sees continuous progress. Keep the handler
+   * cheap; do not do heavy work here or it runs 60×/second.
+   */
   onProgress?: (progress: number) => void
   onComplete?: () => void
   onError?: (error: Error) => void
@@ -29,67 +36,6 @@ export interface TTSPlayback extends TTSState {
 }
 
 const detectLanguage = detectLanguageFromContent
-
-// Split text into chunks suitable for TTS
-const splitIntoChunks = (text: string, maxLength = 1000): string[] => {
-  const chunks: string[] = []
-  const paragraphs = text.split(/\n\n+/)
-
-  for (const paragraph of paragraphs) {
-    // Skip horizontal rules (section separators)
-    if (/^-{3,}$/.test(paragraph.trim())) continue
-
-    let clean = paragraph
-      .replace(/#{1,6}\s+/g, '') // Remove markdown headers
-      .replace(/\*\*([^*]+)\*\*/g, '$1') // Remove bold
-      .replace(/\*([^*]+)\*/g, '$1') // Remove italic
-      .replace(/`([^`]+)`/g, '$1') // Remove code
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Remove links, keep text
-      .replace(/!\[([^\]]*)\]\([^)]+\)/g, '') // Remove images
-      .replace(/>\s+/g, '') // Remove blockquotes
-      .replace(/[-*+]\s+/g, '') // Remove list markers
-      .replace(/\d+\.\s+/g, '') // Remove numbered list markers
-      .replace(/\n/g, ' ') // Replace newlines with spaces
-      .replace(/\s+/g, ' ') // Normalize whitespace
-      .trim()
-
-    if (!clean) continue
-
-    if (clean.length <= maxLength) {
-      chunks.push(clean)
-    } else {
-      const sentences = clean.match(/[^.!?]+[.!?]+/g) || [clean]
-      let currentChunk = ''
-
-      for (const sentence of sentences) {
-        if ((currentChunk + ' ' + sentence).trim().length <= maxLength) {
-          currentChunk = (currentChunk + ' ' + sentence).trim()
-        } else {
-          if (currentChunk) chunks.push(currentChunk)
-
-          if (sentence.length > maxLength) {
-            const words = sentence.split(/\s+/)
-            let wordChunk = ''
-            for (const word of words) {
-              if ((wordChunk + ' ' + word).trim().length <= maxLength) {
-                wordChunk = (wordChunk + ' ' + word).trim()
-              } else {
-                if (wordChunk) chunks.push(wordChunk)
-                wordChunk = word
-              }
-            }
-            if (wordChunk) currentChunk = wordChunk
-          } else {
-            currentChunk = sentence
-          }
-        }
-      }
-      if (currentChunk) chunks.push(currentChunk)
-    }
-  }
-
-  return chunks.filter((c) => c.length > 0)
-}
 
 // Number of chunks to keep buffered ahead of current playback
 const BUFFER_AHEAD = 2
@@ -124,6 +70,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   const isPlayingRef = useRef(false)
   const currentChunkIndexRef = useRef(0)
   const voiceRef = useRef<string | null>(null)
+  // Last integer percent emitted to setState, so progress-driven re-renders fire
+  // at most ~1/percent instead of on every ~60fps rAF tick (hover flicker fix).
+  const lastEmittedPctRef = useRef(-1)
 
   // Buffer cache: pre-fetched AudioBuffers keyed by chunk index
   const bufferCacheRef = useRef<Map<number, AudioBuffer>>(new Map())
@@ -161,8 +110,24 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
           reject(new DOMException('Aborted', 'AbortError'))
           return
         }
+        // decodeAudioData DETACHES (neuters) the ArrayBuffer it receives. The
+        // synthesis cache (lib/tts-client) hands the SAME ArrayBuffer instance
+        // to every caller for a given voice+text, so decoding the cached buffer
+        // would detach it and any later decode of the same chunk — replay,
+        // play-from-here (stop() clears the decoded-buffer cache but not the
+        // synthesis cache), or prefetch-then-play — throws "Cannot decode
+        // detached ArrayBuffer". Decode a copy so the cached buffer stays intact.
+        // slice(0) can throw if the buffer is already detached; reject with the
+        // same prefix shape as the decode error path for consistent triage.
+        let decodable: ArrayBuffer
+        try {
+          decodable = arrayBuffer.slice(0)
+        } catch (error) {
+          reject(new Error(`Failed to copy audio buffer for decode: ${error}`))
+          return
+        }
         audioContext.decodeAudioData(
-          arrayBuffer,
+          decodable,
           (buffer) => {
             if (signal.aborted) {
               reject(new DOMException('Aborted', 'AbortError'))
@@ -218,14 +183,24 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     const currentProgress = completedChars + currentChunkChars * chunkProgress
     const totalProgress = (currentProgress / totalCharsRef.current) * 100
 
-    setState((prev) => ({
-      ...prev,
-      progress: Math.min(totalProgress, 100),
-      currentTime: prev.totalEstimatedTime * (totalProgress / 100),
-      currentChunkIndex: currentChunkIndexRef.current,
-    }))
+    const clamped = Math.min(totalProgress, 100)
+    // Emit progress to callers EVERY frame — the reader's prefetch threshold
+    // depends on it.
+    onProgress?.(clamped)
 
-    onProgress?.(Math.min(totalProgress, 100))
+    // Only re-render (setState) when the rounded percent actually changes,
+    // cutting progress-driven re-renders from ~60/sec to ~1 per 1%. This keeps
+    // the backdrop-blur reader bar from re-rendering at 60fps (hover flicker).
+    const pct = Math.round(clamped)
+    if (pct !== lastEmittedPctRef.current) {
+      lastEmittedPctRef.current = pct
+      setState((prev) => ({
+        ...prev,
+        progress: clamped,
+        currentTime: prev.totalEstimatedTime * (clamped / 100),
+        currentChunkIndex: currentChunkIndexRef.current,
+      }))
+    }
 
     if (isPlayingRef.current) {
       animationFrameRef.current = requestAnimationFrame(updateProgress)
@@ -258,9 +233,14 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       }
 
       const audioContext = getAudioContext()
-      if (audioContext.state === 'suspended') {
-        await audioContext.resume()
-      }
+      // Resume unconditionally. `pause()`/`stop()` call `suspend()` without
+      // awaiting it, so on the play-from-here path the suspend can still be
+      // in flight here with `state` reading 'running'. A conditional resume
+      // would then be skipped and the pending suspend would freeze the audio.
+      // WebAudio processes suspend/resume control messages in call order, so a
+      // resume queued after an in-flight suspend leaves the context running;
+      // resume() on an already-running context is a no-op that resolves at once.
+      await audioContext.resume()
 
       if (generation !== requestGenerationRef.current || signal.aborted) return
 
@@ -356,6 +336,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
     voiceRef.current = voice || null
     isPlayingRef.current = true
+    lastEmittedPctRef.current = -1
     const generation = requestGenerationRef.current + 1
     requestGenerationRef.current = generation
     const abortController = new AbortController()
@@ -452,6 +433,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     pauseOffsetRef.current = 0
     bufferCacheRef.current.clear()
     fetchingRef.current.clear()
+    lastEmittedPctRef.current = -1
 
     setState({
       isPlaying: false,

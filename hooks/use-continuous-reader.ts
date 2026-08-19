@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { SpeechSection } from '@/lib/tts-speech'
-import { getStoredTtsVoice, TTS_VOICE_CHANGE_EVENT, type TtsVoice } from '@/lib/tts-voices'
+import { splitIntoChunks } from '@/lib/tts-chunks'
+import { prefetchSpeech } from '@/lib/tts-client'
+import { DEFAULT_TTS_VOICE, getStoredTtsVoice, TTS_VOICE_CHANGE_EVENT, type TtsVoice } from '@/lib/tts-voices'
 import { useTTS } from './useTTS'
 import type { TTSPlayback } from './useTTS'
 
@@ -15,17 +17,48 @@ export function useContinuousReader(
   { onItemChange }: ContinuousReaderOptions = {}
 ) {
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [previewIndex, setPreviewIndex] = useState(0)
   const [error, setError] = useState<Error | null>(null)
   const currentIndexRef = useRef(0)
+  const previewIndexRef = useRef(0)
   const itemsRef = useRef(items)
   const onItemChangeRef = useRef(onItemChange)
   const pendingStartRef = useRef<number | null>(null)
   const playbackRef = useRef<TTSPlayback | null>(null)
-  const [voice, setVoice] = useState<TtsVoice>(() => getStoredTtsVoice())
+  // Tracks the section index for which the next-section prefetch has fired, so
+  // it warms the following section's first chunk at most once per section.
+  const prefetchedForIndexRef = useRef<number | null>(null)
+  // Tracks the first section's text already warmed by the mount preload, so it
+  // fires once per distinct first-section content and does not re-fire when the
+  // stored voice resolves right after mount.
+  const preloadedFirstTextRef = useRef<string | null>(null)
+  const [voice, setVoice] = useState<TtsVoice>(DEFAULT_TTS_VOICE)
+
+  useEffect(() => {
+    setVoice(getStoredTtsVoice())
+  }, [])
+
+  // Warm the first section's first chunk as soon as the reader has sections, so
+  // the very first Play is near-instant. Guarded on the first section's text
+  // (not voice) so the post-mount stored-voice update does not re-trigger it.
+  useEffect(() => {
+    const firstText = items[0]?.speechText
+    if (!firstText) return
+    if (preloadedFirstTextRef.current === firstText) return
+
+    preloadedFirstTextRef.current = firstText
+    prefetchSpeech(splitIntoChunks(firstText)[0] ?? '', { voice })
+  }, [items, voice])
 
   useEffect(() => {
     currentIndexRef.current = currentIndex
+    // Reset the once-per-section prefetch guard on every section change.
+    prefetchedForIndexRef.current = null
   }, [currentIndex])
+
+  useEffect(() => {
+    previewIndexRef.current = previewIndex
+  }, [previewIndex])
 
   useEffect(() => {
     itemsRef.current = items
@@ -49,6 +82,9 @@ export function useContinuousReader(
     const selectedItem = itemsRef.current[index]
     if (!selectedItem) return
 
+    previewIndexRef.current = index
+    setPreviewIndex(index)
+
     playbackRef.current?.stop()
     setError(null)
 
@@ -66,6 +102,18 @@ export function useContinuousReader(
 
   const playback = useTTS(items[currentIndex]?.speechText ?? '', {
     voice,
+    onProgress: useCallback((progress: number) => {
+      if (progress < 70) return
+
+      const index = currentIndexRef.current
+      const nextIndex = index + 1
+      if (nextIndex >= itemsRef.current.length) return
+      if (prefetchedForIndexRef.current === index) return
+
+      prefetchedForIndexRef.current = index
+      const nextText = itemsRef.current[nextIndex]?.speechText ?? ''
+      prefetchSpeech(splitIntoChunks(nextText)[0] ?? '', { voice })
+    }, [voice]),
     onComplete: useCallback(() => {
       if (currentIndexRef.current !== currentIndex) return
 
@@ -93,6 +141,8 @@ export function useContinuousReader(
 
   const play = useCallback(() => {
     setError(null)
+    previewIndexRef.current = currentIndexRef.current
+    setPreviewIndex(currentIndexRef.current)
     void playbackRef.current?.play()
   }, [])
 
@@ -101,8 +151,38 @@ export function useContinuousReader(
   }, [])
 
   const next = useCallback(() => {
-    selectAndStart(currentIndexRef.current + 1, true)
-  }, [selectAndStart])
+    const currentItems = itemsRef.current
+    const lastIndex = currentItems.length - 1
+    if (lastIndex < 0) return
+
+    const audioActive = Boolean(
+      playbackRef.current?.isPlaying || playbackRef.current?.isBuffering
+    )
+
+    if (audioActive) {
+      // Non-interrupting soft advance: move the eye/scroll only. The current
+      // section keeps playing; auto-advance still continues to currentIndex + 1.
+      const nextPreview = Math.min(previewIndexRef.current + 1, lastIndex)
+      previewIndexRef.current = nextPreview
+      setPreviewIndex(nextPreview)
+      const previewItem = currentItems[nextPreview]
+      if (previewItem) onItemChangeRef.current?.(previewItem, nextPreview)
+      return
+    }
+
+    // Audio not active: select the next section as the pending start without
+    // starting playback. Pressing Play afterwards begins at that section.
+    const nextIndex = Math.min(currentIndexRef.current + 1, lastIndex)
+    const nextItem = currentItems[nextIndex]
+    if (!nextItem) return
+
+    previewIndexRef.current = nextIndex
+    setPreviewIndex(nextIndex)
+    if (nextIndex !== currentIndexRef.current) {
+      setCurrentIndex(nextIndex)
+    }
+    onItemChangeRef.current?.(nextItem, nextIndex)
+  }, [])
 
   const playFrom = useCallback(
     (index: number) => {
@@ -128,6 +208,8 @@ export function useContinuousReader(
     resume: playbackResume,
   } = playback
 
+  const canNext = Math.max(currentIndex, previewIndex) < items.length - 1
+
   return useMemo(() => ({
     isPlaying,
     isBuffering,
@@ -144,13 +226,14 @@ export function useContinuousReader(
     currentItem: items[currentIndex],
     error,
     next,
+    canNext,
     playFrom,
     playFromHere: playFrom,
     retry,
   }), [
     isPlaying, isBuffering, progress, currentTime, totalEstimatedTime,
     currentChunkIndex, totalChunks, playbackStop, playbackResume, currentIndex,
-    items, error, play, pause, next,
+    items, error, play, pause, next, canNext,
     playFrom, retry,
   ])
 }

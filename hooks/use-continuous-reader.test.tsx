@@ -2,7 +2,8 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { SpeechSection } from '@/lib/tts-speech'
-import { setStoredTtsVoice, TTS_VOICE_STORAGE_KEY } from '@/lib/tts-voices'
+import { splitIntoChunks } from '@/lib/tts-chunks'
+import { DEFAULT_TTS_VOICE, setStoredTtsVoice, TTS_VOICE_STORAGE_KEY } from '@/lib/tts-voices'
 import { useContinuousReader } from './use-continuous-reader'
 
 const ttsMock = vi.hoisted(() => {
@@ -52,10 +53,12 @@ const ttsMock = vi.hoisted(() => {
 
 const ttsClientMock = vi.hoisted(() => ({
   synthesizeSpeech: vi.fn(),
+  prefetchSpeech: vi.fn(),
 }))
 
 vi.mock('@/lib/tts-client', () => ({
   synthesizeSpeech: ttsClientMock.synthesizeSpeech,
+  prefetchSpeech: ttsClientMock.prefetchSpeech,
 }))
 
 vi.mock('./useTTS', async () => {
@@ -117,7 +120,10 @@ describe('useContinuousReader', () => {
     ttsMock.reset()
     ttsMock.useTTS.mockClear()
     ttsMock.useActualTTS = false
+    ttsMock.playback.isPlaying = false
+    ttsMock.playback.isBuffering = false
     ttsClientMock.synthesizeSpeech.mockReset()
+    ttsClientMock.prefetchSpeech.mockReset()
   })
 
   it('starts a queue item with prepared speech text and selected voice', async () => {
@@ -144,6 +150,20 @@ describe('useContinuousReader', () => {
     expect(result.current.currentIndex).toBe(0)
   })
 
+  it('passes the default voice to useTTS on the first render', () => {
+    renderHook(() => useContinuousReader([makeItem(0)]))
+
+    expect(ttsMock.calls[0]?.options.voice).toBe(DEFAULT_TTS_VOICE)
+  })
+
+  it('applies the stored voice to useTTS after mount', async () => {
+    renderHook(() => useContinuousReader([makeItem(0)]))
+
+    await waitFor(() => {
+      expect(ttsMock.getLatestOptions()?.voice).toBe('pl-PL-ZofiaNeural')
+    })
+  })
+
   it('pauses and resumes the active item', async () => {
     const { result } = renderHook(() => useContinuousReader([makeItem(0)]))
 
@@ -157,26 +177,92 @@ describe('useContinuousReader', () => {
     expect(ttsMock.playback.play).toHaveBeenCalledTimes(2)
   })
 
-  it('cancels active playback before starting Next', async () => {
+  it('next while playing scrolls to the next section without stopping or restarting audio', async () => {
+    const onItemChange = vi.fn()
+    const { result } = renderHook(() =>
+      useContinuousReader([makeItem(0), makeItem(1), makeItem(2)], { onItemChange })
+    )
+
+    act(() => result.current.play())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+    onItemChange.mockClear()
+
+    ttsMock.playback.isPlaying = true
+    act(() => result.current.next())
+
+    expect(ttsMock.playback.stop).not.toHaveBeenCalled()
+    expect(ttsMock.playback.play).toHaveBeenCalledOnce()
+    expect(result.current.currentIndex).toBe(0)
+    expect(onItemChange).toHaveBeenCalledTimes(1)
+    expect(onItemChange).toHaveBeenLastCalledWith(makeItem(1), 1)
+  })
+
+  it('next while stopped selects the next section without starting playback', async () => {
+    const onItemChange = vi.fn()
+    const { result } = renderHook(() =>
+      useContinuousReader([makeItem(0), makeItem(1)], { onItemChange })
+    )
+
+    act(() => result.current.next())
+
+    expect(result.current.currentIndex).toBe(1)
+    expect(ttsMock.playback.play).not.toHaveBeenCalled()
+    expect(ttsMock.playback.stop).not.toHaveBeenCalled()
+    expect(onItemChange).toHaveBeenLastCalledWith(makeItem(1), 1)
+  })
+
+  it('auto-advance still plays the next section when the current one completes', async () => {
+    const onItemChange = vi.fn()
+    const { result } = renderHook(() =>
+      useContinuousReader([makeItem(0), makeItem(1)], { onItemChange })
+    )
+
+    act(() => result.current.play())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+
+    act(() => (ttsMock.getLatestOptions()?.onComplete as () => void)())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledTimes(2))
+
+    expect(result.current.currentIndex).toBe(1)
+    expect(ttsMock.calls.at(-1)?.content).toBe('prepared speech 1')
+    expect(onItemChange).toHaveBeenLastCalledWith(makeItem(1), 1)
+  })
+
+  it('playFrom still interrupts and starts immediately at the target section', async () => {
     const events: string[] = []
     ttsMock.playback.stop.mockImplementation(() => events.push('stop'))
     ttsMock.playback.play.mockImplementation(async () => {
       events.push('play')
     })
-    const { result } = renderHook(() => useContinuousReader([makeItem(0), makeItem(1)]))
+    const { result } = renderHook(() =>
+      useContinuousReader([makeItem(0), makeItem(1), makeItem(2)])
+    )
 
     act(() => result.current.play())
     await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
 
-    act(() => result.current.next())
+    act(() => result.current.playFrom(2))
     await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledTimes(2))
 
     expect(events).toEqual(['play', 'stop', 'play'])
-    expect(result.current.currentIndex).toBe(1)
-    expect(ttsMock.calls.at(-1)?.content).toBe('prepared speech 1')
+    expect(result.current.currentIndex).toBe(2)
+    expect(ttsMock.calls.at(-1)?.content).toBe('prepared speech 2')
   })
 
-  it('ignores a stale completion after Next starts the new item', async () => {
+  it('canNext is false at the last section and true otherwise', () => {
+    const single = renderHook(() => useContinuousReader([makeItem(0)]))
+    expect(single.result.current.canNext).toBe(false)
+
+    const { result } = renderHook(() =>
+      useContinuousReader([makeItem(0), makeItem(1)])
+    )
+    expect(result.current.canNext).toBe(true)
+
+    act(() => result.current.playFrom(1))
+    expect(result.current.canNext).toBe(false)
+  })
+
+  it('ignores a stale completion after playFrom starts the new item', async () => {
     const { result } = renderHook(() =>
       useContinuousReader([makeItem(0), makeItem(1), makeItem(2)])
     )
@@ -186,7 +272,7 @@ describe('useContinuousReader', () => {
 
     const firstItemOptions = ttsMock.calls[0]?.options
 
-    act(() => result.current.next())
+    act(() => result.current.playFrom(1))
     await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledTimes(2))
 
     act(() => (firstItemOptions?.onComplete as () => void)())
@@ -195,7 +281,7 @@ describe('useContinuousReader', () => {
     expect(ttsMock.playback.play).toHaveBeenCalledTimes(2)
   })
 
-  it('invalidates pending synthesis before Next and ignores its stale resolution', async () => {
+  it('invalidates pending synthesis before direct playFrom during Next flow and ignores its stale resolution', async () => {
     ttsMock.useActualTTS = true
     const { events, requests } = setupPendingSynthesis()
     const { result } = renderHook(() =>
@@ -205,7 +291,7 @@ describe('useContinuousReader', () => {
     act(() => result.current.play())
     await waitFor(() => expect(requests).toHaveLength(1))
 
-    act(() => result.current.next())
+    act(() => result.current.playFrom(1))
     await waitFor(() => {
       expect(requests).toHaveLength(2)
       expect(result.current.isPlaying).toBe(true)
@@ -279,6 +365,79 @@ describe('useContinuousReader', () => {
 
     expect(result.current.currentIndex).toBe(1)
     expect(onItemChange).toHaveBeenLastCalledWith(makeItem(1), 1)
+  })
+
+  it('reader prefetches the next section\'s first chunk once when progress passes the threshold', async () => {
+    const { result } = renderHook(() =>
+      useContinuousReader([makeItem(0), makeItem(1)])
+    )
+
+    act(() => result.current.play())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+    await waitFor(() => expect(ttsMock.getLatestOptions()?.voice).toBe('pl-PL-ZofiaNeural'))
+
+    const onProgress = () => ttsMock.getLatestOptions()?.onProgress as (progress: number) => void
+    // Only the next-section (section 1) progress prefetch matters here; the
+    // section-0 mount preload is a separate path.
+    const nextSectionCalls = () =>
+      ttsClientMock.prefetchSpeech.mock.calls.filter(([chunk]) => chunk === 'prepared speech 1')
+
+    // Below threshold: no next-section prefetch yet.
+    act(() => onProgress()(50))
+    expect(nextSectionCalls()).toHaveLength(0)
+
+    // Crossing the threshold fires exactly once for this section...
+    act(() => onProgress()(70))
+    act(() => onProgress()(85))
+
+    expect(nextSectionCalls()).toHaveLength(1)
+    expect(ttsClientMock.prefetchSpeech).toHaveBeenCalledWith('prepared speech 1', {
+      voice: 'pl-PL-ZofiaNeural',
+    })
+  })
+
+  it('does not prefetch past the last section', async () => {
+    const { result } = renderHook(() => useContinuousReader([makeItem(0)]))
+
+    act(() => result.current.play())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+
+    // Ignore the section-0 mount preload; assert progress adds no next-section prefetch.
+    ttsClientMock.prefetchSpeech.mockClear()
+
+    act(() => (ttsMock.getLatestOptions()?.onProgress as (progress: number) => void)(90))
+
+    expect(ttsClientMock.prefetchSpeech).not.toHaveBeenCalled()
+  })
+
+  it('preloads the first section\'s first chunk once on mount', async () => {
+    const { rerender } = renderHook(() =>
+      useContinuousReader([makeItem(0), makeItem(1)])
+    )
+
+    // Mount warms section 0's first chunk exactly once, with the resolved voice.
+    await waitFor(() => {
+      expect(ttsClientMock.prefetchSpeech).toHaveBeenCalledWith(
+        splitIntoChunks('prepared speech 0')[0] ?? '',
+        { voice: DEFAULT_TTS_VOICE }
+      )
+    })
+
+    // The stored voice resolves post-mount (Task 3). That voice change must not
+    // re-fire the first-section preload.
+    act(() => setStoredTtsVoice('en-US-EmmaMultilingualNeural'))
+    rerender()
+
+    const sectionZeroCalls = ttsClientMock.prefetchSpeech.mock.calls.filter(
+      ([chunk]) => chunk === 'prepared speech 0'
+    )
+    expect(sectionZeroCalls).toHaveLength(1)
+  })
+
+  it('does not preload when there are no sections', () => {
+    renderHook(() => useContinuousReader([]))
+
+    expect(ttsClientMock.prefetchSpeech).not.toHaveBeenCalled()
   })
 
   it('stops with a retryable error on synthesis failure', async () => {

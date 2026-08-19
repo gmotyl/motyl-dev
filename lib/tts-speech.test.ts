@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  normalizeVersionNumbers,
   prepareSpeechSections,
   prepareSpeechText,
   replaceWholeWordMappings,
@@ -60,7 +61,47 @@ Druga treść.`,
   })
 })
 
+describe('normalizeVersionNumbers', () => {
+  it('normalizeVersionNumbers reads 3.6.3 as space-separated numbers', () => {
+    expect(normalizeVersionNumbers('3.6.3')).toBe('3 6 3')
+    expect(normalizeVersionNumbers('10.6.3')).toBe('10 6 3')
+  })
+
+  it('normalizeVersionNumbers handles four-part versions', () => {
+    expect(normalizeVersionNumbers('1.2.3.4')).toBe('1 2 3 4')
+  })
+
+  it('normalizeVersionNumbers now normalizes two-part version numbers', () => {
+    expect(normalizeVersionNumbers('5.6')).toBe('5 6')
+    expect(normalizeVersionNumbers('16.3')).toBe('16 3')
+    expect(normalizeVersionNumbers('Next.js 16.3')).toBe('Next.js 16 3')
+  })
+
+  it('normalizeVersionNumbers allows groups up to five digits', () => {
+    expect(normalizeVersionNumbers('12345.6')).toBe('12345 6')
+  })
+
+  it('normalizeVersionNumbers leaves numbers with a 6+ digit group unchanged', () => {
+    expect(normalizeVersionNumbers('123456.7')).toBe('123456.7')
+  })
+
+  it('normalizeVersionNumbers leaves comma decimals and plain integers unchanged', () => {
+    expect(normalizeVersionNumbers('42')).toBe('42')
+    expect(normalizeVersionNumbers('3,14')).toBe('3,14')
+    expect(normalizeVersionNumbers('Wersja 3,14 liczby')).toBe('Wersja 3,14 liczby')
+  })
+})
+
 describe('prepareSpeechText', () => {
+  it('prepareSpeechText normalizes semver version numbers', () => {
+    expect(prepareSpeechText('Wersja 3.6.3 wychodzi')).toContain('3 6 3')
+  })
+
+  it('prepareSpeechText normalizes two-part version numbers in prose', () => {
+    expect(prepareSpeechText('GPT 5.6 jest')).toContain('5 6')
+  })
+
+
   it('prepares spoken text without tags Markdown syntax or URL destinations', () => {
     const source = `---
 title: Ukryty tytuł
@@ -83,12 +124,12 @@ hashtags: "#pl #ai"
   })
 
   it('keeps reference-link labels while removing definitions and destinations', () => {
-    const source = `Read [the guide][guide] and [the endpoint][api].
+    const source = `Read [the guide][guide] and [the manual][api].
 
 [guide]: https://example.com/guide "Guide"
 [api]: <https://example.com/api> (API docs)`
 
-    expect(prepareSpeechText(source)).toBe('Read the guide and the endpoint.')
+    expect(prepareSpeechText(source)).toBe('Read the guide and the manual.')
   })
 
   it('keeps sentence punctuation after stripped URL destinations', () => {
@@ -100,8 +141,11 @@ hashtags: "#pl #ai"
   it('uses approved longest matching phonetic replacements without changing unknown words', () => {
     const source = 'AI i GPT 5.6 działają z React oraz Microsoft. Unknown AIx.'
 
+    // GPT is now a PRONUNCIATION_MAP entry ('dżi pi ti'), applied before the
+    // acronym speller, so it reads with spaces rather than the speller's hyphens.
+    // 'AI' (no map entry) still exercises the acronym speller -> 'ej-aj'.
     expect(prepareSpeechText(source)).toBe(
-      'ej-aj i dżi-pi-ti 5.6 działają z reakt oraz mikrosoft. Unknown AIx.'
+      'ej-aj i dżi pi ti 5 6 działają z reakt oraz mikrosoft. Unknown AIx.'
     )
     expect(source).toBe('AI i GPT 5.6 działają z React oraz Microsoft. Unknown AIx.')
   })
@@ -113,6 +157,10 @@ hashtags: "#pl #ai"
         'React Native': 'React',
       })
     ).toBe('React oraz R.')
+  })
+
+  it('applies inflection-aware pronunciation for English stems', () => {
+    expect(prepareSpeechText('Nowe benchmarki Reacta')).toBe('Nowe benczmarki reakta')
   })
 })
 
