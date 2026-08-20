@@ -109,28 +109,18 @@ export function MarkReadDialog({
           ))}
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={onCancel}>
-            Skip
-          </Button>
-          <Button onClick={() => onConfirm([...selected])}>
+        <DialogFooter className="flex-col gap-2 sm:flex-col sm:gap-2">
+          <Button
+            size="lg"
+            className="w-full text-base"
+            onClick={() => onConfirm([...selected])}
+          >
             Mark {selected.size} as read
           </Button>
+          <Button variant="ghost" size="sm" className="w-full" onClick={onCancel}>
+            Skip
+          </Button>
         </DialogFooter>
-
-        <div className="pt-3 border-t border-border/40">
-          <a
-            href="https://www.buymeacoffee.com/motyl.dev"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex w-full items-center justify-center gap-2 rounded-md text-sm font-medium h-10 px-4 py-2 transition-colors text-white hover:opacity-90"
-            style={{
-              background: 'linear-gradient(135deg, #BD5FFF 0%, #9d3dff 100%)',
-            }}
-          >
-            ☕ Enjoyed the reads? Fuel the next ones
-          </a>
-        </div>
       </DialogContent>
     </Dialog>
   )
