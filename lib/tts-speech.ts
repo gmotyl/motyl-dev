@@ -1,4 +1,4 @@
-import { PRONUNCIATION_MAP } from '@/lib/tts-pronunciation'
+import { ACRONYM_MAP, PRONUNCIATION_MAP } from '@/lib/tts-pronunciation'
 import { splitIntoChunks } from '@/lib/tts-chunks'
 
 export interface SpeechSource {
@@ -34,10 +34,23 @@ export const replaceWholeWordMappings = (
 }
 
 export const applyPronunciation = (text: string): string => {
-  const keys = Object.keys(PRONUNCIATION_MAP).sort((a, b) => b.length - a.length)
   let out = text
+
+  // 1) Whole-word acronyms first. Match only as a standalone word (Unicode
+  // boundaries, so Polish diacritics count) plus an optional plural "s"
+  // (APIs, GPUs) — NOT as a prefix, so "client"/"click" are never touched.
+  const acronymKeys = Object.keys(ACRONYM_MAP).sort((a, b) => b.length - a.length)
+  for (const key of acronymKeys) {
+    const re = new RegExp(
+      `(?<![\\p{L}\\p{N}_])${escapeRegExp(key)}(s?)(?![\\p{L}\\p{N}_])`,
+      'giu'
+    )
+    out = out.replace(re, (_m, plural: string) => ACRONYM_MAP[key] + plural)
+  }
+
+  // 2) Stem map: match at a word start and preserve trailing Polish inflection.
+  const keys = Object.keys(PRONUNCIATION_MAP).sort((a, b) => b.length - a.length)
   for (const key of keys) {
-    // word-start boundary; capture trailing Polish letters (inflection) to preserve them
     const re = new RegExp(`(?<![\\p{L}\\p{N}_])${escapeRegExp(key)}(\\p{L}*)`, 'giu')
     out = out.replace(re, (_m, suffix: string) => PRONUNCIATION_MAP[key] + suffix)
   }

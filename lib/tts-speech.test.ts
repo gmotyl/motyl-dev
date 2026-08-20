@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  applyPronunciation,
   normalizeVersionNumbers,
   prepareSpeechSections,
   prepareSpeechText,
@@ -8,6 +9,47 @@ import {
   splitReviewedSections,
   type SpeechSection,
 } from './tts-speech'
+import { ACRONYM_MAP } from './tts-pronunciation'
+
+// Assert against the map's own values so ear-tuning the spellings never breaks
+// these behavioral tests.
+describe('applyPronunciation — whole-word acronyms (ACRONYM_MAP)', () => {
+  it('replaces a standalone acronym with its mapped spelling', () => {
+    expect(applyPronunciation('Użyj CLI do tego')).toBe(`Użyj ${ACRONYM_MAP.cli} do tego`)
+    expect(applyPronunciation('nowe API i GPU')).toContain(ACRONYM_MAP.api)
+    expect(applyPronunciation('nowe API i GPU')).toContain(ACRONYM_MAP.gpu)
+  })
+
+  it('handles multi-token acronyms containing a slash (CI/CD)', () => {
+    expect(applyPronunciation('nasz CI/CD tutaj')).toBe(
+      `nasz ${ACRONYM_MAP['ci/cd']} tutaj`
+    )
+  })
+
+  it('does NOT corrupt normal words that start with an acronym (client/click)', () => {
+    const out = applyPronunciation('client kliknął, potem click i clipboard')
+    expect(out).toContain('client')
+    expect(out).toContain('click')
+    expect(out).toContain('clipboard')
+    expect(out).not.toContain(ACRONYM_MAP.cli)
+  })
+
+  it('handles a trailing plural s but not a longer suffix', () => {
+    expect(applyPronunciation('mamy dwa GPUs')).toBe(`mamy dwa ${ACRONYM_MAP.gpu}s`)
+    // Not a standalone word (Polish diacritic follows) → left untouched.
+    expect(applyPronunciation('CLIą')).toBe('CLIą')
+  })
+
+  it('word-style acronym (JSON) uses its mapped token', () => {
+    expect(applyPronunciation('zwraca JSON')).toBe(`zwraca ${ACRONYM_MAP.json}`)
+  })
+
+  it('is case-insensitive', () => {
+    expect(applyPronunciation('cli i Cli i CLI')).toBe(
+      `${ACRONYM_MAP.cli} i ${ACRONYM_MAP.cli} i ${ACRONYM_MAP.cli}`
+    )
+  })
+})
 
 const section = (over: Partial<SpeechSection>): SpeechSection => ({
   sourceSlug: 'news',

@@ -89,10 +89,55 @@ export const PRONUNCIATION_MAP: Readonly<Record<string, string>> = Object.freeze
   bug: 'bag',
   reasoning: 'rizoning',
   vram: 'fał ram',
+  'type-aware': 'tajp ełer',
+  'js/ts': 'dżej es / ti es',
 
   // Multi-word phrases (safe: longest-key-first beats the component words;
   // the phrase also avoids the `face`→"facet" collision of a bare `face` stem)
   'pull request': 'pul rikłest',
   'open source': 'oupen sors',
   'hugging face': 'haging fejs',
+})
+
+/**
+ * Whole-word acronym pronunciations. Unlike PRONUNCIATION_MAP (which is
+ * stem-based and re-appends any trailing Polish inflection), these match ONLY as
+ * a standalone word (optionally with a trailing plural "s"). That is required
+ * for short acronyms that are a PREFIX of real words — e.g. `cli` starts
+ * "client"/"click", `api` could start "apis" — where the stem map would corrupt
+ * those words.
+ *
+ * Values are lowercase Polish phonetic spellings. Letter-by-letter acronyms use
+ * commas so the voice paces them like an acronym instead of blurring into one
+ * word; word-style acronyms (e.g. JSON → "jay-son") are spelled as one token.
+ * The Polish-phonetic spelling reads correctly on BOTH the Polish voices and the
+ * multilingual voices (verified by ear: API/SDK came out right on William).
+ */
+export const ACRONYM_MAP: Readonly<Record<string, string>> = Object.freeze({
+  cli: 'si-el-aj',
+  api: 'ej-pi-aj',
+  sdk: 'es-di-kej',
+  gpu: 'dżi-pi-ju',
+  cpu: 'si-pi-ju',
+  ui: 'ju-łaj,',
+  json: 'dżej-son',
+
+  // More known acronyms (English letter names, Polish phonetic, hyphen-paced)
+  ux: 'ju-eks',
+  url: 'ju-ar-el',
+  html: 'ejcz-ti-em-el',
+  css: 'si-es-es',
+  xml: 'eks-em-el',
+  sql: 'es-kju-el',
+  llm: 'el-el-em',
+  jwt: 'dżej-dabl-ju-ti',
+  npm: 'en-pi-em',
+  ide: 'aj-di-i',
+  ssh: 'es-es-ejcz',
+  dns: 'di-en-es',
+  tts: 'ti-ti-es',
+  pr: 'pi-ar',
+  mr: 'em-ar',
+  qa: 'kju-ej',
+  'ci/cd': 'si-aj-si-di',
 })
