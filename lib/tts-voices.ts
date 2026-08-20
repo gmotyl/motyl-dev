@@ -5,15 +5,43 @@ export const DEFAULT_TTS_VOICE = 'en-AU-WilliamMultilingualNeural'
 export const TTS_VOICES = [
   {
     id: 'en-AU-WilliamMultilingualNeural',
-    label: 'William (multilingual)',
+    label: 'William (multilingual · EN-AU)',
   },
   {
     id: 'en-US-AndrewMultilingualNeural',
-    label: 'Andrew (multilingual)',
+    label: 'Andrew (multilingual · EN-US)',
   },
   {
     id: 'en-US-EmmaMultilingualNeural',
-    label: 'Emma (multilingual)',
+    label: 'Emma (multilingual · EN-US)',
+  },
+  {
+    id: 'en-US-AvaMultilingualNeural',
+    label: 'Ava (multilingual · EN-US)',
+  },
+  {
+    id: 'en-US-BrianMultilingualNeural',
+    label: 'Brian (multilingual · EN-US)',
+  },
+  {
+    id: 'de-DE-SeraphinaMultilingualNeural',
+    label: 'Seraphina (multilingual · DE)',
+  },
+  {
+    id: 'de-DE-FlorianMultilingualNeural',
+    label: 'Florian (multilingual · DE)',
+  },
+  {
+    id: 'fr-FR-VivienneMultilingualNeural',
+    label: 'Vivienne (multilingual · FR)',
+  },
+  {
+    id: 'fr-FR-RemyMultilingualNeural',
+    label: 'Remy (multilingual · FR)',
+  },
+  {
+    id: 'it-IT-GiuseppeMultilingualNeural',
+    label: 'Giuseppe (multilingual · IT)',
   },
   {
     id: 'pl-PL-MarekNeural',

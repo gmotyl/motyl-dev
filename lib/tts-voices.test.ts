@@ -22,6 +22,13 @@ describe('TTS voice preferences', () => {
       'en-AU-WilliamMultilingualNeural',
       'en-US-AndrewMultilingualNeural',
       'en-US-EmmaMultilingualNeural',
+      'en-US-AvaMultilingualNeural',
+      'en-US-BrianMultilingualNeural',
+      'de-DE-SeraphinaMultilingualNeural',
+      'de-DE-FlorianMultilingualNeural',
+      'fr-FR-VivienneMultilingualNeural',
+      'fr-FR-RemyMultilingualNeural',
+      'it-IT-GiuseppeMultilingualNeural',
       'pl-PL-MarekNeural',
       'pl-PL-ZofiaNeural',
     ])
