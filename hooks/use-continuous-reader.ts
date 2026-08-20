@@ -1,15 +1,46 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { SpeechSection } from '@/lib/tts-speech'
-import { splitIntoChunks } from '@/lib/tts-chunks'
-import { prefetchSpeech } from '@/lib/tts-client'
+import { splitIntoSpeechUnits, type SpeechSection } from '@/lib/tts-speech'
+import { synthesizeSpeech } from '@/lib/tts-client'
 import { DEFAULT_TTS_VOICE, getStoredTtsVoice, TTS_VOICE_CHANGE_EVENT, type TtsVoice } from '@/lib/tts-voices'
 import { useTTS } from './useTTS'
 import type { TTSPlayback } from './useTTS'
 
 export interface ContinuousReaderOptions {
   onItemChange?: (item: SpeechSection, index: number) => void
+}
+
+// How many prebuffer warm requests run concurrently. Each edge-tts synthesis is
+// a fresh WebSocket, so keep this low enough not to starve the real
+// play-from-here request while still warming the ladder quickly.
+const PREBUFFER_CONCURRENCY = 2
+
+/**
+ * Warm the synthesis cache for a tier of unit texts with bounded concurrency.
+ * Best-effort: `synthesizeSpeech` caches + dedupes, so already-warm texts are
+ * skipped and failures are ignored (the real playback request retries).
+ */
+async function warmTier(
+  texts: readonly string[],
+  voice: string,
+  concurrency: number,
+  signal: AbortSignal
+): Promise<void> {
+  const queue = [...texts]
+  const worker = async (): Promise<void> => {
+    while (queue.length > 0) {
+      if (signal.aborted) return
+      const text = queue.shift()
+      if (!text) continue
+      try {
+        await synthesizeSpeech(text, { voice })
+      } catch {
+        /* best-effort warm; the real request will retry */
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.max(1, concurrency) }, worker))
 }
 
 export function useContinuousReader(
@@ -25,35 +56,26 @@ export function useContinuousReader(
   const onItemChangeRef = useRef(onItemChange)
   const pendingStartRef = useRef<number | null>(null)
   const playbackRef = useRef<TTSPlayback | null>(null)
-  // Tracks the section index for which the next-section prefetch has fired, so
-  // it warms the following section's first chunk at most once per section.
-  const prefetchedForIndexRef = useRef<number | null>(null)
-  // Tracks the first section's text already warmed by the mount preload, so it
-  // fires once per distinct first-section content and does not re-fire when the
-  // stored voice resolves right after mount.
-  const preloadedFirstTextRef = useRef<string | null>(null)
   const [voice, setVoice] = useState<TtsVoice>(DEFAULT_TTS_VOICE)
 
   useEffect(() => {
     setVoice(getStoredTtsVoice())
   }, [])
 
-  // Warm the first section's first chunk as soon as the reader has sections, so
-  // the very first Play is near-instant. Guarded on the first section's text
-  // (not voice) so the post-mount stored-voice update does not re-trigger it.
+  // Speech units per section (title → TLDR → body chunks). Recomputed only when
+  // the loaded section set changes; the current section's units feed useTTS and
+  // the [0]/[1] units feed the prebuffer ladder.
+  const unitsBySection = useMemo(
+    () => items.map((section) => splitIntoSpeechUnits(section)),
+    [items]
+  )
+  const unitsBySectionRef = useRef(unitsBySection)
   useEffect(() => {
-    const firstText = items[0]?.speechText
-    if (!firstText) return
-    if (preloadedFirstTextRef.current === firstText) return
-
-    preloadedFirstTextRef.current = firstText
-    prefetchSpeech(splitIntoChunks(firstText)[0] ?? '', { voice })
-  }, [items, voice])
+    unitsBySectionRef.current = unitsBySection
+  }, [unitsBySection])
 
   useEffect(() => {
     currentIndexRef.current = currentIndex
-    // Reset the once-per-section prefetch guard on every section change.
-    prefetchedForIndexRef.current = null
   }, [currentIndex])
 
   useEffect(() => {
@@ -102,18 +124,7 @@ export function useContinuousReader(
 
   const playback = useTTS(items[currentIndex]?.speechText ?? '', {
     voice,
-    onProgress: useCallback((progress: number) => {
-      if (progress < 70) return
-
-      const index = currentIndexRef.current
-      const nextIndex = index + 1
-      if (nextIndex >= itemsRef.current.length) return
-      if (prefetchedForIndexRef.current === index) return
-
-      prefetchedForIndexRef.current = index
-      const nextText = itemsRef.current[nextIndex]?.speechText ?? ''
-      prefetchSpeech(splitIntoChunks(nextText)[0] ?? '', { voice })
-    }, [voice]),
+    units: unitsBySection[currentIndex],
     onComplete: useCallback(() => {
       if (currentIndexRef.current !== currentIndex) return
 
@@ -131,6 +142,51 @@ export function useContinuousReader(
   useEffect(() => {
     playbackRef.current = playback
   }, [playback])
+
+  // Prebuffer ladder: warm the synthesis cache ahead of user intent so
+  // play-from-here on any section starts from cache. Order: current section's
+  // title + TLDR first (secures playback runway = "T1 buffered"), THEN every
+  // loaded section's title, THEN every loaded section's TLDR. Restarts on voice
+  // change, section-set change, or current-section change; idempotent (warm
+  // requests hit the cache and skip). Non-current bodies are not prebuffered
+  // here — they load on demand as playback approaches them.
+  useEffect(() => {
+    if (unitsBySection.length === 0) return
+
+    const controller = new AbortController()
+    const { signal } = controller
+
+    const run = async (): Promise<void> => {
+      const all = unitsBySectionRef.current
+      const current = all[currentIndexRef.current]
+      // T1: current section's title + TLDR.
+      if (current) {
+        await warmTier(current.slice(0, 2), voice, PREBUFFER_CONCURRENCY, signal)
+      }
+      if (signal.aborted) return
+      // T2: every loaded section's title unit.
+      const titles = all.map((u) => u[0]).filter((t): t is string => Boolean(t))
+      await warmTier(titles, voice, PREBUFFER_CONCURRENCY, signal)
+      if (signal.aborted) return
+      // T3: every loaded section's TLDR (second) unit — only after all titles.
+      const tldrs = all.map((u) => u[1]).filter((t): t is string => Boolean(t))
+      await warmTier(tldrs, voice, PREBUFFER_CONCURRENCY, signal)
+    }
+
+    const useIdle = typeof requestIdleCallback === 'function'
+    const handle = useIdle
+      ? requestIdleCallback(() => void run())
+      : setTimeout(() => void run(), 0)
+
+    return () => {
+      controller.abort()
+      if (useIdle && typeof cancelIdleCallback === 'function') {
+        cancelIdleCallback(handle as number)
+      } else {
+        clearTimeout(handle as ReturnType<typeof setTimeout>)
+      }
+    }
+  }, [unitsBySection, voice, currentIndex])
 
   useEffect(() => {
     if (pendingStartRef.current !== currentIndex) return

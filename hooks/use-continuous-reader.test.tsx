@@ -2,7 +2,6 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { SpeechSection } from '@/lib/tts-speech'
-import { splitIntoChunks } from '@/lib/tts-chunks'
 import { DEFAULT_TTS_VOICE, setStoredTtsVoice, TTS_VOICE_STORAGE_KEY } from '@/lib/tts-voices'
 import { useContinuousReader } from './use-continuous-reader'
 
@@ -82,8 +81,12 @@ const deferred = <T,>() => {
   return { promise, resolve }
 }
 
+// Pending-synthesis harness. Dedupes by text (mirroring the real synthesis
+// cache) so the prebuffer scheduler and playback, which BOTH call
+// synthesizeSpeech, share one never-resolving deferred per text. Exposes
+// requests keyed by text so a test can resolve a specific (e.g. stale) one.
 const setupPendingSynthesis = () => {
-  const requests: Array<ReturnType<typeof deferred<ArrayBuffer>>> = []
+  const requestsByText = new Map<string, ReturnType<typeof deferred<ArrayBuffer>>>()
   const events: string[] = []
   const originalAbort = AbortController.prototype.abort
 
@@ -92,13 +95,15 @@ const setupPendingSynthesis = () => {
     return originalAbort.call(this)
   })
   ttsClientMock.synthesizeSpeech.mockImplementation((text: string) => {
+    const existing = requestsByText.get(text)
+    if (existing) return existing.promise
     events.push(`synthesize:${text}`)
     const request = deferred<ArrayBuffer>()
-    requests.push(request)
+    requestsByText.set(text, request)
     return request.promise
   })
 
-  return { events, requests }
+  return { events, requestsByText }
 }
 
 const makeItem = (index: number): SpeechSection => ({
@@ -281,74 +286,66 @@ describe('useContinuousReader', () => {
     expect(ttsMock.playback.play).toHaveBeenCalledTimes(2)
   })
 
-  it('invalidates pending synthesis before direct playFrom during Next flow and ignores its stale resolution', async () => {
+  it('interrupts the pending playback synthesis on play-from-here and ignores its stale resolution', async () => {
     ttsMock.useActualTTS = true
-    const { events, requests } = setupPendingSynthesis()
+    const { events, requestsByText } = setupPendingSynthesis()
     const { result } = renderHook(() =>
       useContinuousReader([makeItem(0), makeItem(1), makeItem(2)])
     )
 
+    // Section 0's first (title) unit is 'News' (its sourceTitle).
     act(() => result.current.play())
-    await waitFor(() => expect(requests).toHaveLength(1))
+    await waitFor(() => expect(requestsByText.has('News')).toBe(true))
 
     act(() => result.current.playFrom(1))
     await waitFor(() => {
-      expect(requests).toHaveLength(2)
+      expect(result.current.currentIndex).toBe(1)
       expect(result.current.isPlaying).toBe(true)
       expect(result.current.isBuffering).toBe(true)
     })
+    // Section 1's title unit is now the one being synthesized, and the
+    // interrupt aborted the in-flight (section-0) request.
+    await waitFor(() => expect(requestsByText.has('Section 1')).toBe(true))
+    expect(events).toContain('abort')
 
-    expect(events).toEqual([
-      'synthesize:prepared speech 0',
-      'abort',
-      'synthesize:prepared speech 1',
-    ])
-    expect(result.current.currentIndex).toBe(1)
-
+    // Resolving the STALE section-0 synthesis must not regress state.
     await act(async () => {
-      requests[0].resolve(new ArrayBuffer(0))
+      requestsByText.get('News')!.resolve(new ArrayBuffer(0))
       await Promise.resolve()
     })
 
     expect(result.current.currentIndex).toBe(1)
     expect(result.current.isPlaying).toBe(true)
     expect(result.current.isBuffering).toBe(true)
-    expect(requests).toHaveLength(2)
   })
 
-  it('invalidates pending synthesis before direct playFrom and ignores its stale resolution', async () => {
+  it('interrupts the pending playback synthesis on play-from-here to a farther section', async () => {
     ttsMock.useActualTTS = true
-    const { events, requests } = setupPendingSynthesis()
+    const { events, requestsByText } = setupPendingSynthesis()
     const { result } = renderHook(() =>
       useContinuousReader([makeItem(0), makeItem(1), makeItem(2)])
     )
 
     act(() => result.current.play())
-    await waitFor(() => expect(requests).toHaveLength(1))
+    await waitFor(() => expect(requestsByText.has('News')).toBe(true))
 
     act(() => result.current.playFrom(2))
     await waitFor(() => {
-      expect(requests).toHaveLength(2)
+      expect(result.current.currentIndex).toBe(2)
       expect(result.current.isPlaying).toBe(true)
       expect(result.current.isBuffering).toBe(true)
     })
-
-    expect(events).toEqual([
-      'synthesize:prepared speech 0',
-      'abort',
-      'synthesize:prepared speech 2',
-    ])
-    expect(result.current.currentIndex).toBe(2)
+    await waitFor(() => expect(requestsByText.has('Section 2')).toBe(true))
+    expect(events).toContain('abort')
 
     await act(async () => {
-      requests[0].resolve(new ArrayBuffer(0))
+      requestsByText.get('News')!.resolve(new ArrayBuffer(0))
       await Promise.resolve()
     })
 
     expect(result.current.currentIndex).toBe(2)
     expect(result.current.isPlaying).toBe(true)
     expect(result.current.isBuffering).toBe(true)
-    expect(requests).toHaveLength(2)
   })
 
   it('automatically advances on completion', async () => {
@@ -367,77 +364,74 @@ describe('useContinuousReader', () => {
     expect(onItemChange).toHaveBeenLastCalledWith(makeItem(1), 1)
   })
 
-  it('reader prefetches the next section\'s first chunk once when progress passes the threshold', async () => {
-    const { result } = renderHook(() =>
-      useContinuousReader([makeItem(0), makeItem(1)])
+  it('prebuffer ladder warms all section titles, then all TLDRs', async () => {
+    ttsClientMock.synthesizeSpeech.mockResolvedValue(new ArrayBuffer(0))
+    renderHook(() => useContinuousReader([makeItem(0), makeItem(1), makeItem(2)]))
+
+    const warmed = () =>
+      ttsClientMock.synthesizeSpeech.mock.calls.map(([text]) => text as string)
+
+    // Titles of every loaded section (s0 title = its sourceTitle 'News').
+    await waitFor(() =>
+      expect(warmed()).toEqual(expect.arrayContaining(['News', 'Section 1', 'Section 2']))
     )
-
-    act(() => result.current.play())
-    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
-    await waitFor(() => expect(ttsMock.getLatestOptions()?.voice).toBe('pl-PL-ZofiaNeural'))
-
-    const onProgress = () => ttsMock.getLatestOptions()?.onProgress as (progress: number) => void
-    // Only the next-section (section 1) progress prefetch matters here; the
-    // section-0 mount preload is a separate path.
-    const nextSectionCalls = () =>
-      ttsClientMock.prefetchSpeech.mock.calls.filter(([chunk]) => chunk === 'prepared speech 1')
-
-    // Below threshold: no next-section prefetch yet.
-    act(() => onProgress()(50))
-    expect(nextSectionCalls()).toHaveLength(0)
-
-    // Crossing the threshold fires exactly once for this section...
-    act(() => onProgress()(70))
-    act(() => onProgress()(85))
-
-    expect(nextSectionCalls()).toHaveLength(1)
-    expect(ttsClientMock.prefetchSpeech).toHaveBeenCalledWith('prepared speech 1', {
-      voice: 'pl-PL-ZofiaNeural',
-    })
-  })
-
-  it('does not prefetch past the last section', async () => {
-    const { result } = renderHook(() => useContinuousReader([makeItem(0)]))
-
-    act(() => result.current.play())
-    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
-
-    // Ignore the section-0 mount preload; assert progress adds no next-section prefetch.
-    ttsClientMock.prefetchSpeech.mockClear()
-
-    act(() => (ttsMock.getLatestOptions()?.onProgress as (progress: number) => void)(90))
-
-    expect(ttsClientMock.prefetchSpeech).not.toHaveBeenCalled()
-  })
-
-  it('preloads the first section\'s first chunk once on mount', async () => {
-    const { rerender } = renderHook(() =>
-      useContinuousReader([makeItem(0), makeItem(1)])
-    )
-
-    // Mount warms section 0's first chunk exactly once, with the resolved voice.
-    await waitFor(() => {
-      expect(ttsClientMock.prefetchSpeech).toHaveBeenCalledWith(
-        splitIntoChunks('prepared speech 0')[0] ?? '',
-        { voice: DEFAULT_TTS_VOICE }
+    // Then every section's TLDR (here the no-TLDR fallback = body unit).
+    await waitFor(() =>
+      expect(warmed()).toEqual(
+        expect.arrayContaining(['Visible markdown 0', 'Visible markdown 1', 'Visible markdown 2'])
       )
-    })
-
-    // The stored voice resolves post-mount (Task 3). That voice change must not
-    // re-fire the first-section preload.
-    act(() => setStoredTtsVoice('en-US-EmmaMultilingualNeural'))
-    rerender()
-
-    const sectionZeroCalls = ttsClientMock.prefetchSpeech.mock.calls.filter(
-      ([chunk]) => chunk === 'prepared speech 0'
     )
-    expect(sectionZeroCalls).toHaveLength(1)
+
+    // Tier gate: OTHER sections' titles are warmed before their TLDRs. (The
+    // CURRENT section's title+TLDR come first, in T1, to secure runway.)
+    const calls = warmed()
+    const lastOtherTitle = Math.max(calls.indexOf('Section 1'), calls.indexOf('Section 2'))
+    const firstOtherTldr = Math.min(
+      calls.indexOf('Visible markdown 1'),
+      calls.indexOf('Visible markdown 2')
+    )
+    expect(lastOtherTitle).toBeGreaterThanOrEqual(0)
+    expect(lastOtherTitle).toBeLessThan(firstOtherTldr)
   })
 
-  it('does not preload when there are no sections', () => {
+  it('prebuffer warms the current section title + TLDR first (runway)', async () => {
+    ttsClientMock.synthesizeSpeech.mockResolvedValue(new ArrayBuffer(0))
+    renderHook(() => useContinuousReader([makeItem(0), makeItem(1), makeItem(2)]))
+
+    const warmed = () =>
+      ttsClientMock.synthesizeSpeech.mock.calls.map(([text]) => text as string)
+
+    await waitFor(() => expect(warmed()).toContain('News'))
+    // Current section (index 0) title 'News' and its unit-2 'Visible markdown 0'
+    // are the first two warmed, before other sections' titles.
+    const calls = warmed()
+    expect(calls.indexOf('News')).toBeLessThan(calls.indexOf('Section 1'))
+    expect(calls.indexOf('Visible markdown 0')).toBeLessThan(calls.indexOf('Section 1'))
+  })
+
+  it('re-runs the ladder with the new voice when the voice changes', async () => {
+    ttsClientMock.synthesizeSpeech.mockResolvedValue(new ArrayBuffer(0))
+    renderHook(() => useContinuousReader([makeItem(0), makeItem(1)]))
+
+    const warmedWith = (voice: string) =>
+      ttsClientMock.synthesizeSpeech.mock.calls.some(
+        ([text, opts]) => text === 'Section 1' && (opts as { voice?: string }).voice === voice
+      )
+
+    await waitFor(() => expect(warmedWith('pl-PL-ZofiaNeural')).toBe(true))
+
+    ttsClientMock.synthesizeSpeech.mockClear()
+    act(() => setStoredTtsVoice('en-US-EmmaMultilingualNeural'))
+
+    await waitFor(() => expect(warmedWith('en-US-EmmaMultilingualNeural')).toBe(true))
+  })
+
+  it('does not prebuffer when there are no sections', async () => {
+    ttsClientMock.synthesizeSpeech.mockResolvedValue(new ArrayBuffer(0))
     renderHook(() => useContinuousReader([]))
 
-    expect(ttsClientMock.prefetchSpeech).not.toHaveBeenCalled()
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    expect(ttsClientMock.synthesizeSpeech).not.toHaveBeenCalled()
   })
 
   it('stops with a retryable error on synthesis failure', async () => {

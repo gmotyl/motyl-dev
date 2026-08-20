@@ -106,24 +106,49 @@ describe('synthesizeSpeech cache', () => {
     expect(edgeMock.streamCount).toBe(2)
   })
 
-  it('synthesis cache evicts oldest entries beyond the cap', async () => {
+  it('synthesis cache evicts the least-recently-used entry beyond the cap (200)', async () => {
     const voice = 'en-GB-RyanNeural'
+    const CAP = 200
 
-    for (let i = 0; i < 24; i += 1) {
+    // Fill the cache exactly to the cap.
+    for (let i = 0; i < CAP; i += 1) {
       await synthesizeSpeech(`text-${i}`, { voice })
     }
-    expect(edgeMock.constructCount).toBe(24)
+    expect(edgeMock.constructCount).toBe(CAP)
 
-    // 25th distinct key evicts the oldest inserted key (text-0).
-    await synthesizeSpeech('text-24', { voice })
-    expect(edgeMock.constructCount).toBe(25)
-
-    // text-1 is still cached (a read does not re-synthesize).
-    await synthesizeSpeech('text-1', { voice })
-    expect(edgeMock.constructCount).toBe(25)
+    // One more distinct key overflows and evicts the LRU (text-0, untouched).
+    await synthesizeSpeech(`text-${CAP}`, { voice })
+    expect(edgeMock.constructCount).toBe(CAP + 1)
 
     // text-0 was evicted, so it must be synthesized again.
     await synthesizeSpeech('text-0', { voice })
-    expect(edgeMock.constructCount).toBe(26)
+    expect(edgeMock.constructCount).toBe(CAP + 2)
+  })
+
+  it('LRU: reading an entry protects it from eviction (touch on read)', async () => {
+    const voice = 'en-GB-RyanNeural'
+    const CAP = 200
+
+    for (let i = 0; i < CAP; i += 1) {
+      await synthesizeSpeech(`k-${i}`, { voice })
+    }
+    expect(edgeMock.constructCount).toBe(CAP)
+
+    // Touch the oldest entry (k-0) so it becomes most-recently-used; now k-1 is
+    // the LRU. Reading must NOT re-synthesize.
+    await synthesizeSpeech('k-0', { voice })
+    expect(edgeMock.constructCount).toBe(CAP)
+
+    // Overflow: the new LRU (k-1) is evicted, not the just-touched k-0.
+    await synthesizeSpeech(`k-${CAP}`, { voice })
+    expect(edgeMock.constructCount).toBe(CAP + 1)
+
+    // k-0 survived (still cached, no re-synthesis)...
+    await synthesizeSpeech('k-0', { voice })
+    expect(edgeMock.constructCount).toBe(CAP + 1)
+
+    // ...while k-1 was evicted and must re-synthesize.
+    await synthesizeSpeech('k-1', { voice })
+    expect(edgeMock.constructCount).toBe(CAP + 2)
   })
 })

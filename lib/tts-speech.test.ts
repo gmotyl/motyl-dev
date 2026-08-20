@@ -4,8 +4,94 @@ import {
   prepareSpeechSections,
   prepareSpeechText,
   replaceWholeWordMappings,
+  splitIntoSpeechUnits,
   splitReviewedSections,
+  type SpeechSection,
 } from './tts-speech'
+
+const section = (over: Partial<SpeechSection>): SpeechSection => ({
+  sourceSlug: 'news',
+  sourceTitle: undefined,
+  title: 'Section title',
+  markdown: '## Section title\nBody sentence one. Body sentence two.',
+  speechText: '',
+  ...over,
+})
+
+describe('splitIntoSpeechUnits', () => {
+  it('emits [title, tldr, ...body] with title first from sourceTitle', () => {
+    const units = splitIntoSpeechUnits(
+      section({
+        sourceTitle: 'Article Title',
+        title: 'Article Title',
+        markdown: '## Article Title\n**TLDR:** Short summary here.\n\nFull body paragraph text.',
+      })
+    )
+
+    expect(units[0]).toBe('Article Title')
+    // The TLDR unit is the `**TLDR:**` paragraph, run through prepareSpeechText
+    // (which maps the structural `tldr`/`summary` labels to pause punctuation).
+    expect(units[1]).toBe(prepareSpeechText('**TLDR:** Short summary here.'))
+    expect(units[1]).not.toContain('Full body paragraph text.')
+    expect(units.slice(2).join(' ')).toContain('Full body paragraph text.')
+  })
+
+  it('does not speak the heading twice when sourceTitle equals the heading', () => {
+    const units = splitIntoSpeechUnits(
+      section({
+        sourceTitle: 'Same Title',
+        title: 'Same Title',
+        markdown: '## Same Title\n**TLDR:** A summary.\n\nBody.',
+      })
+    )
+
+    // "Same Title" appears exactly once across all units (title unit only).
+    const occurrences = units.filter((u) => u.includes('Same Title')).length
+    expect(occurrences).toBe(1)
+    expect(units[0]).toBe('Same Title')
+  })
+
+  it('falls back to the body first sentence as unit 2 when there is no TLDR', () => {
+    const units = splitIntoSpeechUnits(
+      section({
+        sourceTitle: 'Title',
+        markdown: '## Title\nFirst sentence here. Second sentence follows. Third one too.',
+      })
+    )
+
+    expect(units[0]).toBe('Title')
+    expect(units[1]).toBe('First sentence here.')
+    expect(units[2]).toContain('Second sentence follows.')
+  })
+
+  it('uses the section heading as the title when there is no sourceTitle', () => {
+    const units = splitIntoSpeechUnits(
+      section({
+        sourceTitle: undefined,
+        title: 'Heading Only',
+        markdown: '## Heading Only\n**TLDR:** T.\n\nBody.',
+      })
+    )
+
+    expect(units[0]).toBe('Heading Only')
+  })
+
+  it('keeps body chunks at the default (non-shrunk) chunk size', () => {
+    const long = 'Zdanie. '.repeat(400) // ~3200 chars of body
+    const units = splitIntoSpeechUnits(
+      section({
+        sourceTitle: 'T',
+        markdown: `## T\n**TLDR:** Krotko.\n\n${long}`,
+      })
+    )
+
+    const bodyUnits = units.slice(2)
+    expect(bodyUnits.length).toBeGreaterThan(1)
+    // No body chunk exceeds the 1000-char default; none is artificially tiny.
+    for (const chunk of bodyUnits) expect(chunk.length).toBeLessThanOrEqual(1000)
+    expect(Math.max(...bodyUnits.map((c) => c.length))).toBeGreaterThan(500)
+  })
+})
 
 describe('splitReviewedSections', () => {
   it('splits consecutive reviewed sections in source order', () => {

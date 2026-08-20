@@ -1,4 +1,5 @@
 import { PRONUNCIATION_MAP } from '@/lib/tts-pronunciation'
+import { splitIntoChunks } from '@/lib/tts-chunks'
 
 export interface SpeechSource {
   slug: string
@@ -113,4 +114,60 @@ export function prepareSpeechSections(sources: readonly SpeechSource[]): SpeechS
       [section.sourceTitle, section.markdown].filter(Boolean).join('\n')
     ),
   }))
+}
+
+// Matches the leading `## heading` line of a section's markdown (removed so the
+// heading is not spoken again as body — the title unit already speaks it).
+const LEADING_HEADING = /^##[ \t]+.*(?:\r?\n|$)/
+
+// Matches a `**TLDR:**` (or `**TLDR**`) paragraph up to the next blank line.
+const TLDR_PARAGRAPH = /(?:^|\n)[ \t]*\*\*TLDR:?\*\*[\s\S]*?(?=\n[ \t]*\n|$)/i
+
+const firstSentence = (text: string): string | null =>
+  text.match(/^[\s\S]*?[.!?]+(?=\s|$)/)?.[0].trim() ?? null
+
+/**
+ * Split a section into ordered **speech units** for synthesis and playback:
+ * `[title, tldr?, ...bodyChunks]`. Each unit is `prepareSpeechText`'d
+ * individually so its string is a stable, reusable synthesis-cache key (the
+ * prebuffer ladder warms these exact strings).
+ *
+ * - **Title** = the section's `sourceTitle` (article/frontmatter title) when
+ *   present, else its `##` heading. The `##` heading is stripped from the body
+ *   so the title is spoken exactly once (no double-title read).
+ * - **TLDR** = the `**TLDR:**` paragraph. If absent, the second unit is the
+ *   body's first sentence instead (keeps the fast-start second unit small).
+ * - **Body** stays at the default 1000-char chunking (not cut smaller): the
+ *   title + TLDR give enough playback runway to fetch full body chunks ahead.
+ */
+export function splitIntoSpeechUnits(section: SpeechSection): string[] {
+  const units: string[] = []
+
+  const titleText = (section.sourceTitle ?? section.title ?? '').trim()
+  const title = prepareSpeechText(titleText)
+  if (title) units.push(title)
+
+  // Body = section markdown minus its leading `## heading` line.
+  let body = section.markdown.replace(LEADING_HEADING, '')
+
+  const tldrMatch = body.match(TLDR_PARAGRAPH)
+  if (tldrMatch) {
+    const tldr = prepareSpeechText(tldrMatch[0])
+    if (tldr) units.push(tldr)
+    const rest = body.slice(0, tldrMatch.index) + body.slice(tldrMatch.index! + tldrMatch[0].length)
+    units.push(...splitIntoChunks(prepareSpeechText(rest)))
+  } else {
+    // No TLDR: second unit is the body's first sentence, remainder follows.
+    const preparedBody = prepareSpeechText(body)
+    const first = firstSentence(preparedBody)
+    if (first) {
+      units.push(first)
+      const remainder = preparedBody.slice(first.length).trim()
+      if (remainder) units.push(...splitIntoChunks(remainder))
+    } else if (preparedBody) {
+      units.push(...splitIntoChunks(preparedBody))
+    }
+  }
+
+  return units.filter((u) => u.length > 0)
 }
