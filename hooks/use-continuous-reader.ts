@@ -254,6 +254,21 @@ export function useContinuousReader(
     playbackRef.current = playback
   }, [playback])
 
+  // Destructured here, above the prebuffer ladder, so the ladder can depend on
+  // the individual state VALUES: `playback`'s identity churns every progress
+  // tick, these do not.
+  const {
+    isPlaying,
+    isBuffering,
+    progress,
+    currentTime,
+    totalEstimatedTime,
+    currentChunkIndex,
+    totalChunks,
+    stop: playbackStop,
+    resume: playbackResume,
+  } = playback
+
   // The position's section disappeared (mark-as-read, DOM eviction): the derived
   // index has already resolved to a survivor per the previous order, so adopt it
   // as the new position, re-seat `useTTS` on it, and — only when audio was
@@ -296,16 +311,31 @@ export function useContinuousReader(
   // change, section-set change, or current-section change; idempotent (warm
   // requests hit the cache and skip). Non-current bodies are not prebuffered
   // here — they load on demand as playback approaches them.
+  //
+  // IDLE-ONLY: playback has absolute priority over warming. While audio is
+  // running or waiting the wide tiers are skipped and the ladder warms only the
+  // next section's first unit (the seam into auto-advance); the current
+  // section's runway belongs to `useTTS`'s BUFFER_AHEAD. `isPlaying` /
+  // `isBuffering` are the destructured values, NOT `playback` — its identity
+  // changes on every progress tick, which would restart the ladder constantly.
+  // Entering `isBuffering` therefore re-runs the effect, whose cleanup aborts
+  // the warms already in flight.
   useEffect(() => {
     if (unitTextsBySection.length === 0) return
 
     const controller = new AbortController()
     const { signal } = controller
+    const audioActive = isPlaying || isBuffering
 
     const run = async (): Promise<void> => {
       const all = unitTextsBySectionRef.current
-      const current = all[currentIndexRef.current]
+      if (audioActive) {
+        const nextFirst = all[currentIndexRef.current + 1]?.[0]
+        if (nextFirst) await warmTier([nextFirst], voice, 1, signal)
+        return
+      }
       // T1: current section's title + TLDR.
+      const current = all[currentIndexRef.current]
       if (current) {
         await warmTier(current.slice(0, 2), voice, PREBUFFER_CONCURRENCY, signal)
       }
@@ -332,7 +362,7 @@ export function useContinuousReader(
         clearTimeout(handle as ReturnType<typeof setTimeout>)
       }
     }
-  }, [unitTextsBySection, voice, currentIndex])
+  }, [unitTextsBySection, voice, currentIndex, isPlaying, isBuffering])
 
   useEffect(() => {
     const pending = pendingStartRef.current
@@ -430,18 +460,6 @@ export function useContinuousReader(
     setError(null)
     void playbackRef.current?.play()
   }, [])
-
-  const {
-    isPlaying,
-    isBuffering,
-    progress,
-    currentTime,
-    totalEstimatedTime,
-    currentChunkIndex,
-    totalChunks,
-    stop: playbackStop,
-    resume: playbackResume,
-  } = playback
 
   const canNext = Math.max(currentIndex, previewIndex) < items.length - 1
 

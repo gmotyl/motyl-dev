@@ -48,7 +48,7 @@ export interface TTSPlayback extends TTSState {
 const detectLanguage = detectLanguageFromContent
 
 // Number of chunks to keep buffered ahead of current playback
-const BUFFER_AHEAD = 2
+const BUFFER_AHEAD = 3
 
 export function useTTS(content: string, options: UseTTSOptions = {}) {
   const { voice, units, onProgress, onComplete, onError } = options
@@ -460,7 +460,10 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       ensureChunks()
       if (chunksRef.current.length === 0) return
 
-      const index = Math.min(Math.max(unitIndex, 0), chunksRef.current.length - 1)
+      // Normalise before clamping: a non-integer or NaN index would index
+      // `chunksRef` to undefined and surface as a synthesis error via onError.
+      const requested = Number.isFinite(unitIndex) ? Math.trunc(unitIndex) : 0
+      const index = Math.min(Math.max(requested, 0), chunksRef.current.length - 1)
       currentChunkIndexRef.current = index
       completedCharsRef.current = charCountsRef.current
         .slice(0, index)

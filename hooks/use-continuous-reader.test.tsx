@@ -454,6 +454,76 @@ describe('useContinuousReader', () => {
     expect(calls.indexOf('Visible markdown 0')).toBeLessThan(calls.indexOf('Section 1'))
   })
 
+  it("warms only the next section's first unit while playing", async () => {
+    ttsClientMock.synthesizeSpeech.mockResolvedValue(new ArrayBuffer(0))
+    ttsMock.playback.isPlaying = true
+    renderReader([makeItem(0), makeItem(1), makeItem(2)])
+
+    const warmed = () =>
+      ttsClientMock.synthesizeSpeech.mock.calls.map(([text]) => text as string)
+
+    await waitFor(() => expect(warmed()).toContain('Section 1'))
+    await new Promise((resolve) => setTimeout(resolve, 20))
+
+    // The wide tiers stay out of playback's way: no other section's title, no
+    // TLDR tier, and not even the current section's own units (that runway
+    // belongs to useTTS's BUFFER_AHEAD).
+    expect(warmed()).toEqual(['Section 1'])
+  })
+
+  it('aborts in-flight warms when the player starts buffering', async () => {
+    const { events } = setupPendingSynthesis()
+    const items = [makeItem(0), makeItem(1), makeItem(2)]
+    const { rerender } = renderReader(items)
+
+    await waitFor(() => expect(events).toContain('synthesize:News'))
+    events.length = 0
+
+    // Same `items` identity, so only the buffering flag changes — an unrelated
+    // re-render must not be what aborts.
+    ttsMock.playback.isBuffering = true
+    act(() => rerender({ items }))
+
+    expect(events).toContain('abort')
+  })
+
+  it('runs the full title and TLDR tiers when the reader is idle', async () => {
+    ttsClientMock.synthesizeSpeech.mockResolvedValue(new ArrayBuffer(0))
+    ttsMock.playback.isPlaying = false
+    ttsMock.playback.isBuffering = false
+    renderReader([makeItem(0), makeItem(1), makeItem(2)])
+
+    const warmed = () =>
+      ttsClientMock.synthesizeSpeech.mock.calls.map(([text]) => text as string)
+
+    await waitFor(() =>
+      expect(warmed()).toEqual(
+        expect.arrayContaining([
+          'News',
+          'Section 1',
+          'Section 2',
+          'Visible markdown 0',
+          'Visible markdown 1',
+          'Visible markdown 2',
+        ])
+      )
+    )
+  })
+
+  it('swallows warm failures without surfacing an error', async () => {
+    ttsClientMock.synthesizeSpeech.mockRejectedValue(new Error('warm failed'))
+    const { result } = renderReader([makeItem(0), makeItem(1)])
+
+    await waitFor(() => expect(ttsClientMock.synthesizeSpeech).toHaveBeenCalled())
+    await new Promise((resolve) => setTimeout(resolve, 20))
+
+    expect(result.current.error).toBeNull()
+    expect(ttsMock.playback.stop).not.toHaveBeenCalled()
+    // A rejecting tier does not stop the ladder: later tiers still run.
+    const warmed = ttsClientMock.synthesizeSpeech.mock.calls.map(([text]) => text as string)
+    expect(warmed).toEqual(expect.arrayContaining(['News', 'Section 1', 'Visible markdown 1']))
+  })
+
   it('re-runs the ladder with the new voice when the voice changes', async () => {
     ttsClientMock.synthesizeSpeech.mockResolvedValue(new ArrayBuffer(0))
     renderHook(() => useContinuousReader([makeItem(0), makeItem(1)]))
