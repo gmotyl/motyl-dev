@@ -747,19 +747,48 @@ describe('useContinuousReader', () => {
     ttsMock.playback.playFromUnit.mockClear()
     act(() => result.current.playFromLine('lines', 9))
     await waitFor(() => expect(ttsMock.playback.playFromUnit).toHaveBeenCalledWith(2))
+
+    // Line 8 above is the blank line between units [7,7] and [9,9] — no unit
+    // covers it, so it exercises the documented fallback (greatest startLine at
+    // or below the line). A line past the last unit's endLine falls back the
+    // same way and lands on the last unit.
+    ttsMock.playback.playFromUnit.mockClear()
+    act(() => result.current.playFromLine('lines', 9999))
+    await waitFor(() => expect(ttsMock.playback.playFromUnit).toHaveBeenCalledWith(2))
+    expect(result.current.position).toEqual({
+      sectionKey: sectionKey('lines', 0),
+      unitIndex: 2,
+    })
   })
 
   it('playFromLine picks the first unit when several share the greatest startLine', async () => {
     const { result } = renderReader([sharedLineItem])
 
-    // Units 1 and 2 both start on line 2 (first sentence + remainder): the click
-    // must land on the paragraph's first unit, never mid-paragraph.
-    act(() => result.current.playFromLine('shared', 3))
+    // Units 1 [2,2] and 2 [2,4] both start on — and both cover — line 2, which
+    // is the only line a click on that paragraph can report (react-markdown
+    // gives a paragraph's own first line). The tie must keep the paragraph's
+    // first unit, so playback starts at the paragraph's beginning.
+    act(() => result.current.playFromLine('shared', 2))
 
     await waitFor(() => expect(ttsMock.playback.playFromUnit).toHaveBeenCalledWith(1))
     expect(result.current.position).toEqual({
       sectionKey: sectionKey('shared', 0),
       unitIndex: 1,
+    })
+  })
+
+  it('playFromLine picks the unit that covers the line when an earlier unit shares its startLine', async () => {
+    const { result } = renderReader([sharedLineItem])
+
+    // Clicking the second rendered paragraph reports line 4. Only unit 2 [2,4]
+    // covers that line, even though unit 1 [2,2] shares its startLine — so the
+    // covering unit must win over the tie-break on startLine.
+    act(() => result.current.playFromLine('shared', 4))
+
+    await waitFor(() => expect(ttsMock.playback.playFromUnit).toHaveBeenCalledWith(2))
+    expect(result.current.position).toEqual({
+      sectionKey: sectionKey('shared', 0),
+      unitIndex: 2,
     })
   })
 

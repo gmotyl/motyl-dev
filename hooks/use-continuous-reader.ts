@@ -426,33 +426,52 @@ export function useContinuousReader(
   )
 
   /**
-   * Resolve an article line to its section + unit and start there. The target is
-   * the unit with the greatest `startLine` <= `line`; several units can share
-   * that line (a paragraph split at sentence boundaries, or the no-TLDR
-   * first-sentence unit and its remainder), and the FIRST of them wins so a
-   * paragraph click starts at the paragraph's beginning, not mid-way through it.
+   * Resolve an article line to its section + unit and start there.
+   *
+   * A unit that COVERS the line (`startLine <= line <= endLine`) wins: units can
+   * share a `startLine` while spanning different ranges (the no-TLDR
+   * first-sentence unit keeps its paragraph's start line, and its remainder is
+   * merged with following paragraphs, widening only the remainder's `endLine`),
+   * so the sharing unit that actually speaks the clicked line is the target.
+   * Among covering units the greatest `startLine` wins, and the FIRST of those
+   * on a tie, so a paragraph click starts at the paragraph's beginning rather
+   * than mid-way through it.
+   *
+   * When no unit covers the line (a blank line between units, or a line past the
+   * last unit) the target falls back to the unit with the greatest `startLine`
+   * <= `line`, first on ties. A line before the first unit's `startLine` matches
+   * nothing and is a no-op.
    */
   const playFromLine = useCallback(
     (sourceSlug: string, line: number) => {
       const currentItems = itemsRef.current
       const unitsBySectionValue = unitsBySectionRef.current
-      let target: { sectionIndex: number; unitIndex: number } | null = null
-      let bestLine = -1
+      let covering: { sectionIndex: number; unitIndex: number } | null = null
+      let coveringLine = -1
+      let fallback: { sectionIndex: number; unitIndex: number } | null = null
+      let fallbackLine = -1
 
       for (let sectionIndex = 0; sectionIndex < currentItems.length; sectionIndex += 1) {
         if (currentItems[sectionIndex].sourceSlug !== sourceSlug) continue
 
         const units = unitsBySectionValue[sectionIndex] ?? []
         for (let unitIndex = 0; unitIndex < units.length; unitIndex += 1) {
-          const { startLine } = units[unitIndex]
+          const { startLine, endLine } = units[unitIndex]
+          if (startLine > line) continue
+
           // Strictly greater: ties keep the earlier unit.
-          if (startLine <= line && startLine > bestLine) {
-            bestLine = startLine
-            target = { sectionIndex, unitIndex }
+          if (line <= endLine && startLine > coveringLine) {
+            coveringLine = startLine
+            covering = { sectionIndex, unitIndex }
+          }
+          if (startLine > fallbackLine) {
+            fallbackLine = startLine
+            fallback = { sectionIndex, unitIndex }
           }
         }
       }
 
+      const target = covering ?? fallback
       if (!target) return
       selectAndStart(target.sectionIndex, target.unitIndex, true)
     },
