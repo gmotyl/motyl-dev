@@ -310,6 +310,36 @@ describe('useTTS playFromUnit', () => {
     })
   })
 
+  it('clamps positive infinity to the last unit', async () => {
+    vi.mocked(synthesizeSpeech).mockClear()
+
+    const { result } = renderHook(() => useTTS('irrelevant content', { units }))
+
+    await act(async () => {
+      await result.current.playFromUnit(Number.POSITIVE_INFINITY)
+    })
+    await waitFor(() => expect(sequence).toContain('start'))
+
+    // +Infinity reads as "past the end", so it clamps to the LAST unit.
+    expect(vi.mocked(synthesizeSpeech).mock.calls[0][0]).toBe(units[2])
+    await waitFor(() => expect(result.current.currentChunkIndex).toBe(2))
+  })
+
+  it('treats NaN as the first unit', async () => {
+    vi.mocked(synthesizeSpeech).mockClear()
+
+    const { result } = renderHook(() => useTTS('irrelevant content', { units }))
+
+    await act(async () => {
+      await result.current.playFromUnit(Number.NaN)
+    })
+    await waitFor(() => expect(sequence).toContain('start'))
+
+    // NaN carries no position at all: fall back to unit 0.
+    expect(vi.mocked(synthesizeSpeech).mock.calls[0][0]).toBe(units[0])
+    await waitFor(() => expect(result.current.currentChunkIndex).toBe(0))
+  })
+
   it('ignores a stale pause offset when jumping to a different unit', async () => {
     const { result } = renderHook(() => useTTS('irrelevant content', { units }))
 

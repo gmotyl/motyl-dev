@@ -460,9 +460,11 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       ensureChunks()
       if (chunksRef.current.length === 0) return
 
-      // Normalise before clamping: a non-integer or NaN index would index
-      // `chunksRef` to undefined and surface as a synthesis error via onError.
-      const requested = Number.isFinite(unitIndex) ? Math.trunc(unitIndex) : 0
+      // Normalise before clamping: a fractional index would index `chunksRef`
+      // to undefined and surface as a synthesis error via onError. NaN carries
+      // no position, so it falls back to 0; infinities are left to the clamp
+      // below, which reads +Infinity as the last unit and -Infinity as the first.
+      const requested = Number.isNaN(unitIndex) ? 0 : Math.trunc(unitIndex)
       const index = Math.min(Math.max(requested, 0), chunksRef.current.length - 1)
       currentChunkIndexRef.current = index
       completedCharsRef.current = charCountsRef.current

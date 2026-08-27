@@ -46,8 +46,9 @@ function resolvePositionIndex(
 
   const liveIndexByKey = new Map(items.map((section, index) => [section.key, index] as const))
   const wasAt = previousKeys.indexOf(positionKey)
-  // Total resolution failure: the position's key is in neither order, so the
-  // queue was fully replaced rather than filtered. Policy: restart at the top.
+  // The position's key is in neither order: either the queue was fully replaced
+  // rather than filtered, or this is the first resolve against a populated queue
+  // (no position yet, so no previous keys). Policy either way: start at the top.
   if (wasAt < 0) return 0
 
   for (let index = wasAt + 1; index < previousKeys.length; index += 1) {
@@ -128,11 +129,12 @@ export function useContinuousReader(
 
   // `currentIndex` is DERIVED from the position, never the other way round: the
   // queue mutating re-derives the index instead of renumbering what is read.
-  // `previousKeysRef.current` is deliberately not a dep: its writer effect is
-  // declared before the resolve effect and only runs after the render that
-  // consumed the old value, so the ref can never be ahead of `items` and the
-  // memo always sees the last committed key order — exactly "the previous
-  // order". Listing it would be a no-op anyway (ref identity never changes).
+  // `previousKeysRef.current` is deliberately not a dep of the memo below. The
+  // ref's writer is an effect, so it only runs post-commit: the render-phase
+  // memo therefore always reads the LAST COMMITTED key order — exactly the
+  // "previous order" the fallback needs — and the ref can never be ahead of
+  // `items`. Listing `.current` would not even be inert: it is a fresh array on
+  // every write, so it would re-run the memo after every commit.
   const resolvedIndex = useMemo(
     () => resolvePositionIndex(items, position.sectionKey, previousKeysRef.current),
     [items, position.sectionKey]
@@ -255,8 +257,9 @@ export function useContinuousReader(
   }, [playback])
 
   // Destructured here, above the prebuffer ladder, so the ladder can depend on
-  // the individual state VALUES: `playback`'s identity churns every progress
-  // tick, these do not.
+  // `isPlaying`/`isBuffering` as VALUES: `playback`'s identity churns every
+  // progress tick, these do not. The other bindings are not ladder deps — they
+  // came along because the whole destructuring statement was hoisted as one.
   const {
     isPlaying,
     isBuffering,
