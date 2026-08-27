@@ -7,15 +7,28 @@ export interface SpeechSource {
   content: string
 }
 
+/**
+ * The reader's stable position key. Section titles repeat across articles, so
+ * the slug must be part of the key for it to identify one section.
+ */
+export const sectionKey = (sourceSlug: string, ordinal: number): string =>
+  `${sourceSlug}#${ordinal}`
+
 export interface ReviewedSection {
   sourceSlug: string
   sourceTitle?: string
   title: string
   markdown: string
+  /** 0-based index of this `##` section within its own article. */
+  ordinal: number
+  /** 1-based line of this section's `##` heading within the article's markdown. */
+  startLine: number
 }
 
 export interface SpeechSection extends ReviewedSection {
   speechText: string
+  /** `sectionKey(sourceSlug, ordinal)` — the reader's stable position key. */
+  key: string
 }
 
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -104,16 +117,25 @@ export function splitReviewedSections(sources: readonly SpeechSource[]): Reviewe
   for (const source of sources) {
     const sectionPattern = /^##[ \t]+(.+?)[ \t]*\r?$([\s\S]*?)(?=^##[ \t]+|(?![\s\S]))/gm
     let match: RegExpExecArray | null
-    let isFirstSection = true
+    let ordinal = 0
+    // Line cursor advanced with the match index — heading text can repeat, so
+    // the line must come from the split position, not from searching the text.
+    let scannedTo = 0
+    let startLine = 1
 
     while ((match = sectionPattern.exec(source.content)) !== null) {
+      startLine += (source.content.slice(scannedTo, match.index).match(/\n/g) ?? []).length
+      scannedTo = match.index
+
       sections.push({
         sourceSlug: source.slug,
-        sourceTitle: isFirstSection ? source.title : undefined,
+        sourceTitle: ordinal === 0 ? source.title : undefined,
         title: match[1].trim(),
         markdown: match[0].trim(),
+        ordinal,
+        startLine,
       })
-      isFirstSection = false
+      ordinal += 1
     }
   }
 
@@ -126,6 +148,7 @@ export function prepareSpeechSections(sources: readonly SpeechSource[]): SpeechS
     speechText: prepareSpeechText(
       [section.sourceTitle, section.markdown].filter(Boolean).join('\n')
     ),
+    key: sectionKey(section.sourceSlug, section.ordinal),
   }))
 }
 

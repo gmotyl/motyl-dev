@@ -5,6 +5,7 @@ import {
   prepareSpeechSections,
   prepareSpeechText,
   replaceWholeWordMappings,
+  sectionKey,
   splitIntoSpeechUnits,
   splitReviewedSections,
   type SpeechSection,
@@ -56,7 +57,10 @@ const section = (over: Partial<SpeechSection>): SpeechSection => ({
   sourceTitle: undefined,
   title: 'Section title',
   markdown: '## Section title\nBody sentence one. Body sentence two.',
+  ordinal: 0,
+  startLine: 1,
   speechText: '',
+  key: sectionKey('news', 0),
   ...over,
 })
 
@@ -186,6 +190,47 @@ Druga treść.`,
       'Źródłowy tytuł',
       undefined,
     ])
+  })
+
+  it('assigns per-article ordinals restarting at zero for each source', () => {
+    const sections = splitReviewedSections([
+      {
+        slug: 'first-news',
+        title: 'Pierwszy przegląd',
+        content: `Wstęp.
+
+## Pierwszy temat
+Treść pierwszego tematu.
+
+## Drugi temat
+Treść drugiego tematu.`,
+      },
+      {
+        slug: 'second-news',
+        title: 'Drugi przegląd',
+        content: '## Trzeci temat\nTreść trzeciego tematu.',
+      },
+    ])
+
+    expect(sections.map((section) => section.ordinal)).toEqual([0, 1, 0])
+  })
+
+  it('reports the 1-based line of each section heading', () => {
+    const sections = splitReviewedSections([
+      {
+        // Line 1 is the `##` heading itself → startLine 1.
+        slug: 'lead-heading',
+        title: 'Od razu nagłówek',
+        content: '## Pierwszy\nTreść.\n\n## Drugi\nTreść.',
+      },
+      {
+        slug: 'with-intro',
+        title: 'Ze wstępem',
+        content: 'Wstęp.\n\n## Trzeci\r\nTreść.\r\n\r\n## Czwarty\nTreść.',
+      },
+    ])
+
+    expect(sections.map((section) => section.startLine)).toEqual([1, 4, 3, 6])
   })
 })
 
@@ -321,5 +366,39 @@ React działa.`,
     }])
 
     expect(sections.map((section) => section.title)).toEqual(['Pierwszy temat', 'Drugi temat'])
+  })
+
+  it('gives identically-titled sections in different articles distinct keys', () => {
+    const sections = prepareSpeechSections([
+      { slug: 'first-news', title: 'Pierwszy', content: '## Ten sam temat\nTreść.' },
+      { slug: 'second-news', title: 'Drugi', content: '## Ten sam temat\nTreść.' },
+    ])
+
+    expect(sections.map((section) => section.key)).toEqual([
+      'first-news#0',
+      'second-news#0',
+    ])
+    expect(sections.map((section) => section.key)).toEqual(
+      sections.map((section) => sectionKey(section.sourceSlug, section.ordinal))
+    )
+  })
+
+  it('leaves speechText unchanged', () => {
+    const sections = prepareSpeechSections([
+      {
+        slug: 'news',
+        title: 'Dzisiejsze wiadomości',
+        content: `## AI w praktyce
+AI pomaga.
+
+## React rośnie
+React działa.`,
+      },
+    ])
+
+    expect(sections.map((section) => section.speechText)).toEqual([
+      'Dzisiejsze wiadomości ej aj w praktyce ej aj pomaga.',
+      'reakt rośnie reakt działa.',
+    ])
   })
 })
