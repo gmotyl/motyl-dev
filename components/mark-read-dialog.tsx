@@ -66,6 +66,10 @@ export function MarkReadDialog({
       )
     }
     wasOpen.current = open
+    // Deps are deliberately over-inclusive: the parent gives `items` a new
+    // identity on every scroll-past change, so this effect re-runs often — the
+    // transition guard makes every such run a no-op. The snapshot intentionally
+    // does not refresh while the dialog is open.
   }, [open, items, currentlyReadingSlug])
 
   const toggleItem = (slug: string) => {

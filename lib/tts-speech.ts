@@ -285,7 +285,10 @@ export function splitIntoSpeechUnits(section: SpeechSection): SpeechUnit[] {
   // Only the FIRST body paragraph can be the TLDR. The TLDR unit is hoisted to
   // index 1, so honouring a mid-body one would emit unit start lines that are
   // not non-decreasing — and the line → unit lookup (play from a paragraph)
-  // relies on that ordering.
+  // relies on that ordering. A `**TLDR:**` paragraph anywhere else is therefore
+  // treated as ordinary body: not pre-spoken as the section's TLDR, and
+  // packed/merged with its neighbours like any other paragraph, so a click on it
+  // resolves to whichever unit covers its lines, not to a TLDR unit of its own.
   const tldrIndex = paragraphs.length > 0 && TLDR_PARAGRAPH.test(paragraphs[0].text) ? 0 : -1
 
   // Prepare each paragraph on its own, then drop the ones that speak nothing
