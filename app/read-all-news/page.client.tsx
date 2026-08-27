@@ -312,7 +312,11 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
     return () => document.removeEventListener('click', handleClick, true)
   }, [scrolledPastSlugs])
 
-  const scrolledPastItems = items.filter(item => scrolledPastSlugs.has(item.slug))
+  // Memoised: a fresh array every render resets the mark-read dialog's snapshot
+  const scrolledPastItems = useMemo(
+    () => items.filter(item => scrolledPastSlugs.has(item.slug)),
+    [items, scrolledPastSlugs]
+  )
 
   return (
     <div className="flex min-h-screen flex-col">
