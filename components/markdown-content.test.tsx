@@ -192,6 +192,27 @@ describe('MarkdownContent paragraph play-from-here', () => {
     expect(onPlayFromLine).toHaveBeenCalledWith(3)
   })
 
+  // @tailwindcss/typography resets the body's edge margins with child combinators
+  // (`.prose > :first-child`/`> :last-child`). The paragraph wrapper is now that
+  // child, so it has to forward the reset to the <p> or every article body gains a
+  // trailing 1.25em.
+  it('keeps the prose first/last-child margin reset reaching the wrapped paragraph', () => {
+    const { container } = render(
+      <MarkdownContent
+        content={paragraphContent}
+        reader={{ onPlayFromHere: vi.fn(), onPlayFromLine: vi.fn() }}
+      />,
+    )
+
+    const wrappers = container.querySelectorAll('.prose > div')
+    expect(wrappers).toHaveLength(2)
+    for (const wrapper of wrappers) {
+      expect(wrapper.querySelector(':scope > p')).not.toBeNull()
+      expect(wrapper).toHaveClass('[&:first-child>p]:mt-0')
+      expect(wrapper).toHaveClass('[&:last-child>p]:mb-0')
+    }
+  })
+
   it('renders paragraphs unchanged when onPlayFromLine is absent', () => {
     const withoutReader = render(<MarkdownContent content={paragraphContent} />).container.innerHTML
     const withReader = render(

@@ -1,7 +1,7 @@
 'use client'
 
 import { Play } from 'lucide-react'
-import { useRef, type MouseEvent, type ReactNode } from 'react'
+import type { MouseEvent, ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
@@ -16,9 +16,9 @@ export interface ParagraphPlayFromHereProps {
 
 /**
  * Paragraph-granular "Play from here". Two click targets live in the DOM at once
- * and CSS alone picks the active one, so server markup never depends on pointer
- * capability: a gutter button on hover-capable pointers, tapping the paragraph
- * body on the rest.
+ * and the pointer's hover capability picks the active one, so server markup never
+ * depends on pointer capability: a gutter button on hover-capable pointers,
+ * tapping the paragraph body on the rest.
  */
 export function ParagraphPlayFromHere({
   line,
@@ -27,16 +27,12 @@ export function ParagraphPlayFromHere({
   className,
   children,
 }: ParagraphPlayFromHereProps) {
-  const tapProbeRef = useRef<HTMLSpanElement>(null)
-
-  // The probe is `display: none` unless `@media (hover: none)` matches, so reading
-  // its computed style at click time is how the body-tap path learns it is inert
-  // on hover-capable pointers — where the gutter button is the only click target.
-  const bodyTapActive = (): boolean => {
-    const probe = tapProbeRef.current
-    if (!probe) return true
-    return window.getComputedStyle(probe).display !== 'none'
-  }
+  // The same query the gutter button's CSS keys off, so exactly one of the two
+  // targets is live. Read at click time, not render time, so a pointer change
+  // needs no re-render. Without matchMedia (SSR, older jsdom) the body tap stays
+  // active: CSS hides the gutter button on `hover: none`, so failing the other
+  // way would leave a touch reader no target at all.
+  const bodyTapActive = (): boolean => !window.matchMedia?.('(hover: hover)').matches
 
   const play = (): void => {
     if (!disabled) onPlayFromLine(line)
@@ -53,13 +49,14 @@ export function ParagraphPlayFromHere({
   }
 
   return (
-    <div className={cn('group relative', className)} onClick={handleBodyClick}>
-      <span
-        ref={tapProbeRef}
-        aria-hidden="true"
-        data-paragraph-tap-probe=""
-        className="hidden [@media(hover:none)]:block"
-      />
+    // @tailwindcss/typography emits its edge margin resets as child combinators
+    // (`.prose > :first-child`), and this wrapper is what the `.prose` child now
+    // is, so it forwards them to the <p>; without that every article body gains a
+    // trailing 1.25em.
+    <div
+      className={cn('group relative [&:first-child>p]:mt-0 [&:last-child>p]:mb-0', className)}
+      onClick={handleBodyClick}
+    >
       <Button
         type="button"
         variant="ghost"
@@ -68,6 +65,10 @@ export function ParagraphPlayFromHere({
           play()
         }}
         disabled={disabled}
+        // One tab stop per paragraph, all named the same, is unusable; the h2
+        // SectionPlayFromHere is play-from-here's keyboard path. Still reachable
+        // by pointer, and focus-visible below still applies to programmatic focus.
+        tabIndex={-1}
         data-line={line}
         aria-label="Play from here"
         className="absolute -left-9 top-1 hidden h-8 w-8 p-0 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:hover)]:flex"

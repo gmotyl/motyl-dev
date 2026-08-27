@@ -2,12 +2,14 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ParagraphPlayFromHere } from './paragraph-play-from-here'
 
-// jsdom applies no stylesheet, so the `@media (hover: …)` split that makes the
-// gutter button and the body-tap mutually exclusive in a browser is inert here:
-// both paths are reachable and are tested as separate code paths.
+// jsdom ships no window.matchMedia, which is the component's "unknown pointer"
+// case: the body-tap path stays live, so it is the default test configuration.
+// The hover configuration — where the gutter button must be the only click target
+// — is stubbed explicitly.
 describe('ParagraphPlayFromHere', () => {
   afterEach(() => {
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   const renderParagraph = (onPlayFromLine: (line: number) => void) =>
@@ -57,6 +59,28 @@ describe('ParagraphPlayFromHere', () => {
 
     expect(onPlayFromLine).toHaveBeenCalledTimes(1)
     expect(onPlayFromLine).toHaveBeenCalledWith(7)
+  })
+
+  // The governing rule: when the pointer supports hover the gutter button is the
+  // ONLY click target, so clicking the paragraph text must do nothing.
+  it('does not call onPlayFromLine when the paragraph body is clicked on a hover-capable pointer', () => {
+    const onPlayFromLine = vi.fn()
+    const matchMedia = vi.fn(() => ({ matches: true }) as unknown as MediaQueryList)
+    vi.stubGlobal('matchMedia', matchMedia)
+    renderParagraph(onPlayFromLine)
+
+    fireEvent.click(screen.getByText(/Body text/))
+
+    expect(matchMedia).toHaveBeenCalledWith('(hover: hover)')
+    expect(onPlayFromLine).not.toHaveBeenCalled()
+  })
+
+  // Every paragraph would otherwise add a tab stop with an identical name; the h2
+  // SectionPlayFromHere stays the keyboard path.
+  it('keeps the gutter button out of the tab order', () => {
+    const { container } = renderParagraph(vi.fn())
+
+    expect(container.querySelector('button[data-line]')).toHaveAttribute('tabindex', '-1')
   })
 
   it('does not call onPlayFromLine on a non-primary button click', () => {
