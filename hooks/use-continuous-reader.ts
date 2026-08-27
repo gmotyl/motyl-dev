@@ -19,6 +19,11 @@ export interface ContinuousReaderOptions {
 export interface ReadingPosition {
   /** `sectionKey(sourceSlug, ordinal)` */
   sectionKey: string
+  /**
+   * Command-time, NOT live: the unit the reader was last told to start at.
+   * Nothing feeds `useTTS`'s `currentChunkIndex` back here, so this does not
+   * track where the voice currently is — read `currentChunkIndex` for that.
+   */
   unitIndex: number
 }
 
@@ -41,6 +46,8 @@ function resolvePositionIndex(
 
   const liveIndexByKey = new Map(items.map((section, index) => [section.key, index] as const))
   const wasAt = previousKeys.indexOf(positionKey)
+  // Total resolution failure: the position's key is in neither order, so the
+  // queue was fully replaced rather than filtered. Policy: restart at the top.
   if (wasAt < 0) return 0
 
   for (let index = wasAt + 1; index < previousKeys.length; index += 1) {
@@ -52,6 +59,8 @@ function resolvePositionIndex(
     if (survivor !== undefined) return survivor
   }
 
+  // No survivor either side of where it sat: the queue was fully replaced.
+  // Same policy as above — restart at the top.
   return 0
 }
 
@@ -119,6 +128,11 @@ export function useContinuousReader(
 
   // `currentIndex` is DERIVED from the position, never the other way round: the
   // queue mutating re-derives the index instead of renumbering what is read.
+  // `previousKeysRef.current` is deliberately not a dep: its writer effect is
+  // declared before the resolve effect and only runs after the render that
+  // consumed the old value, so the ref can never be ahead of `items` and the
+  // memo always sees the last committed key order — exactly "the previous
+  // order". Listing it would be a no-op anyway (ref identity never changes).
   const resolvedIndex = useMemo(
     () => resolvePositionIndex(items, position.sectionKey, previousKeysRef.current),
     [items, position.sectionKey]
@@ -242,7 +256,8 @@ export function useContinuousReader(
 
   // The position's section disappeared (mark-as-read, DOM eviction): the derived
   // index has already resolved to a survivor per the previous order, so adopt it
-  // as the new position and, when audio was running, continue there from unit 0.
+  // as the new position, re-seat `useTTS` on it, and — only when audio was
+  // running — continue there from unit 0.
   // Declared after the `playbackRef` sync so it sees this commit's playback.
   useEffect(() => {
     if (position.sectionKey === currentKey) return
@@ -259,11 +274,18 @@ export function useContinuousReader(
     updatePosition(currentItem.key, 0)
     previewIndexRef.current = currentIndex
     setPreviewIndex(currentIndex)
-    if (!wasActive) return
-
     onItemChangeRef.current?.(currentItem, currentIndex)
+
+    // Re-seat `useTTS` on the survivor on BOTH paths. It has no
+    // reset-on-content-change (`ensureChunks` no-ops while chunks exist) and
+    // `pause()` retains its chunks by contract, so skipping this would leave a
+    // paused reader's next Play speaking the section that was just removed.
     playbackRef.current?.stop()
     setError(null)
+
+    // Only a reader that was already playing continues playing. Without this
+    // gate an empty → populated queue would start speaking section 0 on its own.
+    if (!wasActive) return
     void playbackRef.current?.play()
   }, [currentIndex, currentItem, currentKey, position.sectionKey, updatePosition])
 

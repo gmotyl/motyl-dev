@@ -564,6 +564,62 @@ describe('useContinuousReader', () => {
     expect(result.current.error).toBeNull()
   })
 
+  it('re-seats playback on the survivor when the read article is removed while paused', async () => {
+    const onItemChange = vi.fn()
+    const { result, rerender } = renderHook(
+      ({ items }: { items: SpeechSection[] }) => useContinuousReader(items, { onItemChange }),
+      { initialProps: { items: [makeItem(0), makeItem(1), makeItem(2)] } }
+    )
+
+    act(() => result.current.playFromHere(1))
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+
+    // Paused, not stopped: `useTTS` retains the removed section's chunks, so
+    // moving the position alone would leave the next Play speaking the article
+    // the user just marked read.
+    act(() => result.current.pause())
+    ttsMock.playback.isPlaying = false
+    ttsMock.playback.isBuffering = false
+    ttsMock.playback.play.mockClear()
+    ttsMock.playback.stop.mockClear()
+    onItemChange.mockClear()
+
+    act(() => rerender({ items: [makeItem(0), makeItem(2)] }))
+
+    await waitFor(() =>
+      expect(result.current.position).toEqual({
+        sectionKey: sectionKey('news-2', 2),
+        unitIndex: 0,
+      })
+    )
+    expect(result.current.currentIndex).toBe(1)
+    // Re-seated on the survivor...
+    expect(ttsMock.playback.stop).toHaveBeenCalled()
+    expect(ttsMock.calls.at(-1)?.content).toBe('prepared speech 2')
+    // ...the eye follows...
+    expect(onItemChange).toHaveBeenLastCalledWith(makeItem(2), 1)
+    // ...and a paused reader stays paused: no auto-resume.
+    expect(ttsMock.playback.play).not.toHaveBeenCalled()
+    expect(result.current.error).toBeNull()
+  })
+
+  it('does not auto-start playback when the queue first populates', async () => {
+    const { result, rerender } = renderHook(
+      ({ items }: { items: SpeechSection[] }) => useContinuousReader(items),
+      { initialProps: { items: [] as SpeechSection[] } }
+    )
+
+    act(() => rerender({ items: [makeItem(0), makeItem(1)] }))
+
+    await waitFor(() =>
+      expect(result.current.position).toEqual({
+        sectionKey: sectionKey('news-0', 0),
+        unitIndex: 0,
+      })
+    )
+    expect(ttsMock.playback.play).not.toHaveBeenCalled()
+  })
+
   it('stops without error when the queue empties', async () => {
     const { result, rerender } = renderReader([makeItem(0), makeItem(1)])
 
