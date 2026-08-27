@@ -7,6 +7,7 @@ import * as emoji from 'node-emoji'
 import { ShareAIButton } from '@/components/share-ai-button'
 import { VoteButton } from '@/components/vote-button'
 import { SectionPlayFromHere } from '@/components/section-play-from-here'
+import { ParagraphPlayFromHere } from '@/components/paragraph-play-from-here'
 import { Children, isValidElement, lazy, memo, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Components } from 'react-markdown'
 import GithubSlugger from 'github-slugger'
@@ -37,6 +38,8 @@ export interface MarkdownReaderOptions {
    * working scroll does (by element id), avoiding brittle heading-text matches.
    */
   currentSectionId?: string | null
+  /** Start playback from the speech unit covering this markdown line. */
+  onPlayFromLine?: (line: number) => void
 }
 
 function getHeadingText(children: ReactNode): string {
@@ -111,7 +114,22 @@ export const MarkdownContent = memo(function MarkdownContent({ content, itemType
     return section != null && section.id === reader.currentSectionId
   }
 
+  // Paragraph-granular "Play from here". Only wired when a callback is supplied,
+  // otherwise paragraphs fall through to react-markdown's default <p> untouched.
+  const paragraphPlayEnabled = reader?.enabled !== false && Boolean(reader?.onPlayFromLine)
+
+  const paragraph: Components['p'] = ({ children, node, ...props }) => {
+    const line = node?.position?.start?.line
+    if (line == null) return <p {...props}>{children}</p>
+    return (
+      <ParagraphPlayFromHere line={line} onPlayFromLine={reader!.onPlayFromLine!}>
+        <p {...props}>{children}</p>
+      </ParagraphPlayFromHere>
+    )
+  }
+
   const components: Components = {
+    ...(paragraphPlayEnabled ? { p: paragraph } : {}),
     h2: ({ children, ...props }) => {
       const heading = getHeadingText(children)
       const readerEnabled = reader?.enabled !== false && Boolean(reader?.onPlayFromHere)

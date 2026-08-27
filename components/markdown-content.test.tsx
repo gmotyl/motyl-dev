@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MarkdownContent } from './markdown-content'
 
@@ -148,5 +148,73 @@ describe('MarkdownContent current-section highlight', () => {
       expect(heading).not.toHaveClass('!text-yellow-400')
       expect(heading).not.toHaveClass('bg-yellow-400/10')
     }
+  })
+})
+
+// Paragraph-granular "Play from here": the gutter button reports the paragraph's
+// markdown start line, which the reader maps to the speech unit covering it.
+describe('MarkdownContent paragraph play-from-here', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ text: () => Promise.resolve('') })))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  // Paragraphs start on markdown lines 1 and 3.
+  const paragraphContent = 'First paragraph.\n\nSecond paragraph.'
+
+  it('renders a gutter play button per paragraph when onPlayFromLine is supplied', () => {
+    const { container } = render(
+      <MarkdownContent
+        content={paragraphContent}
+        reader={{ onPlayFromHere: vi.fn(), onPlayFromLine: vi.fn() }}
+      />,
+    )
+
+    const gutterButtons = container.querySelectorAll('button[data-line]')
+    expect(Array.from(gutterButtons, (button) => button.getAttribute('data-line'))).toEqual(['1', '3'])
+  })
+
+  it('calls onPlayFromLine with the paragraph start line when the gutter button is pressed', () => {
+    const onPlayFromLine = vi.fn()
+    const { container } = render(
+      <MarkdownContent
+        content={paragraphContent}
+        reader={{ onPlayFromHere: vi.fn(), onPlayFromLine }}
+      />,
+    )
+
+    fireEvent.click(container.querySelectorAll('button[data-line]')[1])
+
+    expect(onPlayFromLine).toHaveBeenCalledTimes(1)
+    expect(onPlayFromLine).toHaveBeenCalledWith(3)
+  })
+
+  it('renders paragraphs unchanged when onPlayFromLine is absent', () => {
+    const withoutReader = render(<MarkdownContent content={paragraphContent} />).container.innerHTML
+    const withReader = render(
+      <MarkdownContent content={paragraphContent} reader={{ onPlayFromHere: vi.fn() }} />,
+    ).container.innerHTML
+
+    expect(withReader).toBe(withoutReader)
+    expect(screen.queryAllByRole('button')).toHaveLength(0)
+  })
+
+  it('still plays a section from its h2 button when paragraph play is wired', () => {
+    const onPlayFromHere = vi.fn()
+    const { container } = render(
+      <MarkdownContent
+        content={'## First section\n\nFirst text.'}
+        reader={{ onPlayFromHere, getSectionIndex: () => 0, onPlayFromLine: vi.fn() }}
+      />,
+    )
+
+    // The section button is the labelled one; paragraph gutter buttons carry data-line.
+    fireEvent.click(container.querySelector('button:not([data-line])')!)
+
+    expect(onPlayFromHere).toHaveBeenCalledTimes(1)
+    expect(onPlayFromHere).toHaveBeenCalledWith(0)
   })
 })
