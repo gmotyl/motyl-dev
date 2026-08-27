@@ -22,7 +22,7 @@ vi.mock('@/components/markdown-content', async () => {
 
 // Controllable reader return so a test can emit a progress-only tick: a brand-new
 // state object each render (as the real rAF-driven hook does) while keeping
-// playFromHere referentially stable.
+// playFromHere/playFromLine referentially stable.
 let readerReturn: ReturnType<typeof makeReader>
 
 function makeReader(overrides: Partial<{
@@ -31,6 +31,7 @@ function makeReader(overrides: Partial<{
   currentTime: number
   currentIndex: number
   playFromHere: (index: number) => void
+  playFromLine: (sourceSlug: string, line: number) => void
 }> = {}) {
   return {
     isPlaying: false,
@@ -44,11 +45,16 @@ function makeReader(overrides: Partial<{
     pause: vi.fn(),
     next: vi.fn(),
     playFromHere: stablePlayFromHere,
+    // Stable by default, exactly like playFromHere: the markdownReader memo also
+    // depends on playFromLine, so leaving it out would make the progress-tick
+    // guard below pass vacuously (undefined === undefined every render).
+    playFromLine: stablePlayFromLine,
     ...overrides,
   }
 }
 
 const stablePlayFromHere = vi.fn()
+const stablePlayFromLine = vi.fn()
 
 vi.mock('@/hooks/use-continuous-reader', () => ({
   useContinuousReader: () => readerReturn,
@@ -93,6 +99,7 @@ describe('ArticleWrapper markdown re-render churn', () => {
   beforeEach(() => {
     h.readerProps.length = 0
     stablePlayFromHere.mockReset()
+    stablePlayFromLine.mockReset()
   })
 
   it('does not re-render MarkdownContent on a progress-only tick', () => {
@@ -108,8 +115,8 @@ describe('ArticleWrapper markdown re-render churn', () => {
     const readerAtMount = h.readerProps[rendersAfterMount - 1]
 
     // Progress tick: new reader state object (progress/currentTime change) but
-    // playFromHere identity AND currentIndex preserved — exactly what the rAF
-    // loop produces during playback of one section.
+    // playFromHere/playFromLine identities AND currentIndex preserved — exactly
+    // what the rAF loop produces during playback of one section.
     readerReturn = makeReader({ isPlaying: true, progress: 0.77, currentTime: 6.2 })
     rerender(<ArticleWrapper article={article} translatePrompt="prompt" />)
 
@@ -148,6 +155,22 @@ describe('ArticleWrapper markdown re-render churn', () => {
     // A genuine dependency change (new playFromHere) must flow through.
     const newPlayFromHere = vi.fn()
     readerReturn = makeReader({ playFromHere: newPlayFromHere })
+    rerender(<ArticleWrapper article={article} translatePrompt="prompt" />)
+
+    expect(h.readerProps.length).toBe(rendersAfterMount + 1)
+  })
+
+  it('does re-render MarkdownContent when playFromLine identity changes', () => {
+    readerReturn = makeReader()
+    const { rerender } = render(
+      <ArticleWrapper article={article} translatePrompt="prompt" />,
+    )
+    const rendersAfterMount = h.readerProps.length
+
+    // Proves the progress-tick guard above verifies playFromLine non-vacuously:
+    // the memo really does observe this dependency.
+    const newPlayFromLine = vi.fn()
+    readerReturn = makeReader({ playFromLine: newPlayFromLine })
     rerender(<ArticleWrapper article={article} translatePrompt="prompt" />)
 
     expect(h.readerProps.length).toBe(rendersAfterMount + 1)
