@@ -276,6 +276,35 @@ describe('splitIntoSpeechUnits', () => {
     // The skipped paragraphs neither emit a unit nor shift their neighbours.
     expect(ranges(units)).toEqual([[1, 1], [2, 2], [4, 4], [10, 10]])
   })
+
+  it('keeps unit line ranges non-decreasing when a TLDR appears mid-body', () => {
+    // No sentence-ending punctuation, so no first-sentence split, and each
+    // paragraph is over the floor — one unit per paragraph, one line each.
+    const clause = 'zdanie wypelniajace tekst bez kropki'
+    const paragraph = Array.from({ length: 6 }, () => clause).join(', ')
+    const units = splitIntoSpeechUnits(
+      section({
+        sourceTitle: 'T',
+        markdown: [
+          '## T', // 1
+          '', // 2
+          paragraph, // 3
+          '', // 4
+          `**TLDR:** ${paragraph}`, // 5
+          '', // 6
+          paragraph, // 7
+        ].join('\n'),
+      })
+    )
+
+    // Only the first body paragraph can be the TLDR unit. A later one stays in
+    // positional order, because the TLDR unit is hoisted to index 1 and hoisting
+    // a mid-body paragraph would make the start lines non-monotonic — which the
+    // line → unit lookup relies on.
+    const startLines = units.map((unit) => unit.startLine)
+    expect([...startLines].sort((a, b) => a - b)).toEqual(startLines)
+    expect(ranges(units)).toEqual([[1, 1], [3, 3], [5, 5], [7, 7]])
+  })
 })
 
 describe('splitReviewedSections', () => {

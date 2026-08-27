@@ -282,7 +282,11 @@ export function splitIntoSpeechUnits(section: SpeechSection): SpeechUnit[] {
   if (title) units.push({ text: title, startLine: headingLine, endLine: headingLine })
 
   const paragraphs = collectBodyParagraphs(section)
-  const tldrIndex = paragraphs.findIndex((paragraph) => TLDR_PARAGRAPH.test(paragraph.text))
+  // Only the FIRST body paragraph can be the TLDR. The TLDR unit is hoisted to
+  // index 1, so honouring a mid-body one would emit unit start lines that are
+  // not non-decreasing — and the line → unit lookup (play from a paragraph)
+  // relies on that ordering.
+  const tldrIndex = paragraphs.length > 0 && TLDR_PARAGRAPH.test(paragraphs[0].text) ? 0 : -1
 
   // Prepare each paragraph on its own, then drop the ones that speak nothing
   // (horizontal rules, comments) — skipping them leaves neighbours' ranges as

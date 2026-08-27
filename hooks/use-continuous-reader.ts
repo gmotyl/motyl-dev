@@ -11,6 +11,50 @@ export interface ContinuousReaderOptions {
   onItemChange?: (item: SpeechSection, index: number) => void
 }
 
+/**
+ * Where the reader is. The section is addressed by its stable key, never by a
+ * numeric index into the queue, so removing articles (mark-as-read, DOM
+ * eviction) cannot silently shift what is being read.
+ */
+export interface ReadingPosition {
+  /** `sectionKey(sourceSlug, ordinal)` */
+  sectionKey: string
+  unitIndex: number
+}
+
+const NO_POSITION: ReadingPosition = { sectionKey: '', unitIndex: 0 }
+
+/**
+ * Resolve the position's section to an index in the CURRENT sections. When its
+ * key is gone, fall back per the PREVIOUS order: the first survivor that
+ * followed it, else the last survivor before it. Returns -1 for an empty queue.
+ */
+function resolvePositionIndex(
+  items: readonly SpeechSection[],
+  positionKey: string,
+  previousKeys: readonly string[]
+): number {
+  if (items.length === 0) return -1
+
+  const direct = items.findIndex((section) => section.key === positionKey)
+  if (direct >= 0) return direct
+
+  const liveIndexByKey = new Map(items.map((section, index) => [section.key, index] as const))
+  const wasAt = previousKeys.indexOf(positionKey)
+  if (wasAt < 0) return 0
+
+  for (let index = wasAt + 1; index < previousKeys.length; index += 1) {
+    const survivor = liveIndexByKey.get(previousKeys[index])
+    if (survivor !== undefined) return survivor
+  }
+  for (let index = wasAt - 1; index >= 0; index -= 1) {
+    const survivor = liveIndexByKey.get(previousKeys[index])
+    if (survivor !== undefined) return survivor
+  }
+
+  return 0
+}
+
 // How many prebuffer warm requests run concurrently. Each edge-tts synthesis is
 // a fresh WebSocket, so keep this low enough not to starve the real
 // play-from-here request while still warming the ladder quickly.
@@ -47,16 +91,49 @@ export function useContinuousReader(
   items: readonly SpeechSection[],
   { onItemChange }: ContinuousReaderOptions = {}
 ) {
-  const [currentIndex, setCurrentIndex] = useState(0)
+  const [position, setPosition] = useState<ReadingPosition>(() =>
+    items[0] ? { sectionKey: items[0].key, unitIndex: 0 } : NO_POSITION
+  )
   const [previewIndex, setPreviewIndex] = useState(0)
   const [error, setError] = useState<Error | null>(null)
+  const positionRef = useRef(position)
   const currentIndexRef = useRef(0)
   const previewIndexRef = useRef(0)
   const itemsRef = useRef(items)
   const onItemChangeRef = useRef(onItemChange)
-  const pendingStartRef = useRef<number | null>(null)
+  const pendingStartRef = useRef<ReadingPosition | null>(null)
   const playbackRef = useRef<TTSPlayback | null>(null)
+  // The section keys of the previously rendered queue, in order — the only way
+  // to tell where a removed section used to sit when resolving the fallback.
+  const previousKeysRef = useRef<readonly string[]>([])
   const [voice, setVoice] = useState<TtsVoice>(DEFAULT_TTS_VOICE)
+
+  const updatePosition = useCallback((sectionKey: string, unitIndex: number) => {
+    positionRef.current = { sectionKey, unitIndex }
+    setPosition((previous) =>
+      previous.sectionKey === sectionKey && previous.unitIndex === unitIndex
+        ? previous
+        : { sectionKey, unitIndex }
+    )
+  }, [])
+
+  // `currentIndex` is DERIVED from the position, never the other way round: the
+  // queue mutating re-derives the index instead of renumbering what is read.
+  const resolvedIndex = useMemo(
+    () => resolvePositionIndex(items, position.sectionKey, previousKeysRef.current),
+    [items, position.sectionKey]
+  )
+  const currentIndex = Math.max(resolvedIndex, 0)
+  const currentItem = items[currentIndex]
+  const currentKey = currentItem?.key ?? ''
+
+  useEffect(() => {
+    previousKeysRef.current = items.map((section) => section.key)
+  }, [items])
+
+  useEffect(() => {
+    positionRef.current = position
+  }, [position])
 
   useEffect(() => {
     setVoice(getStoredTtsVoice())
@@ -78,6 +155,11 @@ export function useContinuousReader(
   useEffect(() => {
     unitTextsBySectionRef.current = unitTextsBySection
   }, [unitTextsBySection])
+  // Units with their line ranges — what `playFromLine` searches.
+  const unitsBySectionRef = useRef(unitsBySection)
+  useEffect(() => {
+    unitsBySectionRef.current = unitsBySection
+  }, [unitsBySection])
 
   useEffect(() => {
     currentIndexRef.current = currentIndex
@@ -105,39 +187,49 @@ export function useContinuousReader(
     }
   }, [])
 
-  const selectAndStart = useCallback((index: number, reportChange: boolean) => {
-    const selectedItem = itemsRef.current[index]
-    if (!selectedItem) return
+  const selectAndStart = useCallback(
+    (index: number, unitIndex: number, reportChange: boolean) => {
+      const selectedItem = itemsRef.current[index]
+      if (!selectedItem) return
 
-    previewIndexRef.current = index
-    setPreviewIndex(index)
+      previewIndexRef.current = index
+      setPreviewIndex(index)
 
-    playbackRef.current?.stop()
-    setError(null)
+      playbackRef.current?.stop()
+      setError(null)
 
-    if (reportChange) onItemChangeRef.current?.(selectedItem, index)
+      if (reportChange) onItemChangeRef.current?.(selectedItem, index)
 
-    if (index === currentIndexRef.current) {
-      pendingStartRef.current = null
-      void playbackRef.current?.play()
-      return
-    }
+      // Already on this section: `useTTS` holds its units, so start right away.
+      if (selectedItem.key === positionRef.current.sectionKey) {
+        pendingStartRef.current = null
+        updatePosition(selectedItem.key, unitIndex)
+        void (unitIndex > 0
+          ? playbackRef.current?.playFromUnit(unitIndex)
+          : playbackRef.current?.play())
+        return
+      }
 
-    pendingStartRef.current = index
-    setCurrentIndex(index)
-  }, [])
+      // Another section: `useTTS` only sees its units after the position commits,
+      // so hand the start to the effect below.
+      pendingStartRef.current = { sectionKey: selectedItem.key, unitIndex }
+      updatePosition(selectedItem.key, unitIndex)
+    },
+    [updatePosition]
+  )
 
-  const playback = useTTS(items[currentIndex]?.speechText ?? '', {
+  const playback = useTTS(currentItem?.speechText ?? '', {
     voice,
     units: unitTextsBySection[currentIndex],
     onComplete: useCallback(() => {
-      if (currentIndexRef.current !== currentIndex) return
+      // Stale completion: the position moved on since this section started.
+      if (positionRef.current.sectionKey !== currentKey) return
 
-      const nextIndex = currentIndexRef.current + 1
-      if (nextIndex < itemsRef.current.length) {
-        selectAndStart(nextIndex, true)
+      const nextIndex = itemsRef.current.findIndex((section) => section.key === currentKey) + 1
+      if (nextIndex > 0 && nextIndex < itemsRef.current.length) {
+        selectAndStart(nextIndex, 0, true)
       }
-    }, [currentIndex, selectAndStart]),
+    }, [currentKey, selectAndStart]),
     onError: useCallback((nextError: Error) => {
       playbackRef.current?.stop()
       setError(nextError)
@@ -147,6 +239,33 @@ export function useContinuousReader(
   useEffect(() => {
     playbackRef.current = playback
   }, [playback])
+
+  // The position's section disappeared (mark-as-read, DOM eviction): the derived
+  // index has already resolved to a survivor per the previous order, so adopt it
+  // as the new position and, when audio was running, continue there from unit 0.
+  // Declared after the `playbackRef` sync so it sees this commit's playback.
+  useEffect(() => {
+    if (position.sectionKey === currentKey) return
+
+    if (!currentItem) {
+      playbackRef.current?.stop()
+      updatePosition(NO_POSITION.sectionKey, NO_POSITION.unitIndex)
+      return
+    }
+
+    const wasActive = Boolean(
+      playbackRef.current?.isPlaying || playbackRef.current?.isBuffering
+    )
+    updatePosition(currentItem.key, 0)
+    previewIndexRef.current = currentIndex
+    setPreviewIndex(currentIndex)
+    if (!wasActive) return
+
+    onItemChangeRef.current?.(currentItem, currentIndex)
+    playbackRef.current?.stop()
+    setError(null)
+    void playbackRef.current?.play()
+  }, [currentIndex, currentItem, currentKey, position.sectionKey, updatePosition])
 
   // Prebuffer ladder: warm the synthesis cache ahead of user intent so
   // play-from-here on any section starts from cache. Order: current section's
@@ -194,11 +313,12 @@ export function useContinuousReader(
   }, [unitTextsBySection, voice, currentIndex])
 
   useEffect(() => {
-    if (pendingStartRef.current !== currentIndex) return
+    const pending = pendingStartRef.current
+    if (pending?.sectionKey !== currentKey) return
 
     pendingStartRef.current = null
-    void playback.play()
-  }, [currentIndex, playback.play])
+    void (pending.unitIndex > 0 ? playback.playFromUnit(pending.unitIndex) : playback.play())
+  }, [currentKey, playback.play, playback.playFromUnit])
 
   const play = useCallback(() => {
     setError(null)
@@ -239,15 +359,47 @@ export function useContinuousReader(
 
     previewIndexRef.current = nextIndex
     setPreviewIndex(nextIndex)
-    if (nextIndex !== currentIndexRef.current) {
-      setCurrentIndex(nextIndex)
-    }
+    updatePosition(nextItem.key, 0)
     onItemChangeRef.current?.(nextItem, nextIndex)
-  }, [])
+  }, [updatePosition])
 
-  const playFrom = useCallback(
-    (index: number) => {
-      selectAndStart(index, true)
+  const playFromHere = useCallback(
+    (sectionIndex: number, unitIndex = 0) => {
+      selectAndStart(sectionIndex, unitIndex, true)
+    },
+    [selectAndStart]
+  )
+
+  /**
+   * Resolve an article line to its section + unit and start there. The target is
+   * the unit with the greatest `startLine` <= `line`; several units can share
+   * that line (a paragraph split at sentence boundaries, or the no-TLDR
+   * first-sentence unit and its remainder), and the FIRST of them wins so a
+   * paragraph click starts at the paragraph's beginning, not mid-way through it.
+   */
+  const playFromLine = useCallback(
+    (sourceSlug: string, line: number) => {
+      const currentItems = itemsRef.current
+      const unitsBySectionValue = unitsBySectionRef.current
+      let target: { sectionIndex: number; unitIndex: number } | null = null
+      let bestLine = -1
+
+      for (let sectionIndex = 0; sectionIndex < currentItems.length; sectionIndex += 1) {
+        if (currentItems[sectionIndex].sourceSlug !== sourceSlug) continue
+
+        const units = unitsBySectionValue[sectionIndex] ?? []
+        for (let unitIndex = 0; unitIndex < units.length; unitIndex += 1) {
+          const { startLine } = units[unitIndex]
+          // Strictly greater: ties keep the earlier unit.
+          if (startLine <= line && startLine > bestLine) {
+            bestLine = startLine
+            target = { sectionIndex, unitIndex }
+          }
+        }
+      }
+
+      if (!target) return
+      selectAndStart(target.sectionIndex, target.unitIndex, true)
     },
     [selectAndStart]
   )
@@ -284,18 +436,21 @@ export function useContinuousReader(
     stop: playbackStop,
     resume: playbackResume,
     currentIndex,
-    currentItem: items[currentIndex],
+    currentItem,
+    position,
+    currentSlug: currentItem?.sourceSlug ?? null,
     error,
     next,
     canNext,
-    playFrom,
-    playFromHere: playFrom,
+    playFrom: playFromHere,
+    playFromHere,
+    playFromLine,
     retry,
   }), [
     isPlaying, isBuffering, progress, currentTime, totalEstimatedTime,
     currentChunkIndex, totalChunks, playbackStop, playbackResume, currentIndex,
-    items, error, play, pause, next, canNext,
-    playFrom, retry,
+    currentItem, position, error, play, pause, next, canNext,
+    playFromHere, playFromLine, retry,
   ])
 }
 

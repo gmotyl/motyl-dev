@@ -18,6 +18,7 @@ const ttsMock = vi.hoisted(() => {
     currentChunkIndex: 0,
     totalChunks: 0,
     play: vi.fn().mockResolvedValue(undefined),
+    playFromUnit: vi.fn().mockResolvedValue(undefined),
     pause: vi.fn(),
     stop: vi.fn(),
     resume: vi.fn().mockResolvedValue(undefined),
@@ -31,6 +32,7 @@ const ttsMock = vi.hoisted(() => {
       latestOptions = undefined
       calls.length = 0
       playback.play.mockClear()
+      playback.playFromUnit.mockClear()
       playback.pause.mockClear()
       playback.stop.mockClear()
       playback.resume.mockClear()
@@ -116,6 +118,46 @@ const makeItem = (index: number): SpeechSection => ({
   speechText: `prepared speech ${index}`,
   key: sectionKey(`news-${index}`, index),
 })
+
+const renderReader = (items: SpeechSection[]) =>
+  renderHook(({ items: current }: { items: SpeechSection[] }) => useContinuousReader(current), {
+    initialProps: { items },
+  })
+
+// A paragraph long enough to be its own unit (>= UNIT_MIN_CHARS) and free of
+// sentence punctuation, so the no-TLDR first-sentence split does not kick in and
+// every body paragraph maps to exactly one unit with its own start line.
+const LONG_PARAGRAPH = 'x'.repeat(210)
+
+// Units: title [5,5], body [7,7], body [9,9] — three distinct start lines.
+const lineItem: SpeechSection = {
+  sourceSlug: 'lines',
+  sourceTitle: 'Lines',
+  title: 'Heading',
+  markdown: ['## Heading', '', `a${LONG_PARAGRAPH}`, '', `b${LONG_PARAGRAPH}`].join('\n'),
+  ordinal: 0,
+  startLine: 5,
+  speechText: 'prepared lines',
+  key: sectionKey('lines', 0),
+}
+
+// Units: title [1,1], the body's first sentence [2,2], and the remainder merged
+// with the next paragraph [2,4] — units 1 and 2 SHARE start line 2.
+const sharedLineItem: SpeechSection = {
+  sourceSlug: 'shared',
+  sourceTitle: 'Shared',
+  title: 'Heading',
+  markdown: [
+    '## Heading',
+    'First sentence here. Second sentence follows.',
+    '',
+    'Third paragraph body.',
+  ].join('\n'),
+  ordinal: 0,
+  startLine: 1,
+  speechText: 'prepared shared',
+  key: sectionKey('shared', 0),
+}
 
 describe('useContinuousReader', () => {
   afterEach(() => {
@@ -454,5 +496,186 @@ describe('useContinuousReader', () => {
 
     act(() => result.current.retry())
     expect(ttsMock.playback.play).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps playing the same section when earlier articles are removed', async () => {
+    const { result, rerender } = renderReader([makeItem(0), makeItem(1), makeItem(2)])
+
+    act(() => result.current.playFromHere(2))
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+    ttsMock.playback.isPlaying = true
+    ttsMock.playback.stop.mockClear()
+
+    act(() => rerender({ items: [makeItem(2)] }))
+
+    // The position key still resolves, so only the derived index moves: useTTS
+    // keeps the same content and playback is neither stopped nor restarted.
+    expect(result.current.currentIndex).toBe(0)
+    expect(result.current.position).toEqual({
+      sectionKey: sectionKey('news-2', 2),
+      unitIndex: 0,
+    })
+    expect(result.current.currentSlug).toBe('news-2')
+    expect(ttsMock.playback.stop).not.toHaveBeenCalled()
+    expect(ttsMock.playback.play).toHaveBeenCalledOnce()
+    expect(ttsMock.playback.playFromUnit).not.toHaveBeenCalled()
+    expect(ttsMock.calls.at(-1)?.content).toBe('prepared speech 2')
+  })
+
+  it('resolves forward to the first surviving section when the played article is removed', async () => {
+    const { result, rerender } = renderReader([makeItem(0), makeItem(1), makeItem(2)])
+
+    act(() => result.current.playFromHere(1))
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+    ttsMock.playback.isPlaying = true
+
+    act(() => rerender({ items: [makeItem(0), makeItem(2)] }))
+
+    await waitFor(() =>
+      expect(result.current.position).toEqual({
+        sectionKey: sectionKey('news-2', 2),
+        unitIndex: 0,
+      })
+    )
+    expect(result.current.currentIndex).toBe(1)
+    expect(result.current.currentSlug).toBe('news-2')
+    expect(ttsMock.calls.at(-1)?.content).toBe('prepared speech 2')
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledTimes(2))
+    expect(result.current.error).toBeNull()
+  })
+
+  it('falls back to the last surviving section before it when nothing follows survives', async () => {
+    const { result, rerender } = renderReader([makeItem(0), makeItem(1), makeItem(2)])
+
+    act(() => result.current.playFromHere(2))
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+    ttsMock.playback.isPlaying = true
+
+    act(() => rerender({ items: [makeItem(0)] }))
+
+    await waitFor(() =>
+      expect(result.current.position).toEqual({
+        sectionKey: sectionKey('news-0', 0),
+        unitIndex: 0,
+      })
+    )
+    expect(result.current.currentIndex).toBe(0)
+    expect(ttsMock.calls.at(-1)?.content).toBe('prepared speech 0')
+    expect(result.current.error).toBeNull()
+  })
+
+  it('stops without error when the queue empties', async () => {
+    const { result, rerender } = renderReader([makeItem(0), makeItem(1)])
+
+    act(() => result.current.play())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+    ttsMock.playback.isPlaying = true
+    ttsMock.playback.stop.mockClear()
+
+    act(() => rerender({ items: [] }))
+
+    await waitFor(() => expect(ttsMock.playback.stop).toHaveBeenCalled())
+    expect(result.current.position).toEqual({ sectionKey: '', unitIndex: 0 })
+    expect(result.current.currentSlug).toBeNull()
+    expect(result.current.currentItem).toBeUndefined()
+    expect(result.current.error).toBeNull()
+  })
+
+  it('playFromHere defaults to unit zero', async () => {
+    const { result } = renderReader([makeItem(0), makeItem(1)])
+
+    act(() => result.current.playFromHere(1))
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+
+    expect(result.current.position).toEqual({
+      sectionKey: sectionKey('news-1', 1),
+      unitIndex: 0,
+    })
+    expect(ttsMock.playback.playFromUnit).not.toHaveBeenCalled()
+  })
+
+  it('playFromHere starts at the requested unit', async () => {
+    const { result } = renderReader([makeItem(0), makeItem(1)])
+
+    act(() => result.current.playFromHere(0, 2))
+
+    await waitFor(() => expect(ttsMock.playback.playFromUnit).toHaveBeenCalledWith(2))
+    expect(ttsMock.playback.stop).toHaveBeenCalledOnce()
+    expect(result.current.position).toEqual({
+      sectionKey: sectionKey('news-0', 0),
+      unitIndex: 2,
+    })
+  })
+
+  it('playFromLine picks the unit with the greatest startLine at or below the line', async () => {
+    const { result } = renderReader([lineItem])
+
+    act(() => result.current.playFromLine('lines', 8))
+
+    await waitFor(() => expect(ttsMock.playback.playFromUnit).toHaveBeenCalledWith(1))
+    expect(result.current.position).toEqual({
+      sectionKey: sectionKey('lines', 0),
+      unitIndex: 1,
+    })
+
+    ttsMock.playback.playFromUnit.mockClear()
+    act(() => result.current.playFromLine('lines', 9))
+    await waitFor(() => expect(ttsMock.playback.playFromUnit).toHaveBeenCalledWith(2))
+  })
+
+  it('playFromLine picks the first unit when several share the greatest startLine', async () => {
+    const { result } = renderReader([sharedLineItem])
+
+    // Units 1 and 2 both start on line 2 (first sentence + remainder): the click
+    // must land on the paragraph's first unit, never mid-paragraph.
+    act(() => result.current.playFromLine('shared', 3))
+
+    await waitFor(() => expect(ttsMock.playback.playFromUnit).toHaveBeenCalledWith(1))
+    expect(result.current.position).toEqual({
+      sectionKey: sectionKey('shared', 0),
+      unitIndex: 1,
+    })
+  })
+
+  it('playFromLine is a no-op for an unknown slug', async () => {
+    const { result } = renderReader([lineItem])
+
+    act(() => result.current.playFromLine('missing', 8))
+    // A line before the first unit resolves to nothing either.
+    act(() => result.current.playFromLine('lines', 4))
+
+    expect(ttsMock.playback.playFromUnit).not.toHaveBeenCalled()
+    expect(ttsMock.playback.play).not.toHaveBeenCalled()
+    expect(ttsMock.playback.stop).not.toHaveBeenCalled()
+    expect(result.current.position).toEqual({
+      sectionKey: sectionKey('lines', 0),
+      unitIndex: 0,
+    })
+  })
+
+  it('next remains a non-interrupting soft advance', async () => {
+    const onItemChange = vi.fn()
+    const { result } = renderHook(() =>
+      useContinuousReader([makeItem(0), makeItem(1), makeItem(2)], { onItemChange })
+    )
+
+    act(() => result.current.play())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+    onItemChange.mockClear()
+
+    ttsMock.playback.isPlaying = true
+    act(() => result.current.next())
+
+    expect(ttsMock.playback.stop).not.toHaveBeenCalled()
+    expect(ttsMock.playback.play).toHaveBeenCalledOnce()
+    expect(ttsMock.playback.playFromUnit).not.toHaveBeenCalled()
+    // The reading position does not move — only the eye does.
+    expect(result.current.position).toEqual({
+      sectionKey: sectionKey('news-0', 0),
+      unitIndex: 0,
+    })
+    expect(result.current.currentIndex).toBe(0)
+    expect(onItemChange).toHaveBeenCalledTimes(1)
+    expect(onItemChange).toHaveBeenLastCalledWith(makeItem(1), 1)
   })
 })
