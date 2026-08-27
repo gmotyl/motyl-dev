@@ -68,6 +68,8 @@ Generate a newsletter article from one or more provided URLs, using the same for
      - Have opinions — react to the content, don't just neutrally report it
      - Use "I" when it fits naturally
      - Be specific: concrete details beat vague claims every time
+     - Keep English technical terms and proper nouns in English and in the nominative — never inflect them with an apostrophe (no `Claude'a`, `Cursor'a`, `GPT'ka`); let a Polish noun carry the case ("model Claude", "przy pomocy modelu Claude")
+     - Do NOT transliterate or polonise English terms in the text (no "Klod", "Kursor", "czat dżi-pi-ti") — pronunciation is handled by the TTS layer
      - Do NOT include any "Co-Authored-By" attribution lines
      - Do NOT include any "Generated with [Tool Name]" marketing lines
 
