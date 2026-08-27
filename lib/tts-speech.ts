@@ -7,15 +7,28 @@ export interface SpeechSource {
   content: string
 }
 
+/**
+ * The reader's stable position key. Section titles repeat across articles, so
+ * the slug must be part of the key for it to identify one section.
+ */
+export const sectionKey = (sourceSlug: string, ordinal: number): string =>
+  `${sourceSlug}#${ordinal}`
+
 export interface ReviewedSection {
   sourceSlug: string
   sourceTitle?: string
   title: string
   markdown: string
+  /** 0-based index of this `##` section within its own article. */
+  ordinal: number
+  /** 1-based line of this section's `##` heading within the article's markdown. */
+  startLine: number
 }
 
 export interface SpeechSection extends ReviewedSection {
   speechText: string
+  /** `sectionKey(sourceSlug, ordinal)` — the reader's stable position key. */
+  key: string
 }
 
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -104,16 +117,25 @@ export function splitReviewedSections(sources: readonly SpeechSource[]): Reviewe
   for (const source of sources) {
     const sectionPattern = /^##[ \t]+(.+?)[ \t]*\r?$([\s\S]*?)(?=^##[ \t]+|(?![\s\S]))/gm
     let match: RegExpExecArray | null
-    let isFirstSection = true
+    let ordinal = 0
+    // Line cursor advanced with the match index — heading text can repeat, so
+    // the line must come from the split position, not from searching the text.
+    let scannedTo = 0
+    let startLine = 1
 
     while ((match = sectionPattern.exec(source.content)) !== null) {
+      startLine += (source.content.slice(scannedTo, match.index).match(/\n/g) ?? []).length
+      scannedTo = match.index
+
       sections.push({
         sourceSlug: source.slug,
-        sourceTitle: isFirstSection ? source.title : undefined,
+        sourceTitle: ordinal === 0 ? source.title : undefined,
         title: match[1].trim(),
         markdown: match[0].trim(),
+        ordinal,
+        startLine,
       })
-      isFirstSection = false
+      ordinal += 1
     }
   }
 
@@ -126,61 +148,175 @@ export function prepareSpeechSections(sources: readonly SpeechSource[]): SpeechS
     speechText: prepareSpeechText(
       [section.sourceTitle, section.markdown].filter(Boolean).join('\n')
     ),
+    key: sectionKey(section.sourceSlug, section.ordinal),
   }))
 }
 
-// Matches the leading `## heading` line of a section's markdown (removed so the
+// Matches the leading `## heading` line of a section's markdown (skipped so the
 // heading is not spoken again as body — the title unit already speaks it).
-const LEADING_HEADING = /^##[ \t]+.*(?:\r?\n|$)/
+const LEADING_HEADING = /^##[ \t]+/
 
-// Matches a `**TLDR:**` (or `**TLDR**`) paragraph up to the next blank line.
-const TLDR_PARAGRAPH = /(?:^|\n)[ \t]*\*\*TLDR:?\*\*[\s\S]*?(?=\n[ \t]*\n|$)/i
+// Matches a paragraph opening with `**TLDR:**` (or `**TLDR**`).
+const TLDR_PARAGRAPH = /^[ \t]*\*\*TLDR:?\*\*/i
+
+// `\s` covers a lone `\r`, so CRLF markdown splits the same as LF markdown.
+const BLANK_LINE = /^\s*$/
+
+/** Floor a merged unit is packed up to. */
+export const UNIT_MIN_CHARS = 200
+/** Ceiling a unit is cut at, on sentence boundaries. */
+export const UNIT_MAX_CHARS = 450
+
+export interface SpeechUnit {
+  /** Already `prepareSpeechText`'d — the exact synthesis-cache key. */
+  text: string
+  /** 1-based, absolute in the article's (section-filtered) markdown. */
+  startLine: number
+  endLine: number
+}
+
+/** A body paragraph with the absolute lines it occupies; `text` is still raw. */
+type Paragraph = SpeechUnit
 
 const firstSentence = (text: string): string | null =>
   text.match(/^[\s\S]*?[.!?]+(?=\s|$)/)?.[0].trim() ?? null
 
 /**
+ * Read the section's body as blank-line-separated paragraphs, each carrying the
+ * absolute line range it occupies. Paragraphs must be cut here, from the raw
+ * markdown: `prepareSpeechText` collapses newlines into spaces, so paragraph
+ * structure no longer exists in a prepared string.
+ */
+function collectBodyParagraphs(section: SpeechSection): Paragraph[] {
+  const lines = section.markdown.split('\n')
+  const paragraphs: Paragraph[] = []
+  let start = -1
+
+  const flush = (endIndex: number): void => {
+    if (start < 0 || endIndex < start) return
+    paragraphs.push({
+      text: lines.slice(start, endIndex + 1).join('\n'),
+      startLine: section.startLine + start,
+      endLine: section.startLine + endIndex,
+    })
+    start = -1
+  }
+
+  // Line 0 is the `## heading` — spoken by the title unit, never as body.
+  const bodyFrom = LEADING_HEADING.test(section.markdown) ? 1 : 0
+  for (let index = bodyFrom; index < lines.length; index += 1) {
+    if (BLANK_LINE.test(lines[index])) flush(index - 1)
+    else if (start < 0) start = index
+  }
+  flush(lines.length - 1)
+
+  return paragraphs
+}
+
+/**
+ * Pack prepared paragraphs into units: merge consecutive ones until the unit
+ * reaches `UNIT_MIN_CHARS`, never merging past `UNIT_MAX_CHARS`. A merged unit's
+ * range spans from its first paragraph's line to its last one's.
+ */
+function packUnits(paragraphs: readonly Paragraph[]): SpeechUnit[] {
+  const units: SpeechUnit[] = []
+  let pending: SpeechUnit | null = null
+
+  const flush = (): void => {
+    if (pending) units.push(pending)
+    pending = null
+  }
+
+  for (const paragraph of paragraphs) {
+    // Oversized paragraph: cut at sentence boundaries. Every piece keeps the
+    // whole paragraph's range — they all speak the same paragraph.
+    if (paragraph.text.length > UNIT_MAX_CHARS) {
+      flush()
+      for (const chunk of splitIntoChunks(paragraph.text, UNIT_MAX_CHARS)) {
+        units.push({ text: chunk, startLine: paragraph.startLine, endLine: paragraph.endLine })
+      }
+      continue
+    }
+
+    if (!pending) {
+      pending = { ...paragraph }
+    } else if (pending.text.length + 1 + paragraph.text.length > UNIT_MAX_CHARS) {
+      flush()
+      pending = { ...paragraph }
+    } else {
+      pending = {
+        text: `${pending.text} ${paragraph.text}`,
+        startLine: pending.startLine,
+        endLine: paragraph.endLine,
+      }
+    }
+
+    if (pending.text.length >= UNIT_MIN_CHARS) flush()
+  }
+  flush()
+
+  return units
+}
+
+/**
  * Split a section into ordered **speech units** for synthesis and playback:
- * `[title, tldr?, ...bodyChunks]`. Each unit is `prepareSpeechText`'d
+ * `[title, tldr?, ...bodyUnits]`. Each unit is `prepareSpeechText`'d
  * individually so its string is a stable, reusable synthesis-cache key (the
- * prebuffer ladder warms these exact strings).
+ * prebuffer ladder warms these exact strings), and carries the absolute line
+ * range it occupies so a rendered paragraph maps back to the unit speaking it.
  *
  * - **Title** = the section's `sourceTitle` (article/frontmatter title) when
- *   present, else its `##` heading. The `##` heading is stripped from the body
- *   so the title is spoken exactly once (no double-title read).
+ *   present, else its `##` heading; its range is the heading line. The heading
+ *   is skipped as body so the title is spoken exactly once.
  * - **TLDR** = the `**TLDR:**` paragraph. If absent, the second unit is the
  *   body's first sentence instead (keeps the fast-start second unit small).
- * - **Body** stays at the default 1000-char chunking (not cut smaller): the
- *   title + TLDR give enough playback runway to fetch full body chunks ahead.
+ * - **Body** is cut on markdown paragraph boundaries, then packed to the
+ *   `UNIT_MIN_CHARS` floor and cut at the `UNIT_MAX_CHARS` ceiling.
  */
-export function splitIntoSpeechUnits(section: SpeechSection): string[] {
-  const units: string[] = []
+export function splitIntoSpeechUnits(section: SpeechSection): SpeechUnit[] {
+  const units: SpeechUnit[] = []
+  const headingLine = section.startLine
 
   const titleText = (section.sourceTitle ?? section.title ?? '').trim()
   const title = prepareSpeechText(titleText)
-  if (title) units.push(title)
+  if (title) units.push({ text: title, startLine: headingLine, endLine: headingLine })
 
-  // Body = section markdown minus its leading `## heading` line.
-  let body = section.markdown.replace(LEADING_HEADING, '')
+  const paragraphs = collectBodyParagraphs(section)
+  // Only the FIRST body paragraph can be the TLDR. The TLDR unit is hoisted to
+  // index 1, so honouring a mid-body one would emit unit start lines that are
+  // not non-decreasing — and the line → unit lookup (play from a paragraph)
+  // relies on that ordering. A `**TLDR:**` paragraph anywhere else is therefore
+  // treated as ordinary body: not pre-spoken as the section's TLDR, and
+  // packed/merged with its neighbours like any other paragraph, so a click on it
+  // resolves to whichever unit covers its lines, not to a TLDR unit of its own.
+  const tldrIndex = paragraphs.length > 0 && TLDR_PARAGRAPH.test(paragraphs[0].text) ? 0 : -1
 
-  const tldrMatch = body.match(TLDR_PARAGRAPH)
-  if (tldrMatch) {
-    const tldr = prepareSpeechText(tldrMatch[0])
-    if (tldr) units.push(tldr)
-    const rest = body.slice(0, tldrMatch.index) + body.slice(tldrMatch.index! + tldrMatch[0].length)
-    units.push(...splitIntoChunks(prepareSpeechText(rest)))
-  } else {
-    // No TLDR: second unit is the body's first sentence, remainder follows.
-    const preparedBody = prepareSpeechText(body)
-    const first = firstSentence(preparedBody)
-    if (first) {
-      units.push(first)
-      const remainder = preparedBody.slice(first.length).trim()
-      if (remainder) units.push(...splitIntoChunks(remainder))
-    } else if (preparedBody) {
-      units.push(...splitIntoChunks(preparedBody))
+  // Prepare each paragraph on its own, then drop the ones that speak nothing
+  // (horizontal rules, comments) — skipping them leaves neighbours' ranges as
+  // they are.
+  const body = paragraphs
+    .filter((_, index) => index !== tldrIndex)
+    .map((paragraph) => ({ ...paragraph, text: prepareSpeechText(paragraph.text) }))
+    .filter((paragraph) => paragraph.text.length > 0)
+
+  if (tldrIndex >= 0) {
+    const paragraph = paragraphs[tldrIndex]
+    const text = prepareSpeechText(paragraph.text)
+    if (text) {
+      units.push({ text, startLine: paragraph.startLine, endLine: paragraph.endLine })
     }
+    return [...units, ...packUnits(body)]
   }
 
-  return units.filter((u) => u.length > 0)
+  // No TLDR: unit 2 is the body's first sentence; what is left of its paragraph
+  // stays at the head of the queue (same range).
+  const [first, ...rest] = body
+  if (!first) return units
+
+  const sentence = firstSentence(first.text)
+  if (!sentence) return [...units, ...packUnits(body)]
+
+  units.push({ text: sentence, startLine: first.startLine, endLine: first.endLine })
+  const remainder = first.text.slice(sentence.length).trim()
+  return [...units, ...packUnits(remainder ? [{ ...first, text: remainder }, ...rest] : rest)]
 }

@@ -81,6 +81,8 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
   const markdownReader = useMemo(
     () => ({
       onPlayFromHere: reader.playFromHere,
+      // Lines are article-local, so the owning slug disambiguates them.
+      onPlayFromLine: (line: number) => reader.playFromLine(article.slug, line),
       getSectionIndex: (heading: string) => {
         const index = speechSections.findIndex(
           (section) => stripMarkdown(section.title) === stripMarkdown(heading)
@@ -89,7 +91,7 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
       },
       currentSectionId,
     }),
-    [reader.playFromHere, speechSections, currentSectionId]
+    [reader.playFromHere, reader.playFromLine, article.slug, speechSections, currentSectionId]
   )
 
   return (
