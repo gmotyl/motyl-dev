@@ -6,6 +6,7 @@ const edgeMock = vi.hoisted(() => {
   let constructCount = 0
   let streamCount = 0
   let shouldReject = false
+  let stallOnce = false
 
   class FakeCommunicate {
     text: string
@@ -20,6 +21,14 @@ const edgeMock = vi.hoisted(() => {
     async *stream() {
       streamCount += 1
       if (shouldReject) throw new Error('synthesis boom')
+      if (stallOnce) {
+        stallOnce = false
+        yield { type: 'audio', data: new Uint8Array([1, 2, 3]) }
+        // Simulate a WebSocket that neither sends the next frame nor closes —
+        // the real-world "stalled stream" failure this mock stands in for.
+        await new Promise(() => {})
+        return
+      }
       yield { type: 'audio', data: new Uint8Array([1, 2, 3]) }
     }
   }
@@ -35,10 +44,14 @@ const edgeMock = vi.hoisted(() => {
     setReject: (value: boolean) => {
       shouldReject = value
     },
+    setStallOnce: (value: boolean) => {
+      stallOnce = value
+    },
     reset: () => {
       constructCount = 0
       streamCount = 0
       shouldReject = false
+      stallOnce = false
     },
   }
 })
@@ -92,6 +105,24 @@ describe('synthesizeSpeech cache', () => {
 
     expect(edgeMock.constructCount).toBe(2)
     expect(edgeMock.streamCount).toBe(2)
+  })
+
+  it('retries once with a fresh connection after a stalled stream, and succeeds', async () => {
+    vi.useFakeTimers()
+    try {
+      edgeMock.setStallOnce(true)
+
+      const promise = synthesizeSpeech('stalls then recovers', { voice: 'en-GB-RyanNeural' })
+      // Let the stalled first attempt's watchdog fire (15s inactivity timeout).
+      await vi.advanceTimersByTimeAsync(15000)
+      const buffer = await promise
+
+      expect(buffer).toBeInstanceOf(ArrayBuffer)
+      // First attempt stalled (connection 1), retry succeeded (connection 2).
+      expect(edgeMock.constructCount).toBe(2)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('a rejected synthesis is not cached and can be retried', async () => {

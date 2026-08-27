@@ -65,42 +65,93 @@ function storeInCache(key: string, promise: Promise<ArrayBuffer>): void {
   })
 }
 
-async function synthesizeToBuffer(
+// The edge-tts WebSocket occasionally stalls mid-stream — it neither sends
+// the next audio frame nor closes, so `for await (... of communicate.stream())`
+// would hang forever with no error and no timeout anywhere upstream. This is
+// the "TTS freezes after N paragraphs" failure mode: whichever chunk lands on
+// a stalled socket blocks playback indefinitely. Race each `.next()` against
+// an inactivity timeout so a stall surfaces as a rejection instead of a hang.
+const STREAM_STALL_TIMEOUT_MS = 15000
+
+class TTSStreamStallError extends Error {
+  constructor(timeoutMs: number) {
+    super(`TTS stream stalled: no data received for ${timeoutMs}ms`)
+    this.name = 'TTSStreamStallError'
+  }
+}
+
+async function collectAudio(
   text: string,
   options: TTSOptions,
   voice: string
 ): Promise<ArrayBuffer> {
   const { Communicate } = await import('edge-tts-universal/browser')
 
+  const communicate = new Communicate(text, {
+    voice,
+    rate: options.rate,
+    pitch: options.pitch,
+  })
+
+  const iterator = communicate.stream()[Symbol.asyncIterator]()
+  const audioChunks: Uint8Array[] = []
+
+  while (true) {
+    let timeoutHandle: ReturnType<typeof setTimeout>
+    const next = await Promise.race([
+      iterator.next(),
+      new Promise<never>((_, reject) => {
+        timeoutHandle = setTimeout(
+          () => reject(new TTSStreamStallError(STREAM_STALL_TIMEOUT_MS)),
+          STREAM_STALL_TIMEOUT_MS
+        )
+      }),
+    ]).finally(() => clearTimeout(timeoutHandle))
+
+    if (next.done) break
+    if (next.value.type === 'audio' && next.value.data) {
+      audioChunks.push(next.value.data)
+    }
+  }
+
+  // Concatenate all audio chunks into a single ArrayBuffer
+  const totalLength = audioChunks.reduce((acc, chunk) => acc + chunk.length, 0)
+  const result = new Uint8Array(totalLength)
+  let offset = 0
+  for (const chunk of audioChunks) {
+    result.set(chunk, offset)
+    offset += chunk.length
+  }
+
+  return result.buffer
+}
+
+async function synthesizeToBuffer(
+  text: string,
+  options: TTSOptions,
+  voice: string
+): Promise<ArrayBuffer> {
   console.log('[TTS Client] Synthesizing speech for voice:', voice, 'text length:', text.length)
 
   try {
-    const communicate = new Communicate(text, {
-      voice,
-      rate: options.rate,
-      pitch: options.pitch,
-    })
-
-    const audioChunks: Uint8Array[] = []
-
-    for await (const chunk of communicate.stream()) {
-      if (chunk.type === 'audio' && chunk.data) {
-        audioChunks.push(chunk.data)
+    const result = await collectAudio(text, options, voice)
+    console.log('[TTS Client] Got audio data, size:', result.byteLength)
+    return result
+  } catch (error) {
+    if (error instanceof TTSStreamStallError) {
+      // Transient: a fresh WebSocket usually succeeds. Retry once before
+      // giving up so a single stalled connection doesn't surface as a hang
+      // (previously) or a hard failure (without this retry).
+      console.warn('[TTS Client] Stream stalled, retrying with a fresh connection:', error.message)
+      try {
+        const result = await collectAudio(text, options, voice)
+        console.log('[TTS Client] Got audio data on retry, size:', result.byteLength)
+        return result
+      } catch (retryError) {
+        console.error('[TTS Client] Synthesis error (after stall retry):', retryError)
+        throw retryError
       }
     }
-
-    // Concatenate all audio chunks into a single ArrayBuffer
-    const totalLength = audioChunks.reduce((acc, chunk) => acc + chunk.length, 0)
-    const result = new Uint8Array(totalLength)
-    let offset = 0
-    for (const chunk of audioChunks) {
-      result.set(chunk, offset)
-      offset += chunk.length
-    }
-
-    console.log('[TTS Client] Got audio data, size:', result.byteLength)
-    return result.buffer
-  } catch (error) {
     console.error('[TTS Client] Synthesis error:', error)
     throw error
   }
