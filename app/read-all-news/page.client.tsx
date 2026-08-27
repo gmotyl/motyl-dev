@@ -85,6 +85,9 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
   const itemsRef = useRef<ContentItem[]>(initialItems)
   const scrolledPastSlugsRef = useRef<Set<string>>(new Set())
   const sessionRef = useRef(session)
+  // The article the reader is on. Read as a ref so the eviction guard sees the
+  // live value without adding a per-tick dep to fetchMore.
+  const readerSlugRef = useRef<string | null>(reader.currentSlug)
   // Every slug we have ever fetched, including those evicted from the DOM.
   // Sent as excludeSlugs so the server doesn't return them again, regardless
   // of how the visited cookie shifts mid-session.
@@ -92,6 +95,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
   useEffect(() => { itemsRef.current = items }, [items])
   useEffect(() => { scrolledPastSlugsRef.current = scrolledPastSlugs }, [scrolledPastSlugs])
   useEffect(() => { sessionRef.current = session }, [session])
+  useEffect(() => { readerSlugRef.current = reader.currentSlug }, [reader.currentSlug])
 
   // Infinite scroll observer
   useEffect(() => {
@@ -138,11 +142,15 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
         for (const i of newItems) loadedSlugsRef.current.add(i.slug)
         const combined = [...prevItems, ...newItems]
 
-        // Evict oldest scrolled-past articles to keep DOM manageable on mobile
+        // Evict oldest scrolled-past articles to keep DOM manageable on mobile.
+        // The article being read is never a candidate, however old or however
+        // long ago it scrolled past — unmounting it would move the reading
+        // position off the audio the listener is hearing.
+        const readingSlug = readerSlugRef.current
         let finalItems = combined
         if (combined.length > MAX_DOM_ARTICLES && scrolled.size > 0) {
           const toEvict = combined
-            .filter(i => scrolled.has(i.slug))
+            .filter(i => scrolled.has(i.slug) && i.slug !== readingSlug)
             .slice(0, combined.length - MAX_DOM_ARTICLES)
 
           if (toEvict.length > 0) {
@@ -426,6 +434,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         items={scrolledPastItems}
+        currentlyReadingSlug={reader.currentSlug}
         onConfirm={handleDialogConfirm}
         onCancel={handleDialogCancel}
       />
@@ -482,6 +491,8 @@ function FullArticle({
   const markdownReader = useMemo(
     () => ({
       onPlayFromHere: reader.playFromHere,
+      // Lines are article-local, so the owning slug disambiguates them.
+      onPlayFromLine: (line: number) => reader.playFromLine(item.slug, line),
       getSectionIndex: (heading: string) => {
         const index = speechSections.findIndex(
           (section) => section.sourceSlug === item.slug
@@ -491,7 +502,7 @@ function FullArticle({
       },
       currentSectionId,
     }),
-    [reader.playFromHere, speechSections, item.slug, currentSectionId]
+    [reader.playFromHere, reader.playFromLine, speechSections, item.slug, currentSectionId]
   )
 
   useEffect(() => {

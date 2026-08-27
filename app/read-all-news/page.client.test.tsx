@@ -21,26 +21,45 @@ type ReaderHarness = {
   isBuffering: boolean
   currentIndex: number
   currentItem: ReaderItem | undefined
+  currentSlug: string | null
   play: ReaderAction
   pause: ReaderAction
   next: ReaderAction
   playFromHere: Mock<(index: number) => void>
+  playFromLine: Mock<(sourceSlug: string, line: number) => void>
   complete: ReaderAction
+}
+type MarkReadDialogProps = {
+  items: Array<{ slug: string; title: string }>
+  currentlyReadingSlug?: string | null
+  onConfirm: (slugs: string[]) => void
+  onCancel: () => void
 }
 
 let latestReaderItems: ReaderItem[] = []
 let latestReaderOptions: ReaderOptions | undefined
 let latestReaderHarness: ReaderHarness
+let latestMarkReadDialogProps: MarkReadDialogProps | undefined
 let readerIndex = 0
 let intersectionCallback: ((entries: Array<{ isIntersecting: boolean }>) => void) | undefined
 
+// Hoisted so the module factory below can read it without a TDZ crash.
+const { sessionState } = vi.hoisted(() => ({
+  sessionState: { current: null as { user?: { email: string } } | null },
+}))
+
 vi.mock('next-auth/react', () => ({
-  useSession: () => ({ data: null }),
+  useSession: () => ({ data: sessionState.current }),
 }))
 
 vi.mock('@/components/header', () => ({ default: () => <div data-testid="header" /> }))
 vi.mock('@/components/footer', () => ({ default: () => <div data-testid="footer" /> }))
-vi.mock('@/components/mark-read-dialog', () => ({ MarkReadDialog: () => null }))
+vi.mock('@/components/mark-read-dialog', () => ({
+  MarkReadDialog: (props: MarkReadDialogProps) => {
+    latestMarkReadDialogProps = props
+    return null
+  },
+}))
 vi.mock('@/components/article-section-toggle', () => ({ SectionVisibilityDialog: () => null }))
 vi.mock('@/hooks/use-section-visibility', () => ({
   useSectionVisibility: () => ({
@@ -67,10 +86,12 @@ vi.mock('@/hooks/use-continuous-reader', () => ({
       isBuffering: false,
       currentIndex: readerIndex,
       currentItem: items[readerIndex],
+      currentSlug: items[readerIndex]?.sourceSlug ?? null,
       play,
       pause: vi.fn(),
       next: vi.fn(() => selectAndPlay(readerIndex + 1)),
       playFromHere: vi.fn((index: number) => selectAndPlay(index)),
+      playFromLine: vi.fn(),
       complete: vi.fn(() => selectAndPlay(readerIndex + 1)),
     }
     mockUseContinuousReader.mockReturnValue(latestReaderHarness)
@@ -95,10 +116,17 @@ vi.mock('@/components/continuous-reader-controls', () => ({
   ),
 }))
 
+// Stands in for the paragraph affordance: one synthetic markdown line per
+// section, so a click can be attributed to the article that owns it.
+const paragraphLine = (sectionIndex: number) => sectionIndex * 10 + 3
+
 vi.mock('@/components/markdown-content', () => ({
   MarkdownContent: ({ content, reader }: {
     content: string
-    reader?: { onPlayFromHere: (index: number) => void }
+    reader?: {
+      onPlayFromHere: (index: number) => void
+      onPlayFromLine?: (line: number) => void
+    }
   }) => (
     <div>
       {Array.from(content.matchAll(/^##\s+(.+)$/gm)).map((match, index) => (
@@ -107,6 +135,11 @@ vi.mock('@/components/markdown-content', () => ({
           {reader && (
             <button onClick={() => reader.onPlayFromHere(index)}>
               Play from here: {match[1]}
+            </button>
+          )}
+          {reader?.onPlayFromLine && (
+            <button onClick={() => reader.onPlayFromLine?.(paragraphLine(index))}>
+              Play paragraph: {match[1]}
             </button>
           )}
         </div>
@@ -131,12 +164,41 @@ vi.mock('lucide-react', () => ({
   Settings: () => null,
 }))
 
+// The page runs one observer per article bottom-marker plus one for the
+// infinite-scroll sentinel, so tests need to address a specific one. Track the
+// observed elements to tell them apart.
+type ObserverEntry = {
+  callback: (entries: Array<{ isIntersecting: boolean }>) => void
+  elements: Element[]
+  disconnected: boolean
+}
+const observers: ObserverEntry[] = []
+
 class MockIntersectionObserver {
+  private entry: ObserverEntry
+
   constructor(callback: (entries: Array<{ isIntersecting: boolean }>) => void) {
     intersectionCallback = callback
+    this.entry = { callback, elements: [], disconnected: false }
+    observers.push(this.entry)
   }
-  observe() {}
-  disconnect() {}
+  observe(element: Element) { this.entry.elements.push(element) }
+  disconnect() { this.entry.disconnected = true }
+}
+
+const ownerSlug = (element: Element) =>
+  element.closest('article[data-reader-article]')?.getAttribute('data-reader-article') ?? null
+
+const live = () => observers.filter((entry) => !entry.disconnected)
+
+const scrollPast = (slug: string) => {
+  const entry = live().find((o) => o.elements.some((el) => ownerSlug(el) === slug))
+  entry?.callback([{ isIntersecting: true }])
+}
+
+const reachLoadMoreSentinel = () => {
+  const entry = live().reverse().find((o) => o.elements.some((el) => ownerSlug(el) === null))
+  entry?.callback([{ isIntersecting: true }])
 }
 
 const items = (count: number, offset = 0) => Array.from({ length: count }, (_, index) => ({
@@ -155,9 +217,13 @@ describe('ReadAllNewsPage continuous reader', () => {
     latestReaderItems = []
     latestReaderOptions = undefined
     latestReaderHarness = undefined as unknown as ReaderHarness
+    latestMarkReadDialogProps = undefined
     readerIndex = 0
     playbackEvents.length = 0
     intersectionCallback = undefined
+    observers.length = 0
+    sessionState.current = null
+    localStorage.clear()
     mockUseContinuousReader.mockReset()
     scrollHeadingIntoView.mockReset()
     scrollHeadingIntoView.mockImplementation((el?: HTMLElement | null) => {
@@ -266,5 +332,63 @@ describe('ReadAllNewsPage continuous reader', () => {
     act(() => intersectionCallback?.([{ isIntersecting: true }]))
 
     expect(screen.getByRole('button', { name: 'Mark read' })).toBeEnabled()
+  })
+
+  it('passes the currently-read slug to the mark-read dialog', () => {
+    render(<ReadAllNewsPage initialItems={items(2)} totalItems={2} />)
+
+    expect(latestMarkReadDialogProps?.currentlyReadingSlug).toBe('news-1')
+  })
+
+  it('never evicts the article the reader is currently on', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      json: async () => ({ items: items(5, 12), currentPage: 1, totalPages: 2 }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<ReadAllNewsPage initialItems={items(12)} totalItems={17} />)
+
+    // news-1 owns the reader's position; news-2..news-6 are equally old
+    // scrolled-past candidates, so the trim can still reach its target without it.
+    for (const slug of ['news-1', 'news-2', 'news-3', 'news-4', 'news-5', 'news-6']) {
+      act(() => scrollPast(slug))
+    }
+    expect(latestReaderHarness.currentSlug).toBe('news-1')
+
+    await act(async () => { reachLoadMoreSentinel() })
+
+    await waitFor(() => expect(screen.getByText('News 17')).toBeInTheDocument())
+    expect(screen.getByText('News 1')).toBeInTheDocument()
+    for (const title of ['News 2', 'News 3', 'News 4', 'News 5', 'News 6']) {
+      expect(screen.queryByText(title)).not.toBeInTheDocument()
+    }
+    expect(screen.getByText('News 7')).toBeInTheDocument()
+  })
+
+  it('resolves a paragraph line against the owning article when a paragraph is played', async () => {
+    render(<ReadAllNewsPage initialItems={items(2)} totalItems={2} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Play paragraph: Section 2A' }))
+
+    expect(latestReaderHarness.playFromLine).toHaveBeenCalledWith('news-2', paragraphLine(0))
+  })
+
+  it('still scrolls to top and persists the marked slugs on confirm', () => {
+    sessionState.current = { user: { email: 'reader@motyl.dev' } }
+    const fetchMock = vi.fn().mockResolvedValue({ json: async () => ({ items: [] }) })
+    vi.stubGlobal('fetch', fetchMock)
+    const scrollTo = vi.fn()
+    vi.stubGlobal('scrollTo', scrollTo)
+
+    render(<ReadAllNewsPage initialItems={items(3)} totalItems={3} />)
+
+    act(() => latestMarkReadDialogProps?.onConfirm(['news-1']))
+
+    expect(JSON.parse(localStorage.getItem('visitedArticles') ?? '[]')).toContain('news-1')
+    expect(document.cookie).toContain('visitedArticles')
+    expect(fetchMock).toHaveBeenCalledWith('/api/articles/news-1/view', { method: 'POST' })
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0 })
+    expect(screen.queryByText('News 1')).not.toBeInTheDocument()
+    expect(screen.getByText('News 2')).toBeInTheDocument()
   })
 })
