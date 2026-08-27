@@ -17,6 +17,11 @@ interface MarkReadItem {
   title: string
 }
 
+interface MarkReadSnapshot {
+  items: MarkReadItem[]
+  readingSlug: string | null
+}
+
 interface MarkReadDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -37,8 +42,13 @@ export function MarkReadDialog({
 }: MarkReadDialogProps) {
   // The list is snapshotted on open: the parent recomputes `items` on every
   // render, so reading the live prop would reset the rows and wipe the user's
-  // unchecks mid-dialog.
-  const [snapshot, setSnapshot] = useState<MarkReadItem[]>([])
+  // unchecks mid-dialog. The currently-read slug is snapshotted with it —
+  // playback continues while the dialog is open, and a badge that follows the
+  // live slug would drift off the row the selection was derived from.
+  const [snapshot, setSnapshot] = useState<MarkReadSnapshot>({
+    items: [],
+    readingSlug: null,
+  })
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const wasOpen = useRef(false)
 
@@ -46,7 +56,7 @@ export function MarkReadDialog({
   // article, on the closed -> open transition only
   useEffect(() => {
     if (open && !wasOpen.current) {
-      setSnapshot(items)
+      setSnapshot({ items, readingSlug: currentlyReadingSlug ?? null })
       setSelected(
         new Set(
           items
@@ -71,10 +81,10 @@ export function MarkReadDialog({
   }
 
   const toggleAll = () => {
-    if (selected.size === snapshot.length) {
+    if (selected.size === snapshot.items.length) {
       setSelected(new Set())
     } else {
-      setSelected(new Set(snapshot.map(item => item.slug)))
+      setSelected(new Set(snapshot.items.map(item => item.slug)))
     }
   }
 
@@ -92,23 +102,23 @@ export function MarkReadDialog({
         </DialogHeader>
 
         <div className="space-y-3 max-h-[60vh] overflow-y-auto py-2">
-          {snapshot.length > 1 && (
+          {snapshot.items.length > 1 && (
             <div className="flex items-center gap-3 pb-2 border-b border-border/40">
               <Checkbox
                 id="select-all"
-                checked={selected.size === snapshot.length}
+                checked={selected.size === snapshot.items.length}
                 onCheckedChange={toggleAll}
               />
               <label
                 htmlFor="select-all"
                 className="text-sm font-medium cursor-pointer"
               >
-                {selected.size === snapshot.length ? 'Uncheck all' : 'Check all'}
+                {selected.size === snapshot.items.length ? 'Uncheck all' : 'Check all'}
               </label>
             </div>
           )}
 
-          {snapshot.map((item) => (
+          {snapshot.items.map((item) => (
             <div key={item.slug} className="flex items-start gap-3">
               <Checkbox
                 id={item.slug}
@@ -122,7 +132,7 @@ export function MarkReadDialog({
               >
                 {item.title}
               </label>
-              {item.slug === currentlyReadingSlug && (
+              {item.slug === snapshot.readingSlug && (
                 <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                   czytane teraz
                 </span>

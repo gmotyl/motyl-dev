@@ -153,4 +153,56 @@ describe('MarkReadDialog', () => {
     expect(screen.getByLabelText('Third article')).toBeChecked()
     expect(screen.getByRole('button', { name: 'Mark 1 as read' })).toBeInTheDocument()
   })
+
+  it('keeps the badge on the open-time article when currentlyReadingSlug changes while open', () => {
+    const { rerender } = render(
+      <MarkReadDialog
+        open={true}
+        onOpenChange={onOpenChange}
+        items={items}
+        currentlyReadingSlug="first"
+        onConfirm={onConfirm}
+        onCancel={onCancel}
+      />
+    )
+
+    expect(screen.getByText('czytane teraz').closest('div')).toHaveTextContent(
+      'First article'
+    )
+
+    // The reader keeps playing while the dialog is open, so the live prop moves on
+    rerender(
+      <MarkReadDialog
+        open={true}
+        onOpenChange={onOpenChange}
+        items={items}
+        currentlyReadingSlug="second"
+        onConfirm={onConfirm}
+        onCancel={onCancel}
+      />
+    )
+
+    const badgeRow = screen.getByText('czytane teraz').closest('div')
+    expect(badgeRow).toHaveTextContent('First article')
+    expect(badgeRow).not.toHaveTextContent('Second article')
+  })
+
+  it('passes exactly the checked slugs to onConfirm', async () => {
+    const user = userEvent.setup()
+    render(
+      <MarkReadDialog
+        open={true}
+        onOpenChange={onOpenChange}
+        items={[...items, { slug: 'third', title: 'Third article' }]}
+        onConfirm={onConfirm}
+        onCancel={onCancel}
+      />
+    )
+
+    await user.click(screen.getByLabelText('Second article'))
+    await user.click(screen.getByRole('button', { name: 'Mark 2 as read' }))
+
+    expect(onConfirm).toHaveBeenCalledTimes(1)
+    expect(onConfirm).toHaveBeenCalledWith(['first', 'third'])
+  })
 })
