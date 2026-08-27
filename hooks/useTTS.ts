@@ -38,6 +38,8 @@ export interface UseTTSOptions {
 
 export interface TTSPlayback extends TTSState {
   play: () => Promise<void>
+  /** Abort current audio and start at `unitIndex` of the current content. */
+  playFromUnit: (unitIndex: number) => Promise<void>
   pause: () => void
   stop: () => void
   resume: () => Promise<void>
@@ -329,29 +331,34 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     [fetchAudioBuffer, fillBuffer, getAudioContext, invalidatePendingRequests, onComplete, onError, updateProgress]
   )
 
+  // Initialize chunks on first play or after completion reset. Prefer pre-split
+  // speech units (title → TLDR → body) when the caller supplies them; otherwise
+  // fall back to length-based chunking of the raw content. No-op once
+  // initialized — `stop()` clears the list.
+  const ensureChunks = useCallback(() => {
+    if (chunksRef.current.length > 0) return
+
+    const providedUnits = unitsRef.current
+    chunksRef.current =
+      providedUnits && providedUnits.length > 0
+        ? providedUnits
+        : splitIntoChunks(content)
+    charCountsRef.current = chunksRef.current.map((c) => c.length)
+    totalCharsRef.current = charCountsRef.current.reduce((a, b) => a + b, 0)
+
+    const estimatedSeconds = totalCharsRef.current / 15
+    setState((prev) => ({
+      ...prev,
+      totalChunks: chunksRef.current.length,
+      totalEstimatedTime: estimatedSeconds,
+    }))
+  }, [content])
+
   // Play / resume
   const play = useCallback(async () => {
     if (isPlayingRef.current) return
 
-    // Initialize chunks on first play or after completion reset. Prefer
-    // pre-split speech units (title → TLDR → body) when the caller supplies
-    // them; otherwise fall back to length-based chunking of the raw content.
-    if (chunksRef.current.length === 0) {
-      const providedUnits = unitsRef.current
-      chunksRef.current =
-        providedUnits && providedUnits.length > 0
-          ? providedUnits
-          : splitIntoChunks(content)
-      charCountsRef.current = chunksRef.current.map((c) => c.length)
-      totalCharsRef.current = charCountsRef.current.reduce((a, b) => a + b, 0)
-
-      const estimatedSeconds = totalCharsRef.current / 15
-      setState((prev) => ({
-        ...prev,
-        totalChunks: chunksRef.current.length,
-        totalEstimatedTime: estimatedSeconds,
-      }))
-    }
+    ensureChunks()
 
     voiceRef.current = voice || null
     isPlayingRef.current = true
@@ -407,7 +414,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     const offset = pauseOffsetRef.current
     pauseOffsetRef.current = 0
     void playChunk(startIdx, offset, generation, signal)
-  }, [content, fetchAudioBuffer, invalidatePendingRequests, onError, playChunk, voice])
+  }, [ensureChunks, fetchAudioBuffer, invalidatePendingRequests, onError, playChunk, voice])
 
   // Pause
   const pause = useCallback(() => {
@@ -438,6 +445,33 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
     setState((prev) => ({ ...prev, isPlaying: false }))
   }, [invalidatePendingRequests])
+
+  /**
+   * Interrupting skip ("play from here"): abort whatever is playing and start at
+   * `unitIndex` of the current content. Progress is seeded from the units BEFORE
+   * `unitIndex`, so it reflects the skipped audio instead of restarting at 0.
+   */
+  const playFromUnit = useCallback(
+    async (unitIndex: number) => {
+      // Aborts in-flight synthesis and stops the current source. The mid-chunk
+      // offset it records belongs to the OLD unit, so it is dropped below.
+      pause()
+
+      ensureChunks()
+      if (chunksRef.current.length === 0) return
+
+      const index = Math.min(Math.max(unitIndex, 0), chunksRef.current.length - 1)
+      currentChunkIndexRef.current = index
+      completedCharsRef.current = charCountsRef.current
+        .slice(0, index)
+        .reduce((a, b) => a + b, 0)
+      currentChunkBufferRef.current = null
+      pauseOffsetRef.current = 0
+
+      await play()
+    },
+    [ensureChunks, pause, play]
+  )
 
   // Stop
   const stop = useCallback(() => {
@@ -479,6 +513,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   const playback: TTSPlayback = {
     ...state,
     play,
+    playFromUnit,
     pause,
     stop,
     resume: play,

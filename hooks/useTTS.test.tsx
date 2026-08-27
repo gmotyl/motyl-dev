@@ -36,6 +36,8 @@ vi.mock('@/lib/tts-client', () => ({
 // Sequence of relevant control events across the fake context's lifetime.
 let sequence: string[] = []
 let contexts: FakeAudioContext[] = []
+// `offset` argument of every source.start() call, in order.
+let startOffsets: number[] = []
 
 class FakeAudioBuffer {
   duration = 1
@@ -50,8 +52,9 @@ class FakeBufferSource {
   connect = vi.fn()
   disconnect = vi.fn()
   stop = vi.fn()
-  start = vi.fn(() => {
+  start = vi.fn((_when = 0, offset = 0) => {
     sequence.push('start')
+    startOffsets.push(offset)
   })
 }
 
@@ -124,6 +127,7 @@ const flushMicrotasks = () => act(async () => { await Promise.resolve() })
 beforeEach(() => {
   sequence = []
   contexts = []
+  startOffsets = []
   vi.stubGlobal('AudioContext', FakeAudioContext as unknown as typeof AudioContext)
   vi.stubGlobal('webkitAudioContext', FakeAudioContext as unknown as typeof AudioContext)
   // Keep the rAF progress loop from actually running in jsdom.
@@ -236,5 +240,98 @@ describe('useTTS units option', () => {
     await waitFor(() => expect(sequence).toContain('start'))
 
     expect(vi.mocked(synthesizeSpeech).mock.calls[0][0]).toBe('Just one sentence.')
+  })
+})
+
+describe('useTTS playFromUnit', () => {
+  const units = ['a'.repeat(10), 'b'.repeat(20), 'c'.repeat(30)]
+
+  it('starts playback at the requested unit index', async () => {
+    vi.mocked(synthesizeSpeech).mockClear()
+
+    const { result } = renderHook(() => useTTS('irrelevant content', { units }))
+
+    await act(async () => {
+      await result.current.playFromUnit(2)
+    })
+    await waitFor(() => expect(sequence).toContain('start'))
+
+    // The chunk list is initialised even though play() was never called, and the
+    // first synthesis is the requested unit -- not unit 0.
+    expect(vi.mocked(synthesizeSpeech).mock.calls[0][0]).toBe(units[2])
+    expect(result.current.totalChunks).toBe(3)
+    await waitFor(() => expect(result.current.currentChunkIndex).toBe(2))
+  })
+
+  it('seeds progress with the characters of the units it skipped', async () => {
+    // One-shot rAF: run the progress loop exactly once, then stop rescheduling.
+    let rafCalls = 0
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+      rafCalls += 1
+      if (rafCalls === 1) cb(0)
+      return 1
+    })
+
+    const onProgress = vi.fn()
+    const { result } = renderHook(() => useTTS('irrelevant content', { units, onProgress }))
+
+    await act(async () => {
+      await result.current.playFromUnit(2)
+    })
+    await waitFor(() => expect(onProgress).toHaveBeenCalled())
+
+    // Units 0+1 = 30 of 60 total chars already behind us, unit 2 just started.
+    expect(onProgress).toHaveBeenCalledWith(50)
+  })
+
+  it('clamps an out-of-range unit index instead of throwing', async () => {
+    vi.mocked(synthesizeSpeech).mockClear()
+
+    const { result } = renderHook(() => useTTS('irrelevant content', { units }))
+
+    await act(async () => {
+      await result.current.playFromUnit(99)
+    })
+    await waitFor(() => expect(sequence).toContain('start'))
+    expect(vi.mocked(synthesizeSpeech).mock.calls[0][0]).toBe(units[2])
+
+    await act(async () => {
+      result.current.stop()
+      vi.mocked(synthesizeSpeech).mockClear()
+      await result.current.playFromUnit(-5)
+    })
+    await waitFor(() => expect(sequence.filter((e) => e === 'start').length).toBe(2))
+    expect(vi.mocked(synthesizeSpeech).mock.calls[0][0]).toBe(units[0])
+
+    // Nothing to play at all: must resolve, not throw.
+    const empty = renderHook(() => useTTS('', { units: [] }))
+    await act(async () => {
+      await expect(empty.result.current.playFromUnit(0)).resolves.toBeUndefined()
+    })
+  })
+
+  it('ignores a stale pause offset when jumping to a different unit', async () => {
+    const { result } = renderHook(() => useTTS('irrelevant content', { units }))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(sequence).toContain('start'))
+
+    // Pause mid-chunk so pauseOffsetRef holds an offset into unit 0.
+    contexts[0].currentTime = 0.5
+    act(() => {
+      result.current.pause()
+    })
+
+    await act(async () => {
+      await result.current.playFromUnit(2)
+    })
+    await flushMicrotasks()
+    await waitFor(() => expect(sequence.filter((e) => e === 'start').length).toBe(2))
+
+    // The new unit starts from its beginning, not 0.5s into the old one.
+    expect(startOffsets[startOffsets.length - 1]).toBe(0)
+    await waitFor(() => expect(result.current.currentChunkIndex).toBe(2))
   })
 })
