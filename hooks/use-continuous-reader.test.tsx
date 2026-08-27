@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { SpeechSection } from '@/lib/tts-speech'
+import { sectionKey, type SpeechSection } from '@/lib/tts-speech'
 import { DEFAULT_TTS_VOICE, setStoredTtsVoice, TTS_VOICE_STORAGE_KEY } from '@/lib/tts-voices'
 import { useContinuousReader } from './use-continuous-reader'
 
@@ -111,7 +111,10 @@ const makeItem = (index: number): SpeechSection => ({
   sourceTitle: index === 0 ? 'News' : undefined,
   title: `Section ${index}`,
   markdown: `## Section ${index}\nVisible markdown ${index}`,
+  ordinal: index,
+  startLine: 1,
   speechText: `prepared speech ${index}`,
+  key: sectionKey(`news-${index}`, index),
 })
 
 describe('useContinuousReader', () => {

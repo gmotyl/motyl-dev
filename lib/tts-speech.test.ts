@@ -8,6 +8,8 @@ import {
   sectionKey,
   splitIntoSpeechUnits,
   splitReviewedSections,
+  UNIT_MAX_CHARS,
+  UNIT_MIN_CHARS,
   type SpeechSection,
 } from './tts-speech'
 import { ACRONYM_MAP } from './tts-pronunciation'
@@ -60,12 +62,22 @@ const section = (over: Partial<SpeechSection>): SpeechSection => ({
   ordinal: 0,
   startLine: 1,
   speechText: '',
-  key: sectionKey('news', 0),
   ...over,
+  key: sectionKey(over.sourceSlug ?? 'news', over.ordinal ?? 0),
 })
 
+// Filler built from one fixed 26-char sentence: no token matches a
+// pronunciation-map stem and there are no digits, so the prepared text is
+// byte-identical to the raw text and unit sizes are exactly predictable.
+const SENTENCE = 'Zdanie wypelniajace tekst.'
+const sentences = (count: number): string =>
+  Array.from({ length: count }, () => SENTENCE).join(' ')
+
+const ranges = (units: readonly { startLine: number; endLine: number }[]) =>
+  units.map((unit) => [unit.startLine, unit.endLine])
+
 describe('splitIntoSpeechUnits', () => {
-  it('emits [title, tldr, ...body] with title first from sourceTitle', () => {
+  it('keeps title then TLDR then body ordering', () => {
     const units = splitIntoSpeechUnits(
       section({
         sourceTitle: 'Article Title',
@@ -74,12 +86,14 @@ describe('splitIntoSpeechUnits', () => {
       })
     )
 
-    expect(units[0]).toBe('Article Title')
+    expect(units[0].text).toBe('Article Title')
     // The TLDR unit is the `**TLDR:**` paragraph, run through prepareSpeechText
     // (which maps the structural `tldr`/`summary` labels to pause punctuation).
-    expect(units[1]).toBe(prepareSpeechText('**TLDR:** Short summary here.'))
-    expect(units[1]).not.toContain('Full body paragraph text.')
-    expect(units.slice(2).join(' ')).toContain('Full body paragraph text.')
+    expect(units[1].text).toBe(prepareSpeechText('**TLDR:** Short summary here.'))
+    expect(units[1].text).not.toContain('Full body paragraph text.')
+    expect(units.slice(2).map((unit) => unit.text).join(' ')).toContain(
+      'Full body paragraph text.'
+    )
   })
 
   it('does not speak the heading twice when sourceTitle equals the heading', () => {
@@ -92,12 +106,12 @@ describe('splitIntoSpeechUnits', () => {
     )
 
     // "Same Title" appears exactly once across all units (title unit only).
-    const occurrences = units.filter((u) => u.includes('Same Title')).length
+    const occurrences = units.filter((u) => u.text.includes('Same Title')).length
     expect(occurrences).toBe(1)
-    expect(units[0]).toBe('Same Title')
+    expect(units[0].text).toBe('Same Title')
   })
 
-  it('falls back to the body first sentence as unit 2 when there is no TLDR', () => {
+  it("falls back to the body's first sentence when there is no TLDR", () => {
     const units = splitIntoSpeechUnits(
       section({
         sourceTitle: 'Title',
@@ -105,9 +119,9 @@ describe('splitIntoSpeechUnits', () => {
       })
     )
 
-    expect(units[0]).toBe('Title')
-    expect(units[1]).toBe('First sentence here.')
-    expect(units[2]).toContain('Second sentence follows.')
+    expect(units[0].text).toBe('Title')
+    expect(units[1].text).toBe('First sentence here.')
+    expect(units[2].text).toContain('Second sentence follows.')
   })
 
   it('uses the section heading as the title when there is no sourceTitle', () => {
@@ -119,10 +133,10 @@ describe('splitIntoSpeechUnits', () => {
       })
     )
 
-    expect(units[0]).toBe('Heading Only')
+    expect(units[0].text).toBe('Heading Only')
   })
 
-  it('keeps body chunks at the default (non-shrunk) chunk size', () => {
+  it('keeps body units at the unit ceiling rather than an artificially tiny size', () => {
     const long = 'Zdanie. '.repeat(400) // ~3200 chars of body
     const units = splitIntoSpeechUnits(
       section({
@@ -131,11 +145,136 @@ describe('splitIntoSpeechUnits', () => {
       })
     )
 
+    const bodyUnits = units.slice(2).map((unit) => unit.text)
+    expect(bodyUnits.length).toBeGreaterThan(1)
+    // No body unit exceeds the ceiling; none is artificially tiny.
+    for (const chunk of bodyUnits) expect(chunk.length).toBeLessThanOrEqual(UNIT_MAX_CHARS)
+    expect(Math.max(...bodyUnits.map((c) => c.length))).toBeGreaterThan(UNIT_MIN_CHARS)
+  })
+
+  it('cuts body on paragraph boundaries rather than a fixed character count', () => {
+    const first = sentences(8)
+    const second = sentences(8)
+    const units = splitIntoSpeechUnits(
+      section({
+        sourceTitle: 'T',
+        markdown: `## T\n**TLDR:** Krotko.\n\n${first}\n\n${second}`,
+      })
+    )
+
+    // Both paragraphs together still fit one unit, so only the paragraph
+    // boundary can explain the cut.
+    expect(prepareSpeechText(`${first}\n\n${second}`).length).toBeLessThan(UNIT_MAX_CHARS)
+    expect(units.map((unit) => unit.text)).toEqual([
+      'T',
+      prepareSpeechText('**TLDR:** Krotko.'),
+      first,
+      second,
+    ])
+  })
+
+  it('merges consecutive short paragraphs up to the minimum unit size', () => {
+    const short = sentences(4)
+    const units = splitIntoSpeechUnits(
+      section({
+        sourceTitle: 'T',
+        markdown: `## T\n**TLDR:** Krotko.\n\n${short}\n\n${short}\n\n${short}\n\n${short}`,
+      })
+    )
+
+    expect(short.length).toBeLessThan(UNIT_MIN_CHARS)
+    const bodyUnits = units.slice(2)
+    expect(bodyUnits.map((unit) => unit.text)).toEqual([
+      `${short} ${short}`,
+      `${short} ${short}`,
+    ])
+    for (const unit of bodyUnits) {
+      expect(unit.text.length).toBeGreaterThanOrEqual(UNIT_MIN_CHARS)
+      expect(unit.text.length).toBeLessThanOrEqual(UNIT_MAX_CHARS)
+    }
+    // A merged unit spans from its first paragraph's line to its last one's.
+    expect(ranges(bodyUnits)).toEqual([[4, 6], [8, 10]])
+  })
+
+  it('splits an oversized paragraph at sentence boundaries and shares its line range', () => {
+    const oversized = `${sentences(10)}\n${sentences(10)}\n${sentences(10)}`
+    const units = splitIntoSpeechUnits(
+      section({
+        sourceTitle: 'T',
+        markdown: `## T\n**TLDR:** Krotko.\n\n${oversized}`,
+      })
+    )
+
     const bodyUnits = units.slice(2)
     expect(bodyUnits.length).toBeGreaterThan(1)
-    // No body chunk exceeds the 1000-char default; none is artificially tiny.
-    for (const chunk of bodyUnits) expect(chunk.length).toBeLessThanOrEqual(1000)
-    expect(Math.max(...bodyUnits.map((c) => c.length))).toBeGreaterThan(500)
+    for (const unit of bodyUnits) {
+      expect(unit.text.length).toBeLessThanOrEqual(UNIT_MAX_CHARS)
+      expect(unit.text.endsWith('.')).toBe(true)
+    }
+    // splitIntoChunks re-joins its sentence matches, which keep their leading
+    // space, so compare with whitespace collapsed.
+    expect(bodyUnits.map((unit) => unit.text).join(' ').replace(/\s+/g, ' ')).toBe(
+      prepareSpeechText(oversized)
+    )
+    // The paragraph occupies markdown lines 4-6; every piece of it says so.
+    expect(ranges(bodyUnits)).toEqual(bodyUnits.map(() => [4, 6]))
+  })
+
+  it('reports absolute line ranges that match the source markdown', () => {
+    const lines = [
+      'Wstep.', // 1
+      '', // 2
+      '## Temat', // 3
+      '**TLDR:** Krotko.', // 4
+      '', // 5
+      sentences(4), // 6 — paragraph A, line one
+      sentences(4), // 7 — paragraph A, line two
+      '', // 8
+      sentences(4), // 9 — paragraph B, line one
+      sentences(4), // 10 — paragraph B, line two
+    ]
+    const [prepared] = prepareSpeechSections([
+      { slug: 'news', title: 'Tytul', content: lines.join('\n') },
+    ])
+
+    const units = splitIntoSpeechUnits(prepared)
+
+    expect(ranges(units)).toEqual([[3, 3], [4, 4], [6, 7], [9, 10]])
+    // Cross-check against the source: the reported lines really hold the text.
+    expect(lines[units[0].startLine - 1]).toBe('## Temat')
+    expect(units[2].text).toBe(`${lines[5]} ${lines[6]}`)
+    expect(units[3].text).toBe(`${lines[8]} ${lines[9]}`)
+  })
+
+  it('skips horizontal rules and paragraphs that prepare to nothing', () => {
+    const first = sentences(8)
+    const second = sentences(9)
+    const units = splitIntoSpeechUnits(
+      section({
+        sourceTitle: 'T',
+        markdown: [
+          '## T', // 1
+          '**TLDR:** Krotko.', // 2
+          '', // 3
+          first, // 4
+          '', // 5
+          '---', // 6
+          '', // 7
+          '<!-- notatka -->', // 8
+          '', // 9
+          second, // 10
+        ].join('\n'),
+      })
+    )
+
+    expect(units.map((unit) => unit.text)).toEqual([
+      'T',
+      prepareSpeechText('**TLDR:** Krotko.'),
+      first,
+      second,
+    ])
+    // The skipped paragraphs neither emit a unit nor shift their neighbours.
+    expect(ranges(units)).toEqual([[1, 1], [2, 2], [4, 4], [10, 10]])
   })
 })
 

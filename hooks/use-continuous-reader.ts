@@ -62,17 +62,22 @@ export function useContinuousReader(
     setVoice(getStoredTtsVoice())
   }, [])
 
-  // Speech units per section (title → TLDR → body chunks). Recomputed only when
-  // the loaded section set changes; the current section's units feed useTTS and
-  // the [0]/[1] units feed the prebuffer ladder.
+  // Speech units per section (title → TLDR → body units), each with the source
+  // line range it speaks. Recomputed only when the loaded section set changes.
   const unitsBySection = useMemo(
     () => items.map((section) => splitIntoSpeechUnits(section)),
     [items]
   )
-  const unitsBySectionRef = useRef(unitsBySection)
+  // Unit texts only: these exact strings are the synthesis-cache keys that feed
+  // useTTS and the prebuffer ladder.
+  const unitTextsBySection = useMemo(
+    () => unitsBySection.map((units) => units.map((unit) => unit.text)),
+    [unitsBySection]
+  )
+  const unitTextsBySectionRef = useRef(unitTextsBySection)
   useEffect(() => {
-    unitsBySectionRef.current = unitsBySection
-  }, [unitsBySection])
+    unitTextsBySectionRef.current = unitTextsBySection
+  }, [unitTextsBySection])
 
   useEffect(() => {
     currentIndexRef.current = currentIndex
@@ -124,7 +129,7 @@ export function useContinuousReader(
 
   const playback = useTTS(items[currentIndex]?.speechText ?? '', {
     voice,
-    units: unitsBySection[currentIndex],
+    units: unitTextsBySection[currentIndex],
     onComplete: useCallback(() => {
       if (currentIndexRef.current !== currentIndex) return
 
@@ -151,13 +156,13 @@ export function useContinuousReader(
   // requests hit the cache and skip). Non-current bodies are not prebuffered
   // here — they load on demand as playback approaches them.
   useEffect(() => {
-    if (unitsBySection.length === 0) return
+    if (unitTextsBySection.length === 0) return
 
     const controller = new AbortController()
     const { signal } = controller
 
     const run = async (): Promise<void> => {
-      const all = unitsBySectionRef.current
+      const all = unitTextsBySectionRef.current
       const current = all[currentIndexRef.current]
       // T1: current section's title + TLDR.
       if (current) {
@@ -186,7 +191,7 @@ export function useContinuousReader(
         clearTimeout(handle as ReturnType<typeof setTimeout>)
       }
     }
-  }, [unitsBySection, voice, currentIndex])
+  }, [unitTextsBySection, voice, currentIndex])
 
   useEffect(() => {
     if (pendingStartRef.current !== currentIndex) return
