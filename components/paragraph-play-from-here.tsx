@@ -30,8 +30,8 @@ export function ParagraphPlayFromHere({
   // The same query the gutter button's CSS keys off, so exactly one of the two
   // targets is live. Read at click time, not render time, so a pointer change
   // needs no re-render. Without matchMedia (SSR, older jsdom) the body tap stays
-  // active: CSS hides the gutter button on `hover: none`, so failing the other
-  // way would leave a touch reader no target at all.
+  // active: CSS makes the gutter button pointer-inert on `hover: none`, so failing
+  // the other way would leave a touch reader no pointer target at all.
   const bodyTapActive = (): boolean => !window.matchMedia?.('(hover: hover)').matches
 
   const play = (): void => {
@@ -65,13 +65,18 @@ export function ParagraphPlayFromHere({
           play()
         }}
         disabled={disabled}
-        // One tab stop per paragraph, all named the same, is unusable; the h2
-        // SectionPlayFromHere is play-from-here's keyboard path. Still reachable
-        // by pointer, and focus-visible below still applies to programmatic focus.
-        tabIndex={-1}
         data-line={line}
-        aria-label="Play from here"
-        className="absolute -left-9 top-1 hidden h-8 w-8 p-0 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:hover)]:flex"
+        // Paragraph granularity has to be keyboard-operable (WCAG 2.1.1), and the
+        // section control is no substitute — it starts unit 0, not this paragraph.
+        // The line number keeps every button's name unique, so a screen reader
+        // yields a navigable list instead of N identical "Play from here" entries.
+        aria-label={`Play from line ${line}`}
+        // Never `display: none`: that would drop the button out of the tab order,
+        // leaving a hover-less pointer with a keyboard no path at all. Instead the
+        // button is always laid out and only transparent + pointer-inert where the
+        // body tap owns the pointer, so exactly one pointer target stays live per
+        // pointer class while keyboard focus reveals and activates the button.
+        className="absolute -left-9 top-1 flex h-8 w-8 p-0 opacity-0 transition-opacity focus-visible:pointer-events-auto focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:pointer-events-none"
       >
         <Play className="h-4 w-4" aria-hidden="true" />
       </Button>

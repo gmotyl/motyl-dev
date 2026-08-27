@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ParagraphPlayFromHere } from './paragraph-play-from-here'
 
@@ -36,9 +37,10 @@ describe('ParagraphPlayFromHere', () => {
     const gutterButtons = container.querySelectorAll('button[data-line]')
     expect(gutterButtons).toHaveLength(2)
     expect(Array.from(gutterButtons, (button) => button.getAttribute('data-line'))).toEqual(['1', '3'])
-    for (const button of gutterButtons) {
-      expect(button).toHaveAccessibleName('Play from here')
-    }
+    expect(Array.from(gutterButtons, (button) => button.getAttribute('aria-label'))).toEqual([
+      'Play from line 1',
+      'Play from line 3',
+    ])
   })
 
   it('calls onPlayFromLine with the paragraph start line when the gutter button is pressed', () => {
@@ -75,12 +77,62 @@ describe('ParagraphPlayFromHere', () => {
     expect(onPlayFromLine).not.toHaveBeenCalled()
   })
 
-  // Every paragraph would otherwise add a tab stop with an identical name; the h2
-  // SectionPlayFromHere stays the keyboard path.
-  it('keeps the gutter button out of the tab order', () => {
+  // WCAG 2.1.1: paragraph granularity is pointer-only unless the gutter button is
+  // focusable. The h2 SectionPlayFromHere is not an equivalent alternative — it
+  // starts the whole section, not the clicked paragraph.
+  it('the gutter button is reachable in the tab order', async () => {
     const { container } = renderParagraph(vi.fn())
+    const button = container.querySelector('button[data-line]')!
 
-    expect(container.querySelector('button[data-line]')).toHaveAttribute('tabindex', '-1')
+    expect(button).not.toHaveAttribute('tabindex', '-1')
+
+    await userEvent.tab()
+    expect(button).toHaveFocus()
+  })
+
+  it('activates from the keyboard', async () => {
+    const onPlayFromLine = vi.fn()
+    const { container } = renderParagraph(onPlayFromLine)
+    const button = container.querySelector<HTMLButtonElement>('button[data-line]')!
+
+    button.focus()
+    await userEvent.keyboard('{Enter}')
+
+    expect(onPlayFromLine).toHaveBeenCalledTimes(1)
+    expect(onPlayFromLine).toHaveBeenCalledWith(7)
+  })
+
+  it('names each paragraph button distinctly', () => {
+    const { container } = render(
+      <>
+        <ParagraphPlayFromHere line={2} onPlayFromLine={vi.fn()}>
+          <p>One.</p>
+        </ParagraphPlayFromHere>
+        <ParagraphPlayFromHere line={9} onPlayFromLine={vi.fn()}>
+          <p>Two.</p>
+        </ParagraphPlayFromHere>
+      </>,
+    )
+
+    const names = Array.from(container.querySelectorAll('button[data-line]'), (button) =>
+      button.getAttribute('aria-label'),
+    )
+    expect(new Set(names).size).toBe(2)
+    expect(names).toEqual(['Play from line 2', 'Play from line 9'])
+  })
+
+  // `display: none` removes an element from the tab order entirely, so the gutter
+  // button must never be `hidden` on a hover-less pointer — it stays laid out and
+  // merely transparent + pointer-inert there, which keeps the body tap the only
+  // pointer target while leaving a keyboard path.
+  it('is not display:none on a pointer without hover', () => {
+    const { container } = renderParagraph(vi.fn())
+    const button = container.querySelector('button[data-line]')!
+
+    expect(button).not.toHaveClass('hidden')
+    expect(button).toHaveClass('flex')
+    expect(button).toHaveClass('[@media(hover:none)]:pointer-events-none')
+    expect(button).toHaveClass('focus-visible:opacity-100')
   })
 
   it('does not call onPlayFromLine on a non-primary button click', () => {
