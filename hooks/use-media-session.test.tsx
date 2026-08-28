@@ -155,15 +155,93 @@ describe('useMediaSession', () => {
     expect(mediaSession.playbackState).toBe('none')
   })
 
-  it('registers nothing while inactive', () => {
+  it('registers nothing while inactive and never writes to the global', () => {
+    // Pre-seed the singleton as another, active reader would have left it.
+    const foreignMetadata = new MediaMetadataStub({ title: 'Owned by someone else' })
+    mediaSession.metadata = foreignMetadata
+    mediaSession.playbackState = 'playing'
+
     renderHook(() => useMediaSession(baseOptions({ active: false })))
 
-    expect(mediaSession.metadata).toBeNull()
+    expect(mediaSession.metadata).toBe(foreignMetadata)
     expect(mediaSession.setActionHandler).not.toHaveBeenCalled()
-    expect(mediaSession.playbackState).toBe('none')
+    expect(mediaSession.playbackState).toBe('playing')
   })
 
-  it('releases handlers and resets playbackState when it goes inactive', () => {
+  it('leaves an active instance untouched when an inactive instance is mounted alongside it', () => {
+    const activeHandlers = makeHandlers()
+
+    renderHook(() => {
+      useMediaSession(baseOptions({ active: true, handlers: activeHandlers }))
+      // The blog article's reader: mounted with an empty queue, so inactive.
+      useMediaSession(
+        baseOptions({ active: false, metadata: null, playbackState: 'none', handlers: makeHandlers() }),
+      )
+    })
+
+    const metadata = mediaSession.metadata as MediaMetadataStub
+    expect(metadata).toBeInstanceOf(MediaMetadataStub)
+    expect(metadata.title).toBe('Section 1')
+    expect(mediaSession.playbackState).toBe('playing')
+
+    for (const action of ['play', 'pause', 'nexttrack', 'previoustrack']) {
+      expect(actionHandlers.get(action)).toBeTypeOf('function')
+    }
+
+    fireAction('play')
+    expect(activeHandlers.play).toHaveBeenCalledTimes(1)
+  })
+
+  it('leaves an active instance untouched when it mounts after an inactive one', () => {
+    renderHook(() => {
+      useMediaSession(
+        baseOptions({ active: false, metadata: null, playbackState: 'none', handlers: makeHandlers() }),
+      )
+      useMediaSession(baseOptions({ active: true }))
+    })
+
+    const metadata = mediaSession.metadata as MediaMetadataStub
+    expect(metadata).toBeInstanceOf(MediaMetadataStub)
+    expect(metadata.title).toBe('Section 1')
+    expect(mediaSession.playbackState).toBe('playing')
+    expect(actionHandlers.get('play')).toBeTypeOf('function')
+  })
+
+  it('re-registers nothing when only handler and metadata object identities change', () => {
+    const { rerender } = renderHook(
+      (options: UseMediaSessionOptions) => useMediaSession(options),
+      { initialProps: baseOptions({ playbackState: 'playing' }) },
+    )
+
+    expect(mediaSession.setActionHandler).toHaveBeenCalledTimes(4)
+    expect(mediaSession.playbackState).toBe('playing')
+
+    // Fresh object identities, identical values — what every parent render produces.
+    rerender(baseOptions({ playbackState: 'playing' }))
+    rerender(baseOptions({ playbackState: 'playing' }))
+
+    expect(mediaSession.setActionHandler).toHaveBeenCalledTimes(4)
+    expect(mediaSession.playbackState).toBe('playing')
+    for (const action of ['play', 'pause', 'nexttrack', 'previoustrack']) {
+      expect(actionHandlers.get(action)).toBeTypeOf('function')
+    }
+  })
+
+  it('registers the remaining actions when one action is unsupported', () => {
+    mediaSession.setActionHandler = vi.fn((action: string, handler: ActionHandler) => {
+      if (action === 'nexttrack') throw new TypeError('unsupported action')
+      actionHandlers.set(action, handler)
+    })
+
+    expect(() => renderHook(() => useMediaSession(baseOptions()))).not.toThrow()
+
+    expect(actionHandlers.get('play')).toBeTypeOf('function')
+    expect(actionHandlers.get('pause')).toBeTypeOf('function')
+    expect(actionHandlers.get('previoustrack')).toBeTypeOf('function')
+    expect(actionHandlers.has('nexttrack')).toBe(false)
+  })
+
+  it('releases handlers, metadata and playbackState when it goes inactive', () => {
     const { rerender } = renderHook(
       (options: UseMediaSessionOptions) => useMediaSession(options),
       { initialProps: baseOptions({ active: true }) },
@@ -180,9 +258,10 @@ describe('useMediaSession', () => {
     expect(mediaSession.metadata).toBeNull()
   })
 
-  it('releases handlers on unmount', () => {
+  it('releases handlers, metadata and playbackState on unmount', () => {
     const { unmount } = renderHook(() => useMediaSession(baseOptions()))
     expect(actionHandlers.get('play')).toBeTypeOf('function')
+    expect(mediaSession.metadata).toBeInstanceOf(MediaMetadataStub)
 
     unmount()
 
@@ -191,6 +270,7 @@ describe('useMediaSession', () => {
     expect(actionHandlers.get('nexttrack')).toBeNull()
     expect(actionHandlers.get('previoustrack')).toBeNull()
     expect(mediaSession.playbackState).toBe('none')
+    expect(mediaSession.metadata).toBeNull()
   })
 
   it('no-ops when the Media Session API is unavailable', () => {
@@ -198,6 +278,19 @@ describe('useMediaSession', () => {
     expect('mediaSession' in navigator).toBe(false)
 
     const { unmount } = renderHook(() => useMediaSession(baseOptions()))
+    expect(() => unmount()).not.toThrow()
+  })
+
+  it('no-ops for metadata when MediaMetadata is unavailable but mediaSession exists', () => {
+    vi.stubGlobal('MediaMetadata', undefined)
+    expect('mediaSession' in navigator).toBe(true)
+
+    const { unmount } = renderHook(() => useMediaSession(baseOptions()))
+
+    expect(mediaSession.metadata).toBeNull()
+    // Everything that does not need the constructor still works.
+    expect(actionHandlers.get('play')).toBeTypeOf('function')
+    expect(mediaSession.playbackState).toBe('playing')
     expect(() => unmount()).not.toThrow()
   })
 })

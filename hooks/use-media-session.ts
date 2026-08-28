@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useInsertionEffect, useRef } from 'react'
 
 export interface MediaSessionMetadataInput {
   title: string
@@ -53,7 +53,9 @@ const setActionHandler = (
 
 /**
  * Thin wrapper over the Media Session API. Knows nothing about what is being read.
- * `navigator.mediaSession` is a global singleton, so only an active instance touches it.
+ * `navigator.mediaSession` is a global singleton, so only an active instance touches it:
+ * an inactive instance writes nothing at all, and every write an active instance makes
+ * is undone by that same instance's own cleanup.
  */
 export function useMediaSession({
   active,
@@ -63,18 +65,23 @@ export function useMediaSession({
 }: UseMediaSessionOptions): void {
   // Registered callbacks read through the ref so the browser always calls the
   // latest closure without re-registering four action handlers every render.
+  // Written in an insertion effect rather than during render: a render that
+  // concurrent React discards must not publish its handlers.
   const handlersRef = useRef(handlers)
-  handlersRef.current = handlers
+  useInsertionEffect(() => {
+    handlersRef.current = handlers
+  })
 
   const title = metadata?.title ?? null
   const artist = metadata?.artist ?? null
   const album = metadata?.album ?? null
 
+  // Owns the action handlers and nothing else. Keyed on `active` alone so the
+  // four registrations survive re-renders; new handler identities reach the
+  // browser through the ref.
   useEffect(() => {
     const session = getMediaSession()
-    if (!session) return
-
-    if (!active) return
+    if (!session || !active) return
 
     for (const action of ACTIONS) {
       setActionHandler(session, action, () => handlersRef.current[action]())
@@ -84,31 +91,38 @@ export function useMediaSession({
       for (const action of ACTIONS) {
         setActionHandler(session, action, null)
       }
-      session.playbackState = 'none'
     }
   }, [active])
 
+  // Owns the metadata. Clearing lives in this effect's cleanup so only the
+  // instance that published metadata ever clears it.
   useEffect(() => {
     const session = getMediaSession()
-    if (!session) return
+    if (!session || !active) return
 
-    if (!active || title === null || typeof MediaMetadata === 'undefined') {
-      session.metadata = null
-      return
+    if (title !== null && typeof MediaMetadata !== 'undefined') {
+      session.metadata = new MediaMetadata({
+        title,
+        artist: artist ?? '',
+        album: album ?? '',
+        artwork: [...MEDIA_SESSION_ARTWORK],
+      })
     }
 
-    session.metadata = new MediaMetadata({
-      title,
-      artist: artist ?? '',
-      album: album ?? '',
-      artwork: [...MEDIA_SESSION_ARTWORK],
-    })
+    return () => {
+      session.metadata = null
+    }
   }, [active, title, artist, album])
 
+  // Owns playbackState, including resetting it on teardown.
   useEffect(() => {
     const session = getMediaSession()
     if (!session || !active) return
 
     session.playbackState = playbackState
+
+    return () => {
+      session.playbackState = 'none'
+    }
   }, [active, playbackState])
 }
