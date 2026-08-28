@@ -41,6 +41,27 @@ let startOffsets: number[] = []
 // Every FakeBufferSource created, in order, so tests can fire its `onended`
 // to simulate a chunk finishing playback.
 let sources: FakeBufferSource[] = []
+// Every MediaStreamAudioDestinationNode handed out by the fake context.
+let streamDestinations: FakeStreamDestination[] = []
+// Flips off to model a browser without createMediaStreamDestination.
+let supportsStreamDestination = true
+// Stubs for HTMLMediaElement.play/pause — jsdom leaves both unimplemented and
+// play() throws, so the hook's calls are stubbed to stay observable.
+let audioPlay: ReturnType<typeof vi.fn>
+let audioPause: ReturnType<typeof vi.fn>
+let originalPlay: HTMLMediaElement['play']
+let originalPause: HTMLMediaElement['pause']
+
+class FakeStreamDestination {
+  stream: { id: string }
+  connect = vi.fn()
+  disconnect = vi.fn()
+
+  constructor() {
+    this.stream = { id: `stream-${streamDestinations.length}` }
+    streamDestinations.push(this)
+  }
+}
 
 class FakeAudioBuffer {
   duration = 1
@@ -73,6 +94,12 @@ class FakeAudioContext {
 
   constructor() {
     contexts.push(this)
+    // Assigned per instance (not on the prototype) so a test can model a
+    // browser lacking the API by clearing the flag.
+    if (supportsStreamDestination) {
+      ;(this as any).createMediaStreamDestination = () =>
+        new FakeStreamDestination() as unknown as MediaStreamAudioDestinationNode
+    }
   }
 
   createBufferSource() {
@@ -136,6 +163,15 @@ beforeEach(() => {
   contexts = []
   startOffsets = []
   sources = []
+  streamDestinations = []
+  supportsStreamDestination = true
+  document.querySelectorAll('audio').forEach((el) => el.remove())
+  originalPlay = HTMLMediaElement.prototype.play
+  originalPause = HTMLMediaElement.prototype.pause
+  audioPlay = vi.fn(() => Promise.resolve())
+  audioPause = vi.fn()
+  HTMLMediaElement.prototype.play = audioPlay as unknown as HTMLMediaElement['play']
+  HTMLMediaElement.prototype.pause = audioPause as unknown as HTMLMediaElement['pause']
   vi.stubGlobal('AudioContext', FakeAudioContext as unknown as typeof AudioContext)
   vi.stubGlobal('webkitAudioContext', FakeAudioContext as unknown as typeof AudioContext)
   // Keep the rAF progress loop from actually running in jsdom.
@@ -144,6 +180,8 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  HTMLMediaElement.prototype.play = originalPlay
+  HTMLMediaElement.prototype.pause = originalPause
   vi.unstubAllGlobals()
   vi.clearAllMocks()
 })
@@ -446,5 +484,131 @@ describe('useTTS chunk-synthesis failure recovery', () => {
     expect(result.current.isPlaying).toBe(false)
     // Never reached a chunk that could actually play after chunk 0.
     expect(sequence.filter((e) => e === 'start').length).toBe(1)
+  })
+})
+
+describe('useTTS media-element playback routing', () => {
+  // Mobile browsers exempt a backgrounded page from tab freezing and
+  // timer/network throttling on the basis of MEDIA ELEMENT playback, not on a
+  // running AudioContext. Playback is therefore routed
+  // source -> MediaStreamAudioDestinationNode -> <audio srcObject> so the
+  // synthesis socket and chunk-advance chain survive a screen-off phone.
+  beforeEach(() => {
+    vi.mocked(synthesizeSpeech).mockImplementation(async () => new ArrayBuffer(8))
+  })
+
+  const playOnce = async (content = 'Hello world.', options?: Parameters<typeof useTTS>[1]) => {
+    const rendered = renderHook(() => useTTS(content, options))
+    await act(async () => {
+      await rendered.result.current.play()
+    })
+    await waitFor(() => expect(sequence).toContain('start'))
+    return rendered
+  }
+
+  it('connects playback to the stream destination when the API is available', async () => {
+    await playOnce()
+
+    expect(streamDestinations).toHaveLength(1)
+    expect(sources[0].connect).toHaveBeenCalledWith(streamDestinations[0])
+  })
+
+  it('does not also connect to audioContext.destination when streaming', async () => {
+    await playOnce()
+
+    expect(sources[0].connect).toHaveBeenCalledTimes(1)
+    expect(sources[0].connect).not.toHaveBeenCalledWith(contexts[0].destination)
+  })
+
+  it('falls back to audioContext.destination when createMediaStreamDestination is missing', async () => {
+    supportsStreamDestination = false
+
+    await playOnce()
+
+    expect(streamDestinations).toHaveLength(0)
+    expect(sources[0].connect).toHaveBeenCalledWith(contexts[0].destination)
+    // No element is needed for audio to reach the output on this path.
+    expect(document.querySelector('audio')).toBeNull()
+  })
+
+  it('assigns the destination stream to the audio element', async () => {
+    await playOnce()
+
+    const element = document.querySelector('audio') as HTMLAudioElement & {
+      srcObject: unknown
+      playsInline: boolean
+    }
+    expect(element).toBeTruthy()
+    expect(element.srcObject).toBe(streamDestinations[0].stream)
+    expect(element.playsInline).toBe(true)
+    expect(element.controls).toBe(false)
+    expect(element.preload).toBe('none')
+  })
+
+  it('plays the audio element when playback starts', async () => {
+    await playOnce()
+
+    expect(audioPlay).toHaveBeenCalled()
+  })
+
+  it('pauses the audio element on pause and stop', async () => {
+    const { result } = await playOnce()
+
+    act(() => {
+      result.current.pause()
+    })
+    expect(audioPause).toHaveBeenCalled()
+
+    audioPause.mockClear()
+    act(() => {
+      result.current.stop()
+    })
+    expect(audioPause).toHaveBeenCalled()
+  })
+
+  it('plays the audio element again on resume', async () => {
+    const { result } = await playOnce()
+
+    act(() => {
+      result.current.pause()
+    })
+    audioPlay.mockClear()
+
+    await act(async () => {
+      await result.current.resume()
+    })
+    await flushMicrotasks()
+
+    await waitFor(() => expect(audioPlay).toHaveBeenCalled())
+  })
+
+  it('tears the audio element down on unmount', async () => {
+    const { unmount } = await playOnce()
+
+    const element = document.querySelector('audio') as HTMLAudioElement & { srcObject: unknown }
+    expect(element).toBeTruthy()
+    audioPause.mockClear()
+
+    unmount()
+
+    expect(audioPause).toHaveBeenCalled()
+    expect(element.srcObject).toBeNull()
+    expect(element.isConnected).toBe(false)
+    expect(document.querySelector('audio')).toBeNull()
+  })
+
+  it('still chains to the next chunk on ended while streaming', async () => {
+    const units = ['unit one', 'unit two']
+    const { result } = await playOnce('irrelevant content', { units })
+
+    await act(async () => {
+      sources[0].onended?.()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    await waitFor(() => expect(sequence.filter((e) => e === 'start').length).toBe(2))
+    expect(sources[1].connect).toHaveBeenCalledWith(streamDestinations[0])
+    await waitFor(() => expect(result.current.currentChunkIndex).toBe(1))
   })
 })

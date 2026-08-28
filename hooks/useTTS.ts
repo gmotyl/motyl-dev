@@ -78,6 +78,11 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
   // Refs for audio management
   const audioContextRef = useRef<AudioContext | null>(null)
+  // Stream destination + <audio> element that carry the graph's output. Null
+  // when the browser has no createMediaStreamDestination — playback then goes
+  // straight to audioContext.destination.
+  const streamDestinationRef = useRef<MediaStreamAudioDestinationNode | null>(null)
+  const audioElementRef = useRef<HTMLAudioElement | null>(null)
   const currentSourceRef = useRef<AudioBufferSourceNode | null>(null)
   const chunksRef = useRef<string[]>([])
   const charCountsRef = useRef<number[]>([])
@@ -116,9 +121,41 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
   const getAudioContext = useCallback(() => {
     if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const audioContext: AudioContext =
+        new (window.AudioContext || (window as any).webkitAudioContext)()
+      audioContextRef.current = audioContext
+
+      // Mobile browsers exempt a backgrounded page from tab freezing and
+      // timer/network throttling on the basis of MEDIA ELEMENT playback — a
+      // running AudioContext does not qualify. Route the graph through a
+      // MediaStreamAudioDestinationNode into a real <audio> element so the
+      // synthesis socket and chunk-advance chain survive a screen-off phone.
+      // The element is created imperatively (never rendered by React) and torn
+      // down on unmount.
+      if (typeof audioContext.createMediaStreamDestination === 'function') {
+        const streamDestination = audioContext.createMediaStreamDestination()
+        streamDestinationRef.current = streamDestination
+
+        const element = document.createElement('audio')
+        // playsInline is not declared on HTMLMediaElement in lib.dom, but iOS
+        // needs it to keep playback out of the native fullscreen player.
+        ;(element as HTMLAudioElement & { playsInline: boolean }).playsInline = true
+        element.controls = false
+        // The element is fed by a MediaStream, never by a URL — nothing to
+        // preload, and 'none' avoids a pointless network state machine.
+        element.preload = 'none'
+        element.srcObject = streamDestination.stream
+        document.body.appendChild(element)
+        audioElementRef.current = element
+      }
     }
     return audioContextRef.current
+  }, [])
+
+  // play() rejects when the element is not allowed to start (e.g. no gesture
+  // yet); audio still reaches the output through the graph, so swallow it.
+  const playAudioElement = useCallback(() => {
+    void audioElementRef.current?.play?.()?.catch(() => {})
   }, [])
 
   // Synthesize and decode a single chunk, returns AudioBuffer
@@ -336,7 +373,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
       const source = audioContext.createBufferSource()
       source.buffer = buffer
-      source.connect(audioContext.destination)
+      source.connect(streamDestinationRef.current ?? audioContext.destination)
 
       currentSourceRef.current = source
       currentChunkBufferRef.current = buffer
@@ -355,12 +392,13 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       }
 
       source.start(0, offset)
+      playAudioElement()
 
       if (!animationFrameRef.current) {
         animationFrameRef.current = requestAnimationFrame(updateProgress)
       }
     },
-    [fetchAudioBuffer, fillBuffer, getAudioContext, invalidatePendingRequests, onComplete, onError, updateProgress]
+    [fetchAudioBuffer, fillBuffer, getAudioContext, invalidatePendingRequests, onComplete, onError, playAudioElement, updateProgress]
   )
 
   // Initialize chunks on first play or after completion reset. Prefer pre-split
@@ -471,6 +509,8 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       animationFrameRef.current = null
     }
 
+    audioElementRef.current?.pause?.()
+
     if (audioContextRef.current) {
       audioContextRef.current.suspend()
     }
@@ -545,6 +585,14 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         audioContextRef.current.close()
         audioContextRef.current = null
       }
+      const element = audioElementRef.current
+      if (element) {
+        element.pause?.()
+        element.srcObject = null
+        element.remove()
+        audioElementRef.current = null
+      }
+      streamDestinationRef.current = null
     }
   }, [stop])
 
