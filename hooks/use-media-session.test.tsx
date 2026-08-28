@@ -18,6 +18,8 @@ interface MediaSessionStub {
 
 let mediaSession: MediaSessionStub
 let actionHandlers: Map<string, ActionHandler>
+/** Every value written through the `metadata` setter, in order. */
+let metadataWrites: unknown[]
 
 class MediaMetadataStub {
   title: string
@@ -35,8 +37,19 @@ class MediaMetadataStub {
 
 const installMediaSession = () => {
   actionHandlers = new Map()
+  metadataWrites = []
+  let metadataValue: unknown = null
+
   mediaSession = {
-    metadata: null,
+    get metadata() {
+      return metadataValue
+    },
+    // Chromium forwards every setter call to the browser process, so the number of
+    // writes is observable behaviour, not an implementation detail.
+    set metadata(next: unknown) {
+      metadataValue = next
+      metadataWrites.push(next)
+    },
     playbackState: 'none',
     setActionHandler: vi.fn((action: string, handler: ActionHandler) => {
       actionHandlers.set(action, handler)
@@ -77,6 +90,8 @@ const baseOptions = (overrides: Partial<UseMediaSessionOptions> = {}): UseMediaS
   ...overrides,
 })
 
+const publishedMetadata = () => mediaSession.metadata as MediaMetadataStub
+
 describe('useMediaSession', () => {
   beforeEach(() => {
     installMediaSession()
@@ -90,7 +105,7 @@ describe('useMediaSession', () => {
   it('publishes metadata with the manifest artwork while active', () => {
     renderHook(() => useMediaSession(baseOptions()))
 
-    const metadata = mediaSession.metadata as MediaMetadataStub
+    const metadata = publishedMetadata()
     expect(metadata).toBeInstanceOf(MediaMetadataStub)
     expect(metadata.title).toBe('Section 1')
     expect(metadata.artist).toBe('Motyl.dev')
@@ -100,6 +115,77 @@ describe('useMediaSession', () => {
       { src: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
     ])
     expect(metadata.artwork).toEqual([...MEDIA_SESSION_ARTWORK])
+  })
+
+  it('follows the section: republishes metadata when the section changes', () => {
+    const { rerender } = renderHook(
+      (options: UseMediaSessionOptions) => useMediaSession(options),
+      { initialProps: baseOptions() },
+    )
+    expect(publishedMetadata().title).toBe('Section 1')
+
+    rerender(
+      baseOptions({
+        metadata: { title: 'Section 2', artist: 'Motyl.dev', album: 'Reader Article' },
+      }),
+    )
+
+    const metadata = publishedMetadata()
+    expect(metadata).toBeInstanceOf(MediaMetadataStub)
+    expect(metadata.title).toBe('Section 2')
+    expect(metadata.artist).toBe('Motyl.dev')
+    expect(metadata.album).toBe('Reader Article')
+  })
+
+  it('writes metadata exactly once per section change, never a null in between', () => {
+    const { rerender } = renderHook(
+      (options: UseMediaSessionOptions) => useMediaSession(options),
+      { initialProps: baseOptions() },
+    )
+    expect(metadataWrites).toHaveLength(1)
+
+    rerender(
+      baseOptions({
+        metadata: { title: 'Section 2', artist: 'Motyl.dev', album: 'Reader Article' },
+      }),
+    )
+    expect(metadataWrites).toHaveLength(2)
+
+    rerender(
+      baseOptions({
+        metadata: { title: 'Section 3', artist: 'Motyl.dev', album: 'Reader Article' },
+      }),
+    )
+    expect(metadataWrites).toHaveLength(3)
+
+    // A null between sections collapses the Android media notification.
+    expect(metadataWrites).not.toContain(null)
+    expect(metadataWrites[2]).toBe(mediaSession.metadata)
+  })
+
+  it('keeps the MediaMetadata identity stable across value-identical rerenders', () => {
+    const { rerender } = renderHook(
+      (options: UseMediaSessionOptions) => useMediaSession(options),
+      { initialProps: baseOptions() },
+    )
+    const first = mediaSession.metadata
+    expect(first).toBeInstanceOf(MediaMetadataStub)
+
+    // Fresh `metadata` object identities, identical values — every parent render.
+    rerender(baseOptions())
+    rerender(baseOptions())
+
+    expect(mediaSession.metadata).toBe(first)
+    expect(metadataWrites).toHaveLength(1)
+  })
+
+  it('clears metadata instead of constructing MediaMetadata when active with no metadata', () => {
+    mediaSession.metadata = new MediaMetadataStub({ title: 'Owned by someone else' })
+
+    renderHook(() => useMediaSession(baseOptions({ metadata: null })))
+
+    expect(mediaSession.metadata).toBeNull()
+    expect(mediaSession.metadata).not.toBeInstanceOf(MediaMetadataStub)
   })
 
   it('registers play, pause, nexttrack and previoustrack handlers', () => {
@@ -179,7 +265,7 @@ describe('useMediaSession', () => {
       )
     })
 
-    const metadata = mediaSession.metadata as MediaMetadataStub
+    const metadata = publishedMetadata()
     expect(metadata).toBeInstanceOf(MediaMetadataStub)
     expect(metadata.title).toBe('Section 1')
     expect(mediaSession.playbackState).toBe('playing')
@@ -200,31 +286,63 @@ describe('useMediaSession', () => {
       useMediaSession(baseOptions({ active: true }))
     })
 
-    const metadata = mediaSession.metadata as MediaMetadataStub
+    const metadata = publishedMetadata()
     expect(metadata).toBeInstanceOf(MediaMetadataStub)
     expect(metadata.title).toBe('Section 1')
     expect(mediaSession.playbackState).toBe('playing')
     expect(actionHandlers.get('play')).toBeTypeOf('function')
   })
 
-  it('re-registers nothing when only handler and metadata object identities change', () => {
+  it('does not let a former owner tear down the session after another instance took over', () => {
+    const readerA = makeHandlers()
+    const readerB = makeHandlers()
+
     const { rerender } = renderHook(
-      (options: UseMediaSessionOptions) => useMediaSession(options),
-      { initialProps: baseOptions({ playbackState: 'playing' }) },
+      ({ aActive, bActive }: { aActive: boolean; bActive: boolean }) => {
+        useMediaSession(
+          baseOptions({
+            active: aActive,
+            metadata: { title: 'Reader A', artist: 'Motyl.dev', album: 'Article A' },
+            playbackState: 'paused',
+            handlers: readerA,
+          }),
+        )
+        useMediaSession(
+          baseOptions({
+            active: bActive,
+            metadata: { title: 'Reader B', artist: 'Motyl.dev', album: 'Article B' },
+            playbackState: 'playing',
+            handlers: readerB,
+          }),
+        )
+      },
+      { initialProps: { aActive: true, bActive: false } },
     )
 
-    expect(mediaSession.setActionHandler).toHaveBeenCalledTimes(4)
+    // Commit 1: A owns the global.
+    expect(publishedMetadata().title).toBe('Reader A')
+    expect(mediaSession.playbackState).toBe('paused')
+
+    // Commit 2: B becomes active too and seizes the global.
+    rerender({ aActive: true, bActive: true })
+    expect(publishedMetadata().title).toBe('Reader B')
     expect(mediaSession.playbackState).toBe('playing')
 
-    // Fresh object identities, identical values — what every parent render produces.
-    rerender(baseOptions({ playbackState: 'playing' }))
-    rerender(baseOptions({ playbackState: 'playing' }))
+    // Commit 3: the former owner goes inactive. B's deps did not change, so B
+    // never re-runs — its writes have to survive A's teardown on their own.
+    rerender({ aActive: false, bActive: true })
 
-    expect(mediaSession.setActionHandler).toHaveBeenCalledTimes(4)
+    expect(publishedMetadata()).toBeInstanceOf(MediaMetadataStub)
+    expect(publishedMetadata().title).toBe('Reader B')
     expect(mediaSession.playbackState).toBe('playing')
-    for (const action of ['play', 'pause', 'nexttrack', 'previoustrack']) {
-      expect(actionHandlers.get(action)).toBeTypeOf('function')
-    }
+    expect(actionHandlers.get('play')).toBeTypeOf('function')
+    expect(actionHandlers.get('pause')).toBeTypeOf('function')
+    expect(actionHandlers.get('nexttrack')).toBeTypeOf('function')
+    expect(actionHandlers.get('previoustrack')).toBeTypeOf('function')
+
+    fireAction('play')
+    expect(readerB.play).toHaveBeenCalledTimes(1)
+    expect(readerA.play).not.toHaveBeenCalled()
   })
 
   it('registers the remaining actions when one action is unsupported', () => {
@@ -246,6 +364,8 @@ describe('useMediaSession', () => {
       (options: UseMediaSessionOptions) => useMediaSession(options),
       { initialProps: baseOptions({ active: true }) },
     )
+    expect(actionHandlers.get('play')).toBeTypeOf('function')
+    expect(mediaSession.metadata).toBeInstanceOf(MediaMetadataStub)
     expect(mediaSession.playbackState).toBe('playing')
 
     rerender(baseOptions({ active: false }))
@@ -282,12 +402,15 @@ describe('useMediaSession', () => {
   })
 
   it('no-ops for metadata when MediaMetadata is unavailable but mediaSession exists', () => {
+    const foreignMetadata = new MediaMetadataStub({ title: 'Owned by someone else' })
+    mediaSession.metadata = foreignMetadata
     vi.stubGlobal('MediaMetadata', undefined)
     expect('mediaSession' in navigator).toBe(true)
 
     const { unmount } = renderHook(() => useMediaSession(baseOptions()))
 
-    expect(mediaSession.metadata).toBeNull()
+    // No constructor, nothing to publish — and nothing written either.
+    expect(mediaSession.metadata).toBe(foreignMetadata)
     // Everything that does not need the constructor still works.
     expect(actionHandlers.get('play')).toBeTypeOf('function')
     expect(mediaSession.playbackState).toBe('playing')
