@@ -50,6 +50,14 @@ const detectLanguage = detectLanguageFromContent
 // Number of chunks to keep buffered ahead of current playback
 const BUFFER_AHEAD = 3
 
+// A chunk whose synthesis fails (even after lib/tts-client's own
+// fresh-connection retry — see STREAM_STALL_TIMEOUT_MS) is skipped rather than
+// stopping playback outright, so a single unreadable paragraph does not force
+// the user to manually resume. This caps how many *consecutive* chunks may be
+// skipped before giving up: past it, the failure is treated as systemic (e.g.
+// no network) and surfaced as a real stop + onError.
+const MAX_CONSECUTIVE_CHUNK_FAILURES = 3
+
 export function useTTS(content: string, options: UseTTSOptions = {}) {
   const { voice, units, onProgress, onComplete, onError } = options
 
@@ -88,6 +96,12 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   // Last integer percent emitted to setState, so progress-driven re-renders fire
   // at most ~1/percent instead of on every ~60fps rAF tick (hover flicker fix).
   const lastEmittedPctRef = useRef(-1)
+  // Consecutive in-chunk synthesis failures within the current play session.
+  // Reset whenever a chunk's audio is actually obtained. Bounds the auto-skip
+  // below: a systemic outage (no network, edge-tts fully down) must still
+  // surface as a stop + onError instead of racing silently through every
+  // remaining chunk.
+  const consecutiveFailuresRef = useRef(0)
 
   // Buffer cache: pre-fetched AudioBuffers keyed by chunk index
   const bufferCacheRef = useRef<Map<number, AudioBuffer>>(new Map())
@@ -286,13 +300,31 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
             (error as Error).name === 'AbortError'
           ) return
           console.warn(`[TTS] Chunk ${index} failed:`, error)
-          isPlayingRef.current = false
-          invalidatePendingRequests()
-          setState((prev) => ({ ...prev, isPlaying: false, isBuffering: false }))
-          onError?.(error as Error)
+
+          consecutiveFailuresRef.current += 1
+          if (consecutiveFailuresRef.current > MAX_CONSECUTIVE_CHUNK_FAILURES) {
+            // Too many chunks in a row failed: treat as a systemic outage
+            // rather than skipping through the rest of the content silently.
+            isPlayingRef.current = false
+            invalidatePendingRequests()
+            setState((prev) => ({ ...prev, isPlaying: false, isBuffering: false }))
+            onError?.(error as Error)
+            return
+          }
+
+          // A single unreadable chunk (synthesis stalled even after the
+          // client's own retry) must not strand playback waiting for the user
+          // to press Play again. Count it as completed for progress purposes
+          // and move on to the next chunk automatically.
+          completedCharsRef.current += charCountsRef.current[index] || 0
+          void playChunk(index + 1, 0, generation, signal)
           return
         }
       }
+
+      // Buffer obtained (cache hit, resumed mid-chunk, or freshly fetched):
+      // this chunk is readable, so the failure streak resets.
+      consecutiveFailuresRef.current = 0
 
       if (
         generation !== requestGenerationRef.current ||
@@ -492,6 +524,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     bufferCacheRef.current.clear()
     fetchingRef.current.clear()
     lastEmittedPctRef.current = -1
+    consecutiveFailuresRef.current = 0
 
     setState({
       isPlaying: false,

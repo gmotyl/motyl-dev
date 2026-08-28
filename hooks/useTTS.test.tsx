@@ -38,6 +38,9 @@ let sequence: string[] = []
 let contexts: FakeAudioContext[] = []
 // `offset` argument of every source.start() call, in order.
 let startOffsets: number[] = []
+// Every FakeBufferSource created, in order, so tests can fire its `onended`
+// to simulate a chunk finishing playback.
+let sources: FakeBufferSource[] = []
 
 class FakeAudioBuffer {
   duration = 1
@@ -56,6 +59,10 @@ class FakeBufferSource {
     sequence.push('start')
     startOffsets.push(offset)
   })
+
+  constructor() {
+    sources.push(this)
+  }
 }
 
 class FakeAudioContext {
@@ -128,6 +135,7 @@ beforeEach(() => {
   sequence = []
   contexts = []
   startOffsets = []
+  sources = []
   vi.stubGlobal('AudioContext', FakeAudioContext as unknown as typeof AudioContext)
   vi.stubGlobal('webkitAudioContext', FakeAudioContext as unknown as typeof AudioContext)
   // Keep the rAF progress loop from actually running in jsdom.
@@ -363,5 +371,80 @@ describe('useTTS playFromUnit', () => {
     // The new unit starts from its beginning, not 0.5s into the old one.
     expect(startOffsets[startOffsets.length - 1]).toBe(0)
     await waitFor(() => expect(result.current.currentChunkIndex).toBe(2))
+  })
+})
+
+describe('useTTS chunk-synthesis failure recovery', () => {
+  // Regression test: a stalled/failed chunk (edge-tts stream stall surviving
+  // tts-client's own retry) used to stop playback outright via onError,
+  // stranding the reader until the user manually pressed Play again. It must
+  // now skip the unreadable chunk and continue automatically.
+  it('skips a single failed chunk and continues playing the next one, without erroring', async () => {
+    const units = ['ok-1', 'fail-2', 'ok-3']
+    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) => {
+      if (text === 'fail-2') throw new Error('stalled')
+      return new ArrayBuffer(8)
+    })
+    const onError = vi.fn()
+    const onComplete = vi.fn()
+
+    const { result } = renderHook(() => useTTS('irrelevant content', { units, onError, onComplete }))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(sequence).toContain('start'))
+    expect(result.current.currentChunkIndex).toBe(0)
+
+    // Chunk 0 finishes: playChunk(1) fetches 'fail-2', fails, and — instead of
+    // stopping — skips straight to chunk 2 without the user doing anything.
+    await act(async () => {
+      sources[0].onended?.()
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(onError).not.toHaveBeenCalled()
+    await waitFor(() => expect(sequence.filter((e) => e === 'start').length).toBe(2))
+    await waitFor(() => expect(result.current.currentChunkIndex).toBe(2))
+    expect(result.current.isPlaying).toBe(true)
+
+    // Chunk 2 finishes normally: playback completes as if nothing failed.
+    await act(async () => {
+      sources[1].onended?.()
+      await Promise.resolve()
+    })
+    expect(onComplete).toHaveBeenCalledTimes(1)
+    expect(result.current.isPlaying).toBe(false)
+  })
+
+  it('stops and reports onError once too many consecutive chunks fail in a row', async () => {
+    const units = ['ok-1', 'fail-2', 'fail-3', 'fail-4', 'fail-5']
+    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) => {
+      if (text.startsWith('fail-')) throw new Error('stalled')
+      return new ArrayBuffer(8)
+    })
+    const onError = vi.fn()
+
+    const { result } = renderHook(() => useTTS('irrelevant content', { units, onError }))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(sequence).toContain('start'))
+
+    // Chunk 0 finishes; chunks 1-4 all fail. The first 3 failures skip
+    // (consecutive count 1, 2, 3), the 4th exceeds the cap and stops instead
+    // of silently skipping through every remaining chunk.
+    await act(async () => {
+      sources[0].onended?.()
+      for (let i = 0; i < 6; i += 1) await Promise.resolve()
+    })
+
+    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1))
+    expect(result.current.isPlaying).toBe(false)
+    // Never reached a chunk that could actually play after chunk 0.
+    expect(sequence.filter((e) => e === 'start').length).toBe(1)
   })
 })
