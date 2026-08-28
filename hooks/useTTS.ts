@@ -58,6 +58,28 @@ const BUFFER_AHEAD = 3
 // no network) and surfaced as a real stop + onError.
 const MAX_CONSECUTIVE_CHUNK_FAILURES = 3
 
+/**
+ * Deliberate platform carve-out: Apple/WebKit browsers do NOT get the
+ * media-element playback path.
+ *
+ * `createMediaStreamDestination` exists in Safari, so feature detection alone
+ * would happily route iOS into `<audio srcObject=MediaStream>` — a path with a
+ * long history of rendering no sound at all for Web-Audio-originated
+ * MediaStreams on iOS Safari. Because the routing is exclusive (the source is
+ * connected to the stream destination INSTEAD of `audioContext.destination`),
+ * taking it on WebKit would be a straight regression: silence where direct
+ * output works today. WebKit therefore keeps the plain
+ * `audioContext.destination` path and simply forgoes the background-playback
+ * exemption; only non-WebKit (the Chrome-for-Android target) streams.
+ *
+ * `navigator.vendor === 'Apple Computer, Inc.'` is the check because it is
+ * stable across Apple browsers AND correctly catches Chrome/Firefox on iOS,
+ * which are WebKit underneath and share the same defect. SSR-safe: this module
+ * is imported by a Next.js client component that still renders on the server.
+ */
+const isWebKitBrowser = (): boolean =>
+  typeof navigator !== 'undefined' && navigator.vendor === 'Apple Computer, Inc.'
+
 export function useTTS(content: string, options: UseTTSOptions = {}) {
   const { voice, units, onProgress, onComplete, onError } = options
 
@@ -78,6 +100,15 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
   // Refs for audio management
   const audioContextRef = useRef<AudioContext | null>(null)
+  // Stream destination + <audio> element that carry the graph's output. Null
+  // when the browser has no createMediaStreamDestination, when it is WebKit
+  // (see isWebKitBrowser), or once the element has refused to start — playback
+  // then goes straight to audioContext.destination.
+  const streamDestinationRef = useRef<MediaStreamAudioDestinationNode | null>(null)
+  const audioElementRef = useRef<HTMLAudioElement | null>(null)
+  // Latches once the element's play() has rejected. The element stays in the
+  // DOM (unmount tears it down) but is never driven again.
+  const mediaElementUnusableRef = useRef(false)
   const currentSourceRef = useRef<AudioBufferSourceNode | null>(null)
   const chunksRef = useRef<string[]>([])
   const charCountsRef = useRef<number[]>([])
@@ -116,10 +147,85 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
   const getAudioContext = useCallback(() => {
     if (!audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const audioContext: AudioContext =
+        new (window.AudioContext || (window as any).webkitAudioContext)()
+      audioContextRef.current = audioContext
+
+      // Mobile browsers exempt a backgrounded page from tab freezing and
+      // timer/network throttling on the basis of MEDIA ELEMENT playback — a
+      // running AudioContext does not qualify. Route the graph through a
+      // MediaStreamAudioDestinationNode into a real <audio> element so the
+      // synthesis socket and chunk-advance chain survive a screen-off phone.
+      // The element is created imperatively (never rendered by React) and torn
+      // down on unmount.
+      // isWebKitBrowser() is a deliberate carve-out, not a feature test — see
+      // its doc comment. Apple browsers stay on audioContext.destination.
+      if (typeof audioContext.createMediaStreamDestination === 'function' && !isWebKitBrowser()) {
+        const streamDestination = audioContext.createMediaStreamDestination()
+        streamDestinationRef.current = streamDestination
+
+        const element = document.createElement('audio')
+        // playsInline is not declared on HTMLMediaElement in lib.dom, but iOS
+        // needs it to keep playback out of the native fullscreen player.
+        ;(element as HTMLAudioElement & { playsInline: boolean }).playsInline = true
+        element.controls = false
+        // The element is fed by a MediaStream, never by a URL — nothing to
+        // preload, and 'none' avoids a pointless network state machine.
+        element.preload = 'none'
+        element.srcObject = streamDestination.stream
+        document.body.appendChild(element)
+        audioElementRef.current = element
+      }
     }
     return audioContextRef.current
   }, [])
+
+  /**
+   * The element could not start (autoplay policy / no user gesture, or a
+   * platform that will not render this MediaStream). Routing is EXCLUSIVE —
+   * the source is connected to the stream destination INSTEAD of
+   * `audioContext.destination` — so leaving it there means the graph renders
+   * into a MediaStream nobody consumes: total silence while `isPlaying` stays
+   * true, progress keeps advancing and chunks keep chaining. Recover audibility
+   * instead: re-wire the source that was just started to
+   * `audioContext.destination` and drop the element for the rest of this hook
+   * instance (later chunks then connect straight to the context destination).
+   * Background playback is lost, but the user hears the article.
+   */
+  const fallBackToContextDestination = useCallback(
+    (source: AudioBufferSourceNode | null) => {
+      if (mediaElementUnusableRef.current) return
+      mediaElementUnusableRef.current = true
+
+      const streamDestination = streamDestinationRef.current
+      // Subsequent sources take the `?? audioContext.destination` branch.
+      streamDestinationRef.current = null
+      audioElementRef.current?.pause?.()
+
+      const audioContext = audioContextRef.current
+      const target = source ?? currentSourceRef.current
+      if (!audioContext || !target) return
+
+      try {
+        if (streamDestination) target.disconnect(streamDestination)
+      } catch (_) { /* already disconnected */ }
+      try {
+        target.connect(audioContext.destination)
+      } catch (_) { /* source already ended */ }
+    },
+    []
+  )
+
+  // Drive the <audio> element for `source`. A rejected play() is NOT harmless:
+  // with exclusive routing it means silence, so recover instead of swallowing.
+  const playAudioElement = useCallback(
+    (source: AudioBufferSourceNode | null) => {
+      if (mediaElementUnusableRef.current) return
+      const played = audioElementRef.current?.play?.()
+      void played?.catch?.(() => fallBackToContextDestination(source))
+    },
+    [fallBackToContextDestination]
+  )
 
   // Synthesize and decode a single chunk, returns AudioBuffer
   const fetchAudioBuffer = useCallback(
@@ -336,7 +442,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
       const source = audioContext.createBufferSource()
       source.buffer = buffer
-      source.connect(audioContext.destination)
+      source.connect(streamDestinationRef.current ?? audioContext.destination)
 
       currentSourceRef.current = source
       currentChunkBufferRef.current = buffer
@@ -354,13 +460,18 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         void playChunk(index + 1, 0, generation, signal)
       }
 
+      // Start the element FIRST. A MediaStreamAudioDestinationNode is a LIVE
+      // stream: the element plays from "now", not from stream start, so any
+      // element start latency clips the head of the chunk. Both calls are in
+      // the same synchronous task, so the window is tiny — but free to close.
+      playAudioElement(source)
       source.start(0, offset)
 
       if (!animationFrameRef.current) {
         animationFrameRef.current = requestAnimationFrame(updateProgress)
       }
     },
-    [fetchAudioBuffer, fillBuffer, getAudioContext, invalidatePendingRequests, onComplete, onError, updateProgress]
+    [fetchAudioBuffer, fillBuffer, getAudioContext, invalidatePendingRequests, onComplete, onError, playAudioElement, updateProgress]
   )
 
   // Initialize chunks on first play or after completion reset. Prefer pre-split
@@ -471,6 +582,8 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       animationFrameRef.current = null
     }
 
+    audioElementRef.current?.pause?.()
+
     if (audioContextRef.current) {
       audioContextRef.current.suspend()
     }
@@ -545,6 +658,14 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         audioContextRef.current.close()
         audioContextRef.current = null
       }
+      const element = audioElementRef.current
+      if (element) {
+        element.pause?.()
+        element.srcObject = null
+        element.remove()
+        audioElementRef.current = null
+      }
+      streamDestinationRef.current = null
     }
   }, [stop])
 

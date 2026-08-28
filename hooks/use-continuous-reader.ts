@@ -4,8 +4,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { splitIntoSpeechUnits, type SpeechSection } from '@/lib/tts-speech'
 import { synthesizeSpeech } from '@/lib/tts-client'
 import { DEFAULT_TTS_VOICE, getStoredTtsVoice, TTS_VOICE_CHANGE_EVENT, type TtsVoice } from '@/lib/tts-voices'
+import {
+  resolveNextTrackIndex,
+  resolvePreviousTrackIndex,
+  resolveTrackGranularity,
+} from '@/lib/media-session-tracks'
+import { useMediaSession } from './use-media-session'
 import { useTTS } from './useTTS'
 import type { TTSPlayback } from './useTTS'
+
+/** Shown as the album on every OS media control. */
+const MEDIA_SESSION_ALBUM = 'Motyl.dev'
 
 export interface ContinuousReaderOptions {
   onItemChange?: (item: SpeechSection, index: number) => void
@@ -483,7 +492,85 @@ export function useContinuousReader(
     void playbackRef.current?.play()
   }, [])
 
+  /**
+   * Interrupting Media-session skip backwards. Restarts the current track past
+   * `RESTART_THRESHOLD_SECONDS`, otherwise steps to the previous track.
+   * Elapsed-in-section is read off the last committed playback: `playback`'s
+   * identity churns every progress tick, so the ref always holds a fresh
+   * `currentTime` without this callback depending on it.
+   *
+   * It goes through `playFromHere`, so from a PAUSED reader it does not merely
+   * move the position — it starts speaking the target. That is the OS transport
+   * contract: a skip on a lock screen is expected to play what it skipped to.
+   */
+  const previous = useCallback(() => {
+    const currentItems = itemsRef.current
+    if (currentItems.length === 0) return
+
+    const target = resolvePreviousTrackIndex(
+      currentItems,
+      currentIndexRef.current,
+      resolveTrackGranularity(currentItems),
+      playbackRef.current?.currentTime ?? 0
+    )
+    playFromHere(target, 0)
+  }, [playFromHere])
+
+  /**
+   * Interrupting Media-session skip forwards — NOT the in-app `next`, which is a
+   * non-interrupting soft advance. At the end of the queue it does nothing,
+   * leaving the current audio running.
+   *
+   * Deliberately internal: it is reachable only through the media-session
+   * `nexttrack` handler below. `previous`/`canPrevious` ARE returned because the
+   * in-app transport contract asks for them; nothing in the app drives a
+   * skip-forward, so nothing exposes one. Same paused-reader caveat as
+   * `previous`: it starts playback at the target.
+   */
+  const nextTrack = useCallback(() => {
+    const currentItems = itemsRef.current
+    if (currentItems.length === 0) return
+
+    const target = resolveNextTrackIndex(
+      currentItems,
+      currentIndexRef.current,
+      resolveTrackGranularity(currentItems)
+    )
+    if (target === null) return
+    playFromHere(target, 0)
+  }, [playFromHere])
+
   const canNext = Math.max(currentIndex, previewIndex) < items.length - 1
+  // Is there anything to drive at all? This is what makes the OS controls appear.
+  const hasQueue = items.length > 0
+  // Only an empty queue has nothing to go back to: the first track restarts.
+  // Equal to `hasQueue` by the skip-back rule, not by being the same question.
+  const canPrevious = hasQueue
+
+  const mediaTitle = currentItem ? (currentItem.sourceTitle ?? currentItem.title) : null
+  const mediaArtist = currentItem?.title ?? null
+  // Memoized on the primitives it is built from. `useMediaSession` keys its
+  // effects on those primitives too, so a fresh object here would be inert —
+  // this only avoids handing a new literal to the hook on every progress tick.
+  const mediaMetadata = useMemo(
+    () =>
+      mediaTitle === null
+        ? null
+        : { title: mediaTitle, artist: mediaArtist ?? '', album: MEDIA_SESSION_ALBUM },
+    [mediaTitle, mediaArtist]
+  )
+
+  const mediaHandlers = useMemo(
+    () => ({ play, pause, nexttrack: nextTrack, previoustrack: previous }),
+    [play, pause, nextTrack, previous]
+  )
+
+  useMediaSession({
+    active: hasQueue,
+    metadata: mediaMetadata,
+    playbackState: isPlaying ? 'playing' : hasQueue ? 'paused' : 'none',
+    handlers: mediaHandlers,
+  })
 
   return useMemo(() => ({
     isPlaying,
@@ -504,6 +591,8 @@ export function useContinuousReader(
     error,
     next,
     canNext,
+    previous,
+    canPrevious,
     playFrom: playFromHere,
     playFromHere,
     playFromLine,
@@ -512,7 +601,7 @@ export function useContinuousReader(
     isPlaying, isBuffering, progress, currentTime, totalEstimatedTime,
     currentChunkIndex, totalChunks, playbackStop, playbackResume, currentIndex,
     currentItem, position, error, play, pause, next, canNext,
-    playFromHere, playFromLine, retry,
+    previous, canPrevious, playFromHere, playFromLine, retry,
   ])
 }
 

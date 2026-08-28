@@ -62,6 +62,42 @@ vi.mock('@/lib/tts-client', () => ({
   prefetchSpeech: ttsClientMock.prefetchSpeech,
 }))
 
+// The Media Session wrapper is exercised in its own suite; here it is a spy so
+// the reader's registration (active, metadata, playbackState) and the handlers
+// the OS would call can be asserted directly.
+const mediaSessionMock = vi.hoisted(() => {
+  const calls: Array<Record<string, unknown>> = []
+
+  return {
+    calls,
+    reset: () => {
+      calls.length = 0
+    },
+    useMediaSession: vi.fn((options: unknown) => {
+      calls.push(options as Record<string, unknown>)
+    }),
+  }
+})
+
+vi.mock('./use-media-session', () => ({
+  useMediaSession: mediaSessionMock.useMediaSession,
+}))
+
+interface MediaSessionCall {
+  active: boolean
+  metadata: { title: string; artist: string; album: string } | null
+  playbackState: 'playing' | 'paused' | 'none'
+  handlers: {
+    play: () => void
+    pause: () => void
+    nexttrack: () => void
+    previoustrack: () => void
+  }
+}
+
+const latestMediaSession = (): MediaSessionCall =>
+  mediaSessionMock.calls.at(-1) as unknown as MediaSessionCall
+
 vi.mock('./useTTS', async () => {
   const actual = await vi.importActual<typeof import('./useTTS')>('./useTTS')
 
@@ -119,6 +155,24 @@ const makeItem = (index: number): SpeechSection => ({
   key: sectionKey(`news-${index}`, index),
 })
 
+// A section of a named article. Several of these sharing a slug make a
+// multi-section article, which is what separates section- from
+// article-granularity media-session skips.
+const makeSection = (
+  sourceSlug: string,
+  ordinal: number,
+  sourceTitle?: string
+): SpeechSection => ({
+  sourceSlug,
+  sourceTitle,
+  title: `${sourceSlug} section ${ordinal}`,
+  markdown: `## ${sourceSlug} ${ordinal}\nBody ${ordinal}`,
+  ordinal,
+  startLine: 1,
+  speechText: `prepared ${sourceSlug} ${ordinal}`,
+  key: sectionKey(sourceSlug, ordinal),
+})
+
 const renderReader = (items: SpeechSection[]) =>
   renderHook(({ items: current }: { items: SpeechSection[] }) => useContinuousReader(current), {
     initialProps: { items },
@@ -172,6 +226,9 @@ describe('useContinuousReader', () => {
     ttsMock.useActualTTS = false
     ttsMock.playback.isPlaying = false
     ttsMock.playback.isBuffering = false
+    ttsMock.playback.currentTime = 0
+    mediaSessionMock.reset()
+    mediaSessionMock.useMediaSession.mockClear()
     ttsClientMock.synthesizeSpeech.mockReset()
     ttsClientMock.prefetchSpeech.mockReset()
   })
@@ -832,5 +889,166 @@ describe('useContinuousReader', () => {
     expect(result.current.currentIndex).toBe(0)
     expect(onItemChange).toHaveBeenCalledTimes(1)
     expect(onItemChange).toHaveBeenLastCalledWith(makeItem(1), 1)
+  })
+
+  // Driven through the handler map, not `result.current.previous()`: the
+  // Media-session skip backwards is DEFINED by the OS surface, so this pins that
+  // `previoustrack` is wired to it and not to the skip forwards.
+  it('previoustrack jumps interrupting-ly to the resolved target', async () => {
+    const { result } = renderReader([makeItem(0), makeItem(1), makeItem(2)])
+
+    act(() => result.current.playFrom(2))
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+    ttsMock.playback.stop.mockClear()
+
+    act(() => latestMediaSession().handlers.previoustrack())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledTimes(2))
+
+    expect(ttsMock.playback.stop).toHaveBeenCalled()
+    expect(result.current.currentIndex).toBe(1)
+    expect(ttsMock.calls.at(-1)?.content).toBe('prepared speech 1')
+    expect(result.current.canPrevious).toBe(true)
+  })
+
+  it('previous restarts the current section past the 3s threshold', async () => {
+    const { result } = renderReader([makeItem(0), makeItem(1), makeItem(2)])
+
+    act(() => result.current.playFrom(1))
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+    ttsMock.playback.stop.mockClear()
+    ttsMock.playback.currentTime = 5
+
+    act(() => result.current.previous())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledTimes(2))
+
+    expect(ttsMock.playback.stop).toHaveBeenCalled()
+    expect(result.current.currentIndex).toBe(1)
+    expect(result.current.position).toEqual({
+      sectionKey: sectionKey('news-1', 1),
+      unitIndex: 0,
+    })
+  })
+
+  it('nexttrack skips a whole article on a multi-article queue', async () => {
+    const { result } = renderReader([
+      makeSection('alpha', 0, 'Alpha'),
+      makeSection('alpha', 1, 'Alpha'),
+      makeSection('beta', 0, 'Beta'),
+    ])
+
+    act(() => result.current.play())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+
+    act(() => latestMediaSession().handlers.nexttrack())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledTimes(2))
+
+    expect(ttsMock.playback.stop).toHaveBeenCalled()
+    expect(result.current.currentIndex).toBe(2)
+    expect(ttsMock.calls.at(-1)?.content).toBe('prepared beta 0')
+  })
+
+  it('nexttrack skips one section on a single-article queue', async () => {
+    const { result } = renderReader([
+      makeSection('alpha', 0, 'Alpha'),
+      makeSection('alpha', 1, 'Alpha'),
+    ])
+
+    act(() => result.current.play())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+
+    act(() => latestMediaSession().handlers.nexttrack())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledTimes(2))
+
+    expect(result.current.currentIndex).toBe(1)
+    expect(ttsMock.calls.at(-1)?.content).toBe('prepared alpha 1')
+  })
+
+  it('nexttrack on the last track leaves playback alone', async () => {
+    const { result } = renderReader([
+      makeSection('alpha', 0, 'Alpha'),
+      makeSection('alpha', 1, 'Alpha'),
+    ])
+
+    act(() => result.current.playFrom(1))
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+    ttsMock.playback.stop.mockClear()
+
+    act(() => latestMediaSession().handlers.nexttrack())
+
+    expect(ttsMock.playback.stop).not.toHaveBeenCalled()
+    expect(ttsMock.playback.play).toHaveBeenCalledOnce()
+    expect(result.current.currentIndex).toBe(1)
+  })
+
+  it('publishes article title, section title and album as media metadata', async () => {
+    const { result } = renderReader([
+      makeSection('alpha', 0, 'Alpha Article'),
+      makeSection('alpha', 1, 'Alpha Article'),
+    ])
+
+    expect(latestMediaSession().active).toBe(true)
+    expect(latestMediaSession().metadata).toEqual({
+      title: 'Alpha Article',
+      artist: 'alpha section 0',
+      album: 'Motyl.dev',
+    })
+
+    act(() => result.current.playFrom(1))
+    await waitFor(() =>
+      expect(latestMediaSession().metadata?.artist).toBe('alpha section 1')
+    )
+
+    // No article title: the section's own title stands in.
+    const untitled = renderReader([makeSection('gamma', 0)])
+    expect(latestMediaSession().metadata).toEqual({
+      title: 'gamma section 0',
+      artist: 'gamma section 0',
+      album: 'Motyl.dev',
+    })
+    untitled.unmount()
+  })
+
+  it('keeps canPrevious and the media session on for a single-section queue', () => {
+    const { result } = renderReader([makeSection('gamma', 0)])
+
+    // The boundary is EMPTY vs non-empty, not one-track vs many: with a single
+    // section there is still somewhere to go back to — the track restarts.
+    expect(result.current.canPrevious).toBe(true)
+    expect(latestMediaSession().active).toBe(true)
+  })
+
+  it('keeps the media session inactive for an empty queue', () => {
+    const { result } = renderReader([])
+
+    expect(latestMediaSession().active).toBe(false)
+    expect(latestMediaSession().metadata).toBeNull()
+    expect(result.current.canPrevious).toBe(false)
+  })
+
+  it('reports playing, paused and none playback states', async () => {
+    const empty = renderReader([])
+    expect(latestMediaSession().playbackState).toBe('none')
+    empty.unmount()
+
+    const { result, rerender } = renderReader([makeItem(0), makeItem(1)])
+    expect(latestMediaSession().playbackState).toBe('paused')
+
+    act(() => result.current.play())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+
+    ttsMock.playback.isPlaying = true
+    act(() => rerender({ items: [makeItem(0), makeItem(1)] }))
+
+    expect(latestMediaSession().playbackState).toBe('playing')
+  })
+
+  it("OS play and pause drive the reader's play and pause", async () => {
+    renderReader([makeItem(0), makeItem(1)])
+
+    act(() => latestMediaSession().handlers.play())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+
+    act(() => latestMediaSession().handlers.pause())
+    expect(ttsMock.playback.pause).toHaveBeenCalledOnce()
   })
 })
