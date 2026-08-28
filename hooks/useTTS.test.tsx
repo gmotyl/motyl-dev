@@ -35,6 +35,10 @@ vi.mock('@/lib/tts-client', () => ({
 
 // Sequence of relevant control events across the fake context's lifetime.
 let sequence: string[] = []
+// Separate ordering log for "who ran first" assertions. Kept out of `sequence`
+// because that array's adjacency (resume immediately before start) is itself
+// asserted by the play-from-here regression test.
+let order: string[] = []
 let contexts: FakeAudioContext[] = []
 // `offset` argument of every source.start() call, in order.
 let startOffsets: number[] = []
@@ -78,6 +82,7 @@ class FakeBufferSource {
   stop = vi.fn()
   start = vi.fn((_when = 0, offset = 0) => {
     sequence.push('start')
+    order.push('source-start')
     startOffsets.push(offset)
   })
 
@@ -158,17 +163,32 @@ class FakeAudioContext {
 
 const flushMicrotasks = () => act(async () => { await Promise.resolve() })
 
+// The hook detects Apple/WebKit browsers via navigator.vendor and deliberately
+// keeps them off the media-element path (see isWebKitBrowser in useTTS.ts).
+// jsdom reports the APPLE vendor by default, so every test that exercises the
+// streaming path has to declare a non-WebKit browser explicitly.
+const WEBKIT_VENDOR = 'Apple Computer, Inc.'
+const NON_WEBKIT_VENDOR = 'Google Inc.'
+const setNavigatorVendor = (vendor: string) => {
+  Object.defineProperty(window.navigator, 'vendor', { value: vendor, configurable: true })
+}
+
 beforeEach(() => {
   sequence = []
+  order = []
   contexts = []
   startOffsets = []
   sources = []
   streamDestinations = []
   supportsStreamDestination = true
+  setNavigatorVendor(NON_WEBKIT_VENDOR)
   document.querySelectorAll('audio').forEach((el) => el.remove())
   originalPlay = HTMLMediaElement.prototype.play
   originalPause = HTMLMediaElement.prototype.pause
-  audioPlay = vi.fn(() => Promise.resolve())
+  audioPlay = vi.fn(() => {
+    order.push('element-play')
+    return Promise.resolve()
+  })
   audioPause = vi.fn()
   HTMLMediaElement.prototype.play = audioPlay as unknown as HTMLMediaElement['play']
   HTMLMediaElement.prototype.pause = audioPause as unknown as HTMLMediaElement['pause']
@@ -182,6 +202,8 @@ beforeEach(() => {
 afterEach(() => {
   HTMLMediaElement.prototype.play = originalPlay
   HTMLMediaElement.prototype.pause = originalPause
+  // Own property only; deleting restores jsdom's prototype getter.
+  delete (window.navigator as unknown as Record<string, unknown>).vendor
   vi.unstubAllGlobals()
   vi.clearAllMocks()
 })
@@ -610,5 +632,150 @@ describe('useTTS media-element playback routing', () => {
     await waitFor(() => expect(sequence.filter((e) => e === 'start').length).toBe(2))
     expect(sources[1].connect).toHaveBeenCalledWith(streamDestinations[0])
     await waitFor(() => expect(result.current.currentChunkIndex).toBe(1))
+  })
+
+  it('starts the element before starting the source, so no head of the live stream is clipped', async () => {
+    await playOnce()
+
+    // A MediaStreamAudioDestinationNode is a LIVE stream: the element plays
+    // from "now", so it must be running before the source produces samples.
+    expect(order.indexOf('element-play')).toBeGreaterThanOrEqual(0)
+    expect(order.indexOf('element-play')).toBeLessThan(order.indexOf('source-start'))
+  })
+})
+
+describe('useTTS WebKit carve-out', () => {
+  // createMediaStreamDestination EXISTS in Safari, so feature detection alone
+  // would route iOS into <audio srcObject=MediaStream> — a path that has a long
+  // history of producing no sound for Web-Audio-originated MediaStreams on iOS.
+  // Since the routing is exclusive, that would be silence where direct output
+  // works today. WebKit therefore deliberately keeps audioContext.destination.
+  beforeEach(() => {
+    vi.mocked(synthesizeSpeech).mockImplementation(async () => new ArrayBuffer(8))
+  })
+
+  const playOnce = async () => {
+    const rendered = renderHook(() => useTTS('Hello world.'))
+    await act(async () => {
+      await rendered.result.current.play()
+    })
+    await waitFor(() => expect(sequence).toContain('start'))
+    return rendered
+  }
+
+  it('keeps an Apple/WebKit browser on audioContext.destination and creates no element', async () => {
+    setNavigatorVendor(WEBKIT_VENDOR)
+
+    await playOnce()
+
+    // The API is available on this fake context, so only the vendor check can
+    // have kept us off the streaming path.
+    expect(supportsStreamDestination).toBe(true)
+    expect(streamDestinations).toHaveLength(0)
+    expect(document.querySelector('audio')).toBeNull()
+    expect(audioPlay).not.toHaveBeenCalled()
+    expect(sources[0].connect).toHaveBeenCalledTimes(1)
+    expect(sources[0].connect).toHaveBeenCalledWith(contexts[0].destination)
+  })
+
+  it('catches Chrome/Firefox on iOS, which report the Apple vendor too', async () => {
+    setNavigatorVendor(WEBKIT_VENDOR)
+    Object.defineProperty(window.navigator, 'userAgent', {
+      value:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 CriOS/120.0',
+      configurable: true,
+    })
+
+    await playOnce()
+
+    expect(streamDestinations).toHaveLength(0)
+    expect(sources[0].connect).toHaveBeenCalledWith(contexts[0].destination)
+
+    delete (window.navigator as unknown as Record<string, unknown>).userAgent
+  })
+
+  it('keeps the streaming behaviour on a non-WebKit browser', async () => {
+    setNavigatorVendor(NON_WEBKIT_VENDOR)
+
+    await playOnce()
+
+    expect(streamDestinations).toHaveLength(1)
+    expect(document.querySelector('audio')).toBeTruthy()
+    expect(sources[0].connect).toHaveBeenCalledWith(streamDestinations[0])
+    expect(sources[0].connect).not.toHaveBeenCalledWith(contexts[0].destination)
+  })
+})
+
+describe('useTTS media element that refuses to play', () => {
+  // Routing is EXCLUSIVE: the source is connected to the stream destination
+  // INSTEAD of audioContext.destination. So a rejected element play() (autoplay
+  // policy, no gesture, a stream the platform will not render) would otherwise
+  // mean the graph renders into a MediaStream nobody consumes — total silence
+  // while isPlaying stays true, progress advances and chunks keep chaining, with
+  // nothing surfaced to the UI. Recovery must make the audio audible again.
+  beforeEach(() => {
+    vi.mocked(synthesizeSpeech).mockImplementation(async () => new ArrayBuffer(8))
+    audioPlay = vi.fn(() => {
+      order.push('element-play')
+      return Promise.reject(new DOMException('play() blocked', 'NotAllowedError'))
+    })
+    HTMLMediaElement.prototype.play = audioPlay as unknown as HTMLMediaElement['play']
+  })
+
+  it('re-routes the playing source to audioContext.destination so audio still reaches the output', async () => {
+    const { result } = renderHook(() => useTTS('Hello world.'))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(sequence).toContain('start'))
+    // Let the rejected play() promise settle.
+    await flushMicrotasks()
+
+    expect(audioPlay).toHaveBeenCalled()
+    // The element was tried first (streaming path), then abandoned.
+    expect(sources[0].connect).toHaveBeenCalledWith(streamDestinations[0])
+    await waitFor(() =>
+      expect(sources[0].connect).toHaveBeenCalledWith(contexts[0].destination)
+    )
+    expect(sources[0].disconnect).toHaveBeenCalledWith(streamDestinations[0])
+    expect(result.current.isPlaying).toBe(true)
+  })
+
+  it('does not strand the rest of the article: later chunks go straight to the context destination', async () => {
+    const units = ['unit one', 'unit two']
+    const onComplete = vi.fn()
+    const onError = vi.fn()
+
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units, onComplete, onError })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(sequence).toContain('start'))
+    await flushMicrotasks()
+
+    await act(async () => {
+      sources[0].onended?.()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    await waitFor(() => expect(sequence.filter((e) => e === 'start').length).toBe(2))
+    // Chunk 2 is wired for audibility from the start — never to the dead stream.
+    expect(sources[1].connect).toHaveBeenCalledWith(contexts[0].destination)
+    expect(sources[1].connect).not.toHaveBeenCalledWith(streamDestinations[0])
+    // The element is not driven again once it has refused.
+    expect(audioPlay).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      sources[1].onended?.()
+      await Promise.resolve()
+    })
+    expect(onError).not.toHaveBeenCalled()
+    expect(onComplete).toHaveBeenCalledTimes(1)
+    expect(result.current.isPlaying).toBe(false)
   })
 })
