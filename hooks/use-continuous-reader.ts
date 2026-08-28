@@ -498,6 +498,10 @@ export function useContinuousReader(
    * Elapsed-in-section is read off the last committed playback: `playback`'s
    * identity churns every progress tick, so the ref always holds a fresh
    * `currentTime` without this callback depending on it.
+   *
+   * It goes through `playFromHere`, so from a PAUSED reader it does not merely
+   * move the position — it starts speaking the target. That is the OS transport
+   * contract: a skip on a lock screen is expected to play what it skipped to.
    */
   const previous = useCallback(() => {
     const currentItems = itemsRef.current
@@ -516,6 +520,12 @@ export function useContinuousReader(
    * Interrupting Media-session skip forwards — NOT the in-app `next`, which is a
    * non-interrupting soft advance. At the end of the queue it does nothing,
    * leaving the current audio running.
+   *
+   * Deliberately internal: it is reachable only through the media-session
+   * `nexttrack` handler below. `previous`/`canPrevious` ARE returned because the
+   * in-app transport contract asks for them; nothing in the app drives a
+   * skip-forward, so nothing exposes one. Same paused-reader caveat as
+   * `previous`: it starts playback at the target.
    */
   const nextTrack = useCallback(() => {
     const currentItems = itemsRef.current
@@ -531,8 +541,11 @@ export function useContinuousReader(
   }, [playFromHere])
 
   const canNext = Math.max(currentIndex, previewIndex) < items.length - 1
+  // Is there anything to drive at all? This is what makes the OS controls appear.
+  const hasQueue = items.length > 0
   // Only an empty queue has nothing to go back to: the first track restarts.
-  const canPrevious = items.length > 0
+  // Equal to `hasQueue` by the skip-back rule, not by being the same question.
+  const canPrevious = hasQueue
 
   const mediaTitle = currentItem ? (currentItem.sourceTitle ?? currentItem.title) : null
   const mediaArtist = currentItem?.title ?? null
@@ -553,9 +566,9 @@ export function useContinuousReader(
   )
 
   useMediaSession({
-    active: canPrevious,
+    active: hasQueue,
     metadata: mediaMetadata,
-    playbackState: isPlaying ? 'playing' : canPrevious ? 'paused' : 'none',
+    playbackState: isPlaying ? 'playing' : hasQueue ? 'paused' : 'none',
     handlers: mediaHandlers,
   })
 

@@ -891,14 +891,17 @@ describe('useContinuousReader', () => {
     expect(onItemChange).toHaveBeenLastCalledWith(makeItem(1), 1)
   })
 
-  it('previous jumps interrupting-ly to the resolved target', async () => {
+  // Driven through the handler map, not `result.current.previous()`: the
+  // Media-session skip backwards is DEFINED by the OS surface, so this pins that
+  // `previoustrack` is wired to it and not to the skip forwards.
+  it('previoustrack jumps interrupting-ly to the resolved target', async () => {
     const { result } = renderReader([makeItem(0), makeItem(1), makeItem(2)])
 
     act(() => result.current.playFrom(2))
     await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
     ttsMock.playback.stop.mockClear()
 
-    act(() => result.current.previous())
+    act(() => latestMediaSession().handlers.previoustrack())
     await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledTimes(2))
 
     expect(ttsMock.playback.stop).toHaveBeenCalled()
@@ -1003,6 +1006,15 @@ describe('useContinuousReader', () => {
       album: 'Motyl.dev',
     })
     untitled.unmount()
+  })
+
+  it('keeps canPrevious and the media session on for a single-section queue', () => {
+    const { result } = renderReader([makeSection('gamma', 0)])
+
+    // The boundary is EMPTY vs non-empty, not one-track vs many: with a single
+    // section there is still somewhere to go back to — the track restarts.
+    expect(result.current.canPrevious).toBe(true)
+    expect(latestMediaSession().active).toBe(true)
   })
 
   it('keeps the media session inactive for an empty queue', () => {
