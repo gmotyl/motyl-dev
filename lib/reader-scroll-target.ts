@@ -24,7 +24,7 @@ export function resolveScrollTarget(
   const title = stripMarkdown(section.title)
 
   if (scroll && 'line' in scroll && article) {
-    const lineEl = article.querySelector<HTMLElement>(`[data-line="${scroll.line}"]`)
+    const lineEl = article.querySelector<HTMLElement>(`[data-line="${CSS.escape(String(scroll.line))}"]`)
     const paragraph = lineEl?.parentElement ?? lineEl
     if (paragraph) return paragraph
   }
@@ -44,6 +44,9 @@ export function resolveScrollTarget(
     const links = article.querySelectorAll<HTMLElement>(
       `[data-section-link="${CSS.escape(heading.id)}"]`,
     )
+    // The section's source "Link:" is emitted as the last element of its content,
+    // so among a section's links it is always the last in DOM order. Any inline
+    // body links precede it, hence `links.length - 1` is the source link.
     const linkEl = links[links.length - 1]
     if (linkEl) return linkEl
   }

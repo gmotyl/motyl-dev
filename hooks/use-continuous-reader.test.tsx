@@ -358,6 +358,29 @@ describe('useContinuousReader', () => {
     expect(onItemChange).not.toHaveBeenCalled()
   })
 
+  it('stopped Next continues from the eye, not the playback position, after a paused cascade', async () => {
+    const onItemChange = vi.fn()
+    const { result } = renderHook(() =>
+      useContinuousReader([makeItem(0), makeItem(1), makeItem(2), makeItem(3)], { onItemChange })
+    )
+
+    act(() => result.current.play())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+
+    // Cascade the eye ahead while playing; playback stays on section 0.
+    ttsMock.playback.isPlaying = true
+    act(() => result.current.next()) // eye → 1
+    expect(result.current.currentIndex).toBe(0)
+
+    // Pause, then Next while stopped: advance from the eye (1), not playback (0).
+    ttsMock.playback.isPlaying = false
+    onItemChange.mockClear()
+    act(() => result.current.next())
+
+    expect(onItemChange).toHaveBeenLastCalledWith(makeItem(1), 1, { link: true })
+    expect(result.current.currentIndex).toBe(2)
+  })
+
   it('auto-advance still plays the next section when the current one completes', async () => {
     const onItemChange = vi.fn()
     const { result } = renderHook(() =>

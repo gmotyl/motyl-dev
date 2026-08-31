@@ -435,8 +435,10 @@ export function useContinuousReader(
 
     // Audio not active: move the start pointer to the next section (pressing Play
     // afterwards begins there) but anchor the section being LEFT by its source
-    // link — the same forward-cascade framing as while playing.
-    const leaving = currentIndexRef.current
+    // link — the same forward-cascade framing as while playing. Use previewIndex
+    // (the eye) here too, so a paused reader whose eye was cascaded ahead of the
+    // playback position keeps advancing from the eye rather than jumping back.
+    const leaving = previewIndexRef.current
     if (leaving >= lastIndex) return // already at the last section
     const nextIndex = leaving + 1
     const nextItem = currentItems[nextIndex]
