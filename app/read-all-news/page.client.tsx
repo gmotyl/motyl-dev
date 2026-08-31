@@ -20,6 +20,7 @@ import { formatDate } from '@/lib/utils'
 import { prepareSpeechSections, stripMarkdown, type SpeechSection } from '@/lib/tts-speech'
 import { headingToId } from '@/lib/heading-slug'
 import { scrollHeadingIntoView } from '@/lib/scroll-heading'
+import { resolveScrollTarget } from '@/lib/reader-scroll-target'
 
 interface ReadAllNewsPageProps {
   initialItems: ContentItem[]
@@ -51,43 +52,9 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
   )
 
   const scrollToSection = useCallback((section: SpeechSection, index: number, scroll?: ScrollHint) => {
-    const title = stripMarkdown(section.title)
     const article = Array.from(document.querySelectorAll<HTMLElement>('article[data-reader-article]'))
       .find((candidate) => candidate.dataset.readerArticle === section.sourceSlug)
-    // Paragraph play: scroll to the exact clicked paragraph, not the section
-    // heading. The paragraph's play button carries `data-line`; its wrapper div
-    // is the paragraph container.
-    if (scroll && 'line' in scroll && article) {
-      const lineEl = article.querySelector<HTMLElement>(`[data-line="${scroll.line}"]`)
-      const paragraph = lineEl?.parentElement ?? lineEl
-      if (paragraph) {
-        scrollHeadingIntoView(paragraph)
-        return
-      }
-    }
-    const occurrence = speechSections
-      .slice(0, index)
-      .filter((candidate) => candidate.sourceSlug === section.sourceSlug)
-      .filter((candidate) => stripMarkdown(candidate.title) === title).length
-    const headings = Array.from(article?.querySelectorAll<HTMLElement>('h2') ?? [])
-    // First occurrence carries the plain rehype-slug id; later duplicates get -1/-2
-    // suffixes, so fall back to textContent matching for those.
-    const heading = (occurrence === 0
-      ? headings.find((h) => h.id === headingToId(title))
-      : undefined)
-      ?? headings.filter((h) => stripMarkdown(h.textContent ?? '') === title)[occurrence]
-    // Next: anchor the section's source link (bottom "Link:") at the top instead of
-    // its heading, so the link stays at the top and the next section's title appears
-    // just below it. The link carries `data-section-link` = the section heading id.
-    if (scroll && 'link' in scroll && heading && article) {
-      const links = article.querySelectorAll<HTMLElement>(`[data-section-link="${CSS.escape(heading.id)}"]`)
-      const linkEl = links[links.length - 1]
-      if (linkEl) {
-        scrollHeadingIntoView(linkEl)
-        return
-      }
-    }
-    scrollHeadingIntoView(heading)
+    scrollHeadingIntoView(resolveScrollTarget(article, speechSections, section, index, scroll))
   }, [speechSections])
 
   const reader = useContinuousReader(speechSections, { onItemChange: scrollToSection })
