@@ -50,10 +50,21 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
     [items, hiddenSections]
   )
 
-  const scrollToSection = useCallback((section: SpeechSection, index: number) => {
+  const scrollToSection = useCallback((section: SpeechSection, index: number, scrollLine?: number) => {
     const title = stripMarkdown(section.title)
     const article = Array.from(document.querySelectorAll<HTMLElement>('article[data-reader-article]'))
       .find((candidate) => candidate.dataset.readerArticle === section.sourceSlug)
+    // Paragraph play: scroll to the exact clicked paragraph, not the section
+    // heading. The paragraph's play button carries `data-line`; its wrapper div
+    // is the paragraph container.
+    if (scrollLine != null && article) {
+      const lineEl = article.querySelector<HTMLElement>(`[data-line="${scrollLine}"]`)
+      const paragraph = lineEl?.parentElement ?? lineEl
+      if (paragraph) {
+        scrollHeadingIntoView(paragraph)
+        return
+      }
+    }
     const occurrence = speechSections
       .slice(0, index)
       .filter((candidate) => candidate.sourceSlug === section.sourceSlug)

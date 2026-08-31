@@ -284,7 +284,7 @@ describe('useContinuousReader', () => {
     expect(ttsMock.playback.play).toHaveBeenCalledTimes(2)
   })
 
-  it('next while playing scrolls to the next section without stopping or restarting audio', async () => {
+  it('next while playing re-anchors the current section without stopping or restarting audio', async () => {
     const onItemChange = vi.fn()
     const { result } = renderHook(() =>
       useContinuousReader([makeItem(0), makeItem(1), makeItem(2)], { onItemChange })
@@ -301,7 +301,8 @@ describe('useContinuousReader', () => {
     expect(ttsMock.playback.play).toHaveBeenCalledOnce()
     expect(result.current.currentIndex).toBe(0)
     expect(onItemChange).toHaveBeenCalledTimes(1)
-    expect(onItemChange).toHaveBeenLastCalledWith(makeItem(1), 1)
+    // Re-anchors the CURRENTLY playing section, not the next one.
+    expect(onItemChange).toHaveBeenLastCalledWith(makeItem(0), 0)
   })
 
   it('next while stopped selects the next section without starting playback', async () => {
@@ -818,6 +819,17 @@ describe('useContinuousReader', () => {
     })
   })
 
+  it('playFromLine forwards the clicked line to onItemChange for paragraph scrolling', async () => {
+    const onItemChange = vi.fn()
+    const { result } = renderHook(() => useContinuousReader([lineItem], { onItemChange }))
+
+    act(() => result.current.playFromLine('lines', 8))
+
+    // (section, index, scrollLine) — the line the user clicked, so the consumer
+    // can scroll to that paragraph rather than the section heading.
+    expect(onItemChange).toHaveBeenLastCalledWith(lineItem, 0, 8)
+  })
+
   it('playFromLine picks the first unit when several share the greatest startLine', async () => {
     const { result } = renderReader([sharedLineItem])
 
@@ -865,7 +877,7 @@ describe('useContinuousReader', () => {
     })
   })
 
-  it('next remains a non-interrupting soft advance', async () => {
+  it('next remains non-interrupting and re-anchors the current section', async () => {
     const onItemChange = vi.fn()
     const { result } = renderHook(() =>
       useContinuousReader([makeItem(0), makeItem(1), makeItem(2)], { onItemChange })
@@ -888,7 +900,8 @@ describe('useContinuousReader', () => {
     })
     expect(result.current.currentIndex).toBe(0)
     expect(onItemChange).toHaveBeenCalledTimes(1)
-    expect(onItemChange).toHaveBeenLastCalledWith(makeItem(1), 1)
+    // The eye returns to the currently playing section, not the next one.
+    expect(onItemChange).toHaveBeenLastCalledWith(makeItem(0), 0)
   })
 
   // Driven through the handler map, not `result.current.previous()`: the

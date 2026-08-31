@@ -17,7 +17,10 @@ import type { TTSPlayback } from './useTTS'
 const MEDIA_SESSION_ALBUM = 'Motyl.dev'
 
 export interface ContinuousReaderOptions {
-  onItemChange?: (item: SpeechSection, index: number) => void
+  // `scrollLine` is the markdown line the user activated (paragraph play), so the
+  // consumer can scroll to that exact paragraph instead of the section heading.
+  // Omitted for section-level changes (heading play, Next, auto-advance).
+  onItemChange?: (item: SpeechSection, index: number, scrollLine?: number) => void
 }
 
 /**
@@ -213,7 +216,7 @@ export function useContinuousReader(
   }, [])
 
   const selectAndStart = useCallback(
-    (index: number, unitIndex: number, reportChange: boolean) => {
+    (index: number, unitIndex: number, reportChange: boolean, scrollLine?: number) => {
       const selectedItem = itemsRef.current[index]
       if (!selectedItem) return
 
@@ -223,7 +226,12 @@ export function useContinuousReader(
       playbackRef.current?.stop()
       setError(null)
 
-      if (reportChange) onItemChangeRef.current?.(selectedItem, index)
+      if (reportChange) {
+        // Only forward scrollLine when a paragraph was activated; section-level
+        // changes stay a 2-arg call (heading scroll).
+        if (scrollLine == null) onItemChangeRef.current?.(selectedItem, index)
+        else onItemChangeRef.current?.(selectedItem, index, scrollLine)
+      }
 
       // Already on this section: `useTTS` holds its units, so start right away.
       if (selectedItem.key === positionRef.current.sectionKey) {
@@ -405,13 +413,12 @@ export function useContinuousReader(
     )
 
     if (audioActive) {
-      // Non-interrupting soft advance: move the eye/scroll only. The current
-      // section keeps playing; auto-advance still continues to currentIndex + 1.
-      const nextPreview = Math.min(previewIndexRef.current + 1, lastIndex)
-      previewIndexRef.current = nextPreview
-      setPreviewIndex(nextPreview)
-      const previewItem = currentItems[nextPreview]
-      if (previewItem) onItemChangeRef.current?.(previewItem, nextPreview)
+      // Non-interrupting: playback stays on the current section. Rather than
+      // previewing the next section, re-anchor the eye on the section that is
+      // actually playing, bringing its heading/link back to the top of the view.
+      const currentIdx = currentIndexRef.current
+      const currentPlaying = currentItems[currentIdx]
+      if (currentPlaying) onItemChangeRef.current?.(currentPlaying, currentIdx)
       return
     }
 
@@ -482,7 +489,9 @@ export function useContinuousReader(
 
       const target = covering ?? fallback
       if (!target) return
-      selectAndStart(target.sectionIndex, target.unitIndex, true)
+      // Pass the clicked line so the consumer scrolls to that exact paragraph,
+      // not the section heading (which could be the article top).
+      selectAndStart(target.sectionIndex, target.unitIndex, true, line)
     },
     [selectAndStart]
   )
