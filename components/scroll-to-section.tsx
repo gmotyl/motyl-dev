@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { scrollHeadingIntoView } from '@/lib/scroll-heading';
 
 interface ScrollToSectionProps {
   sectionId?: string;
@@ -60,15 +61,9 @@ export function ScrollToSection({ sectionId }: ScrollToSectionProps) {
         }
 
         if (targetElement) {
-          // Scroll to element with offset for header
-          const offset = 100; // Adjust based on header height
-          const elementPosition = targetElement.getBoundingClientRect().top;
-          const offsetPosition = elementPosition + window.pageYOffset - offset;
-
-          window.scrollTo({
-            top: offsetPosition,
-            behavior: 'smooth'
-          });
+          // Anchor the heading just below the sticky header, shared with the
+          // continuous reader so both surfaces scroll identically.
+          scrollHeadingIntoView(targetElement);
 
           // Highlight the section briefly
           targetElement.classList.add('highlight-section');

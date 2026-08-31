@@ -16,8 +16,16 @@ import type { TTSPlayback } from './useTTS'
 /** Shown as the album on every OS media control. */
 const MEDIA_SESSION_ALBUM = 'Motyl.dev'
 
+// Where the consumer should anchor the scroll for this change:
+//  - { line }  paragraph play → scroll to that exact paragraph.
+//  - { link: true }  Next → scroll to the section's source link (bottom "Link:"),
+//    so its link stays at the top and the next section's title appears below it.
+//  - undefined  section-level change (heading play, section click, auto-advance) →
+//    scroll to the section heading.
+export type ScrollHint = { line: number } | { link: true }
+
 export interface ContinuousReaderOptions {
-  onItemChange?: (item: SpeechSection, index: number) => void
+  onItemChange?: (item: SpeechSection, index: number, scroll?: ScrollHint) => void
 }
 
 /**
@@ -213,7 +221,7 @@ export function useContinuousReader(
   }, [])
 
   const selectAndStart = useCallback(
-    (index: number, unitIndex: number, reportChange: boolean) => {
+    (index: number, unitIndex: number, reportChange: boolean, scroll?: ScrollHint) => {
       const selectedItem = itemsRef.current[index]
       if (!selectedItem) return
 
@@ -223,7 +231,12 @@ export function useContinuousReader(
       playbackRef.current?.stop()
       setError(null)
 
-      if (reportChange) onItemChangeRef.current?.(selectedItem, index)
+      if (reportChange) {
+        // Only forward a scroll hint when one applies (paragraph play); section-level
+        // changes stay a 2-arg call (heading scroll).
+        if (scroll === undefined) onItemChangeRef.current?.(selectedItem, index)
+        else onItemChangeRef.current?.(selectedItem, index, scroll)
+      }
 
       // Already on this section: `useTTS` holds its units, so start right away.
       if (selectedItem.key === positionRef.current.sectionKey) {
@@ -405,26 +418,37 @@ export function useContinuousReader(
     )
 
     if (audioActive) {
-      // Non-interrupting soft advance: move the eye/scroll only. The current
-      // section keeps playing; auto-advance still continues to currentIndex + 1.
-      const nextPreview = Math.min(previewIndexRef.current + 1, lastIndex)
-      previewIndexRef.current = nextPreview
-      setPreviewIndex(nextPreview)
-      const previewItem = currentItems[nextPreview]
-      if (previewItem) onItemChangeRef.current?.(previewItem, nextPreview)
+      // Non-interrupting: playback keeps going. Advance the eye forward one
+      // section, but anchor the section we're LEAVING at the top — its link stays
+      // at the top and the next section's title appears just below it. Each Next
+      // cascades down to the following boundary.
+      const leaving = previewIndexRef.current
+      if (leaving >= lastIndex) return // already at the last section
+      previewIndexRef.current = leaving + 1
+      setPreviewIndex(leaving + 1)
+      const leavingItem = currentItems[leaving]
+      // Anchor the leaving section's source link at the top (not its heading), so
+      // its link stays visible and the next section's title appears just below it.
+      if (leavingItem) onItemChangeRef.current?.(leavingItem, leaving, { link: true })
       return
     }
 
-    // Audio not active: select the next section as the pending start without
-    // starting playback. Pressing Play afterwards begins at that section.
-    const nextIndex = Math.min(currentIndexRef.current + 1, lastIndex)
+    // Audio not active: move the start pointer to the next section (pressing Play
+    // afterwards begins there) but anchor the section being LEFT by its source
+    // link — the same forward-cascade framing as while playing. Use previewIndex
+    // (the eye) here too, so a paused reader whose eye was cascaded ahead of the
+    // playback position keeps advancing from the eye rather than jumping back.
+    const leaving = previewIndexRef.current
+    if (leaving >= lastIndex) return // already at the last section
+    const nextIndex = leaving + 1
     const nextItem = currentItems[nextIndex]
+    const leavingItem = currentItems[leaving]
     if (!nextItem) return
 
     previewIndexRef.current = nextIndex
     setPreviewIndex(nextIndex)
     updatePosition(nextItem.key, 0)
-    onItemChangeRef.current?.(nextItem, nextIndex)
+    if (leavingItem) onItemChangeRef.current?.(leavingItem, leaving, { link: true })
   }, [updatePosition])
 
   const playFromHere = useCallback(
@@ -482,7 +506,9 @@ export function useContinuousReader(
 
       const target = covering ?? fallback
       if (!target) return
-      selectAndStart(target.sectionIndex, target.unitIndex, true)
+      // Pass the clicked line so the consumer scrolls to that exact paragraph,
+      // not the section heading (which could be the article top).
+      selectAndStart(target.sectionIndex, target.unitIndex, true, { line })
     },
     [selectAndStart]
   )

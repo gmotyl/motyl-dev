@@ -11,7 +11,7 @@ import { MarkdownContent } from '@/components/markdown-content'
 import { filterHiddenSections, type SectionType } from '@/lib/section-filter'
 import { ItemType } from '@/lib/types'
 import { ContentItem } from '@/lib/articles'
-import { useContinuousReader } from '@/hooks/use-continuous-reader'
+import { useContinuousReader, type ScrollHint } from '@/hooks/use-continuous-reader'
 import { MarkReadDialog } from '@/components/mark-read-dialog'
 import { SectionVisibilityDialog } from '@/components/article-section-toggle'
 import { useSectionVisibility } from '@/hooks/use-section-visibility'
@@ -20,6 +20,7 @@ import { formatDate } from '@/lib/utils'
 import { prepareSpeechSections, stripMarkdown, type SpeechSection } from '@/lib/tts-speech'
 import { headingToId } from '@/lib/heading-slug'
 import { scrollHeadingIntoView } from '@/lib/scroll-heading'
+import { resolveScrollTarget } from '@/lib/reader-scroll-target'
 
 interface ReadAllNewsPageProps {
   initialItems: ContentItem[]
@@ -50,22 +51,10 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
     [items, hiddenSections]
   )
 
-  const scrollToSection = useCallback((section: SpeechSection, index: number) => {
-    const title = stripMarkdown(section.title)
+  const scrollToSection = useCallback((section: SpeechSection, index: number, scroll?: ScrollHint) => {
     const article = Array.from(document.querySelectorAll<HTMLElement>('article[data-reader-article]'))
       .find((candidate) => candidate.dataset.readerArticle === section.sourceSlug)
-    const occurrence = speechSections
-      .slice(0, index)
-      .filter((candidate) => candidate.sourceSlug === section.sourceSlug)
-      .filter((candidate) => stripMarkdown(candidate.title) === title).length
-    const headings = Array.from(article?.querySelectorAll<HTMLElement>('h2') ?? [])
-    // First occurrence carries the plain rehype-slug id; later duplicates get -1/-2
-    // suffixes, so fall back to textContent matching for those.
-    const target = (occurrence === 0
-      ? headings.find((heading) => heading.id === headingToId(title))
-      : undefined)
-      ?? headings.filter((heading) => stripMarkdown(heading.textContent ?? '') === title)[occurrence]
-    scrollHeadingIntoView(target)
+    scrollHeadingIntoView(resolveScrollTarget(article, speechSections, section, index, scroll))
   }, [speechSections])
 
   const reader = useContinuousReader(speechSections, { onItemChange: scrollToSection })

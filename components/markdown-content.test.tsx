@@ -117,6 +117,25 @@ describe('MarkdownContent current-section highlight', () => {
     expect(other).not.toHaveClass('bg-yellow-400/10')
   })
 
+  it('tags each link with its enclosing section id via data-section-link', () => {
+    render(
+      <MarkdownContent
+        content={linkContent}
+        reader={{ onPlayFromHere: vi.fn(), currentSectionId: null }}
+      />,
+    )
+
+    // The reader's Next scroll finds a section's source link by this attribute.
+    expect(screen.getByRole('link', { name: 'the source' })).toHaveAttribute(
+      'data-section-link',
+      'why-it-matters',
+    )
+    expect(screen.getByRole('link', { name: 'second link' })).toHaveAttribute(
+      'data-section-link',
+      'later-on',
+    )
+  })
+
   it('does not highlight any link when no section is active', () => {
     render(
       <MarkdownContent

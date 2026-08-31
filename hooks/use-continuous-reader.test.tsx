@@ -284,7 +284,7 @@ describe('useContinuousReader', () => {
     expect(ttsMock.playback.play).toHaveBeenCalledTimes(2)
   })
 
-  it('next while playing scrolls to the next section without stopping or restarting audio', async () => {
+  it('next while playing cascades the eye forward, anchoring the section being left', async () => {
     const onItemChange = vi.fn()
     const { result } = renderHook(() =>
       useContinuousReader([makeItem(0), makeItem(1), makeItem(2)], { onItemChange })
@@ -295,16 +295,39 @@ describe('useContinuousReader', () => {
     onItemChange.mockClear()
 
     ttsMock.playback.isPlaying = true
+    // First Next: leaving section 0 → anchor 0 at the top, eye advances to 1.
+    act(() => result.current.next())
+    // Second Next: leaving section 1 → anchor 1 at the top, eye advances to 2.
     act(() => result.current.next())
 
     expect(ttsMock.playback.stop).not.toHaveBeenCalled()
-    expect(ttsMock.playback.play).toHaveBeenCalledOnce()
-    expect(result.current.currentIndex).toBe(0)
-    expect(onItemChange).toHaveBeenCalledTimes(1)
-    expect(onItemChange).toHaveBeenLastCalledWith(makeItem(1), 1)
+    expect(ttsMock.playback.play).toHaveBeenCalledOnce() // audio never restarts
+    expect(result.current.currentIndex).toBe(0) // playback stays put
+    // Each Next anchors the section being left BY ITS SOURCE LINK ({ link: true }).
+    expect(onItemChange.mock.calls).toEqual([
+      [makeItem(0), 0, { link: true }],
+      [makeItem(1), 1, { link: true }],
+    ])
   })
 
-  it('next while stopped selects the next section without starting playback', async () => {
+  it('next while playing stops advancing at the last section', async () => {
+    const onItemChange = vi.fn()
+    const { result } = renderHook(() =>
+      useContinuousReader([makeItem(0), makeItem(1)], { onItemChange })
+    )
+
+    act(() => result.current.play())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+    onItemChange.mockClear()
+
+    ttsMock.playback.isPlaying = true
+    act(() => result.current.next()) // leaving 0 → eye at 1 (last)
+    act(() => result.current.next()) // already at last → no-op
+
+    expect(onItemChange.mock.calls).toEqual([[makeItem(0), 0, { link: true }]])
+  })
+
+  it('next while stopped moves the start pointer forward, anchoring the leaving link', async () => {
     const onItemChange = vi.fn()
     const { result } = renderHook(() =>
       useContinuousReader([makeItem(0), makeItem(1)], { onItemChange })
@@ -312,10 +335,50 @@ describe('useContinuousReader', () => {
 
     act(() => result.current.next())
 
+    // Start pointer advances (Play would begin at section 1)...
     expect(result.current.currentIndex).toBe(1)
     expect(ttsMock.playback.play).not.toHaveBeenCalled()
     expect(ttsMock.playback.stop).not.toHaveBeenCalled()
-    expect(onItemChange).toHaveBeenLastCalledWith(makeItem(1), 1)
+    // ...but the eye anchors the section being LEFT (0) by its source link.
+    expect(onItemChange).toHaveBeenLastCalledWith(makeItem(0), 0, { link: true })
+  })
+
+  it('next while stopped is a no-op at the last section', async () => {
+    const onItemChange = vi.fn()
+    const { result } = renderHook(() =>
+      useContinuousReader([makeItem(0), makeItem(1)], { onItemChange })
+    )
+
+    act(() => result.current.next()) // 0 → pointer at 1 (last)
+    expect(result.current.currentIndex).toBe(1)
+    onItemChange.mockClear()
+
+    act(() => result.current.next()) // already at last → no-op
+    expect(result.current.currentIndex).toBe(1)
+    expect(onItemChange).not.toHaveBeenCalled()
+  })
+
+  it('stopped Next continues from the eye, not the playback position, after a paused cascade', async () => {
+    const onItemChange = vi.fn()
+    const { result } = renderHook(() =>
+      useContinuousReader([makeItem(0), makeItem(1), makeItem(2), makeItem(3)], { onItemChange })
+    )
+
+    act(() => result.current.play())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+
+    // Cascade the eye ahead while playing; playback stays on section 0.
+    ttsMock.playback.isPlaying = true
+    act(() => result.current.next()) // eye → 1
+    expect(result.current.currentIndex).toBe(0)
+
+    // Pause, then Next while stopped: advance from the eye (1), not playback (0).
+    ttsMock.playback.isPlaying = false
+    onItemChange.mockClear()
+    act(() => result.current.next())
+
+    expect(onItemChange).toHaveBeenLastCalledWith(makeItem(1), 1, { link: true })
+    expect(result.current.currentIndex).toBe(2)
   })
 
   it('auto-advance still plays the next section when the current one completes', async () => {
@@ -818,6 +881,17 @@ describe('useContinuousReader', () => {
     })
   })
 
+  it('playFromLine forwards the clicked line to onItemChange for paragraph scrolling', async () => {
+    const onItemChange = vi.fn()
+    const { result } = renderHook(() => useContinuousReader([lineItem], { onItemChange }))
+
+    act(() => result.current.playFromLine('lines', 8))
+
+    // (section, index, { line }) — the line the user clicked, so the consumer can
+    // scroll to that paragraph rather than the section heading.
+    expect(onItemChange).toHaveBeenLastCalledWith(lineItem, 0, { line: 8 })
+  })
+
   it('playFromLine picks the first unit when several share the greatest startLine', async () => {
     const { result } = renderReader([sharedLineItem])
 
@@ -865,7 +939,7 @@ describe('useContinuousReader', () => {
     })
   })
 
-  it('next remains a non-interrupting soft advance', async () => {
+  it('next remains non-interrupting: playback position never moves', async () => {
     const onItemChange = vi.fn()
     const { result } = renderHook(() =>
       useContinuousReader([makeItem(0), makeItem(1), makeItem(2)], { onItemChange })
@@ -887,8 +961,9 @@ describe('useContinuousReader', () => {
       unitIndex: 0,
     })
     expect(result.current.currentIndex).toBe(0)
+    // The eye advances forward, anchoring the section being left (0) by its link.
     expect(onItemChange).toHaveBeenCalledTimes(1)
-    expect(onItemChange).toHaveBeenLastCalledWith(makeItem(1), 1)
+    expect(onItemChange).toHaveBeenLastCalledWith(makeItem(0), 0, { link: true })
   })
 
   // Driven through the handler map, not `result.current.previous()`: the

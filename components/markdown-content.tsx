@@ -107,11 +107,14 @@ export const MarkdownContent = memo(function MarkdownContent({ content, itemType
     return ranges
   }, [contentWithEmojis])
 
-  const isLinkInCurrentSection = (node: unknown): boolean => {
+  // The id of the `##` section that encloses a markdown node (by line), matching
+  // the rendered <h2 id>. Used both to highlight the current section's link and to
+  // let the reader scroll to a section's source link on Next.
+  const sectionIdForNode = (node: unknown): string | null => {
     const line = (node as { position?: { start?: { line?: number } } } | undefined)?.position?.start?.line
-    if (line == null || reader?.currentSectionId == null) return false
+    if (line == null) return null
     const section = sectionRanges.find((range) => line >= range.start && line < range.end)
-    return section != null && section.id === reader.currentSectionId
+    return section?.id ?? null
   }
 
   // Paragraph-granular "Play from here". Only wired when a callback is supplied,
@@ -154,12 +157,13 @@ export const MarkdownContent = memo(function MarkdownContent({ content, itemType
     a: ({ href, children, node, ...props }) => {
       const isExternal = href?.startsWith('http://') || href?.startsWith('https://')
       const title = typeof children === 'string' ? children : ''
-      const linkIsCurrent = isLinkInCurrentSection(node)
+      const sectionId = sectionIdForNode(node)
+      const linkIsCurrent = sectionId != null && sectionId === reader?.currentSectionId
       const linkHighlight = linkIsCurrent && 'ring-2 ring-yellow-400/70 bg-yellow-400/10 rounded-md px-1 transition-colors'
 
       if (isExternal && summaryPrompt && isNews) {
         return (
-          <span className={cn('inline-flex items-center gap-2 not-prose', linkHighlight)}>
+          <span data-section-link={sectionId ?? undefined} className={cn('inline-flex items-center gap-2 not-prose', linkHighlight)}>
             <VoteButton
               linkUrl={href!}
               title={title}
@@ -184,7 +188,7 @@ export const MarkdownContent = memo(function MarkdownContent({ content, itemType
         )
       }
 
-      return <a href={href} {...props} className={cn(props.className, linkHighlight)}>{children}</a>
+      return <a href={href} {...props} data-section-link={sectionId ?? undefined} className={cn(props.className, linkHighlight)}>{children}</a>
     },
     code: ({ className, children, ...props }) => {
       if (/language-mermaid/.test(className || '')) {
