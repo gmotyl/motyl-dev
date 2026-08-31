@@ -327,7 +327,7 @@ describe('useContinuousReader', () => {
     expect(onItemChange.mock.calls).toEqual([[makeItem(0), 0, { link: true }]])
   })
 
-  it('next while stopped selects the next section without starting playback', async () => {
+  it('next while stopped moves the start pointer forward, anchoring the leaving link', async () => {
     const onItemChange = vi.fn()
     const { result } = renderHook(() =>
       useContinuousReader([makeItem(0), makeItem(1)], { onItemChange })
@@ -335,10 +335,27 @@ describe('useContinuousReader', () => {
 
     act(() => result.current.next())
 
+    // Start pointer advances (Play would begin at section 1)...
     expect(result.current.currentIndex).toBe(1)
     expect(ttsMock.playback.play).not.toHaveBeenCalled()
     expect(ttsMock.playback.stop).not.toHaveBeenCalled()
-    expect(onItemChange).toHaveBeenLastCalledWith(makeItem(1), 1)
+    // ...but the eye anchors the section being LEFT (0) by its source link.
+    expect(onItemChange).toHaveBeenLastCalledWith(makeItem(0), 0, { link: true })
+  })
+
+  it('next while stopped is a no-op at the last section', async () => {
+    const onItemChange = vi.fn()
+    const { result } = renderHook(() =>
+      useContinuousReader([makeItem(0), makeItem(1)], { onItemChange })
+    )
+
+    act(() => result.current.next()) // 0 → pointer at 1 (last)
+    expect(result.current.currentIndex).toBe(1)
+    onItemChange.mockClear()
+
+    act(() => result.current.next()) // already at last → no-op
+    expect(result.current.currentIndex).toBe(1)
+    expect(onItemChange).not.toHaveBeenCalled()
   })
 
   it('auto-advance still plays the next section when the current one completes', async () => {

@@ -433,16 +433,20 @@ export function useContinuousReader(
       return
     }
 
-    // Audio not active: select the next section as the pending start without
-    // starting playback. Pressing Play afterwards begins at that section.
-    const nextIndex = Math.min(currentIndexRef.current + 1, lastIndex)
+    // Audio not active: move the start pointer to the next section (pressing Play
+    // afterwards begins there) but anchor the section being LEFT by its source
+    // link — the same forward-cascade framing as while playing.
+    const leaving = currentIndexRef.current
+    if (leaving >= lastIndex) return // already at the last section
+    const nextIndex = leaving + 1
     const nextItem = currentItems[nextIndex]
+    const leavingItem = currentItems[leaving]
     if (!nextItem) return
 
     previewIndexRef.current = nextIndex
     setPreviewIndex(nextIndex)
     updatePosition(nextItem.key, 0)
-    onItemChangeRef.current?.(nextItem, nextIndex)
+    if (leavingItem) onItemChangeRef.current?.(leavingItem, leaving, { link: true })
   }, [updatePosition])
 
   const playFromHere = useCallback(
