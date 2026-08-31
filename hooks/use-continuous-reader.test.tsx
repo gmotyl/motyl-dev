@@ -284,7 +284,7 @@ describe('useContinuousReader', () => {
     expect(ttsMock.playback.play).toHaveBeenCalledTimes(2)
   })
 
-  it('next while playing re-anchors the current section without stopping or restarting audio', async () => {
+  it('next while playing cascades the eye forward, anchoring the section being left', async () => {
     const onItemChange = vi.fn()
     const { result } = renderHook(() =>
       useContinuousReader([makeItem(0), makeItem(1), makeItem(2)], { onItemChange })
@@ -295,14 +295,35 @@ describe('useContinuousReader', () => {
     onItemChange.mockClear()
 
     ttsMock.playback.isPlaying = true
+    // First Next: leaving section 0 → anchor 0 at the top, eye advances to 1.
+    act(() => result.current.next())
+    // Second Next: leaving section 1 → anchor 1 at the top, eye advances to 2.
     act(() => result.current.next())
 
     expect(ttsMock.playback.stop).not.toHaveBeenCalled()
-    expect(ttsMock.playback.play).toHaveBeenCalledOnce()
-    expect(result.current.currentIndex).toBe(0)
-    expect(onItemChange).toHaveBeenCalledTimes(1)
-    // Re-anchors the CURRENTLY playing section, not the next one.
-    expect(onItemChange).toHaveBeenLastCalledWith(makeItem(0), 0)
+    expect(ttsMock.playback.play).toHaveBeenCalledOnce() // audio never restarts
+    expect(result.current.currentIndex).toBe(0) // playback stays put
+    expect(onItemChange.mock.calls).toEqual([
+      [makeItem(0), 0],
+      [makeItem(1), 1],
+    ])
+  })
+
+  it('next while playing stops advancing at the last section', async () => {
+    const onItemChange = vi.fn()
+    const { result } = renderHook(() =>
+      useContinuousReader([makeItem(0), makeItem(1)], { onItemChange })
+    )
+
+    act(() => result.current.play())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+    onItemChange.mockClear()
+
+    ttsMock.playback.isPlaying = true
+    act(() => result.current.next()) // leaving 0 → eye at 1 (last)
+    act(() => result.current.next()) // already at last → no-op
+
+    expect(onItemChange.mock.calls).toEqual([[makeItem(0), 0]])
   })
 
   it('next while stopped selects the next section without starting playback', async () => {
@@ -877,7 +898,7 @@ describe('useContinuousReader', () => {
     })
   })
 
-  it('next remains non-interrupting and re-anchors the current section', async () => {
+  it('next remains non-interrupting: playback position never moves', async () => {
     const onItemChange = vi.fn()
     const { result } = renderHook(() =>
       useContinuousReader([makeItem(0), makeItem(1), makeItem(2)], { onItemChange })
@@ -899,8 +920,8 @@ describe('useContinuousReader', () => {
       unitIndex: 0,
     })
     expect(result.current.currentIndex).toBe(0)
+    // The eye advances forward, anchoring the section being left (0) at the top.
     expect(onItemChange).toHaveBeenCalledTimes(1)
-    // The eye returns to the currently playing section, not the next one.
     expect(onItemChange).toHaveBeenLastCalledWith(makeItem(0), 0)
   })
 

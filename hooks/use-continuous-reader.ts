@@ -413,12 +413,16 @@ export function useContinuousReader(
     )
 
     if (audioActive) {
-      // Non-interrupting: playback stays on the current section. Rather than
-      // previewing the next section, re-anchor the eye on the section that is
-      // actually playing, bringing its heading/link back to the top of the view.
-      const currentIdx = currentIndexRef.current
-      const currentPlaying = currentItems[currentIdx]
-      if (currentPlaying) onItemChangeRef.current?.(currentPlaying, currentIdx)
+      // Non-interrupting: playback keeps going. Advance the eye forward one
+      // section, but anchor the section we're LEAVING at the top — its link stays
+      // at the top and the next section's title appears just below it. Each Next
+      // cascades down to the following boundary.
+      const leaving = previewIndexRef.current
+      if (leaving >= lastIndex) return // already at the last section
+      previewIndexRef.current = leaving + 1
+      setPreviewIndex(leaving + 1)
+      const leavingItem = currentItems[leaving]
+      if (leavingItem) onItemChangeRef.current?.(leavingItem, leaving)
       return
     }
 
