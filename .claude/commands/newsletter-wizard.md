@@ -21,7 +21,9 @@ Invoke the `generate-trends` skill:
 Skill: generate-trends
 ```
 
-When it completes, capture the resulting `issueNumber` and `issueFile` path from the generated markdown file. Report both to the user.
+When it completes, capture the resulting `issueNumber` and `issueFile` path from the generated markdown file. `generate-trends` runs its own unslop pass on the draft before writing it, so the file is already polished — no need to redo that here.
+
+Report the issue number and path to the user.
 
 **Confirm:** "Issue #N generated at `<path>`. Move to step 2 (manual review)?"
 
@@ -109,7 +111,7 @@ Invoke the `repurpose` skill:
 Skill: repurpose
 ```
 
-The skill will draft LinkedIn / Bluesky / Twitter posts. Remember: Twitter/X is manual-publish only — give the user a short draft and never auto-publish to Twitter.
+The skill will draft LinkedIn / Bluesky / Twitter posts, running its own unslop pass before returning them, so what comes back is already polished. Remember: Twitter/X is manual-publish only — give the user a short draft and never auto-publish to Twitter.
 
 Mark the wizard complete and print a final summary:
 - Issue #N file path

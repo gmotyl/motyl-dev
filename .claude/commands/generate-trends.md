@@ -1,6 +1,6 @@
 ---
 description: Generate weekly trends summary from vote data and create a PR
-allowed-tools: ["Bash", "Read", "Write", "Glob"]
+allowed-tools: ["Bash", "Read", "Write", "Glob", "Skill"]
 ---
 
 Generate a curated weekly trends summary from vote data, create a markdown file, and open a PR for review.
@@ -71,6 +71,8 @@ Use today's date for `publishedAt`.
 - Keep it concise — quality over quantity
 - Category icons: Frontend = 🚀, AI = 🤖, Tools = 🛠️, Other = 📦
 
+**Unslop pass:** before writing the file, invoke `Skill: unslop` on the drafted item descriptions and the closing line, and rewrite anything it flags. Keep the frontmatter, links, and vote counts untouched.
+
 ### 4. Create branch and commit
 
 ```bash
@@ -91,6 +93,8 @@ gh pr create \
 ### 6. Generate social media snippets
 
 Based on the newsletter content, generate **3 short teaser proposals for each platform**: LinkedIn and Twitter/X.
+
+Before output, invoke `Skill: unslop` on all 6 drafts and rewrite anything it flags, keeping each platform's length limit intact.
 
 Output them directly in the chat (do NOT write to a file).
 

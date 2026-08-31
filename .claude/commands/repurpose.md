@@ -1,6 +1,6 @@
 ---
 description: Repurpose newsletter or article into native posts for LinkedIn, Bluesky, Twitter/X, Instagram, TikTok
-allowed-tools: ["Read", "Bash", "Glob"]
+allowed-tools: ["Read", "Bash", "Glob", "Skill"]
 argument-hint: [issue-number-or-slug]
 ---
 
@@ -47,14 +47,6 @@ Read the full file. Extract these **5 content atoms**:
 Generate all platforms. Use the content atoms — never just quote from the article verbatim.
 
 Write in **Polish** (Greg's audience) unless the article is in English — then write in English.
-
-Apply humanizer rules (write like a person, not an AI):
-- No hollow openers ("In today's digital landscape...")
-- No filler transitions ("Furthermore", "Moreover", "It's worth noting")
-- No AI-isms ("game-changer", "leverage", "dive into", "delve")
-- Vary sentence length — mix short punchy sentences with longer ones
-- Use first person where natural
-- Be direct — cut the fluff
 
 ---
 
@@ -188,7 +180,11 @@ Estimated duration: ~[N]s / ~[N] words
 
 ---
 
-## Step 4: Output summary
+## Step 4: Unslop pass
+
+Before output, invoke `Skill: unslop` on each drafted post (LinkedIn, Bluesky thread, Twitter/X thread, Instagram caption, TikTok script) and rewrite anything it flags. Keep each platform's format, length limit, and structural markers (`1/`, `[HOOK - 0-3s]`, etc.) intact. Note: Instagram explicitly allows emoji per its own rules above — the unslop pass shouldn't strip those.
+
+## Step 5: Output summary
 
 After all posts, add:
 

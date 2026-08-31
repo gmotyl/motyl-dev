@@ -1,6 +1,6 @@
 ---
 description: Generate newsletter articles from mailbox
-allowed-tools: ["mcp__newsletter-ai__*"]
+allowed-tools: ["mcp__newsletter-ai__*", "Skill"]
 argument-hint: [limit] [pattern]
 ---
 
@@ -136,20 +136,11 @@ When processing these newsletters:
        - **Each topic section MUST end with `**Link:** [Title](URL)` line**
        - **IMPORTANT**: Do NOT include any "Co-Authored-By" attribution lines - these scare readers
        - **IMPORTANT**: Do NOT include any "Generated with [Tool Name]" marketing lines - keep it clean and professional
-       - **IMPORTANT**: Write like a human from the start — apply these rules during generation:
-         - No em dashes (—); use commas or separate sentences instead
-         - No "rule of three" (avoid listing exactly three items just to seem thorough)
-         - No AI vocabulary: additionally, crucial, delve, highlight, landscape, pivotal, showcase, testament, underscore, vibrant, key (as adjective), foster, enhance
-         - No inflated significance: "marks a turning point", "reflects broader trends", "serves as a reminder"
-         - No promotional language: groundbreaking, stunning, breathtaking, boasts, nestled, renowned
-         - No vague attributions: "experts say", "industry observers note", "some argue"
-         - No negative parallelisms: "It's not just X, it's Y"
-         - No inline-header bullet lists (**Key:** description) — write in prose instead
-         - Vary sentence length: mix short punchy sentences with longer ones
-         - Have opinions — react to the content, don't just neutrally report it
-         - Use "I" when it fits naturally ("I keep thinking about...", "Here's what gets me...")
-         - Be specific: concrete details beat vague claims every time
-   - Call `mcp__newsletter-ai__save_article` with the generated content and newsletter name
+       - **IMPORTANT**: Write like a human from the start — avoid obvious AI tells (puffery, hollow "-ing" phrases, rule-of-three, em dashes, inline-header bullet lists) while drafting
+   - **Unslop pass**: before saving, invoke `Skill: unslop` on the full drafted markdown body (frontmatter + TLDR + per-article sections + takeaways + "why do I care"). Writing clean on the first pass never fully works, so this is a mandatory second pass, not a fallback:
+     - Rewrite anything the skill flags, preserving meaning and the per-article structure (headings, `**Link:**` lines, frontmatter fields must stay intact)
+     - Run the self-audit question from the skill ("What makes this obviously AI generated?") on the result before moving on
+   - Call `mcp__newsletter-ai__save_article` with the unslopped content and newsletter name
    - **CRITICAL: Track the newsletter UID that was used for this article generation**
    - Display: "✅ Saved article to [filepath]"
 
