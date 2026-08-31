@@ -16,11 +16,16 @@ import type { TTSPlayback } from './useTTS'
 /** Shown as the album on every OS media control. */
 const MEDIA_SESSION_ALBUM = 'Motyl.dev'
 
+// Where the consumer should anchor the scroll for this change:
+//  - { line }  paragraph play → scroll to that exact paragraph.
+//  - { link: true }  Next → scroll to the section's source link (bottom "Link:"),
+//    so its link stays at the top and the next section's title appears below it.
+//  - undefined  section-level change (heading play, section click, auto-advance) →
+//    scroll to the section heading.
+export type ScrollHint = { line: number } | { link: true }
+
 export interface ContinuousReaderOptions {
-  // `scrollLine` is the markdown line the user activated (paragraph play), so the
-  // consumer can scroll to that exact paragraph instead of the section heading.
-  // Omitted for section-level changes (heading play, Next, auto-advance).
-  onItemChange?: (item: SpeechSection, index: number, scrollLine?: number) => void
+  onItemChange?: (item: SpeechSection, index: number, scroll?: ScrollHint) => void
 }
 
 /**
@@ -216,7 +221,7 @@ export function useContinuousReader(
   }, [])
 
   const selectAndStart = useCallback(
-    (index: number, unitIndex: number, reportChange: boolean, scrollLine?: number) => {
+    (index: number, unitIndex: number, reportChange: boolean, scroll?: ScrollHint) => {
       const selectedItem = itemsRef.current[index]
       if (!selectedItem) return
 
@@ -227,10 +232,10 @@ export function useContinuousReader(
       setError(null)
 
       if (reportChange) {
-        // Only forward scrollLine when a paragraph was activated; section-level
+        // Only forward a scroll hint when one applies (paragraph play); section-level
         // changes stay a 2-arg call (heading scroll).
-        if (scrollLine == null) onItemChangeRef.current?.(selectedItem, index)
-        else onItemChangeRef.current?.(selectedItem, index, scrollLine)
+        if (scroll === undefined) onItemChangeRef.current?.(selectedItem, index)
+        else onItemChangeRef.current?.(selectedItem, index, scroll)
       }
 
       // Already on this section: `useTTS` holds its units, so start right away.
@@ -422,7 +427,9 @@ export function useContinuousReader(
       previewIndexRef.current = leaving + 1
       setPreviewIndex(leaving + 1)
       const leavingItem = currentItems[leaving]
-      if (leavingItem) onItemChangeRef.current?.(leavingItem, leaving)
+      // Anchor the leaving section's source link at the top (not its heading), so
+      // its link stays visible and the next section's title appears just below it.
+      if (leavingItem) onItemChangeRef.current?.(leavingItem, leaving, { link: true })
       return
     }
 
@@ -495,7 +502,7 @@ export function useContinuousReader(
       if (!target) return
       // Pass the clicked line so the consumer scrolls to that exact paragraph,
       // not the section heading (which could be the article top).
-      selectAndStart(target.sectionIndex, target.unitIndex, true, line)
+      selectAndStart(target.sectionIndex, target.unitIndex, true, { line })
     },
     [selectAndStart]
   )

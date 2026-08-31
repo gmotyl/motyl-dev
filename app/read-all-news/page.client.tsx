@@ -11,7 +11,7 @@ import { MarkdownContent } from '@/components/markdown-content'
 import { filterHiddenSections, type SectionType } from '@/lib/section-filter'
 import { ItemType } from '@/lib/types'
 import { ContentItem } from '@/lib/articles'
-import { useContinuousReader } from '@/hooks/use-continuous-reader'
+import { useContinuousReader, type ScrollHint } from '@/hooks/use-continuous-reader'
 import { MarkReadDialog } from '@/components/mark-read-dialog'
 import { SectionVisibilityDialog } from '@/components/article-section-toggle'
 import { useSectionVisibility } from '@/hooks/use-section-visibility'
@@ -50,15 +50,15 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
     [items, hiddenSections]
   )
 
-  const scrollToSection = useCallback((section: SpeechSection, index: number, scrollLine?: number) => {
+  const scrollToSection = useCallback((section: SpeechSection, index: number, scroll?: ScrollHint) => {
     const title = stripMarkdown(section.title)
     const article = Array.from(document.querySelectorAll<HTMLElement>('article[data-reader-article]'))
       .find((candidate) => candidate.dataset.readerArticle === section.sourceSlug)
     // Paragraph play: scroll to the exact clicked paragraph, not the section
     // heading. The paragraph's play button carries `data-line`; its wrapper div
     // is the paragraph container.
-    if (scrollLine != null && article) {
-      const lineEl = article.querySelector<HTMLElement>(`[data-line="${scrollLine}"]`)
+    if (scroll && 'line' in scroll && article) {
+      const lineEl = article.querySelector<HTMLElement>(`[data-line="${scroll.line}"]`)
       const paragraph = lineEl?.parentElement ?? lineEl
       if (paragraph) {
         scrollHeadingIntoView(paragraph)
@@ -72,11 +72,22 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
     const headings = Array.from(article?.querySelectorAll<HTMLElement>('h2') ?? [])
     // First occurrence carries the plain rehype-slug id; later duplicates get -1/-2
     // suffixes, so fall back to textContent matching for those.
-    const target = (occurrence === 0
-      ? headings.find((heading) => heading.id === headingToId(title))
+    const heading = (occurrence === 0
+      ? headings.find((h) => h.id === headingToId(title))
       : undefined)
-      ?? headings.filter((heading) => stripMarkdown(heading.textContent ?? '') === title)[occurrence]
-    scrollHeadingIntoView(target)
+      ?? headings.filter((h) => stripMarkdown(h.textContent ?? '') === title)[occurrence]
+    // Next: anchor the section's source link (bottom "Link:") at the top instead of
+    // its heading, so the link stays at the top and the next section's title appears
+    // just below it. The link carries `data-section-link` = the section heading id.
+    if (scroll && 'link' in scroll && heading && article) {
+      const links = article.querySelectorAll<HTMLElement>(`[data-section-link="${CSS.escape(heading.id)}"]`)
+      const linkEl = links[links.length - 1]
+      if (linkEl) {
+        scrollHeadingIntoView(linkEl)
+        return
+      }
+    }
+    scrollHeadingIntoView(heading)
   }, [speechSections])
 
   const reader = useContinuousReader(speechSections, { onItemChange: scrollToSection })

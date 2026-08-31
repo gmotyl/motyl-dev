@@ -303,9 +303,10 @@ describe('useContinuousReader', () => {
     expect(ttsMock.playback.stop).not.toHaveBeenCalled()
     expect(ttsMock.playback.play).toHaveBeenCalledOnce() // audio never restarts
     expect(result.current.currentIndex).toBe(0) // playback stays put
+    // Each Next anchors the section being left BY ITS SOURCE LINK ({ link: true }).
     expect(onItemChange.mock.calls).toEqual([
-      [makeItem(0), 0],
-      [makeItem(1), 1],
+      [makeItem(0), 0, { link: true }],
+      [makeItem(1), 1, { link: true }],
     ])
   })
 
@@ -323,7 +324,7 @@ describe('useContinuousReader', () => {
     act(() => result.current.next()) // leaving 0 → eye at 1 (last)
     act(() => result.current.next()) // already at last → no-op
 
-    expect(onItemChange.mock.calls).toEqual([[makeItem(0), 0]])
+    expect(onItemChange.mock.calls).toEqual([[makeItem(0), 0, { link: true }]])
   })
 
   it('next while stopped selects the next section without starting playback', async () => {
@@ -846,9 +847,9 @@ describe('useContinuousReader', () => {
 
     act(() => result.current.playFromLine('lines', 8))
 
-    // (section, index, scrollLine) — the line the user clicked, so the consumer
-    // can scroll to that paragraph rather than the section heading.
-    expect(onItemChange).toHaveBeenLastCalledWith(lineItem, 0, 8)
+    // (section, index, { line }) — the line the user clicked, so the consumer can
+    // scroll to that paragraph rather than the section heading.
+    expect(onItemChange).toHaveBeenLastCalledWith(lineItem, 0, { line: 8 })
   })
 
   it('playFromLine picks the first unit when several share the greatest startLine', async () => {
@@ -920,9 +921,9 @@ describe('useContinuousReader', () => {
       unitIndex: 0,
     })
     expect(result.current.currentIndex).toBe(0)
-    // The eye advances forward, anchoring the section being left (0) at the top.
+    // The eye advances forward, anchoring the section being left (0) by its link.
     expect(onItemChange).toHaveBeenCalledTimes(1)
-    expect(onItemChange).toHaveBeenLastCalledWith(makeItem(0), 0)
+    expect(onItemChange).toHaveBeenLastCalledWith(makeItem(0), 0, { link: true })
   })
 
   // Driven through the handler map, not `result.current.previous()`: the
