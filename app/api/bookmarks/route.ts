@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { getUserBookmarks, addBookmark } from '@/lib/bookmarks';
+import { auth } from '@/lib/auth/auth';
+import { getUserBookmarks, addBookmark } from '@/lib/engagement/bookmarks';
 
 /**
  * GET /api/bookmarks

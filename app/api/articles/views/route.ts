@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getUserViewedArticles, clearViewHistory } from '@/lib/article-views'
+import { getUserViewedArticles, clearViewHistory } from '@/lib/engagement/article-views'
 
 // GET - Get all viewed article slugs for the current user
 export async function GET() {

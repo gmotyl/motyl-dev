@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { removeBookmark, updateBookmark } from '@/lib/bookmarks';
+import { auth } from '@/lib/auth/auth';
+import { removeBookmark, updateBookmark } from '@/lib/engagement/bookmarks';
 
 /**
  * DELETE /api/bookmarks/[id]

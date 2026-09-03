@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
-import { auth } from '@/lib/auth'
+import { auth } from '@/lib/auth/auth'
 
-vi.mock('@/lib/articles', () => ({
+vi.mock('@/lib/content/articles', () => ({
   getContentPageData: vi.fn(async () => ({
     items: [],
     totalItems: 0,
@@ -12,11 +12,11 @@ vi.mock('@/lib/articles', () => ({
   })),
 }))
 
-vi.mock('@/lib/auth', () => ({
+vi.mock('@/lib/auth/auth', () => ({
   auth: vi.fn(async () => null),
 }))
 
-vi.mock('@/lib/article-views', () => ({
+vi.mock('@/lib/engagement/article-views', () => ({
   getUserViewedArticles: vi.fn(async () => []),
 }))
 
@@ -25,7 +25,7 @@ vi.mock('next/headers', () => ({
 }))
 
 import { GET } from './route'
-import { getContentPageData } from '@/lib/articles'
+import { getContentPageData } from '@/lib/content/articles'
 
 describe('GET /api/content — limit query param', () => {
   beforeEach(() => {

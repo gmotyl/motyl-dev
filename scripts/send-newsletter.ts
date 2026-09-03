@@ -23,8 +23,8 @@ import { render } from '@react-email/components'
 import * as React from 'react'
 import { Resend } from 'resend'
 import NewsletterEmail from '../emails/newsletter.js'
-import { parseFrontmatter } from '../lib/newsletter-issues.js'
-import { buildEmailMarkdownRenderer } from '../lib/email-markdown.js'
+import { parseFrontmatter } from '../lib/newsletter/issues.js'
+import { buildEmailMarkdownRenderer } from '../lib/newsletter/email-markdown.js'
 
 // ---------------------------------------------------------------------------
 // Main

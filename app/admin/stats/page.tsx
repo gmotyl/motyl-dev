@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
-import { auth } from '@/lib/auth'
-import { getAllTimeStats, getMonthlyPatternStats } from '@/lib/pattern-stats'
+import { auth } from '@/lib/auth/auth'
+import { getAllTimeStats, getMonthlyPatternStats } from '@/lib/trends/pattern-stats'
 import { PatternStatsDashboard } from '@/components/pattern-stats-dashboard'
 import Header from '@/components/header'
 import Footer from '@/components/footer'

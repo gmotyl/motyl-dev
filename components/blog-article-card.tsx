@@ -1,9 +1,9 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { getContentUrl } from '@/lib/urls'
-import { getOgImage } from '@/lib/og'
+import { getContentUrl } from '@/lib/content/urls'
+import { getOgImage } from '@/lib/content/og'
 import { formatDate, vtName, vtImageName } from '@/lib/utils'
-import type { ContentItemMetadata } from '@/lib/articles'
+import type { ContentItemMetadata } from '@/lib/content/articles'
 
 interface BlogArticleCardProps {
   article: ContentItemMetadata

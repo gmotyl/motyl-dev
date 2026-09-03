@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('@/lib/require-super-admin', () => ({
+vi.mock('@/lib/auth/require-super-admin', () => ({
   requireSuperAdmin: vi.fn(async () => undefined),
 }))
 
-vi.mock('@/lib/articles', () => ({
+vi.mock('@/lib/content/articles', () => ({
   getContentItemBySlug: vi.fn(async () => null),
   getAllContentMetadata: vi.fn(async () => []),
 }))
@@ -18,8 +18,8 @@ vi.mock('@/components/content-page', () => ({
 }))
 
 import NewsItemPage from './page'
-import { requireSuperAdmin } from '@/lib/require-super-admin'
-import { getContentItemBySlug } from '@/lib/articles'
+import { requireSuperAdmin } from '@/lib/auth/require-super-admin'
+import { getContentItemBySlug } from '@/lib/content/articles'
 
 describe('NewsItemPage — SuperAdmin guard', () => {
   beforeEach(() => vi.clearAllMocks())

@@ -1,9 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ShareAIButton } from './share-ai-button'
-import { getContentItemBySlug } from '@/lib/articles'
+import { getContentItemBySlug } from '@/lib/content/articles'
 
-vi.mock('@/lib/articles')
+vi.mock('@/lib/content/articles')
 
 // Mock localStorage
 const localStorageMock = (() => {

@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { ItemType } from '@/lib/types'
+import { ItemType } from '@/lib/content/types'
 
-vi.mock('@/lib/articles', () => ({
+vi.mock('@/lib/content/articles', () => ({
   getAllContentMetadata: vi.fn(async () => []),
 }))
 
-vi.mock('@/lib/urls', () => ({
+vi.mock('@/lib/content/urls', () => ({
   getContentUrl: vi.fn((item: { slug: string; itemType: string }, absolute: boolean) => {
     const base = absolute ? 'https://motyl.dev' : ''
     const prefix = item.itemType === 'news' ? '/news' : '/articles'
@@ -14,7 +14,7 @@ vi.mock('@/lib/urls', () => ({
 }))
 
 import sitemap from './sitemap'
-import { getAllContentMetadata } from '@/lib/articles'
+import { getAllContentMetadata } from '@/lib/content/articles'
 
 const mockNews = { slug: 'secret-news', itemType: ItemType.News, publishedAt: '2024-01-01', title: '', excerpt: '', hashtags: [], content: '' }
 const mockArticle = { slug: 'public-article', itemType: ItemType.Article, publishedAt: '2024-01-01', title: '', excerpt: '', hashtags: [], content: '' }

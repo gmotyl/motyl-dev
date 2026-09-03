@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { vtName, vtImageName } from '@/lib/utils'
-import type { NewsletterMeta } from '@/lib/newsletter-issues'
+import type { NewsletterMeta } from '@/lib/newsletter/issues'
 
 interface NewsletterIssueCardProps {
   issue: NewsletterMeta

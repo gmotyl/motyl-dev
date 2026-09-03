@@ -1,9 +1,9 @@
-import { getContentPageData, ContentItem } from '@/lib/articles'
+import { getContentPageData, ContentItem } from '@/lib/content/articles'
 import { headers } from 'next/headers'
-import { auth } from '@/lib/auth'
-import { getUserViewedArticles } from '@/lib/article-views'
+import { auth } from '@/lib/auth/auth'
+import { getUserViewedArticles } from '@/lib/engagement/article-views'
 import ReadAllNewsPageClient from './page.client'
-import { requireSuperAdmin } from '@/lib/require-super-admin'
+import { requireSuperAdmin } from '@/lib/auth/require-super-admin'
 
 export const metadata = {
   title: 'Read All News - Motyl.dev',

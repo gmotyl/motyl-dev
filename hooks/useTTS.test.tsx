@@ -2,10 +2,10 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useTTS } from './useTTS'
-import { synthesizeSpeech } from '@/lib/tts-client'
+import { synthesizeSpeech } from '@/lib/tts/client'
 
 // Mock the synthesis client so no real network / edge-tts is touched.
-vi.mock('@/lib/tts-client', () => ({
+vi.mock('@/lib/tts/client', () => ({
   synthesizeSpeech: vi.fn(async () => new ArrayBuffer(8)),
   prefetchSpeech: vi.fn(),
 }))

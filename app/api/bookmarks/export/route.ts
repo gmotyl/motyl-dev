@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { exportToMarkdown } from '@/lib/bookmarks';
+import { auth } from '@/lib/auth/auth';
+import { exportToMarkdown } from '@/lib/engagement/bookmarks';
 
 /**
  * GET /api/bookmarks/export

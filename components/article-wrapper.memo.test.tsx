@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ArticleWrapper } from './article-wrapper'
-import { ItemType } from '@/lib/types'
+import { ItemType } from '@/lib/content/types'
 
 // Collects the `reader` prop MarkdownContent receives on each *actual* render.
 // The mock is wrapped in React.memo so it faithfully mirrors the real (memoized)

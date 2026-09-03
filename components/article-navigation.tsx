@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { getContentUrl } from '@/lib/urls'
-import { ContentItemMetadata } from '@/lib/articles'
+import { getContentUrl } from '@/lib/content/urls'
+import { ContentItemMetadata } from '@/lib/content/articles'
 
 interface ArticleNavigationProps {
   prevArticle: ContentItemMetadata | null

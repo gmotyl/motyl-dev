@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
-import { getHomepageFeed } from '@/lib/trends'
-import { getAllContentMetadata } from '@/lib/articles'
-import { ItemType } from '@/lib/types'
+import { getHomepageFeed } from '@/lib/trends/trends'
+import { getAllContentMetadata } from '@/lib/content/articles'
+import { ItemType } from '@/lib/content/types'
 
 export async function GET() {
   try {

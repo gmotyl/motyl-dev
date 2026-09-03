@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { NewsletterIssueCard } from './newsletter-issue-card'
-import type { NewsletterMeta } from '@/lib/newsletter-issues'
+import type { NewsletterMeta } from '@/lib/newsletter/issues'
 
 vi.mock('next/image', () => ({
   // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text

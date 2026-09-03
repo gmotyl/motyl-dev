@@ -1,8 +1,8 @@
 import { Suspense } from 'react'
 import { ContentListing } from '@/components/content-listing'
-import { getAllHashtags } from '@/lib/articles'
+import { getAllHashtags } from '@/lib/content/articles'
 import Header from '@/components/header'
-import { readBatch, readManifest } from '@/lib/content-batches'
+import { readBatch, readManifest } from '@/lib/content/batches'
 
 export const revalidate = 300 // ISR: 5 min
 

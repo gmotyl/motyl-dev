@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import type { SectionType } from '@/lib/section-filter'
+import type { SectionType } from '@/lib/content/section-filter'
 
 const STORAGE_KEY = 'article-hidden-sections'
 

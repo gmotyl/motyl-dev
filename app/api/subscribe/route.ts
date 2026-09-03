@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { Resend } from "resend"
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { buildEmailMarkdownRenderer, wrapInEmailShell } from '@/lib/email-markdown'
+import { buildEmailMarkdownRenderer, wrapInEmailShell } from '@/lib/newsletter/email-markdown'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://motyl.dev'
 

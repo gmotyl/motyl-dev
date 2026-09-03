@@ -1,10 +1,10 @@
 import { notFound } from 'next/navigation'
-import { getContentItemBySlug, getAllContentMetadata } from '@/lib/articles'
+import { getContentItemBySlug, getAllContentMetadata } from '@/lib/content/articles'
 import ContentPage from '@/components/content-page'
-import { ItemType } from '@/lib/types'
-import { getContentUrl } from '@/lib/urls'
-import { getOgImage } from '@/lib/og'
-import { requireSuperAdmin } from '@/lib/require-super-admin'
+import { ItemType } from '@/lib/content/types'
+import { getContentUrl } from '@/lib/content/urls'
+import { getOgImage } from '@/lib/content/og'
+import { requireSuperAdmin } from '@/lib/auth/require-super-admin'
 
 export async function generateMetadata({ params: paramsPromise }: { params: Promise<{ slug: string }> }) {
   try {

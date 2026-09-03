@@ -1,7 +1,7 @@
 import Image from 'next/image'
 import { CategoryIcon } from '@/components/category-icon'
-import { type Content, ItemType } from '@/lib/types'
-import { getOgImage } from '@/lib/og'
+import { type Content, ItemType } from '@/lib/content/types'
+import { getOgImage } from '@/lib/content/og'
 import { vtImageName } from '@/lib/utils'
 
 interface HeroImageProps {

@@ -3,13 +3,13 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Mock } from 'vitest'
 import ReadAllNewsPage from './page.client'
-import { ItemType } from '@/lib/types'
+import { ItemType } from '@/lib/content/types'
 
 // The reader no longer calls scrollIntoView; it delegates to this helper.
 // Mock it so scroll-order tests can record which heading scrolled (el.id)
 // and assert scroll fires before playback.
 const { scrollHeadingIntoView } = vi.hoisted(() => ({ scrollHeadingIntoView: vi.fn() }))
-vi.mock('@/lib/scroll-heading', () => ({ scrollHeadingIntoView }))
+vi.mock('@/lib/reader/scroll-heading', () => ({ scrollHeadingIntoView }))
 
 const mockUseContinuousReader = vi.fn()
 const playbackEvents: string[] = []

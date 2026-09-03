@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getAllHashtags } from '@/lib/articles'
+import { getAllHashtags } from '@/lib/content/articles'
 
 export async function GET() {
   try {

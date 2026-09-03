@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
-vi.mock('@/lib/require-super-admin', () => ({ requireSuperAdmin: vi.fn(async () => undefined) }))
-vi.mock('@/lib/trends', () => ({ getHomepageFeed: vi.fn(async () => ({ trendings: [], lastWeekSummary: null })) }))
+vi.mock('@/lib/auth/require-super-admin', () => ({ requireSuperAdmin: vi.fn(async () => undefined) }))
+vi.mock('@/lib/trends/trends', () => ({ getHomepageFeed: vi.fn(async () => ({ trendings: [], lastWeekSummary: null })) }))
 vi.mock('@/components/trending-list', () => ({ TrendingList: () => <div data-testid="trending-list" /> }))
 
 import TrendingPage, { dynamic } from './page'
-import { requireSuperAdmin } from '@/lib/require-super-admin'
-import { getHomepageFeed } from '@/lib/trends'
+import { requireSuperAdmin } from '@/lib/auth/require-super-admin'
+import { getHomepageFeed } from '@/lib/trends/trends'
 
 const item = {
   id: '1',

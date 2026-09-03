@@ -1,8 +1,8 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { sectionKey, type SpeechSection } from '@/lib/tts-speech'
-import { DEFAULT_TTS_VOICE, setStoredTtsVoice, TTS_VOICE_STORAGE_KEY } from '@/lib/tts-voices'
+import { sectionKey, type SpeechSection } from '@/lib/tts/speech'
+import { DEFAULT_TTS_VOICE, setStoredTtsVoice, TTS_VOICE_STORAGE_KEY } from '@/lib/tts/voices'
 import { useContinuousReader } from './use-continuous-reader'
 
 const ttsMock = vi.hoisted(() => {
@@ -57,7 +57,7 @@ const ttsClientMock = vi.hoisted(() => ({
   prefetchSpeech: vi.fn(),
 }))
 
-vi.mock('@/lib/tts-client', () => ({
+vi.mock('@/lib/tts/client', () => ({
   synthesizeSpeech: ttsClientMock.synthesizeSpeech,
   prefetchSpeech: ttsClientMock.prefetchSpeech,
 }))

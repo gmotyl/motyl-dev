@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { VoteButton } from '@/components/vote-button'
 import { CategoryIconMini } from '@/components/category-icon'
 import { cn } from '@/lib/utils'
-import { CONTENT_CATEGORIES, type ContentCategory } from '@/lib/og'
+import { CONTENT_CATEGORIES, type ContentCategory } from '@/lib/content/og'
 import {
   AlertDialog,
   AlertDialogAction,

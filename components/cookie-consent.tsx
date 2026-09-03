@@ -6,7 +6,7 @@ import {
   setConsent,
   getConsent,
   OPEN_SETTINGS_EVENT,
-} from '@/lib/consent'
+} from '@/lib/shell/consent'
 
 const GdprConsent = () => {
   const [open, setOpen] = useState(false)

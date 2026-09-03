@@ -1,7 +1,7 @@
 'use client'
 
 import Script from 'next/script'
-import { useConsent } from '@/lib/consent'
+import { useConsent } from '@/lib/shell/consent'
 
 interface AdSlotProps {
   format?: 'auto' | 'rectangle' | 'horizontal'

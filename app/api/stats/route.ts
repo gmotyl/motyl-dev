@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
-import { getPatternStats } from '@/lib/pattern-stats'
+import { auth } from '@/lib/auth/auth'
+import { getPatternStats } from '@/lib/trends/pattern-stats'
 
 export async function GET(request: NextRequest) {
   const session = await auth()

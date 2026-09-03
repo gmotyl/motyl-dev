@@ -4,7 +4,7 @@ import Image from 'next/image'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
 import ReactMarkdown from 'react-markdown'
-import { getAllNewsletters } from '@/lib/newsletter-issues'
+import { getAllNewsletters } from '@/lib/newsletter/issues'
 import { NewsletterCTA } from '@/components/newsletter-cta'
 import { vtName, vtImageName } from '@/lib/utils'
 

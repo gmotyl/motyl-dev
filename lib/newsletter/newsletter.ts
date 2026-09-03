@@ -1,0 +1,65 @@
+import { getContentItemBySlug } from '@/lib/content/articles'
+
+export interface ArticleExtract {
+  slug: string
+  title: string
+  tldr: string | null
+  keyTakeaways: string[] | null
+}
+
+export function extractTldr(content: string): string | null {
+  const patterns = [
+    /\*\*TLDR:\*\*\s*([\s\S]*?)(?=\n\n(?:\*\*|##|---)|(?![\s\S]))/i,
+    /^###?\s+TLDR:?\s*\n\n([\s\S]*?)(?=\n\n(?:\*\*|##|---)|(?![\s\S]))/im,
+  ]
+
+  for (const pattern of patterns) {
+    const match = content.match(pattern)
+    if (match?.[1]?.trim()) {
+      return match[1].trim()
+    }
+  }
+  return null
+}
+
+export function extractKeyTakeaways(content: string): string[] | null {
+  const patterns = [
+    /\*\*Key takeaways:\*\*\s*\n([\s\S]*?)(?=\n\n(?:\*\*|##|---)|(?![\s\S]))/i,
+    /^##\s+Key [A-Za-z ]+\n\n([\s\S]*?)(?=\n\n(?:\*\*|##|---)|(?![\s\S]))/im,
+  ]
+
+  for (const pattern of patterns) {
+    const match = content.match(pattern)
+    if (match?.[1]?.trim()) {
+      const bullets = match[1]
+        .split('\n')
+        .filter((line) => /^[-*]\s+/.test(line))
+        .map((line) => line.replace(/^[-*]\s+/, '').trim())
+        .filter((line) => line.length > 0)
+      if (bullets.length > 0) return bullets
+    }
+  }
+  return null
+}
+
+export async function extractArticleContent(slugs: string[]): Promise<ArticleExtract[]> {
+  'use server'
+  const results: ArticleExtract[] = []
+
+  for (const slug of slugs) {
+    const article = await getContentItemBySlug(slug)
+    if (!article) {
+      results.push({ slug, title: slug, tldr: null, keyTakeaways: null })
+      continue
+    }
+
+    results.push({
+      slug,
+      title: article.title,
+      tldr: extractTldr(article.content),
+      keyTakeaways: extractKeyTakeaways(article.content),
+    })
+  }
+
+  return results
+}

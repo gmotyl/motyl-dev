@@ -7,7 +7,7 @@ import { toast } from 'sonner'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { getContentItemBySlug } from '@/lib/articles'
+import { getContentItemBySlug } from '@/lib/content/articles'
 
 interface ShareAIButtonProps {
   articleContent?: string
