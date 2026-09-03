@@ -5,7 +5,7 @@ import { ItemType } from '@/lib/content/types'
 import type { ContentItemMetadata } from '@/lib/content/articles'
 
 vi.mock('next/image', () => ({
-  // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
+  // eslint-disable-next-line @next/next/no-img-element
   default: ({ src, alt }: { src: string; alt: string }) => <img src={src} alt={alt} />,
 }))
 

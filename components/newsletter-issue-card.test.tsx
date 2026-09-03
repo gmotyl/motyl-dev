@@ -4,7 +4,7 @@ import { NewsletterIssueCard } from './newsletter-issue-card'
 import type { NewsletterMeta } from '@/lib/newsletter/issues'
 
 vi.mock('next/image', () => ({
-  // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
+  // eslint-disable-next-line @next/next/no-img-element
   default: ({ src, alt }: { src: string; alt: string }) => <img src={src} alt={alt} />,
 }))
 
