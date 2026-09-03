@@ -10,7 +10,7 @@ We will implement a more sophisticated hybrid strategy that leverages the best o
 
 ### Step 1: Implement Server-Side Data Logic
 
--   **Action:** Create a new, comprehensive data-fetching function in `lib/articles.ts`, e.g., `getArticlePageData({ page, filters })`.
+-   **Action:** Create a new, comprehensive data-fetching function in `lib/content/articles.ts`, e.g., `getArticlePageData({ page, filters })`.
 -   **Purpose:** To centralize all filtering and pagination logic on the server.
 -   **Details:**
     -   This function will accept parameters for the current `page` number, `limit`, and a `filters` object containing `hashtags`, `mode` (`AND`/`OR`), and `unseen` status.

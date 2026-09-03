@@ -16,7 +16,7 @@ Successfully implemented synchronized "Unseen" articles tracking that works for 
 - **Unique Constraint**: Prevents duplicate views (userId + articleSlug)
 - **Cascade Delete**: Views are deleted when user is deleted
 
-### 2. Server Functions ([lib/article-views.ts](lib/article-views.ts))
+### 2. Server Functions ([lib/engagement/article-views.ts](lib/engagement/article-views.ts))
 - `markArticleAsViewed(slug)` - Create/update view record
 - `getUserViewedArticles()` - Get all viewed slugs for current user
 - `isArticleViewed(slug)` - Check if specific article viewed
@@ -172,7 +172,7 @@ const { markAsVisited, isVisited, visitedArticles, isLoading } = useVisitedArtic
 ## 📁 Files Created/Modified
 
 ### New Files (7):
-1. [lib/article-views.ts](lib/article-views.ts) - Server functions
+1. [lib/engagement/article-views.ts](lib/engagement/article-views.ts) - Server functions
 2. [app/api/articles/[slug]/view/route.ts](app/api/articles/[slug]/view/route.ts) - Mark viewed endpoint
 3. [app/api/articles/views/route.ts](app/api/articles/views/route.ts) - GET/DELETE endpoints
 4. [app/api/articles/views/sync/route.ts](app/api/articles/views/sync/route.ts) - Sync endpoint
@@ -226,7 +226,7 @@ const { markAsVisited, isVisited, visitedArticles, isLoading } = useVisitedArtic
 ### 1. User Profile Page
 Add to [app/profile/page.tsx](app/profile/page.tsx):
 ```typescript
-import { getViewedCount, clearViewHistory } from '@/lib/article-views'
+import { getViewedCount, clearViewHistory } from '@/lib/engagement/article-views'
 
 // Show count: "You've read 42 articles"
 // Add "Clear History" button

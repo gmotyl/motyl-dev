@@ -14,7 +14,7 @@ Request path: **browser → Cloudflare (DNS-proxied) → Vercel Edge → Next.js
 | Cloudflare | A **Cache Rule in the Cloudflare dashboard** + `CDN-Cache-Control` from origin | HTML is *not* cacheable at Cloudflare without a Cache Rule, whatever the headers say. This bit is not in the repo — see below. |
 | Vercel Edge | `CDN-Cache-Control` in `vercel.json` | Same directive Cloudflare reads. |
 | Next.js render | Route segment config (`revalidate`, `dynamic`) in each `page.tsx` | Governs whether Vercel renders per request or serves a prerendered page. |
-| App-level | `data/content-cache.json` (built by `scripts/build-content-cache.ts`), React `cache()` in `lib/articles.ts` / `lib/newsletter-issues.ts` | Build-time content cache; zero round-trips at request time. |
+| App-level | `data/content-cache.json` (built by `scripts/build-content-cache.ts`), React `cache()` in `lib/content/articles.ts` / `lib/newsletter/issues.ts` | Build-time content cache; zero round-trips at request time. |
 
 `/sw.js` is the deliberate exception: `public, max-age=0, must-revalidate` set in `next.config.ts`, so a PWA install can never get stuck on an old shell.
 
