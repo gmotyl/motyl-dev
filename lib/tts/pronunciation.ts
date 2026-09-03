@@ -57,6 +57,9 @@ export const PRONUNCIATION_MAP: Readonly<Record<string, string>> = Object.freeze
   useref: 'juz ref',
   compiler: 'kompajler',
   nvidia: 'en widia',
+  'node.js': 'noud dżej es',
+  npm: 'en-pi-em',
+  node: 'noud',
 
   // Jargon
   githuba: 'git chaba',
