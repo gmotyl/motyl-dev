@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { ItemType } from '@/lib/types'
+import { ItemType } from '@/lib/content/types'
 
-vi.mock('@/lib/trends', () => ({
+vi.mock('@/lib/trends/trends', () => ({
   getHomepageFeed: vi.fn(async () => ({
     trendings: [],
     lastWeekSummary: null,
   })),
 }))
 
-vi.mock('@/lib/articles', () => ({
+vi.mock('@/lib/content/articles', () => ({
   getAllContentMetadata: vi.fn(async () => [
     { slug: 'article-1', title: 'Article 1', itemType: ItemType.Article, hashtags: [], publishedAt: '2024-01-03', excerpt: '' },
     { slug: 'news-1', title: 'News 1', itemType: ItemType.News, hashtags: [], publishedAt: '2024-01-04', excerpt: '' },

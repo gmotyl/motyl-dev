@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { ALL_SECTIONS } from '@/hooks/use-section-visibility'
-import type { SectionType } from '@/lib/section-filter'
+import type { SectionType } from '@/lib/content/section-filter'
 
 interface ArticleSectionToggleProps {
   hiddenSections: Set<SectionType>

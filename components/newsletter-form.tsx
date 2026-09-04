@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 import { Mail, CheckCircle } from "lucide-react"
 
-import { queueNewsletterSubscription } from '@/lib/newsletter-queue'
+import { queueNewsletterSubscription } from '@/lib/newsletter/queue'
 
 interface NewsletterFormProps {
   articleSlug?: string

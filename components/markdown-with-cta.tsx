@@ -2,9 +2,9 @@
 
 import { MarkdownContent } from '@/components/markdown-content'
 import { NewsletterCTA } from '@/components/newsletter-cta'
-import { extractInlineCTAs } from '@/lib/extract-inline-cta'
-import { ItemTypeValue } from '@/lib/types'
-import type { ContentCategory } from '@/lib/og'
+import { extractInlineCTAs } from '@/lib/content/inline-cta'
+import { ItemTypeValue } from '@/lib/content/types'
+import type { ContentCategory } from '@/lib/content/og'
 
 interface MarkdownWithCTAProps {
   content: string

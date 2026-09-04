@@ -17,8 +17,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { BookmarkDialog } from '@/components/bookmark-dialog';
 import { formatDistanceToNow } from 'date-fns';
-import { getContentUrl } from '@/lib/urls';
-import { ItemType, type Content } from '@/lib/types';
+import { getContentUrl } from '@/lib/content/urls';
+import { ItemType, type Content } from '@/lib/content/types';
 
 interface Bookmark {
   id: string;

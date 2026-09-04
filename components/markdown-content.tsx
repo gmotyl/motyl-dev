@@ -11,9 +11,9 @@ import { ParagraphPlayFromHere } from '@/components/paragraph-play-from-here'
 import { Children, isValidElement, lazy, memo, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Components } from 'react-markdown'
 import GithubSlugger from 'github-slugger'
-import { ItemType, type ItemTypeValue } from '@/lib/types'
-import type { ContentCategory } from '@/lib/og'
-import { stripMarkdown } from '@/lib/tts-speech'
+import { ItemType, type ItemTypeValue } from '@/lib/content/types'
+import type { ContentCategory } from '@/lib/content/og'
+import { stripMarkdown } from '@/lib/tts/speech'
 import { cn } from '@/lib/utils'
 
 const MermaidDiagram = lazy(() => import('@/components/mermaid-diagram').then(m => ({ default: m.MermaidDiagram })))

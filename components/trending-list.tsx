@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { TrendingCard } from '@/components/trending-card'
-import type { ContentCategory } from '@/lib/og'
+import type { ContentCategory } from '@/lib/content/og'
 import { useFLIP } from '@/hooks/use-flip'
 
 interface TrendingItem {

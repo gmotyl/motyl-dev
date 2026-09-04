@@ -1,6 +1,6 @@
 import type { NextConfig } from 'next'
-import { getAllContent } from './lib/articles'
-import { ItemType } from './lib/types'
+import { getAllContent } from './lib/content/articles'
+import { ItemType } from './lib/content/types'
 
 const nextConfig: NextConfig = {
   experimental: {

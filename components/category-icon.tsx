@@ -1,6 +1,6 @@
 'use client'
 
-import { getContentCategory } from '@/lib/og'
+import { getContentCategory } from '@/lib/content/og'
 
 interface CategoryIconProps {
   hashtags?: string[]

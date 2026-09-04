@@ -56,11 +56,35 @@ When you discover:
 
 ### Key Files
 
-- `lib/articles.ts` — Article CRUD, hashtag filtering, sorting
+- `lib/content/articles.ts` — Article CRUD, hashtag filtering, sorting
 - `app/page.tsx` — Landing page (hero, latest issue, recent issues, from the blog, subscribe, support CTA)
 - `app/articles/page.tsx` — Article listing with hashtag filters
 - `components/ui/` — Radix UI primitives styled with Tailwind
 - `docs/caching.md` — **read before touching `vercel.json`, `middleware.ts`, route segment config, or adding any route.** Public routes are edge-cached 30 days; private routes are `no-store` and stay off the Cloudflare allowlist. Half the config lives in the Cloudflare dashboard, not in this repo.
+
+### `lib/` layout
+
+`lib/` is grouped by domain — put a new module in the folder that owns its concern rather than at the root.
+
+| Folder | Owns |
+|--------|------|
+| `lib/db/` | Prisma client singleton |
+| `lib/auth/` | NextAuth session + super-admin guard |
+| `lib/content/` | **Content** model, article/news loading, sections, slugs, URLs, OG images |
+| `lib/newsletter/` | **Newsletter Issue** parsing, send queue, email markdown |
+| `lib/trends/` | **Trending Link** feed, votes, **News Source** pattern stats |
+| `lib/tts/` | Speech synthesis — chunking, pronunciation, voices, client |
+| `lib/reader/` | Reader/player behaviour — scroll targets, media-session tracks |
+| `lib/engagement/` | Bookmarks, article view counts |
+| `lib/shell/` | App-shell concerns — nav links, PWA helpers, cookie consent |
+
+Conventions:
+
+- `lib/utils.ts` stays at the root — shadcn's `components.json` pins `"utils": "@/lib/utils"`.
+- Filenames don't repeat their folder (`lib/tts/speech.ts`, not `lib/tts/tts-speech.ts`).
+- Import across `lib/` folders via the `@/lib/...` alias, never a `../` relative path.
+- Tests stay co-located next to the module they cover.
+- No barrel `index.ts` files — import the module directly.
 
 ---
 

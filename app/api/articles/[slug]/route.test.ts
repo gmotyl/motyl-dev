@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { ItemType } from '@/lib/types'
+import { ItemType } from '@/lib/content/types'
 
-vi.mock('@/lib/articles', () => ({
+vi.mock('@/lib/content/articles', () => ({
   getAllContentMetadata: vi.fn(async () => [
     { slug: 'my-article', title: 'My Article', itemType: ItemType.Article, hashtags: [], publishedAt: '2024-01-01', excerpt: '' },
     { slug: 'breaking-news', title: 'Breaking News', itemType: ItemType.News, hashtags: [], publishedAt: '2024-01-02', excerpt: '' },
@@ -10,7 +10,7 @@ vi.mock('@/lib/articles', () => ({
 }))
 
 import { generateStaticParams } from './route'
-import { getAllContentMetadata } from '@/lib/articles'
+import { getAllContentMetadata } from '@/lib/content/articles'
 
 describe('generateStaticParams — excludes news slugs', () => {
   beforeEach(() => vi.clearAllMocks())

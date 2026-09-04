@@ -1,14 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { splitIntoSpeechUnits, type SpeechSection } from '@/lib/tts-speech'
-import { synthesizeSpeech } from '@/lib/tts-client'
-import { DEFAULT_TTS_VOICE, getStoredTtsVoice, TTS_VOICE_CHANGE_EVENT, type TtsVoice } from '@/lib/tts-voices'
+import { splitIntoSpeechUnits, type SpeechSection } from '@/lib/tts/speech'
+import { synthesizeSpeech } from '@/lib/tts/client'
+import { DEFAULT_TTS_VOICE, getStoredTtsVoice, TTS_VOICE_CHANGE_EVENT, type TtsVoice } from '@/lib/tts/voices'
 import {
   resolveNextTrackIndex,
   resolvePreviousTrackIndex,
   resolveTrackGranularity,
-} from '@/lib/media-session-tracks'
+} from '@/lib/reader/media-session-tracks'
 import { useMediaSession } from './use-media-session'
 import { useTTS } from './useTTS'
 import type { TTSPlayback } from './useTTS'

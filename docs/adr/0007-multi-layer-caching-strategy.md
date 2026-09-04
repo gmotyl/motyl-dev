@@ -7,7 +7,7 @@ Four cache layers, configured for a publication where content changes only on de
 1. **Cloudflare edge** (DNS-proxied in front of Vercel): respects `CDN-Cache-Control` from `vercel.json`. List pages (`/news`, `/articles`) cached 1h; detail pages (`/news/:slug*`, `/articles/:slug*`) cached 30d. `stale-while-revalidate=60` lets readers see the previous version while a refresh runs in the background.
 2. **Vercel Edge Network** (same `CDN-Cache-Control` directive applies).
 3. **Browser** (`Cache-Control max-age`): list pages 5 min; detail pages 30 min. Shorter than the CDN values so a returning reader still benefits from edge freshness.
-4. **App-level**: a build-time JSON cache (`data/content-cache.json` from `scripts/build-content-cache.ts`) is imported as a module so reads are zero-RT; `lib/articles.ts` and `lib/newsletter-issues.ts` wrap loads in React's `cache()` so the same request reuses the parse.
+4. **App-level**: a build-time JSON cache (`data/content-cache.json` from `scripts/build-content-cache.ts`) is imported as a module so reads are zero-RT; `lib/content/articles.ts` and `lib/newsletter/issues.ts` wrap loads in React's `cache()` so the same request reuses the parse.
 
 Client-side, the polish from the network-optimisation incident is locked in: `prefetch={false}` on article `<Link>` components (one prefetch per visible card was generating ~70 requests per page), a 5-second TTL dedup on `useVisitedArticles` GETs, 500ms batching on view POSTs, and NextAuth's `SessionProvider refetchInterval={0}` to kill session polling. The service worker (`/sw.js`) is the one cache deliberately disabled (`max-age=0, must-revalidate`) — PWA installs must update on every visit.
 

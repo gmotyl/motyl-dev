@@ -8,7 +8,7 @@ import {
   setStoredTtsVoice,
   TTS_VOICES,
   type TtsVoice,
-} from '@/lib/tts-voices'
+} from '@/lib/tts/voices'
 
 export function TtsVoiceSettings() {
   const [voice, setVoice] = useState<TtsVoice>(DEFAULT_TTS_VOICE)

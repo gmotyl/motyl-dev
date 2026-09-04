@@ -1,7 +1,7 @@
 import { timingSafeEqual } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { recordProcessingStats } from '@/lib/pattern-stats'
+import { recordProcessingStats } from '@/lib/trends/pattern-stats'
 
 const statsSchema = z.object({
   entries: z.array(

@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ArticleSectionToggle } from './article-section-toggle'
-import type { SectionType } from '@/lib/section-filter'
+import type { SectionType } from '@/lib/content/section-filter'
 
 function makeHiddenSections(...ids: SectionType[]): Set<SectionType> {
   return new Set(ids)

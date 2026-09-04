@@ -1,5 +1,5 @@
-import { requireSuperAdmin } from '@/lib/require-super-admin'
-import { getHomepageFeed } from '@/lib/trends'
+import { requireSuperAdmin } from '@/lib/auth/require-super-admin'
+import { getHomepageFeed } from '@/lib/trends/trends'
 import { TrendingList } from '@/components/trending-list'
 
 // Live vote counts — must never be cached at the edge or statically rendered.

@@ -8,8 +8,8 @@ import { BookmarkButton } from '@/components/bookmark-button';
 import { BookmarkDialog } from '@/components/bookmark-dialog';
 import { useBookmarks } from '@/hooks/use-bookmarks';
 import { VoteButton } from '@/components/vote-button';
-import { type Content, type ExternalLink, ItemType } from '@/lib/types';
-import { getContentCategory } from '@/lib/og';
+import { type Content, type ExternalLink, ItemType } from '@/lib/content/types';
+import { getContentCategory } from '@/lib/content/og';
 
 interface ArticleExternalLinksProps {
   article: Content;

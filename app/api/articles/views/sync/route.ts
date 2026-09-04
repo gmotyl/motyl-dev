@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { syncLocalStorageToDatabase } from '@/lib/article-views'
+import { syncLocalStorageToDatabase } from '@/lib/engagement/article-views'
 
 // POST - Sync article slugs from localStorage to database
 export async function POST(request: NextRequest) {

@@ -22,7 +22,7 @@ interface VoteButtonProps {
   linkUrl: string
   title: string
   description?: string
-  category?: import('@/lib/og').ContentCategory
+  category?: import('@/lib/content/og').ContentCategory
   /**
    * @param sourceDomain - Full URL of the source (e.g. "https://example.com"). Must be a valid URL.
    */

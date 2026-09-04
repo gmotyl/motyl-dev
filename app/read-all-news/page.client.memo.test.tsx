@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import ReadAllNewsPage from './page.client'
-import { ItemType } from '@/lib/types'
+import { ItemType } from '@/lib/content/types'
 
 // Sibling of components/article-wrapper.memo.test.tsx, for the *other* reader
 // host. Read-all-news is the more expensive one: up to MAX_DOM_ARTICLES (12)

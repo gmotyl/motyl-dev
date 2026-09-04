@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { castVote, getWeekVotes, deleteTrendingItem, updateTrendingCategory } from '@/lib/trends'
-import { CONTENT_CATEGORIES } from '@/lib/og'
-import { auth } from '@/lib/auth'
+import { castVote, getWeekVotes, deleteTrendingItem, updateTrendingCategory } from '@/lib/trends/trends'
+import { CONTENT_CATEGORIES } from '@/lib/content/og'
+import { auth } from '@/lib/auth/auth'
 import { z } from 'zod'
 
 const voteSchema = z.object({

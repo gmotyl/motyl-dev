@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getContentPageData } from '@/lib/articles'
+import { getContentPageData } from '@/lib/content/articles'
 import { headers } from 'next/headers'
-import { auth } from '@/lib/auth'
-import { getUserViewedArticles } from '@/lib/article-views'
+import { auth } from '@/lib/auth/auth'
+import { getUserViewedArticles } from '@/lib/engagement/article-views'
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams

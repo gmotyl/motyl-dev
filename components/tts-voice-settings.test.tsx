@@ -5,7 +5,7 @@ import TtsVoiceSettings from './tts-voice-settings'
 import {
   TTS_VOICE_STORAGE_KEY,
   getStoredTtsVoice,
-} from '@/lib/tts-voices'
+} from '@/lib/tts/voices'
 
 describe('TtsVoiceSettings', () => {
   beforeEach(() => {

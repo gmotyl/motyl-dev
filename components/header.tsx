@@ -11,7 +11,7 @@ import { SignInButton } from '@/components/sign-in-button'
 import { DevSignInButton } from '@/components/dev-sign-in-button'
 import { InstallPrompt } from '@/components/install-prompt'
 import { cn } from '@/lib/utils'
-import { getVisibleNavLinks } from '@/lib/nav-links'
+import { getVisibleNavLinks } from '@/lib/shell/nav-links'
 
 const SUPPORT_URL = 'https://www.buymeacoffee.com/motyl.dev'
 

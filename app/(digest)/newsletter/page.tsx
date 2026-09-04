@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { getAllNewsletterMeta } from '@/lib/newsletter-issues'
+import { getAllNewsletterMeta } from '@/lib/newsletter/issues'
 import NewsletterForm from '@/components/newsletter-form'
 import { NewsletterHero } from '@/components/newsletter-hero'
 import { NewsletterIssueCard } from '@/components/newsletter-issue-card'

@@ -1,9 +1,9 @@
 import { notFound } from 'next/navigation'
-import { getContentItemBySlug, getAllContentMetadata } from '@/lib/articles'
+import { getContentItemBySlug, getAllContentMetadata } from '@/lib/content/articles'
 import ContentPage from '@/components/content-page'
-import { getContentUrl } from '@/lib/urls'
-import { ItemType } from '@/lib/types'
-import { getOgImage } from '@/lib/og'
+import { getContentUrl } from '@/lib/content/urls'
+import { ItemType } from '@/lib/content/types'
+import { getOgImage } from '@/lib/content/og'
 
 // Force static generation at build time
 export const dynamic = 'force-static'

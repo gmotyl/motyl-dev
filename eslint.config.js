@@ -1,9 +1,11 @@
-const typescriptParser = require('@typescript-eslint/parser');
-const typescriptPlugin = require('@typescript-eslint/eslint-plugin');
-const nextPlugin = require('@next/eslint-plugin-next');
-const reactPlugin = require('eslint-plugin-react');
-const reactHooksPlugin = require('eslint-plugin-react-hooks');
-const globals = require('globals');
+// Flat ESLint config. This file must be ESM: package.json sets "type": "module",
+// so a `require`-based config here cannot load at all.
+import typescriptParser from '@typescript-eslint/parser';
+import typescriptPlugin from '@typescript-eslint/eslint-plugin';
+import nextPlugin from '@next/eslint-plugin-next';
+import reactPlugin from 'eslint-plugin-react';
+import reactHooksPlugin from 'eslint-plugin-react-hooks';
+import globals from 'globals';
 
 function allRulesAsWarnings(rules) {
   if (!rules) {
@@ -11,12 +13,17 @@ function allRulesAsWarnings(rules) {
   }
   const newRules = {};
   for (const rule in rules) {
-    newRules[rule] = 'warn';
+    const setting = rules[rule];
+    const level = Array.isArray(setting) ? setting[0] : setting;
+    // Keep rules the upstream config deliberately disables. Blanket-warning them
+    // re-enabled core rules that a plugin replaces — notably core no-unused-vars,
+    // which typescript-eslint turns off in favour of its own TS-aware version.
+    newRules[rule] = level === 'off' || level === 0 ? 'off' : 'warn';
   }
   return newRules;
 }
 
-module.exports = [
+export default [
   {
     ignores: ['.next/**', 'node_modules/**'],
   },

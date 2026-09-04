@@ -1,6 +1,6 @@
 'use client'
 
-import { openConsentSettings } from '@/lib/consent'
+import { openConsentSettings } from '@/lib/shell/consent'
 
 export function CookieSettingsLink() {
   return (

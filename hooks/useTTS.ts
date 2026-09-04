@@ -1,9 +1,9 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { detectLanguageFromContent } from '@/lib/tts'
-import { splitIntoChunks } from '@/lib/tts-chunks'
-import { synthesizeSpeech } from '@/lib/tts-client'
+import { detectLanguageFromContent } from '@/lib/tts/voice-map'
+import { splitIntoChunks } from '@/lib/tts/chunks'
+import { synthesizeSpeech } from '@/lib/tts/client'
 
 export interface TTSState {
   isPlaying: boolean

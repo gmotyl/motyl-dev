@@ -8,12 +8,12 @@ import { Button } from '@/components/ui/button'
 import { useVisitedArticles } from '@/hooks/use-visited-articles'
 import { HashtagInput } from '@/components/hashtag-input'
 import { InfoTooltip } from '@/components/info-tooltip'
-import { getOgImage } from '@/lib/og'
+import { getOgImage } from '@/lib/content/og'
 import Image from 'next/image'
 import { CategoryIcon, CategoryIconMini } from '@/components/category-icon'
-import { getContentCategory } from '@/lib/og'
+import { getContentCategory } from '@/lib/content/og'
 import { formatDate, vtName, vtImageName } from '@/lib/utils'
-import type { TrimmedItem, ContentManifest } from '@/lib/content-batches'
+import type { TrimmedItem, ContentManifest } from '@/lib/content/batches'
 
 const RENDER_BATCH = 30
 

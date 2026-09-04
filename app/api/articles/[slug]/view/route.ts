@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { markArticleAsViewed } from '@/lib/article-views'
+import { markArticleAsViewed } from '@/lib/engagement/article-views'
 
 export async function POST(
   request: NextRequest,

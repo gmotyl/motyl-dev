@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next';
-import { getAllContentMetadata } from '@/lib/articles';
-import { getContentUrl } from '@/lib/urls';
-import { ItemType } from '@/lib/types';
+import { getAllContentMetadata } from '@/lib/content/articles';
+import { getContentUrl } from '@/lib/content/urls';
+import { ItemType } from '@/lib/content/types';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.BASE_URL || 'https://motyl.dev';

@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { BlogArticleCard } from './blog-article-card'
-import { ItemType } from '@/lib/types'
-import type { ContentItemMetadata } from '@/lib/articles'
+import { ItemType } from '@/lib/content/types'
+import type { ContentItemMetadata } from '@/lib/content/articles'
 
 vi.mock('next/image', () => ({
-  // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
+  // eslint-disable-next-line @next/next/no-img-element
   default: ({ src, alt }: { src: string; alt: string }) => <img src={src} alt={alt} />,
 }))
 

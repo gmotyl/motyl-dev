@@ -18,7 +18,7 @@ _Avoid_: Claude, AI, model, assistant
 
 **Blog Article**:
 First-party long-form writing authored by the **Maintainer** (hand-written, no LLM Agent in the loop).
-_Files_: `articles/` · _Code_: `Content` with `itemType: 'article'` (`lib/types.ts`)
+_Files_: `articles/` · _Code_: `Content` with `itemType: 'article'` (`lib/content/types.ts`)
 _Avoid_: post, article (unqualified)
 
 **News Article**:
@@ -65,7 +65,7 @@ A record that a **User** has opened a **Blog Article** or **News Article** (uniq
 
 **Pattern Stats**:
 Daily counts per **News Source** of how many items were `processed`, `extracted`, and `included` (cited in a **News Article**).
-_Code_: `lib/pattern-stats.ts` · `PatternStats` model.
+_Code_: `lib/trends/pattern-stats.ts` · `PatternStats` model.
 
 ### Distribution
 
@@ -103,5 +103,5 @@ The fixed eight-step sequence — `/generate-trends` → manual edit → `/image
 - "Newsletter" used to mean three things across the stack (inbound email, outbound issue, the publication itself). Resolved: inbound = **News Source**, outbound = **Newsletter Issue**, brand-name "newsletter" is allowed in marketing copy only and never in code or this glossary.
 - "Article" used to mean both the Maintainer's first-party writing and scraped third-party content. Resolved: first-party = **Blog Article**, third-party scraped content lives only in newsletter-ai and is called a **Scraped Source** there (see newsletter-ai/CONTEXT.md). The code's `ItemType.Article` enum value refers to **Blog Article** — rename is a backlog item.
 - `content/trends/motyl-dev-N.md` directory name mixes "Trends" and "Newsletter Issue" — the file *is* a Newsletter Issue. Directory name is legacy.
-- The literal `week: 'current'` in `TrendsVotes` is a workflow signal, not an ISO week. Real week labels appear only in `TrendsArchive` after a **Cycle Reset**. `getCurrentWeek()` in `lib/trends.ts` is computed but unused for storage.
+- The literal `week: 'current'` in `TrendsVotes` is a workflow signal, not an ISO week. Real week labels appear only in `TrendsArchive` after a **Cycle Reset**. `getCurrentWeek()` in `lib/trends/trends.ts` is computed but unused for storage.
 - `/generate-trends` currently doubles as "compute the analytics + draft the issue body" — the issue body coming out of a trends command is an acknowledged smell (see backlog).

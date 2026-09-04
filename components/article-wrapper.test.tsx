@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ArticleWrapper } from './article-wrapper'
-import { ItemType } from '@/lib/types'
+import { ItemType } from '@/lib/content/types'
 
 const mockUseContinuousReader = vi.fn()
 let latestReaderItems: any[] = []

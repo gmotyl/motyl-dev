@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
-import { resetWeeklyVotes } from '@/lib/trends'
+import { auth } from '@/lib/auth/auth'
+import { resetWeeklyVotes } from '@/lib/trends/trends'
 
 export async function POST() {
   try {

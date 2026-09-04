@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { scrollHeadingIntoView } from '@/lib/scroll-heading';
+import { scrollHeadingIntoView } from '@/lib/reader/scroll-heading';
 
 interface ScrollToSectionProps {
   sectionId?: string;

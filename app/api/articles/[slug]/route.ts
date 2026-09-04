@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { getContentItemBySlug, getAllContentMetadata } from '@/lib/articles'
-import { ItemType } from '@/lib/types'
+import { getContentItemBySlug, getAllContentMetadata } from '@/lib/content/articles'
+import { ItemType } from '@/lib/content/types'
 
 // Force static generation at build time - no ISR revalidation
 export const dynamic = 'force-static'

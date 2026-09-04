@@ -1,6 +1,6 @@
 'use client'
 
-import { ItemType } from '@/lib/types'
+import { ItemType } from '@/lib/content/types'
 
 interface BuyMeACoffeeButtonProps {
   itemType?: ItemType
