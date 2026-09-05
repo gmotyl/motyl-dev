@@ -121,11 +121,17 @@ export function useContinuousReader(
   const [position, setPosition] = useState<ReadingPosition>(() =>
     items[0] ? { sectionKey: items[0].key, unitIndex: 0 } : NO_POSITION
   )
-  const [previewIndex, setPreviewIndex] = useState(0)
+  // The eye: the preview pointer Next cascades and `canNext` is read from. Like
+  // the reading position it is addressed by a stable section key, never by a
+  // numeric index, so removing articles cannot silently shift what Next
+  // advances from. `previewKeyRef` is the SYNCHRONOUS source of truth — two
+  // rapid `next()` presses must cascade without waiting for a render — while
+  // the state exists only to drive the render-phase derivation below.
+  const [previewKey, setPreviewKey] = useState<string>(() => items[0]?.key ?? '')
+  const previewKeyRef = useRef(previewKey)
   const [error, setError] = useState<Error | null>(null)
   const positionRef = useRef(position)
   const currentIndexRef = useRef(0)
-  const previewIndexRef = useRef(0)
   const itemsRef = useRef(items)
   const onItemChangeRef = useRef(onItemChange)
   const pendingStartRef = useRef<ReadingPosition | null>(null)
@@ -159,6 +165,16 @@ export function useContinuousReader(
   const currentIndex = Math.max(resolvedIndex, 0)
   const currentItem = items[currentIndex]
   const currentKey = currentItem?.key ?? ''
+
+  // The eye's index is derived the same way, through the same resolver and with
+  // the same previous-order snapshot, so a queue mutation re-seats it on its own
+  // section instead of leaving it pointing a slot too far.
+  const resolvedPreviewIndex = useMemo(
+    () => resolvePositionIndex(items, previewKey, previousKeysRef.current),
+    [items, previewKey]
+  )
+  const previewIndex = Math.max(resolvedPreviewIndex, 0)
+  const previewItem = items[previewIndex]
 
   useEffect(() => {
     previousKeysRef.current = items.map((section) => section.key)
@@ -198,9 +214,16 @@ export function useContinuousReader(
     currentIndexRef.current = currentIndex
   }, [currentIndex])
 
+  // Adopt the survivor the render above resolved the eye to. Without this the
+  // removed section's key would outlive the previous-order snapshot (rewritten
+  // post-commit from the NEW queue), and the next resolve would find it in
+  // neither order and restart the eye at the top of the queue.
   useEffect(() => {
-    previewIndexRef.current = previewIndex
-  }, [previewIndex])
+    const liveKey = previewItem?.key ?? ''
+    if (liveKey === previewKeyRef.current) return
+    previewKeyRef.current = liveKey
+    setPreviewKey(liveKey)
+  }, [previewItem])
 
   useEffect(() => {
     itemsRef.current = items
@@ -225,8 +248,8 @@ export function useContinuousReader(
       const selectedItem = itemsRef.current[index]
       if (!selectedItem) return
 
-      previewIndexRef.current = index
-      setPreviewIndex(index)
+      previewKeyRef.current = selectedItem.key
+      setPreviewKey(selectedItem.key)
 
       playbackRef.current?.stop()
       setError(null)
@@ -312,8 +335,8 @@ export function useContinuousReader(
       playbackRef.current?.isPlaying || playbackRef.current?.isBuffering
     )
     updatePosition(currentItem.key, 0)
-    previewIndexRef.current = currentIndex
-    setPreviewIndex(currentIndex)
+    previewKeyRef.current = currentItem.key
+    setPreviewKey(currentItem.key)
     onItemChangeRef.current?.(currentItem, currentIndex)
 
     // Re-seat `useTTS` on the survivor on BOTH paths. It has no
@@ -399,8 +422,9 @@ export function useContinuousReader(
 
   const play = useCallback(() => {
     setError(null)
-    previewIndexRef.current = currentIndexRef.current
-    setPreviewIndex(currentIndexRef.current)
+    const currentSectionKey = itemsRef.current[currentIndexRef.current]?.key ?? ''
+    previewKeyRef.current = currentSectionKey
+    setPreviewKey(currentSectionKey)
     void playbackRef.current?.play()
   }, [])
 
@@ -417,15 +441,25 @@ export function useContinuousReader(
       playbackRef.current?.isPlaying || playbackRef.current?.isBuffering
     )
 
+    // Resolve the eye's key against the CURRENT queue rather than trusting a
+    // remembered index: earlier sections may have been removed since the last
+    // press, and only the resolver knows where the eye's section sits now.
+    const leaving = Math.max(
+      resolvePositionIndex(currentItems, previewKeyRef.current, previousKeysRef.current),
+      0
+    )
+
     if (audioActive) {
       // Non-interrupting: playback keeps going. Advance the eye forward one
       // section, but anchor the section we're LEAVING at the top — its link stays
       // at the top and the next section's title appears just below it. Each Next
       // cascades down to the following boundary.
-      const leaving = previewIndexRef.current
       if (leaving >= lastIndex) return // already at the last section
-      previewIndexRef.current = leaving + 1
-      setPreviewIndex(leaving + 1)
+      const advancedItem = currentItems[leaving + 1]
+      // Written synchronously, before the state update, so a second press in the
+      // same tick cascades from here instead of repeating this one.
+      previewKeyRef.current = advancedItem.key
+      setPreviewKey(advancedItem.key)
       const leavingItem = currentItems[leaving]
       // Anchor the leaving section's source link at the top (not its heading), so
       // its link stays visible and the next section's title appears just below it.
@@ -438,15 +472,14 @@ export function useContinuousReader(
     // link — the same forward-cascade framing as while playing. Use previewIndex
     // (the eye) here too, so a paused reader whose eye was cascaded ahead of the
     // playback position keeps advancing from the eye rather than jumping back.
-    const leaving = previewIndexRef.current
     if (leaving >= lastIndex) return // already at the last section
     const nextIndex = leaving + 1
     const nextItem = currentItems[nextIndex]
     const leavingItem = currentItems[leaving]
     if (!nextItem) return
 
-    previewIndexRef.current = nextIndex
-    setPreviewIndex(nextIndex)
+    previewKeyRef.current = nextItem.key
+    setPreviewKey(nextItem.key)
     updatePosition(nextItem.key, 0)
     if (leavingItem) onItemChangeRef.current?.(leavingItem, leaving, { link: true })
   }, [updatePosition])

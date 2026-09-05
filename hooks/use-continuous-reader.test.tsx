@@ -793,6 +793,190 @@ describe('useContinuousReader', () => {
     expect(result.current.error).toBeNull()
   })
 
+  // The eye — the preview pointer Next cascades and canNext is read from — is
+  // addressed by section key, so a queue mutation must re-derive it exactly the
+  // way it re-derives the reading position. Every assertion below is on a
+  // SECTION KEY: a numeric-index assertion can pass for the wrong reason here.
+  const fiveArticles = (): SpeechSection[] => [
+    makeItem(0),
+    makeItem(1),
+    makeItem(2),
+    makeItem(3),
+    makeItem(4),
+  ]
+
+  const renderReaderWithChange = (items: SpeechSection[], onItemChange: () => void) =>
+    renderHook(
+      ({ items: current }: { items: SpeechSection[] }) =>
+        useContinuousReader(current, { onItemChange }),
+      { initialProps: { items } }
+    )
+
+  const lastLeavingKey = (onItemChange: ReturnType<typeof vi.fn>): string | undefined =>
+    (onItemChange.mock.calls.at(-1)?.[0] as SpeechSection | undefined)?.key
+
+  it('advances to the immediate successor after an earlier article is removed', async () => {
+    const { result, rerender } = renderReader(fiveArticles())
+
+    act(() => result.current.playFromHere(1))
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+
+    // Article 1 is marked read and evicted; the article being read survives.
+    act(() => rerender({ items: [makeItem(1), makeItem(2), makeItem(3), makeItem(4)] }))
+
+    act(() => result.current.next())
+
+    expect(result.current.position.sectionKey).toBe(sectionKey('news-2', 2))
+    expect(result.current.currentItem?.key).toBe(sectionKey('news-2', 2))
+  })
+
+  it('keeps the eye on its own section when a section above it is removed', async () => {
+    const onItemChange = vi.fn()
+    const { result, rerender } = renderReaderWithChange(fiveArticles(), onItemChange)
+
+    act(() => result.current.playFromHere(0))
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+    ttsMock.playback.isPlaying = true
+
+    act(() => result.current.next())
+    act(() => result.current.next()) // eye on section 2, playback still on section 0
+
+    act(() => rerender({ items: [makeItem(0), makeItem(2), makeItem(3), makeItem(4)] }))
+    onItemChange.mockClear()
+
+    act(() => result.current.next())
+
+    expect(lastLeavingKey(onItemChange)).toBe(sectionKey('news-2', 2))
+  })
+
+  it("resolves the eye to the following survivor when the eye's own section is removed", async () => {
+    const onItemChange = vi.fn()
+    const { result, rerender } = renderReaderWithChange(fiveArticles(), onItemChange)
+
+    act(() => result.current.playFromHere(1))
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+    ttsMock.playback.isPlaying = true
+
+    act(() => result.current.next()) // eye on section 2
+
+    // Sections 0 and 2 go; the read section (1) stays, so only the eye moves.
+    act(() => rerender({ items: [makeItem(1), makeItem(3), makeItem(4)] }))
+    onItemChange.mockClear()
+
+    act(() => result.current.next())
+
+    expect(lastLeavingKey(onItemChange)).toBe(sectionKey('news-3', 3))
+  })
+
+  it('falls back to the preceding survivor when nothing after the eye survives', async () => {
+    const onItemChange = vi.fn()
+    const { result, rerender } = renderReaderWithChange(fiveArticles(), onItemChange)
+
+    act(() => result.current.playFromHere(0))
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+    ttsMock.playback.isPlaying = true
+
+    act(() => result.current.next())
+    act(() => result.current.next())
+    act(() => result.current.next()) // eye on section 3
+
+    // Sections 3 and 4 go and a freshly loaded section arrives, so the queue
+    // still has something after the survivor the eye falls back to.
+    act(() =>
+      rerender({ items: [makeItem(0), makeItem(1), makeItem(2), makeItem(5)] })
+    )
+
+    expect(result.current.canNext).toBe(true)
+    onItemChange.mockClear()
+
+    act(() => result.current.next())
+
+    expect(lastLeavingKey(onItemChange)).toBe(sectionKey('news-2', 2))
+  })
+
+  it('re-derives the eye even when the section being read survives the removal', async () => {
+    const onItemChange = vi.fn()
+    const { result, rerender } = renderReaderWithChange(fiveArticles(), onItemChange)
+
+    act(() => result.current.playFromHere(2))
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+    ttsMock.playback.isPlaying = true
+
+    act(() => result.current.next()) // eye on section 3
+
+    act(() => rerender({ items: [makeItem(1), makeItem(2), makeItem(3), makeItem(4)] }))
+    onItemChange.mockClear()
+
+    // The reading position never drifted...
+    expect(result.current.position.sectionKey).toBe(sectionKey('news-2', 2))
+
+    act(() => result.current.next())
+
+    // ...and the eye is re-derived all the same.
+    expect(lastLeavingKey(onItemChange)).toBe(sectionKey('news-3', 3))
+  })
+
+  it('reports canNext false when removals leave the eye on the last section', async () => {
+    const { result, rerender } = renderReader(fiveArticles())
+
+    act(() => result.current.playFromHere(1))
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+    ttsMock.playback.isPlaying = true
+
+    act(() => result.current.next()) // eye on section 2
+
+    // Sections still follow the eye → true.
+    act(() => rerender({ items: [makeItem(1), makeItem(2), makeItem(3)] }))
+    expect(result.current.canNext).toBe(true)
+
+    // Nothing follows it any more → false.
+    act(() => rerender({ items: [makeItem(1), makeItem(2)] }))
+    expect(result.current.canNext).toBe(false)
+  })
+
+  it('cascades two sections when next is called twice without an intervening render', async () => {
+    const onItemChange = vi.fn()
+    const { result } = renderReaderWithChange(
+      [makeItem(0), makeItem(1), makeItem(2)],
+      onItemChange
+    )
+
+    act(() => result.current.playFromHere(0))
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+    ttsMock.playback.isPlaying = true
+    onItemChange.mockClear()
+
+    act(() => {
+      result.current.next()
+      result.current.next()
+    })
+
+    expect(
+      onItemChange.mock.calls.map((call) => (call[0] as SpeechSection).key)
+    ).toEqual([sectionKey('news-0', 0), sectionKey('news-1', 1)])
+  })
+
+  it('does not stop or restart playback when next is pressed while playing', async () => {
+    const onItemChange = vi.fn()
+    const { result } = renderReaderWithChange(
+      [makeItem(0), makeItem(1), makeItem(2)],
+      onItemChange
+    )
+
+    act(() => result.current.play())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+    ttsMock.playback.isPlaying = true
+    ttsMock.playback.stop.mockClear()
+    onItemChange.mockClear()
+
+    act(() => result.current.next())
+
+    expect(ttsMock.playback.stop).not.toHaveBeenCalled()
+    expect(ttsMock.playback.play).toHaveBeenCalledOnce()
+    expect(lastLeavingKey(onItemChange)).toBe(sectionKey('news-0', 0))
+    expect(onItemChange.mock.calls.at(-1)?.[2]).toEqual({ link: true })
+  })
+
   it('does not auto-start playback when the queue first populates', async () => {
     const { result, rerender } = renderHook(
       ({ items }: { items: SpeechSection[] }) => useContinuousReader(items),
