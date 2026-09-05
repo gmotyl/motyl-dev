@@ -62,6 +62,16 @@ export const PRONUNCIATION_MAP: Readonly<Record<string, string>> = Object.freeze
   'node.js': 'noud dżej es',
   npm: 'en-pi-em',
   nodejs: 'noud dżej es',
+  turbopack: 'turbo pak',
+  turbopacku: 'turbo paku',
+  tubopacka: 'turbo pak',
+  turbopackiem: 'turbo pakiem',
+  trace: 'trejs',
+  traców: 'trejsuf',
+  tracem: 'trejsem',
+  tracami: 'trejsemi',
+  tracu: 'trejsu',
+  tracach: 'trejsach',
 
   // Jargon
   githuba: 'git chaba',
@@ -96,6 +106,8 @@ export const PRONUNCIATION_MAP: Readonly<Record<string, string>> = Object.freeze
   vram: 'fał ram',
   'type-aware': 'tajp ełer',
   'js/ts': 'dżej es / ti es',
+  'key takeaways': 'kluczowe wnioski:',
+  "pipeline'y": 'pajplajny',
 
   // Multi-word phrases (safe: longest-key-first beats the component words;
   // the phrase also avoids the `face`→"facet" collision of a bare `face` stem)
@@ -126,6 +138,7 @@ export const ACRONYM_MAP: Readonly<Record<string, string>> = Object.freeze({
   cpu: 'si-pi-ju',
   ui: 'ju-łaj,',
   json: 'dżej-son',
+  ndjson: 'en-di-dżej-es-on',
 
   // More known acronyms (English letter names, Polish phonetic, hyphen-paced)
   ux: 'ju-eks',
