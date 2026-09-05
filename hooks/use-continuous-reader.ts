@@ -214,10 +214,19 @@ export function useContinuousReader(
     currentIndexRef.current = currentIndex
   }, [currentIndex])
 
-  // Adopt the survivor the render above resolved the eye to. Without this the
-  // removed section's key would outlive the previous-order snapshot (rewritten
-  // post-commit from the NEW queue), and the next resolve would find it in
-  // neither order and restart the eye at the top of the queue.
+  // Adopt the survivor the render above resolved the eye to. This is the eye's
+  // mirror of the position-drift effect below, and it upholds the invariant the
+  // rest of the hook leans on: `previewKeyRef.current` is always a key that is
+  // LIVE in the last committed queue. Only the render-phase resolve can still
+  // see where a removed section sat (it reads the previous-order snapshot
+  // pre-commit); unless that resolution is WRITTEN BACK here it is lost, the
+  // snapshot is rewritten post-commit from the NEW queue, and the next resolve
+  // finds the dead key in neither order and restarts the eye at index 0. Delete
+  // this effect and `resolves the eye to the following survivor when the eye's
+  // own section is removed` fails with 'news-1#1' instead of 'news-3#3'.
+  // Declared BEFORE the drift effect, so when the read section is removed in the
+  // same commit drift's write lands last and the eye follows the reading
+  // position onto its survivor. `next()` consumes this invariant — see there.
   useEffect(() => {
     const liveKey = previewItem?.key ?? ''
     if (liveKey === previewKeyRef.current) return
@@ -441,9 +450,15 @@ export function useContinuousReader(
       playbackRef.current?.isPlaying || playbackRef.current?.isBuffering
     )
 
-    // Resolve the eye's key against the CURRENT queue rather than trusting a
-    // remembered index: earlier sections may have been removed since the last
-    // press, and only the resolver knows where the eye's section sits now.
+    // Address the eye by key, never by a remembered index: sections may have
+    // been removed since the last press. The resolver's previous-order fallback
+    // is NOT what saves us here — `next()` is an event handler, so it runs
+    // post-commit and `previousKeysRef.current` already holds the CURRENT order;
+    // a dead key would be in neither order and take the "restart at 0" branch.
+    // Correctness comes from the eye-adoption effect above, which keeps
+    // `previewKeyRef.current` live in the last committed queue — so this call
+    // degenerates to a findIndex. It still goes through the resolver so every
+    // key→index read in this hook takes one path and satisfies its contract.
     const leaving = Math.max(
       resolvePositionIndex(currentItems, previewKeyRef.current, previousKeysRef.current),
       0
