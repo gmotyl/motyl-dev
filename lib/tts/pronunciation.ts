@@ -29,6 +29,8 @@ export const PRONUNCIATION_MAP: Readonly<Record<string, string>> = Object.freeze
   checkpoint: 'czekpojnt',
   compliance: 'komplajens',
   chrome: 'krołm',
+  // Polish reads "ch" as /x/, so an unmapped "chunk" comes out as "hunk"
+  chunk: 'czank',
 
   // Product / library names
   ai: 'ej aj',

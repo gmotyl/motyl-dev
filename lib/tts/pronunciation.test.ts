@@ -62,6 +62,22 @@ describe('applyPronunciation', () => {
     expect(applyPronunciation('facet')).toBe('facet')
   })
 
+  it('speaks chunk as czank', () => {
+    expect(applyPronunciation('chunk')).toBe('czank')
+  })
+
+  it('preserves Polish inflection on chunk (chunki, chunków, chunkiem)', () => {
+    expect(applyPronunciation('chunki')).toBe('czanki')
+    expect(applyPronunciation('chunków')).toBe('czanków')
+    expect(applyPronunciation('chunkiem')).toBe('czankiem')
+  })
+
+  it('maps chunk case-insensitively', () => {
+    expect(applyPronunciation('Chunk')).toBe('czank')
+    expect(applyPronunciation('CHUNK')).toBe('czank')
+    expect(applyPronunciation('Chunki')).toBe('czanki')
+  })
+
   it('preserves Polish inflection on new stems', () => {
     expect(applyPronunciation('frameworku')).toBe('frejmłerku')
     expect(applyPronunciation('deploya')).toBe('diploja')
