@@ -84,7 +84,10 @@ const stripHashtagMetadata = (text: string): string =>
     .replace(/(?<![\p{L}\p{N}_])#[\p{L}\p{N}_-]+/gu, '')
 
 // A horizontal rule: `---`, `***`, `___`, or spaced variants like `- - -`.
-const HORIZONTAL_RULE_LINE = /^\s*(?:[-*_]\s*){3,}$/gm
+// The optional `>` prefix matters because rules are stripped BEFORE blockquote
+// markers are (see `stripMarkdown`), so `> ---` has to be recognised here or
+// the dashes survive into speech.
+const HORIZONTAL_RULE_LINE = /^[ \t]*(?:>[ \t]*)*(?:[-*_][ \t]*){3,}$/gm
 
 // A markdown list item at any indent depth: `-`, `*`, `+`, `N.` or `N)`,
 // captured as marker + item text. Rules are already gone by the time this runs

@@ -549,6 +549,22 @@ describe('stripMarkdown — list items are spoken as sentences', () => {
     )
   })
 
+  // Rules are stripped before the blockquote marker is, so the rule pattern has
+  // to recognise `> ---` itself — otherwise the dashes are spoken aloud.
+  it('removes a horizontal rule written inside a blockquote', () => {
+    expect(stripMarkdown('Przed\n\n> ---\n\nPo')).toBe('Przed Po')
+    expect(stripMarkdown('Przed\n\n> ***\n\nPo')).toBe('Przed Po')
+    expect(stripMarkdown('Przed\n\n> ___\n\nPo')).toBe('Przed Po')
+  })
+
+  // `ALREADY_TERMINATED` must ignore trailing emphasis/backtick markers: they
+  // are stripped later, so a terminator hiding behind them is a real one.
+  it('does not double punctuation when the terminator is wrapped in emphasis', () => {
+    expect(stripMarkdown('- **Gotowe.**')).toBe('Gotowe.')
+    expect(stripMarkdown('- **Uwaga:**')).toBe('Uwaga:')
+    expect(stripMarkdown('- Uruchom `pnpm test.`')).toBe('Uruchom pnpm test.')
+  })
+
   it('does not insert terminators into a hard-wrapped prose paragraph', () => {
     expect(
       stripMarkdown('To jest długie zdanie\nzawinięte na kilka linii\nbez żadnych punktorów.')
