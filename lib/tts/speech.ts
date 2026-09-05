@@ -83,6 +83,29 @@ const stripHashtagMetadata = (text: string): string =>
     .join('\n')
     .replace(/(?<![\p{L}\p{N}_])#[\p{L}\p{N}_-]+/gu, '')
 
+// A horizontal rule: `---`, `***`, `___`, or spaced variants like `- - -`.
+const HORIZONTAL_RULE_LINE = /^\s*(?:[-*_]\s*){3,}$/gm
+
+// A markdown list item at any indent depth: `-`, `*`, `+`, `N.` or `N)`,
+// captured as marker + item text. Rules are already gone by the time this runs
+// (see `stripMarkdown`), so `- - -` can never be mistaken for an item.
+const LIST_ITEM_LINE = /^([ \t]*(?:[-*+]|\d+[.)])[ \t]+)(.*\S)[ \t]*$/gm
+
+// The item text already ends a sentence (or introduces one, with `:`/`;`).
+// Trailing closers and emphasis markers are ignored: `("gotowe.")`, `**Done.**`.
+const ALREADY_TERMINATED = /[.!?:;][*_~`"')\]]*$/
+
+/**
+ * Terminate each markdown list item as its own sentence. A contiguous bullet
+ * list is a single paragraph, and the voice client takes plain text only (no
+ * SSML), so punctuation is the only lever that puts a pause between items.
+ *
+ * Must run BEFORE list markers are stripped (it needs to see which lines are
+ * items) and BEFORE whitespace is collapsed (which destroys line structure).
+ */
+const terminateListItem = (line: string, marker: string, item: string): string =>
+  ALREADY_TERMINATED.test(item) ? line : `${marker}${item}.`
+
 export const stripMarkdown = (text: string): string =>
   stripHashtagMetadata(stripFrontmatter(text))
     .replace(/<!--[\s\S]*?-->/g, '')
@@ -96,9 +119,12 @@ export const stripMarkdown = (text: string): string =>
     .replace(/\[([^\]\r\n]+)\]\[[^\]\r\n]*\]/g, '$1')
     .replace(/https?:\/\/[^\s)>]+/gi, (url) => url.match(/[.,!?;:]+$/)?.[0] ?? '')
     .replace(/^\s{0,3}#{1,6}\s+/gm, '')
+    // Rules FIRST: `- - -` matches the list-item shape, and a terminating `.`
+    // would stop it matching `HORIZONTAL_RULE_LINE`, leaking `- -` into speech.
+    .replace(HORIZONTAL_RULE_LINE, '')
+    .replace(LIST_ITEM_LINE, terminateListItem)
     .replace(/^\s*(?:[-*+]\s+|\d+[.)]\s+)/gm, '')
     .replace(/^\s*>\s?/gm, '')
-    .replace(/^\s*(?:[-*_]\s*){3,}$/gm, '')
     .replace(/[*_~`]/g, '')
     .replace(/<[^>]+>/g, '')
     .replace(/\s+/g, ' ')

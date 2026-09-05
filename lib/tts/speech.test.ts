@@ -8,6 +8,7 @@ import {
   sectionKey,
   splitIntoSpeechUnits,
   splitReviewedSections,
+  stripMarkdown,
   UNIT_MAX_CHARS,
   UNIT_MIN_CHARS,
   type SpeechSection,
@@ -460,7 +461,7 @@ hashtags: "#pl #ai"
 #pl #ai`
 
     expect(prepareSpeechText(source)).toBe(
-      'Widoczny tytuł Najważniejsze wieści Opis z ważnym linkiem i kodem. Pierwszy punkt Drugi punkt'
+      'Widoczny tytuł Najważniejsze wieści Opis z ważnym linkiem i kodem. Pierwszy punkt. Drugi punkt.'
     )
   })
 
@@ -503,6 +504,69 @@ hashtags: "#pl #ai"
 
   it('applies inflection-aware pronunciation for English stems', () => {
     expect(prepareSpeechText('Nowe benchmarki Reacta')).toBe('Nowe benczmarki reakta')
+  })
+})
+
+// The voice client takes plain text only — no SSML — so punctuation is the only
+// pause lever. A contiguous bullet list is ONE paragraph, so without a
+// terminator per item the whole list is spoken as a single run-on sentence.
+describe('stripMarkdown — list items are spoken as sentences', () => {
+  it('terminates an unterminated list item with a period', () => {
+    expect(stripMarkdown('- Pierwszy punkt\n- Drugi punkt')).toBe('Pierwszy punkt. Drugi punkt.')
+  })
+
+  it('does not double punctuation on an already-terminated list item', () => {
+    expect(stripMarkdown('- Gotowe.\n- Naprawdę!\n- Serio?')).toBe('Gotowe. Naprawdę! Serio?')
+  })
+
+  it('does not append after a closing bracket or quote following a terminator', () => {
+    expect(stripMarkdown('- Powiedział "gotowe."\n- Nawias (tak?)\n- Klamra [tak!]')).toBe(
+      'Powiedział "gotowe." Nawias (tak?) Klamra [tak!]'
+    )
+  })
+
+  it('leaves a list item ending in a colon or semicolon alone', () => {
+    expect(stripMarkdown('- Kroki:\n- Najpierw to;\n- Potem tamto')).toBe(
+      'Kroki: Najpierw to; Potem tamto.'
+    )
+  })
+
+  it('terminates ordered list items (1. and 2))', () => {
+    expect(stripMarkdown('1. Raz\n2) Dwa')).toBe('Raz. Dwa.')
+  })
+
+  it('terminates indented and nested list items', () => {
+    expect(stripMarkdown('- Główny\n  * Zagnieżdżony\n    1. Głębiej\n  + Obok')).toBe(
+      'Główny. Zagnieżdżony. Głębiej. Obok.'
+    )
+  })
+
+  // `- - -` matches the list-marker shape, so it must not gain a period: the
+  // rule-stripping regex would then stop matching and the rule would leak.
+  it('still removes horizontal rules written as ---, *** and - - -', () => {
+    expect(stripMarkdown('Przed\n\n---\n\nŚrodek\n\n***\n\nDalej\n\n- - -\n\nKoniec')).toBe(
+      'Przed Środek Dalej Koniec'
+    )
+  })
+
+  it('does not insert terminators into a hard-wrapped prose paragraph', () => {
+    expect(
+      stripMarkdown('To jest długie zdanie\nzawinięte na kilka linii\nbez żadnych punktorów.')
+    ).toBe('To jest długie zdanie zawinięte na kilka linii bez żadnych punktorów.')
+  })
+
+  it('reads a key-takeaways bullet list as separate sentences', () => {
+    const source = [
+      '**Key takeaways**',
+      '',
+      '- A great section on coding',
+      '- Exciting updates in Next.js 16.2.',
+      '- As always, plenty of content regarding the AI',
+    ].join('\n')
+
+    expect(stripMarkdown(source)).toBe(
+      'Key takeaways A great section on coding. Exciting updates in Next.js 16.2. As always, plenty of content regarding the AI.'
+    )
   })
 })
 
