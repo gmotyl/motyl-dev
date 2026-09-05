@@ -8,11 +8,13 @@ import {
   sectionKey,
   splitIntoSpeechUnits,
   splitReviewedSections,
+  stripMarkdown,
   UNIT_MAX_CHARS,
   UNIT_MIN_CHARS,
   type SpeechSection,
 } from '@/lib/tts/speech'
 import { ACRONYM_MAP } from '@/lib/tts/pronunciation'
+import { headingToId } from '@/lib/content/heading-slug'
 
 // Assert against the map's own values so ear-tuning the spellings never breaks
 // these behavioral tests.
@@ -460,7 +462,7 @@ hashtags: "#pl #ai"
 #pl #ai`
 
     expect(prepareSpeechText(source)).toBe(
-      'Widoczny tytuł Najważniejsze wieści Opis z ważnym linkiem i kodem. Pierwszy punkt Drugi punkt'
+      'Widoczny tytuł Najważniejsze wieści Opis z ważnym linkiem i kodem. Pierwszy punkt. Drugi punkt.'
     )
   })
 
@@ -503,6 +505,114 @@ hashtags: "#pl #ai"
 
   it('applies inflection-aware pronunciation for English stems', () => {
     expect(prepareSpeechText('Nowe benchmarki Reacta')).toBe('Nowe benczmarki reakta')
+  })
+})
+
+// The voice client takes plain text only — no SSML — so punctuation is the only
+// pause lever. A contiguous bullet list is ONE paragraph, so without a
+// terminator per item the whole list is spoken as a single run-on sentence.
+describe('stripMarkdown — list items are spoken as sentences', () => {
+  it('terminates an unterminated list item with a period', () => {
+    expect(stripMarkdown('- Pierwszy punkt\n- Drugi punkt')).toBe('Pierwszy punkt. Drugi punkt.')
+  })
+
+  it('does not double punctuation on an already-terminated list item', () => {
+    expect(stripMarkdown('- Gotowe.\n- Naprawdę!\n- Serio?')).toBe('Gotowe. Naprawdę! Serio?')
+  })
+
+  it('does not append after a closing bracket or quote following a terminator', () => {
+    expect(stripMarkdown('- Powiedział "gotowe."\n- Nawias (tak?)\n- Klamra [tak!]')).toBe(
+      'Powiedział "gotowe." Nawias (tak?) Klamra [tak!]'
+    )
+  })
+
+  it('leaves a list item ending in a colon or semicolon alone', () => {
+    expect(stripMarkdown('- Kroki:\n- Najpierw to;\n- Potem tamto')).toBe(
+      'Kroki: Najpierw to; Potem tamto.'
+    )
+  })
+
+  it('terminates ordered list items (1. and 2))', () => {
+    expect(stripMarkdown('1. Raz\n2) Dwa')).toBe('Raz. Dwa.')
+  })
+
+  it('terminates indented and nested list items', () => {
+    expect(stripMarkdown('- Główny\n  * Zagnieżdżony\n    1. Głębiej\n  + Obok')).toBe(
+      'Główny. Zagnieżdżony. Głębiej. Obok.'
+    )
+  })
+
+  // `- - -` matches the list-marker shape, so it must not gain a period: the
+  // rule-stripping regex would then stop matching and the rule would leak.
+  it('still removes horizontal rules written as ---, *** and - - -', () => {
+    expect(stripMarkdown('Przed\n\n---\n\nŚrodek\n\n***\n\nDalej\n\n- - -\n\nKoniec')).toBe(
+      'Przed Środek Dalej Koniec'
+    )
+  })
+
+  // Rules are stripped before the blockquote marker is, so the rule pattern has
+  // to recognise `> ---` itself — otherwise the dashes are spoken aloud.
+  it('removes a horizontal rule written inside a blockquote', () => {
+    expect(stripMarkdown('Przed\n\n> ---\n\nPo')).toBe('Przed Po')
+    expect(stripMarkdown('Przed\n\n> ***\n\nPo')).toBe('Przed Po')
+    expect(stripMarkdown('Przed\n\n> ___\n\nPo')).toBe('Przed Po')
+  })
+
+  // `ALREADY_TERMINATED` must ignore trailing emphasis/backtick markers: they
+  // are stripped later, so a terminator hiding behind them is a real one.
+  it('does not double punctuation when the terminator is wrapped in emphasis', () => {
+    expect(stripMarkdown('- **Gotowe.**')).toBe('Gotowe.')
+    expect(stripMarkdown('- **Uwaga:**')).toBe('Uwaga:')
+    expect(stripMarkdown('- Uruchom `pnpm test.`')).toBe('Uruchom pnpm test.')
+  })
+
+  it('does not insert terminators into a hard-wrapped prose paragraph', () => {
+    expect(
+      stripMarkdown('To jest długie zdanie\nzawinięte na kilka linii\nbez żadnych punktorów.')
+    ).toBe('To jest długie zdanie zawinięte na kilka linii bez żadnych punktorów.')
+  })
+
+  it('reads a key-takeaways bullet list as separate sentences', () => {
+    const source = [
+      '**Key takeaways**',
+      '',
+      '- A great section on coding',
+      '- Exciting updates in Next.js 16.2.',
+      '- As always, plenty of content regarding the AI',
+    ].join('\n')
+
+    expect(stripMarkdown(source)).toBe(
+      'Key takeaways A great section on coding. Exciting updates in Next.js 16.2. As always, plenty of content regarding the AI.'
+    )
+  })
+})
+
+// `stripMarkdown` is not TTS-only. `markdown-content.tsx` slugs its output into
+// heading ids, and `article-wrapper.tsx`, `read-all-news/page.client.tsx` and
+// `lib/reader/scroll-target.ts` match a section to its heading through it. A
+// numbered `###` heading looks exactly like an ordered list item, so the pass
+// above fires on it and appends a period — which `github-slugger` happens to
+// discard, leaving every heading id where it was. This pins that: if a future
+// terminator survives slugging, every numbered heading's id shifts and the
+// reader scrolls to — and highlights — nothing.
+describe('stripMarkdown — list-item termination and heading ids', () => {
+  it('heading ids are unaffected by list-item termination', () => {
+    expect(headingToId(stripMarkdown('1. The Syntax Highlighter Ate My Diagram'))).toBe(
+      'the-syntax-highlighter-ate-my-diagram'
+    )
+    expect(headingToId(stripMarkdown("2. Mermaid's Dark Theme Isn't Dark Enough"))).toBe(
+      'mermaids-dark-theme-isnt-dark-enough'
+    )
+    expect(headingToId(stripMarkdown('3. Contextual Continuity'))).toBe('contextual-continuity')
+    expect(
+      headingToId(stripMarkdown('1. **Purple Butterfly** (Current Enhanced)... (and so on)'))
+    ).toBe('purple-butterfly-current-enhanced-and-so-on')
+
+    // And the pass really does fire on these headings — the ids above are
+    // stable *despite* the appended terminator, not because it is absent.
+    expect(stripMarkdown('1. The Syntax Highlighter Ate My Diagram')).toBe(
+      'The Syntax Highlighter Ate My Diagram.'
+    )
   })
 })
 
