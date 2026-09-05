@@ -14,6 +14,7 @@ import {
   type SpeechSection,
 } from '@/lib/tts/speech'
 import { ACRONYM_MAP } from '@/lib/tts/pronunciation'
+import { headingToId } from '@/lib/content/heading-slug'
 
 // Assert against the map's own values so ear-tuning the spellings never breaks
 // these behavioral tests.
@@ -582,6 +583,35 @@ describe('stripMarkdown — list items are spoken as sentences', () => {
 
     expect(stripMarkdown(source)).toBe(
       'Key takeaways A great section on coding. Exciting updates in Next.js 16.2. As always, plenty of content regarding the AI.'
+    )
+  })
+})
+
+// `stripMarkdown` is not TTS-only. `markdown-content.tsx` slugs its output into
+// heading ids, and `article-wrapper.tsx`, `read-all-news/page.client.tsx` and
+// `lib/reader/scroll-target.ts` match a section to its heading through it. A
+// numbered `###` heading looks exactly like an ordered list item, so the pass
+// above fires on it and appends a period — which `github-slugger` happens to
+// discard, leaving every heading id where it was. This pins that: if a future
+// terminator survives slugging, every numbered heading's id shifts and the
+// reader scrolls to — and highlights — nothing.
+describe('stripMarkdown — list-item termination and heading ids', () => {
+  it('heading ids are unaffected by list-item termination', () => {
+    expect(headingToId(stripMarkdown('1. The Syntax Highlighter Ate My Diagram'))).toBe(
+      'the-syntax-highlighter-ate-my-diagram'
+    )
+    expect(headingToId(stripMarkdown("2. Mermaid's Dark Theme Isn't Dark Enough"))).toBe(
+      'mermaids-dark-theme-isnt-dark-enough'
+    )
+    expect(headingToId(stripMarkdown('3. Contextual Continuity'))).toBe('contextual-continuity')
+    expect(
+      headingToId(stripMarkdown('1. **Purple Butterfly** (Current Enhanced)... (and so on)'))
+    ).toBe('purple-butterfly-current-enhanced-and-so-on')
+
+    // And the pass really does fire on these headings — the ids above are
+    // stable *despite* the appended terminator, not because it is absent.
+    expect(stripMarkdown('1. The Syntax Highlighter Ate My Diagram')).toBe(
+      'The Syntax Highlighter Ate My Diagram.'
     )
   })
 })
