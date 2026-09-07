@@ -93,6 +93,17 @@ const emitTimeUpdate = async (currentTime: number) => {
   })
 }
 
+// Fire the element's `error` event — the browser saying "these bytes are
+// unusable" (undecodable MP3, dead object URL). There is no second output path
+// to retry on, so the hook must treat it as a unit failure, and the skip chain
+// it starts needs the same settling turns as `endCurrentUnit`.
+const failCurrentUnitInElement = async (turns = 6) => {
+  await act(async () => {
+    currentAudio().dispatchEvent(new Event('error'))
+    for (let i = 0; i < turns; i += 1) await Promise.resolve()
+  })
+}
+
 // Fire the element's `ended` event — the hook's unit-advance trigger — and let
 // the follow-on synthesis/skip chain settle.
 const endCurrentUnit = async (turns = 6) => {
@@ -698,5 +709,208 @@ describe('useTTS chunk-synthesis failure recovery', () => {
     expect(result.current.isPlaying).toBe(false)
     // Never reached a unit that could actually play after unit 0.
     expect(srcAssignments).toHaveLength(1)
+  })
+})
+
+/**
+ * With one output path there is nothing left to silently fall back to, so every
+ * way the element can refuse to produce sound has to reach the user. The failure
+ * mode this whole suite guards against is silence with `isPlaying` stuck true.
+ */
+describe('useTTS media-element failure paths', () => {
+  it('stops and reports onError when the element refuses to play', async () => {
+    // What Safari/Chrome throw at an un-gestured start; also what a broken
+    // element gives back once it has a source it cannot open.
+    const refusal = new DOMException('play() was not allowed', 'NotAllowedError')
+    audioPlay.mockImplementation(() => Promise.reject(refusal))
+    const onError = vi.fn()
+
+    const { result } = renderHook(() => useTTS('Hello world.', { onError }))
+
+    await act(async () => {
+      await result.current.play()
+    })
+
+    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1))
+    expect(onError).toHaveBeenCalledWith(refusal)
+    // The rejection must clear the playing flag, or the UI shows a playing
+    // reader over silence with no way to notice.
+    await waitFor(() => expect(result.current.isPlaying).toBe(false))
+    // The gesture-unlock poke at the top of play() rejects on this mock too; it
+    // is a different call and must not be reported as a refused unit start.
+    expect(onError).toHaveBeenCalledTimes(1)
+  })
+
+  it('treats an element error as a unit failure and continues with the next unit', async () => {
+    const units = ['a'.repeat(10), 'b'.repeat(20), 'c'.repeat(30)]
+    const onError = vi.fn()
+    const onProgress = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units, onError, onProgress })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+    const failedUrl = srcAssignments[0]
+
+    // Undecodable MP3 for unit 0: same treatment as a synthesis failure — skip
+    // it, count it complete, keep playing.
+    await failCurrentUnitInElement()
+
+    expect(onError).not.toHaveBeenCalled()
+    await waitFor(() => expect(srcAssignments).toHaveLength(2))
+    await waitFor(() => expect(result.current.currentChunkIndex).toBe(1))
+    expect(result.current.isPlaying).toBe(true)
+
+    // The abandoned unit's object URL is released before moving on; the one the
+    // element is now reading obviously is not.
+    expect(revokeObjectURL).toHaveBeenCalledWith(failedUrl)
+    expect(revokeObjectURL).not.toHaveBeenCalledWith(srcAssignments[1])
+
+    // Unit 0's 10 of 60 characters are counted complete, so progress advances
+    // past the unreadable unit instead of stalling on it.
+    onProgress.mockClear()
+    await flushFrame()
+    expect(onProgress.mock.calls.at(-1)?.[0] as number).toBeCloseTo(100 / 6, 5)
+  })
+
+  it('stops and reports onError after too many consecutive element errors', async () => {
+    const units = ['u0', 'u1', 'u2', 'u3', 'u4']
+    const onError = vi.fn()
+    const { result } = renderHook(() => useTTS('irrelevant content', { units, onError }))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    // Every unit synthesizes fine but the element rejects all of them — a
+    // systemic decode failure, not one bad paragraph. Skips 1, 2 and 3 are
+    // tolerated; the 4th exceeds MAX_CONSECUTIVE_CHUNK_FAILURES and stops.
+    for (let i = 0; i < 4; i += 1) await failCurrentUnitInElement()
+
+    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1))
+    expect(result.current.isPlaying).toBe(false)
+    // Units 0-3 were attempted; unit 4 was never reached.
+    expect(srcAssignments).toHaveLength(4)
+
+    // Giving up ends the session, so nothing it created may outlive it.
+    const revoked = new Set(revokeObjectURL.mock.calls.map(([url]) => url as string))
+    expect([...revoked].sort()).toEqual([...new Set(createdUrls)].sort())
+  })
+
+  /**
+   * iOS/WebKit gates `play()` on the user-gesture task itself (Chrome for
+   * Android does not: its gate is sticky user activation, which survives for the
+   * document's lifetime). The first per-unit `play()` happens after
+   * `await fetchAudioBlob(...)`, i.e. in a later task, so without an in-gesture
+   * poke at the element it would reject with NotAllowedError — and the spec
+   * delta's claim that Apple browsers are no longer carved out would be false.
+   */
+  it('unlocks the element inside the user gesture before awaiting synthesis', async () => {
+    let resolveSynthesis: ((buffer: ArrayBuffer) => void) | undefined
+    vi.mocked(synthesizeSpeech).mockImplementation(
+      () => new Promise<ArrayBuffer>((resolve) => { resolveSynthesis = resolve })
+    )
+
+    const { result } = renderHook(() => useTTS('Hello world.'))
+
+    let started: Promise<void> | undefined
+    act(() => {
+      started = result.current.play()
+    })
+
+    // Still inside the gesture task: nothing has been synthesized or assigned
+    // yet, but the element has already been played (and left silent).
+    expect(audioPlay).toHaveBeenCalledTimes(1)
+    expect(audioPause).toHaveBeenCalledTimes(1)
+    expect(currentAudio().getAttribute('src')).toBeNull()
+    expect(srcAssignments).toHaveLength(0)
+
+    await act(async () => {
+      resolveSynthesis?.(new ArrayBuffer(8))
+      await started
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    // The real unit start is a separate call, on an element the gesture already
+    // unlocked.
+    expect(audioPlay.mock.calls.length).toBeGreaterThan(1)
+  })
+
+  it('does not count a unit as complete when ended fires after pause', async () => {
+    const units = ['a'.repeat(10), 'b'.repeat(30)]
+    const onProgress = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units, onProgress })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    mediaCurrentTime = 0.5
+    act(() => {
+      result.current.pause()
+    })
+
+    // Structural, not merely guarded: an abandoned unit's handler is detached,
+    // so a late `ended` cannot run at all.
+    expect(currentAudio().onended).toBeNull()
+
+    await endCurrentUnit()
+    expect(srcAssignments).toHaveLength(1)
+
+    // Resume mid-unit: progress is half of unit 0 (10 chars of 40) = 12.5%. If
+    // the stale `ended` had counted unit 0 complete it would read 37.5%.
+    onProgress.mockClear()
+    await act(async () => {
+      await result.current.play()
+    })
+    await flushFrame()
+    expect(onProgress.mock.calls.at(-1)?.[0] as number).toBeCloseTo(12.5, 5)
+  })
+
+  it('restarts the progress loop after recovering from the failure cap', async () => {
+    const units = ['ok-1', 'fail-2', 'fail-3', 'fail-4', 'fail-5']
+    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) => {
+      if (text.startsWith('fail-')) throw new Error('stalled')
+      return new ArrayBuffer(8)
+    })
+    const onError = vi.fn()
+    const onProgress = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units, onError, onProgress })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    await endCurrentUnit()
+    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1))
+    expect(result.current.isPlaying).toBe(false)
+
+    // The outage clears and the user presses Play again.
+    vi.mocked(synthesizeSpeech).mockImplementation(async () => new ArrayBuffer(8))
+    frameCallbacks = []
+    onProgress.mockClear()
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(2))
+
+    // A frame handle left behind by the give-up path would make playChunk's
+    // `if (!animationFrameRef.current)` skip re-arming the loop, killing
+    // onProgress — and with it the reader's prefetch threshold — for the rest
+    // of the session.
+    expect(frameCallbacks).not.toHaveLength(0)
+    await flushFrame()
+    expect(onProgress).toHaveBeenCalled()
   })
 })
