@@ -93,6 +93,14 @@ const emitTimeUpdate = async (currentTime: number) => {
   })
 }
 
+// Put the element back in the state a real one is in immediately after a `src`
+// swap: `duration` is NaN until `loadedmetadata` arrives, which happens once per
+// UNIT, not just once at startup. The harness otherwise pins a duration forever,
+// which no real element ever does.
+const clearDurationMetadata = () => {
+  mediaDuration = Number.NaN
+}
+
 // Fire the element's `error` event — the browser saying "these bytes are
 // unusable" (undecodable MP3, dead object URL). There is no second output path
 // to retry on, so the hook must treat it as a unit failure, and the skip chain
@@ -912,5 +920,122 @@ describe('useTTS media-element failure paths', () => {
     expect(frameCallbacks).not.toHaveLength(0)
     await flushFrame()
     expect(onProgress).toHaveBeenCalled()
+  })
+})
+
+/**
+ * Behaviors that were already correct but that nothing pinned — a reviewer's
+ * mutants survived the whole suite. Each test below is the mutation-kill for one
+ * of them.
+ */
+describe('useTTS object-URL lifecycle and progress accumulation', () => {
+  it('revokes each consumed unit\'s object URL and never the one now playing', async () => {
+    const units = ['a'.repeat(10), 'b'.repeat(10), 'c'.repeat(10)]
+    const { result } = renderHook(() => useTTS('irrelevant content', { units }))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    await endCurrentUnit()
+    await waitFor(() => expect(srcAssignments).toHaveLength(2))
+    await endCurrentUnit()
+    await waitFor(() => expect(srcAssignments).toHaveLength(3))
+
+    // Units 0 and 1 are behind the playhead: their URLs are released as the
+    // element moves on, which is the only thing keeping a Read All News session
+    // from retaining every paragraph's audio for the whole article.
+    expect(revokeObjectURL).toHaveBeenCalledWith(srcAssignments[0])
+    expect(revokeObjectURL).toHaveBeenCalledWith(srcAssignments[1])
+    // The URL the element is reading right now must survive — revoking it would
+    // pull the media out from under the current unit.
+    expect(revokeObjectURL).not.toHaveBeenCalledWith(srcAssignments[2])
+    expect(currentAudio().getAttribute('src')).toBe(srcAssignments[2])
+  })
+
+  it('reads an unknown (NaN) duration as "just started" instead of emitting NaN', async () => {
+    const units = ['a'.repeat(10), 'b'.repeat(30)]
+    const onProgress = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units, onProgress })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    await endCurrentUnit()
+    await waitFor(() => expect(srcAssignments).toHaveLength(2))
+
+    // Unit 1 has just been assigned and has no metadata yet — the real state of
+    // the element for a beat after EVERY swap.
+    onProgress.mockClear()
+    clearDurationMetadata()
+    await emitTimeUpdate(0.4)
+
+    // 10 of 40 characters are behind us and the new unit counts as 0% until its
+    // duration is known. A NaN here would poison the continuous reader's
+    // prefetch threshold (every comparison against it is false), silently
+    // stopping the prefetch ladder.
+    const emitted = onProgress.mock.calls.at(-1)?.[0] as number
+    expect(Number.isNaN(emitted)).toBe(false)
+    expect(emitted).toBeCloseTo(25, 5)
+    expect(Number.isNaN(result.current.progress)).toBe(false)
+    expect(result.current.progress).toBeCloseTo(25, 5)
+  })
+
+  it('accumulates completed characters across units as each one finishes', async () => {
+    // 10 + 20 + 70 = 100 characters, so progress reads directly as a percentage.
+    const units = ['a'.repeat(10), 'b'.repeat(20), 'c'.repeat(70)]
+    const onProgress = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units, onProgress })
+    )
+
+    const progressNow = async () => {
+      onProgress.mockClear()
+      await flushFrame()
+      return onProgress.mock.calls.at(-1)?.[0] as number
+    }
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    // Nothing finished yet.
+    expect(await progressNow()).toBeCloseTo(0, 5)
+
+    await endCurrentUnit()
+    await waitFor(() => expect(result.current.currentChunkIndex).toBe(1))
+    expect(await progressNow()).toBeCloseTo(10, 5)
+
+    // The second unit ADDS to the first — a per-unit assignment instead of an
+    // accumulation would read 20 here and the bar would jump backwards.
+    await endCurrentUnit()
+    await waitFor(() => expect(result.current.currentChunkIndex).toBe(2))
+    expect(await progressNow()).toBeCloseTo(30, 5)
+  })
+
+  it('leaves the element src in place when paused', async () => {
+    const { result } = renderHook(() => useTTS('Hello world.'))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    mediaCurrentTime = 0.4
+    act(() => {
+      result.current.pause()
+    })
+
+    // A pause must not drop the source: clearing it would rewind the unit, throw
+    // away the buffered media and tear down the OS media session the notification
+    // and car head unit are attached to.
+    expect(currentAudio().getAttribute('src')).toBe(srcAssignments[0])
+    expect(currentAudio().getAttribute('src')).toMatch(/^blob:/)
   })
 })
