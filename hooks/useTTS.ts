@@ -29,9 +29,14 @@ export interface UseTTSOptions {
    * Fired on EVERY progress tick during playback with the 0–100 progress
    * percent — that is every animation frame while the page is visible (~60Hz)
    * AND every element `timeupdate` (~4Hz, and the only one that survives a
-   * hidden page). Intentionally NOT throttled, so the continuous reader's
-   * prefetch threshold sees continuous progress even with the screen off. Keep
-   * the handler cheap; do not do heavy work here or it runs 60×/second.
+   * hidden page). Deliberately unthrottled, which is the ONLY thing separating
+   * it from the `progress` state: that one is latched to whole-percent changes,
+   * so a caller needing sub-percent resolution has to come through here.
+   *
+   * Nothing in this repo passes one today (`use-continuous-reader` and
+   * `tts-player` are the only two call sites, and neither does) — it is an
+   * extension point, not a load-bearing input. Keep any handler cheap anyway; it
+   * runs ~60×/second while the screen is on.
    */
   onProgress?: (progress: number) => void
   onComplete?: () => void
@@ -157,11 +162,17 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       // the next unit's blob is already local — 'auto' lets the element decode
       // its head immediately so the swap at `ended` is inaudible.
       element.preload = 'auto'
-      // The authoritative progress clock. Unlike requestAnimationFrame this
-      // keeps firing (~4Hz) while the page is hidden, which is the only reason
-      // background prefetch keeps being evaluated with the screen off. Attached
-      // once for the element's whole life — no per-unit add/remove — so a src
-      // swap can never drop it mid-article.
+      // The authoritative progress clock. requestAnimationFrame is frozen while
+      // the page is hidden, so this (~4Hz) is the only thing that keeps the
+      // `progress` / `currentTime` STATE moving with the screen off — the whole
+      // scenario this change exists for. Concretely: the reader's media-session
+      // `previoustrack` handler picks restart-vs-previous-track from
+      // `playback.currentTime` (RESTART_THRESHOLD_SECONDS in
+      // lib/reader/media-session-tracks), and a lock-screen or headset button
+      // press is by definition a hidden-page event — with rAF alone that
+      // decision would be made from a minutes-stale elapsed value, and the bar
+      // would jump on return. Attached once for the element's whole life — no
+      // per-unit add/remove — so a src swap can never drop it mid-article.
       element.addEventListener('timeupdate', () => emitProgressRef.current())
       document.body.appendChild(element)
       audioElementRef.current = element
@@ -198,8 +209,13 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     elementUnlockedRef.current = true
     try {
       const attempt = element.play?.()
-      element.pause?.()
+      // Swallow BEFORE pausing, not after: `pause()` is exactly what the `catch`
+      // below is here for (older engines throw synchronously), and a throw
+      // between the two statements would leave the `play()` promise — which
+      // rejects as a matter of course here — with no handler at all, surfacing as
+      // an unhandledrejection.
       void attempt?.catch?.(() => {})
+      element.pause?.()
     } catch {
       // Older engines throw synchronously instead of rejecting; either way an
       // unlock that fails must never surface to the user.
@@ -322,10 +338,13 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
    * Progress has two clocks (see the change's design.md):
    *   - `timeupdate` (~4Hz) is the AUTHORITATIVE one, because it keeps firing
    *     while the page is hidden. That is the whole point of this change: phone
-   *     screen off, reader playing in the background. `use-continuous-reader`
-   *     evaluates its prefetch threshold from `onProgress`, so a progress
-   *     stream that dies with the page would stall the prefetch ladder and
-   *     starve the reader at a section boundary.
+   *     screen off, reader playing in the background. rAF stops there, so
+   *     without this clock `progress` and `currentTime` would freeze for the
+   *     entire hidden stretch and jump on return — and the reader's
+   *     media-session `previoustrack` handler, which reads `currentTime` to
+   *     choose restart-vs-previous-track, would answer a lock-screen press from
+   *     a stale value. (The prebuffer ladder is NOT a consumer: it is keyed on
+   *     `isPlaying`/`isBuffering`, not on progress.)
    *   - `requestAnimationFrame` is cosmetic: it does not tick while hidden, and
    *     exists only to move the reader bar smoothly between timeupdates.
    *
@@ -337,6 +356,16 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     // Also the "stop emitting" gate: after pause/stop/completion the element
     // keeps its `timeupdate` listener attached, but this guard makes it inert.
     if (!isPlayingRef.current || !element) return
+
+    // Only the unit the element is ACTUALLY loaded with may be measured. Between
+    // `ended` for unit N and the `src` swap inside `playChunk(N+1)` there is a
+    // gap — as long as N+1's synthesis takes — where `completedChars` has already
+    // absorbed unit N and `currentChunkIndexRef` already points at N+1, while the
+    // element still holds unit N's exhausted media (`currentTime === duration`).
+    // Reading that reports "unit N+1 is 100% played", so progress spikes to the
+    // end of N+1 and then falls back the instant the swap rewinds the element.
+    // Progress must never go backwards, so the gap emits nothing at all.
+    if (loadedUnitIndexRef.current !== currentChunkIndexRef.current) return
 
     // duration is NaN until the element has metadata, and the element rewinds to
     // 0 on every src swap — so an unknown duration reads as "just started"
@@ -353,8 +382,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     const totalProgress = (currentProgress / totalCharsRef.current) * 100
 
     const clamped = Math.min(totalProgress, 100)
-    // Emit progress to callers EVERY frame — the reader's prefetch threshold
-    // depends on it.
+    // Callers see EVERY tick: this is the hook's only unthrottled view of
+    // progress, deliberately outside the whole-percent latch guarding setState
+    // below.
     onProgress?.(clamped)
 
     // Only re-render (setState) when the rounded percent actually changes,
@@ -423,9 +453,10 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
        * The animation-frame handle is cancelled AND nulled: `runProgressFrame`
        * early-returns without clearing it, so a stale handle left here would make
        * the next `play()` skip re-arming the loop
-       * (`if (!animationFrameRef.current)`) and `onProgress` would stay dead for
-       * the rest of the session — which now also starves the continuous reader's
-       * prefetch threshold.
+       * (`if (!animationFrameRef.current)`). The `timeupdate` clock would carry
+       * on, so progress would not die outright — but the smooth clock would be
+       * gone for the rest of the session and the reader bar would lurch forward
+       * ~4×/second instead of gliding.
        */
       const stopWithError = (error: Error) => {
         isPlayingRef.current = false
@@ -493,6 +524,21 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         objectUrlsRef.current.has(index)
 
       if (!resuming) {
+        // The previous unit is abandoned the moment this branch commits to a new
+        // one — and it stays abandoned across the `await` below, which can be
+        // arbitrarily long when this unit is not buffered yet. Without a detach
+        // here the OLD unit's `onended`/`onerror` stay live for that whole
+        // window, and every one of their guards (generation, abort signal,
+        // `isPlaying`) still passes: a stray element `error` would run
+        // `failUnit(previous)` a SECOND time, double-counting that unit's
+        // characters into `completedChars` for the rest of the session and
+        // issuing a duplicate `playChunk` for this index. This is the case
+        // `detachUnitHandlers` exists to make structurally impossible. The
+        // resuming branch deliberately skips it: there the element keeps its
+        // `src` and position, and the handlers below are simply re-pointed at
+        // the same unit.
+        detachUnitHandlers()
+
         let url = objectUrlsRef.current.get(index)
 
         if (!url) {

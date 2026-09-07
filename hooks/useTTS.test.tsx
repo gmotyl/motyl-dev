@@ -344,10 +344,12 @@ describe('useTTS media-element playback', () => {
  *
  * - `timeupdate` — the AUTHORITATIVE one. It keeps firing while the page is
  *   hidden, which is exactly the scenario this whole change exists for (screen
- *   off, reader playing in the background). `use-continuous-reader` drives its
- *   prefetch threshold off `onProgress`, so if progress died with the page the
- *   prefetch ladder would stop evaluating and the reader would starve at a
- *   section boundary.
+ *   off, reader playing in the background). rAF is frozen there, so without this
+ *   clock the `progress` / `currentTime` STATE would freeze for the whole hidden
+ *   stretch and jump on return — and the reader's media-session `previoustrack`
+ *   handler, which reads `currentTime` to choose restart-vs-previous-track,
+ *   would answer a lock-screen press from a stale elapsed value. (The prebuffer
+ *   ladder is not a consumer: it is keyed on `isPlaying`/`isBuffering`.)
  * - `requestAnimationFrame` — cosmetic only. It does NOT tick while hidden; it
  *   exists so the reader bar moves smoothly at 60Hz while the screen is on.
  *
@@ -440,8 +442,9 @@ describe('useTTS progress clocks', () => {
     await flushFrame()
 
     expect(renderCount).toBe(rendersAtThreePercent)
-    // onProgress, however, fired for every single tick: the reader's prefetch
-    // threshold needs continuous progress, not one sample per percent.
+    // onProgress, however, fired for every single tick: it is the hook's only
+    // unthrottled view of progress, deliberately outside the whole-percent latch
+    // that guards setState.
     expect(onProgress).toHaveBeenCalledTimes(4)
     expect(onProgress.mock.calls.map(([p]) => Math.round((p as number) * 100) / 100))
       .toEqual([3, 3.02, 3.04, 3.04])
@@ -914,9 +917,9 @@ describe('useTTS media-element failure paths', () => {
     await waitFor(() => expect(srcAssignments).toHaveLength(2))
 
     // A frame handle left behind by the give-up path would make playChunk's
-    // `if (!animationFrameRef.current)` skip re-arming the loop, killing
-    // onProgress — and with it the reader's prefetch threshold — for the rest
-    // of the session.
+    // `if (!animationFrameRef.current)` skip re-arming the loop, so the smooth
+    // clock would be gone for the rest of the session and the reader bar would
+    // lurch forward at the ~4Hz timeupdate rate instead of gliding.
     expect(frameCallbacks).not.toHaveLength(0)
     await flushFrame()
     expect(onProgress).toHaveBeenCalled()
@@ -976,9 +979,11 @@ describe('useTTS object-URL lifecycle and progress accumulation', () => {
     await emitTimeUpdate(0.4)
 
     // 10 of 40 characters are behind us and the new unit counts as 0% until its
-    // duration is known. A NaN here would poison the continuous reader's
-    // prefetch threshold (every comparison against it is false), silently
-    // stopping the prefetch ladder.
+    // duration is known. A NaN would propagate into `progress` AND `currentTime`
+    // (derived from it), and every comparison against NaN is false — so the bar
+    // would stall and the reader's media-session `previoustrack` handler would
+    // read `elapsed > RESTART_THRESHOLD_SECONDS` as false forever, always
+    // stepping to the previous track instead of restarting the current one.
     const emitted = onProgress.mock.calls.at(-1)?.[0] as number
     expect(Number.isNaN(emitted)).toBe(false)
     expect(emitted).toBeCloseTo(25, 5)
@@ -1019,6 +1024,67 @@ describe('useTTS object-URL lifecycle and progress accumulation', () => {
     expect(await progressNow()).toBeCloseTo(30, 5)
   })
 
+  it('unlocks the element only once, not again on resume', async () => {
+    const { result } = renderHook(() => useTTS('Hello world.'))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    // The in-gesture unlock poke is a play() immediately followed by a pause(),
+    // on an element that has no source yet — so nothing is audible.
+    expect(audioPause).toHaveBeenCalledTimes(1)
+
+    mediaCurrentTime = 0.4
+    act(() => {
+      result.current.pause()
+    })
+    expect(audioPause).toHaveBeenCalledTimes(2)
+
+    audioPlay.mockClear()
+    await act(async () => {
+      await result.current.play()
+    })
+    await flushMicrotasks()
+    await waitFor(() => expect(audioPlay).toHaveBeenCalled())
+
+    // Resume must NOT poke again. WebKit's per-element unlock never expires, so
+    // the latch is pure win — and by now the element is LOADED, so a second
+    // play()+pause() pair would emit an audible blip of the current unit on a
+    // real device before settling back into the resume.
+    expect(audioPause).toHaveBeenCalledTimes(2)
+    expect(currentAudio().getAttribute('src')).toBe(srcAssignments[0])
+    expect(srcAssignments).toHaveLength(1)
+  })
+
+  it('routes timeupdate to the latest onProgress after a rerender', async () => {
+    const first = vi.fn()
+    const second = vi.fn()
+    const { result, rerender } = renderHook(
+      ({ onProgress }: { onProgress: (progress: number) => void }) =>
+        useTTS('irrelevant content', { units: ['a'.repeat(10)], onProgress }),
+      { initialProps: { onProgress: first } }
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    // The `timeupdate` listener is attached ONCE, at element creation, so it can
+    // only reach the current callback through a ref. Closing over `emitProgress`
+    // directly would pin the identity that existed at mount and every later
+    // `onProgress` would be dead.
+    rerender({ onProgress: second })
+    first.mockClear()
+    mediaDuration = 2
+    await emitTimeUpdate(1)
+
+    expect(second).toHaveBeenCalledWith(50)
+    expect(first).not.toHaveBeenCalled()
+  })
+
   it('leaves the element src in place when paused', async () => {
     const { result } = renderHook(() => useTTS('Hello world.'))
 
@@ -1037,5 +1103,117 @@ describe('useTTS object-URL lifecycle and progress accumulation', () => {
     // and car head unit are attached to.
     expect(currentAudio().getAttribute('src')).toBe(srcAssignments[0])
     expect(currentAudio().getAttribute('src')).toMatch(/^blob:/)
+  })
+})
+
+/**
+ * The window between `ended` firing for unit N and unit N+1 actually loading.
+ *
+ * `playChunk(N+1)` cannot reassign the element's handlers or its `src` until its
+ * own synthesis resolves, so for the whole length of that await the element is
+ * still carrying unit N's handlers AND unit N's finished media — while the
+ * hook's own bookkeeping (`completedChars`, `currentChunkIndex`) has already
+ * moved on to N+1. Both nits below live in exactly that gap.
+ */
+describe('useTTS starved unit boundary', () => {
+  const units = ['a'.repeat(10), 'b'.repeat(30)]
+
+  // Park unit 1's synthesis so playChunk(1) suspends mid-await, leaving the
+  // element loaded with the finished unit 0.
+  const parkSecondUnit = () => {
+    let release: ((buffer: ArrayBuffer) => void) | undefined
+    const parked = new Promise<ArrayBuffer>((resolve) => { release = resolve })
+    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) =>
+      text === units[1] ? parked : new ArrayBuffer(8)
+    )
+    return async () => {
+      await act(async () => {
+        release?.(new ArrayBuffer(8))
+        for (let i = 0; i < 8; i += 1) await Promise.resolve()
+      })
+    }
+  }
+
+  it('does not double-count a unit when a stray error fires during the next unit\'s synthesis', async () => {
+    const releaseSecondUnit = parkSecondUnit()
+    const onProgress = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units, onProgress })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    // Unit 0 ends; playChunk(1) suspends on the parked synthesis.
+    await endCurrentUnit()
+    expect(srcAssignments).toHaveLength(1)
+
+    // Structural, not merely guarded: unit 0 is abandoned the moment the chain
+    // commits to unit 1, so its handlers cannot run at all. Unit 0's `onerror`
+    // guards (generation, abort signal, isPlaying) ALL still pass here, so only
+    // the detach stops it.
+    expect(currentAudio().onerror).toBeNull()
+    expect(currentAudio().onended).toBeNull()
+
+    // The stray event: the element gives up on the media it is still holding
+    // (unit 0's) while unit 1 is being synthesized.
+    await failCurrentUnitInElement()
+    await releaseSecondUnit()
+
+    await waitFor(() => expect(result.current.currentChunkIndex).toBe(1))
+    // Exactly one start for unit 1 — a live stale `onerror` would run failUnit(0)
+    // a second time and issue a duplicate playChunk(1).
+    expect(srcAssignments).toHaveLength(2)
+
+    // Unit 0's 10 of 40 characters, counted once. Counted twice it reads 50%,
+    // and every later percentage in the session stays inflated by that unit.
+    onProgress.mockClear()
+    await flushFrame()
+    expect(onProgress.mock.calls.at(-1)?.[0] as number).toBeCloseTo(25, 5)
+  })
+
+  it('does not emit a progress spike while the next unit is still being synthesized', async () => {
+    const releaseSecondUnit = parkSecondUnit()
+    const emitted: number[] = []
+    const onProgress = vi.fn((progress: number) => { emitted.push(progress) })
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units, onProgress })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    mediaDuration = 2
+    await emitTimeUpdate(1)
+    await emitTimeUpdate(2)
+
+    // Unit 0 ends. `completedChars` absorbs its 10 chars and `currentChunkIndex`
+    // moves to 1 immediately, but the element keeps unit 0's exhausted media
+    // (currentTime === duration) for as long as unit 1's synthesis takes.
+    await endCurrentUnit()
+    expect(srcAssignments).toHaveLength(1)
+
+    // Both clocks read that stale element during the gap. Ungated they compute
+    // "unit 1 is 100% done" (10 + 30 * 1) / 40 — a spike to 100% that then falls
+    // back to 25% the instant the src swap rewinds the element.
+    await flushFrame()
+    await emitTimeUpdate(2)
+    await flushFrame()
+
+    await releaseSecondUnit()
+    await waitFor(() => expect(srcAssignments).toHaveLength(2))
+    await flushFrame()
+
+    // Nothing above the honest 25% ever escaped, and progress never went
+    // backwards.
+    expect(Math.max(...emitted)).toBeCloseTo(25, 5)
+    emitted.forEach((progress, i) => {
+      if (i > 0) expect(progress).toBeGreaterThanOrEqual(emitted[i - 1])
+    })
+    expect(emitted.at(-1)).toBeCloseTo(25, 5)
   })
 })
