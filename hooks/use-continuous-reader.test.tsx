@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from '@testing-library/react'
+import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { sectionKey, type SpeechSection } from '@/lib/tts/speech'
@@ -24,6 +24,15 @@ const ttsMock = vi.hoisted(() => {
     resume: vi.fn().mockResolvedValue(undefined),
   }
 
+  // Named binding so `reset()` below can put it back; see the comment there.
+  const defaultUseTTS = (content: string, options: unknown) => {
+    const normalizedOptions = options as Record<string, unknown>
+    latestOptions = normalizedOptions
+    calls.push({ content, options: normalizedOptions })
+    return playback
+  }
+  const useTTS = vi.fn(defaultUseTTS)
+
   return {
     calls,
     playback,
@@ -36,13 +45,14 @@ const ttsMock = vi.hoisted(() => {
       playback.pause.mockClear()
       playback.stop.mockClear()
       playback.resume.mockClear()
+      // REINSTATE the default, do not merely clear it: a test that swaps in its
+      // own implementation (the fresh-playback-object one below) would leak that
+      // into every test declared after it, because `mockClear()` wipes recorded
+      // calls but leaves the implementation in place.
+      useTTS.mockReset()
+      useTTS.mockImplementation(defaultUseTTS)
     },
-    useTTS: vi.fn((content: string, options: unknown) => {
-      const normalizedOptions = options as Record<string, unknown>
-      latestOptions = normalizedOptions
-      calls.push({ content, options: normalizedOptions })
-      return playback
-    }),
+    useTTS,
     get useActualTTS() {
       return useActualTTS
     },
@@ -81,6 +91,35 @@ const mediaSessionMock = vi.hoisted(() => {
 
 vi.mock('./use-media-session', () => ({
   useMediaSession: mediaSessionMock.useMediaSession,
+}))
+
+// The wake lock itself is exercised in `useWakeLock.test.tsx`; here it is a spy
+// so the reader's playback-scoped acquire/release can be asserted. The two
+// callbacks keep a STABLE identity across renders, exactly as the real hook's
+// `useCallback`-wrapped ones do — the reader hangs an effect off them, so a
+// fresh function per render would re-request the lock on every progress tick.
+const wakeLockMock = vi.hoisted(() => {
+  const requestWakeLock = vi.fn().mockResolvedValue(undefined)
+  const releaseWakeLock = vi.fn().mockResolvedValue(undefined)
+
+  return {
+    requestWakeLock,
+    releaseWakeLock,
+    reset: () => {
+      requestWakeLock.mockClear()
+      releaseWakeLock.mockClear()
+    },
+    useWakeLock: vi.fn(() => ({
+      isSupported: true,
+      isActive: false,
+      requestWakeLock,
+      releaseWakeLock,
+    })),
+  }
+})
+
+vi.mock('./useWakeLock', () => ({
+  useWakeLock: wakeLockMock.useWakeLock,
 }))
 
 interface MediaSessionCall {
@@ -213,22 +252,58 @@ const sharedLineItem: SpeechSection = {
   key: sectionKey('shared', 0),
 }
 
+// jsdom leaves `HTMLMediaElement.play()` / `.pause()` unimplemented: calling
+// either logs "Not implemented: HTMLMediaElement's play() method" to the virtual
+// console instead of doing anything. `useTTS` creates a real <audio> element on
+// mount and unlocks it (play() then pause()) inside the user gesture, so every
+// reader test that starts playback printed that noise to stderr and buried real
+// failures. Same descriptor-swap shape as the fuller harness in `useTTS.test.tsx`.
+const mediaProto = HTMLMediaElement.prototype
+let patchedMediaDescriptors: Array<[string, PropertyDescriptor | undefined]> = []
+
+const installMediaElementStubs = () => {
+  const stubs: Array<[string, unknown]> = [
+    ['play', vi.fn(() => Promise.resolve())],
+    ['pause', vi.fn()],
+  ]
+
+  for (const [name, value] of stubs) {
+    patchedMediaDescriptors.push([name, Object.getOwnPropertyDescriptor(mediaProto, name)])
+    Object.defineProperty(mediaProto, name, { configurable: true, writable: true, value })
+  }
+}
+
+const removeMediaElementStubs = () => {
+  for (const [name, descriptor] of patchedMediaDescriptors) {
+    if (descriptor) Object.defineProperty(mediaProto, name, descriptor)
+    else delete (mediaProto as unknown as Record<string, unknown>)[name]
+  }
+  patchedMediaDescriptors = []
+}
+
 describe('useContinuousReader', () => {
   afterEach(() => {
+    // Unmount BEFORE restoring the prototype: the hook's teardown pauses the
+    // element, and jsdom's own pause() is the unimplemented stub that logs.
+    cleanup()
+    removeMediaElementStubs()
     vi.restoreAllMocks()
   })
 
   beforeEach(() => {
+    installMediaElementStubs()
     localStorage.clear()
     localStorage.setItem(TTS_VOICE_STORAGE_KEY, 'pl-PL-ZofiaNeural')
     ttsMock.reset()
-    ttsMock.useTTS.mockClear()
     ttsMock.useActualTTS = false
     ttsMock.playback.isPlaying = false
     ttsMock.playback.isBuffering = false
     ttsMock.playback.currentTime = 0
+    ttsMock.playback.progress = 0
     mediaSessionMock.reset()
     mediaSessionMock.useMediaSession.mockClear()
+    wakeLockMock.reset()
+    wakeLockMock.useWakeLock.mockClear()
     ttsClientMock.synthesizeSpeech.mockReset()
     ttsClientMock.prefetchSpeech.mockReset()
   })
@@ -1309,5 +1384,129 @@ describe('useContinuousReader', () => {
 
     act(() => latestMediaSession().handlers.pause())
     expect(ttsMock.playback.pause).toHaveBeenCalledOnce()
+  })
+
+  describe('screen wake lock', () => {
+    // Drive the mocked playback into the playing state the way the OS would see
+    // it: flip the flag the reader reads, then let it render.
+    const setPlaying = (
+      playing: boolean,
+      rerender: (props: { items: SpeechSection[] }) => void,
+      items: SpeechSection[]
+    ) => {
+      ttsMock.playback.isPlaying = playing
+      act(() => rerender({ items }))
+    }
+
+    it('requests a screen wake lock when playback starts', async () => {
+      const items = [makeItem(0)]
+      const { result, rerender } = renderReader(items)
+
+      // Idle reader: nothing is holding the screen awake.
+      expect(wakeLockMock.requestWakeLock).not.toHaveBeenCalled()
+
+      act(() => result.current.play())
+      await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+      setPlaying(true, rerender, items)
+
+      expect(wakeLockMock.requestWakeLock).toHaveBeenCalledOnce()
+    })
+
+    it('releases the wake lock when playback pauses', async () => {
+      const items = [makeItem(0)]
+      const { result, rerender } = renderReader(items)
+
+      act(() => result.current.play())
+      await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+      setPlaying(true, rerender, items)
+      expect(wakeLockMock.releaseWakeLock).not.toHaveBeenCalled()
+
+      act(() => result.current.pause())
+      setPlaying(false, rerender, items)
+
+      expect(wakeLockMock.releaseWakeLock).toHaveBeenCalledOnce()
+      expect(wakeLockMock.requestWakeLock).toHaveBeenCalledOnce()
+    })
+
+    it('releases the wake lock on unmount', async () => {
+      const items = [makeItem(0)]
+      const { result, rerender, unmount } = renderReader(items)
+
+      act(() => result.current.play())
+      await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+      setPlaying(true, rerender, items)
+      // Assert the ACQUIRE, not just the release: unmount tears down the
+      // playback effect whether or not it ever requested anything, so a bare
+      // "released on unmount" assertion still passes with the whole feature
+      // deleted. Pinning the request first is what gives this test teeth.
+      expect(wakeLockMock.requestWakeLock).toHaveBeenCalledOnce()
+      expect(wakeLockMock.releaseWakeLock).not.toHaveBeenCalled()
+
+      act(() => unmount())
+
+      expect(wakeLockMock.releaseWakeLock).toHaveBeenCalledOnce()
+    })
+
+    it('does not re-request the wake lock on progress-driven re-renders', async () => {
+      // `useTTS` returns a fresh playback object every progress tick in
+      // production; mirror that here so the effect cannot be keyed on the
+      // playback object's identity and still pass.
+      ttsMock.useTTS.mockImplementation(() => ({ ...ttsMock.playback }))
+
+      const items = [makeItem(0)]
+      const { result, rerender } = renderReader(items)
+
+      act(() => result.current.play())
+      await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+      setPlaying(true, rerender, items)
+      expect(wakeLockMock.requestWakeLock).toHaveBeenCalledOnce()
+
+      // The reader re-renders on every 1% of progress; none of those may touch
+      // the lock it is already holding.
+      for (let percent = 1; percent <= 5; percent += 1) {
+        ttsMock.playback.progress = percent
+        ttsMock.playback.currentTime = percent
+        act(() => rerender({ items }))
+      }
+
+      expect(result.current.progress).toBe(5)
+      expect(wakeLockMock.requestWakeLock).toHaveBeenCalledOnce()
+      expect(wakeLockMock.releaseWakeLock).not.toHaveBeenCalled()
+    })
+
+    it('keeps the wake lock held across a section handoff', async () => {
+      const items = [makeItem(0), makeItem(1)]
+      const { result, rerender } = renderReader(items)
+
+      act(() => result.current.play())
+      await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+      setPlaying(true, rerender, items)
+      expect(wakeLockMock.requestWakeLock).toHaveBeenCalledOnce()
+
+      // Section 0's last unit finishes. `useTTS` drops `isPlaying` in the same
+      // breath as it reports completion, and the reader can only QUEUE the next
+      // section (`pendingStartRef` + position update) — playback resumes in a
+      // later commit. This is the true -> false -> true window, once per
+      // section, and it must not touch the lock: on the very scenario this
+      // feature exists for (screen off, page hidden) a re-request would be
+      // rejected with NotAllowedError and log an error per section.
+      ttsMock.playback.isPlaying = false
+      act(() => {
+        ;(ttsMock.getLatestOptions()?.onComplete as (() => void) | undefined)?.()
+      })
+
+      // The reader has moved on to section 1 and asked it to play...
+      expect(result.current.currentIndex).toBe(1)
+      await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledTimes(2))
+      // ...and while it did, the screen stayed claimed.
+      expect(wakeLockMock.releaseWakeLock).not.toHaveBeenCalled()
+
+      // Audio is running again on the next section: still the SAME lock, no
+      // second acquire.
+      setPlaying(true, rerender, items)
+
+      expect(wakeLockMock.releaseWakeLock).not.toHaveBeenCalled()
+      expect(wakeLockMock.requestWakeLock).toHaveBeenCalledOnce()
+    })
   })
 })

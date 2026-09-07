@@ -2,7 +2,6 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import Header from '@/components/header'
 import Footer from '@/components/footer'
-import { WakeLockToggle } from '@/components/wake-lock-toggle'
 import { ArticleExternalLinks } from '@/components/article-external-links'
 import { HashtagsList } from '@/components/hashtags-list'
 import { ArticleScrollHandler } from '@/components/article-scroll-handler'
@@ -105,13 +104,10 @@ export default async function ContentPage({ article, prevArticle, nextArticle }:
             <div className="mb-4">
               <h1 className="text-4xl font-bold leading-tight" style={{ viewTransitionName: vtName(article.slug) }}>{article.title}</h1>
             </div>
-            <div className="flex justify-between items-center mb-2">
-              <p className="text-muted-foreground">
-                Published on{' '}
-                {formatDate(article.publishedAt)}
-              </p>
-              <WakeLockToggle />
-            </div>
+            <p className="text-muted-foreground mb-2">
+              Published on{' '}
+              {formatDate(article.publishedAt)}
+            </p>
             <HashtagsList
               hashtags={article.hashtags}
               maxVisible={3}

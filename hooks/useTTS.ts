@@ -26,10 +26,17 @@ export interface UseTTSOptions {
    */
   units?: string[]
   /**
-   * Fired on EVERY requestAnimationFrame tick during playback (~60Hz) with the
-   * 0–100 progress percent — intentionally NOT throttled, so the continuous
-   * reader's prefetch threshold sees continuous progress. Keep the handler
-   * cheap; do not do heavy work here or it runs 60×/second.
+   * Fired on EVERY progress tick during playback with the 0–100 progress
+   * percent — that is every animation frame while the page is visible (~60Hz)
+   * AND every element `timeupdate` (~4Hz, and the only one that survives a
+   * hidden page). Deliberately unthrottled, which is the ONLY thing separating
+   * it from the `progress` state: that one is latched to whole-percent changes,
+   * so a caller needing sub-percent resolution has to come through here.
+   *
+   * Nothing in this repo passes one today (`use-continuous-reader` and
+   * `tts-player` are the only two call sites, and neither does) — it is an
+   * extension point, not a load-bearing input. Keep any handler cheap anyway; it
+   * runs ~60×/second while the screen is on.
    */
   onProgress?: (progress: number) => void
   onComplete?: () => void
@@ -58,27 +65,11 @@ const BUFFER_AHEAD = 3
 // no network) and surfaced as a real stop + onError.
 const MAX_CONSECUTIVE_CHUNK_FAILURES = 3
 
-/**
- * Deliberate platform carve-out: Apple/WebKit browsers do NOT get the
- * media-element playback path.
- *
- * `createMediaStreamDestination` exists in Safari, so feature detection alone
- * would happily route iOS into `<audio srcObject=MediaStream>` — a path with a
- * long history of rendering no sound at all for Web-Audio-originated
- * MediaStreams on iOS Safari. Because the routing is exclusive (the source is
- * connected to the stream destination INSTEAD of `audioContext.destination`),
- * taking it on WebKit would be a straight regression: silence where direct
- * output works today. WebKit therefore keeps the plain
- * `audioContext.destination` path and simply forgoes the background-playback
- * exemption; only non-WebKit (the Chrome-for-Android target) streams.
- *
- * `navigator.vendor === 'Apple Computer, Inc.'` is the check because it is
- * stable across Apple browsers AND correctly catches Chrome/Firefox on iOS,
- * which are WebKit underneath and share the same defect. SSR-safe: this module
- * is imported by a Next.js client component that still renders on the server.
- */
-const isWebKitBrowser = (): boolean =>
-  typeof navigator !== 'undefined' && navigator.vendor === 'Apple Computer, Inc.'
+// `lib/tts/client` returns MP3 bytes straight from edge-tts. Nothing in the
+// reader needs decoded samples (no runtime playback-rate or EQ feature), so the
+// bytes are handed to the media element as-is, correctly typed, and the browser
+// decodes them on its own audio thread.
+const AUDIO_MIME_TYPE = 'audio/mpeg'
 
 export function useTTS(content: string, options: UseTTSOptions = {}) {
   const { voice, units, onProgress, onComplete, onError } = options
@@ -99,25 +90,26 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   })
 
   // Refs for audio management
-  const audioContextRef = useRef<AudioContext | null>(null)
-  // Stream destination + <audio> element that carry the graph's output. Null
-  // when the browser has no createMediaStreamDestination, when it is WebKit
-  // (see isWebKitBrowser), or once the element has refused to start — playback
-  // then goes straight to audioContext.destination.
-  const streamDestinationRef = useRef<MediaStreamAudioDestinationNode | null>(null)
+  //
+  // THE output device: one long-lived <audio> element per hook instance whose
+  // `src` is swapped per speech unit. A real (URL-backed) media element is what
+  // earns Chrome for Android the media treatment — notification, lockscreen,
+  // AVRCP metadata in the car — and, crucially, the background-media exemption
+  // that keeps the main thread alive with the screen off. A MediaStream-backed
+  // element gets none of that, which is why the Web Audio carrier is gone.
   const audioElementRef = useRef<HTMLAudioElement | null>(null)
-  // Latches once the element's play() has rejected. The element stays in the
-  // DOM (unmount tears it down) but is never driven again.
-  const mediaElementUnusableRef = useRef(false)
-  const currentSourceRef = useRef<AudioBufferSourceNode | null>(null)
+  // Whether this element has already been poked inside a user gesture (see
+  // `unlockElementForGesture`). Once true it stays true for the element's whole
+  // life — WebKit's per-element unlock does not expire.
+  const elementUnlockedRef = useRef(false)
+  // Index of the unit currently loaded into the element, so a mid-unit resume
+  // can be told apart from a fresh unit start.
+  const loadedUnitIndexRef = useRef<number | null>(null)
   const chunksRef = useRef<string[]>([])
   const charCountsRef = useRef<number[]>([])
   const totalCharsRef = useRef<number>(0)
   const completedCharsRef = useRef<number>(0)
-  const currentChunkStartTimeRef = useRef<number>(0)
-  const currentChunkDurationRef = useRef<number>(0)
   const pauseOffsetRef = useRef<number>(0)
-  const currentChunkBufferRef = useRef<AudioBuffer | null>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
   const requestGenerationRef = useRef(0)
   const animationFrameRef = useRef<number | null>(null)
@@ -127,15 +119,26 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   // Last integer percent emitted to setState, so progress-driven re-renders fire
   // at most ~1/percent instead of on every ~60fps rAF tick (hover flicker fix).
   const lastEmittedPctRef = useRef(-1)
-  // Consecutive in-chunk synthesis failures within the current play session.
-  // Reset whenever a chunk's audio is actually obtained. Bounds the auto-skip
-  // below: a systemic outage (no network, edge-tts fully down) must still
-  // surface as a stop + onError instead of racing silently through every
+  // Consecutive unreadable units within the current play session — synthesis
+  // that never produced bytes, or bytes the element refused. Reset when a unit
+  // actually plays to its end (and at the start of a play session), NOT when
+  // synthesis merely resolves. Bounds the auto-skip below: a systemic outage
+  // (no network, edge-tts fully down, a decoder that rejects everything) must
+  // still surface as a stop + onError instead of racing silently through every
   // remaining chunk.
   const consecutiveFailuresRef = useRef(0)
+  // The element's `timeupdate` handler is attached once, at element creation,
+  // so it has to reach the CURRENT progress emitter — whose identity changes
+  // with `onProgress` — instead of closing over the one that existed at mount.
+  const emitProgressRef = useRef<() => void>(() => {})
 
-  // Buffer cache: pre-fetched AudioBuffers keyed by chunk index
-  const bufferCacheRef = useRef<Map<number, AudioBuffer>>(new Map())
+  // Buffer cache: pre-fetched MP3 blobs keyed by chunk index. An entry is
+  // dropped once its object URL exists — the URL then owns the bytes.
+  const bufferCacheRef = useRef<Map<number, Blob>>(new Map())
+  // Live `blob:` object URLs keyed by chunk index. Every URL in here MUST be
+  // revoked eventually (unit consumed, stop(), unmount) or a long Read All News
+  // session leaks the whole article's audio.
+  const objectUrlsRef = useRef<Map<number, string>>(new Map())
   // Track in-flight fetches to avoid duplicate requests
   const fetchingRef = useRef<Set<number>>(new Set())
 
@@ -145,91 +148,137 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     abortControllerRef.current = null
   }, [])
 
-  const getAudioContext = useCallback(() => {
-    if (!audioContextRef.current) {
-      const audioContext: AudioContext =
-        new (window.AudioContext || (window as any).webkitAudioContext)()
-      audioContextRef.current = audioContext
-
-      // Mobile browsers exempt a backgrounded page from tab freezing and
-      // timer/network throttling on the basis of MEDIA ELEMENT playback — a
-      // running AudioContext does not qualify. Route the graph through a
-      // MediaStreamAudioDestinationNode into a real <audio> element so the
-      // synthesis socket and chunk-advance chain survive a screen-off phone.
-      // The element is created imperatively (never rendered by React) and torn
-      // down on unmount.
-      // isWebKitBrowser() is a deliberate carve-out, not a feature test — see
-      // its doc comment. Apple browsers stay on audioContext.destination.
-      if (typeof audioContext.createMediaStreamDestination === 'function' && !isWebKitBrowser()) {
-        const streamDestination = audioContext.createMediaStreamDestination()
-        streamDestinationRef.current = streamDestination
-
-        const element = document.createElement('audio')
-        // playsInline is not declared on HTMLMediaElement in lib.dom, but iOS
-        // needs it to keep playback out of the native fullscreen player.
-        ;(element as HTMLAudioElement & { playsInline: boolean }).playsInline = true
-        element.controls = false
-        // The element is fed by a MediaStream, never by a URL — nothing to
-        // preload, and 'none' avoids a pointless network state machine.
-        element.preload = 'none'
-        element.srcObject = streamDestination.stream
-        document.body.appendChild(element)
-        audioElementRef.current = element
-      }
+  // Create (once) the single element every unit plays through. Created
+  // imperatively rather than rendered by React so nothing about the reader's
+  // render tree can remount it mid-article and drop the OS media session.
+  const getAudioElement = useCallback((): HTMLAudioElement => {
+    if (!audioElementRef.current) {
+      const element = document.createElement('audio')
+      // playsInline is not declared on HTMLMediaElement in lib.dom, but iOS
+      // needs it to keep playback out of the native fullscreen player.
+      ;(element as HTMLAudioElement & { playsInline: boolean }).playsInline = true
+      element.controls = false
+      // Unlike the old MediaStream carrier there IS something to load here, and
+      // the next unit's blob is already local — 'auto' lets the element decode
+      // its head immediately so the swap at `ended` is inaudible.
+      element.preload = 'auto'
+      // The authoritative progress clock. requestAnimationFrame is frozen while
+      // the page is hidden, so this (~4Hz) is the only thing that keeps the
+      // `progress` / `currentTime` STATE moving with the screen off — the whole
+      // scenario this change exists for. Concretely: the reader's media-session
+      // `previoustrack` handler picks restart-vs-previous-track from
+      // `playback.currentTime` (RESTART_THRESHOLD_SECONDS in
+      // lib/reader/media-session-tracks), and a lock-screen or headset button
+      // press is by definition a hidden-page event — with rAF alone that
+      // decision would be made from a minutes-stale elapsed value, and the bar
+      // would jump on return. Attached once for the element's whole life — no
+      // per-unit add/remove — so a src swap can never drop it mid-article.
+      element.addEventListener('timeupdate', () => emitProgressRef.current())
+      document.body.appendChild(element)
+      audioElementRef.current = element
+      elementUnlockedRef.current = false
     }
-    return audioContextRef.current
+    return audioElementRef.current
   }, [])
 
   /**
-   * The element could not start (autoplay policy / no user gesture, or a
-   * platform that will not render this MediaStream). Routing is EXCLUSIVE —
-   * the source is connected to the stream destination INSTEAD of
-   * `audioContext.destination` — so leaving it there means the graph renders
-   * into a MediaStream nobody consumes: total silence while `isPlaying` stays
-   * true, progress keeps advancing and chunks keep chaining. Recover audibility
-   * instead: re-wire the source that was just started to
-   * `audioContext.destination` and drop the element for the rest of this hook
-   * instance (later chunks then connect straight to the context destination).
-   * Background playback is lost, but the user hears the article.
+   * Spend the user gesture on the element, synchronously, before anything is
+   * awaited.
+   *
+   * WebKit (iOS Safari, and every iOS browser, since they all use it) gates
+   * `play()` on the *gesture task itself*: only a call made synchronously inside
+   * the handler — or a later call on an element that call already unlocked —
+   * is allowed. Our real per-unit `play()` happens after
+   * `await fetchAudioBlob(...)`, which is a different task, so without this poke
+   * the very first unit would reject with `NotAllowedError` and the spec's
+   * "Apple browsers are no longer carved out" would be a lie.
+   *
+   * Chrome for Android does NOT need this: its gate is *sticky* user activation,
+   * which persists for the document's lifetime, so the `ended`-driven chain,
+   * media-session `nexttrack` and resume-after-pause all pass on their own.
+   *
+   * The element has no source at this point, so nothing becomes audible; the
+   * immediate `pause()` keeps it that way if the engine did start something. The
+   * returned promise rejects here as a matter of course (`NotSupportedError` for
+   * the empty element, `AbortError` for the pause that interrupts it) and that
+   * rejection is deliberately swallowed — it is NOT the refused start that
+   * `playChunk` reports through `onError`.
    */
-  const fallBackToContextDestination = useCallback(
-    (source: AudioBufferSourceNode | null) => {
-      if (mediaElementUnusableRef.current) return
-      mediaElementUnusableRef.current = true
+  const unlockElementForGesture = useCallback((element: HTMLAudioElement) => {
+    if (elementUnlockedRef.current) return
+    elementUnlockedRef.current = true
+    try {
+      const attempt = element.play?.()
+      // Swallow BEFORE pausing, not after: `pause()` is exactly what the `catch`
+      // below is here for (older engines throw synchronously), and a throw
+      // between the two statements would leave the `play()` promise — which
+      // rejects as a matter of course here — with no handler at all, surfacing as
+      // an unhandledrejection.
+      void attempt?.catch?.(() => {})
+      element.pause?.()
+    } catch {
+      // Older engines throw synchronously instead of rejecting; either way an
+      // unlock that fails must never surface to the user.
+    }
+  }, [])
 
-      const streamDestination = streamDestinationRef.current
-      // Subsequent sources take the `?? audioContext.destination` branch.
-      streamDestinationRef.current = null
-      audioElementRef.current?.pause?.()
+  // Expose a unit's MP3 as a blob: URL, reusing the one it already has. Called
+  // as soon as a unit's audio lands (prefetch) so the source swap at `ended` is
+  // a local assignment with no network round-trip.
+  const ensureObjectUrl = useCallback((index: number, blob: Blob): string => {
+    const existing = objectUrlsRef.current.get(index)
+    if (existing) return existing
 
-      const audioContext = audioContextRef.current
-      const target = source ?? currentSourceRef.current
-      if (!audioContext || !target) return
+    const url = URL.createObjectURL(blob)
+    objectUrlsRef.current.set(index, url)
+    // The URL keeps the blob alive; holding the Blob too would double the
+    // retained audio for the whole buffered window.
+    bufferCacheRef.current.delete(index)
+    return url
+  }, [])
 
-      try {
-        if (streamDestination) target.disconnect(streamDestination)
-      } catch (_) { /* already disconnected */ }
-      try {
-        target.connect(audioContext.destination)
-      } catch (_) { /* source already ended */ }
-    },
-    []
-  )
+  /**
+   * Detach the current unit's `ended` / `error` handlers.
+   *
+   * Called wherever the unit in the element is abandoned (pause, stop, give-up,
+   * completion). Both handlers do check the generation and abort signal, but a
+   * *structural* detach is what actually makes a late event harmless: an `ended`
+   * that was already queued when the user hit pause would otherwise still run
+   * `completedChars += charCounts[index]` and silently inflate progress for the
+   * rest of the session. A handler that cannot run at all cannot be broken by a
+   * later refactor of those guards either.
+   */
+  const detachUnitHandlers = useCallback(() => {
+    const element = audioElementRef.current
+    if (!element) return
+    element.onended = null
+    element.onerror = null
+  }, [])
 
-  // Drive the <audio> element for `source`. A rejected play() is NOT harmless:
-  // with exclusive routing it means silence, so recover instead of swallowing.
-  const playAudioElement = useCallback(
-    (source: AudioBufferSourceNode | null) => {
-      if (mediaElementUnusableRef.current) return
-      const played = audioElementRef.current?.play?.()
-      void played?.catch?.(() => fallBackToContextDestination(source))
-    },
-    [fallBackToContextDestination]
-  )
+  const revokeAllObjectUrls = useCallback(() => {
+    objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
+    objectUrlsRef.current.clear()
+  }, [])
 
-  // Synthesize and decode a single chunk, returns AudioBuffer
-  const fetchAudioBuffer = useCallback(
-    async (text: string, signal: AbortSignal): Promise<AudioBuffer> => {
+  /**
+   * Revoke every object URL outside the live window [current, current +
+   * BUFFER_AHEAD]. Called AFTER the element's src has been swapped, so the URL
+   * being dropped is never the one the element is currently reading. This is
+   * what releases a consumed unit, and also what cleans up behind a backwards
+   * or long-distance `playFromUnit` jump.
+   */
+  const pruneObjectUrls = useCallback((currentIndex: number) => {
+    const keepUntil = currentIndex + BUFFER_AHEAD
+    objectUrlsRef.current.forEach((url, index) => {
+      if (index >= currentIndex && index <= keepUntil) return
+      URL.revokeObjectURL(url)
+      objectUrlsRef.current.delete(index)
+    })
+  }, [])
+
+  // Synthesize a single chunk and wrap its MP3 for the element.
+  const fetchAudioBlob = useCallback(
+    async (text: string, signal: AbortSignal): Promise<Blob> => {
       const detectedVoice = voiceRef.current || detectLanguage(content)
 
       if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
@@ -238,43 +287,14 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
       if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
 
-      const audioContext = getAudioContext()
-
-      return new Promise((resolve, reject) => {
-        if (signal.aborted) {
-          reject(new DOMException('Aborted', 'AbortError'))
-          return
-        }
-        // decodeAudioData DETACHES (neuters) the ArrayBuffer it receives. The
-        // synthesis cache (lib/tts-client) hands the SAME ArrayBuffer instance
-        // to every caller for a given voice+text, so decoding the cached buffer
-        // would detach it and any later decode of the same chunk — replay,
-        // play-from-here (stop() clears the decoded-buffer cache but not the
-        // synthesis cache), or prefetch-then-play — throws "Cannot decode
-        // detached ArrayBuffer". Decode a copy so the cached buffer stays intact.
-        // slice(0) can throw if the buffer is already detached; reject with the
-        // same prefix shape as the decode error path for consistent triage.
-        let decodable: ArrayBuffer
-        try {
-          decodable = arrayBuffer.slice(0)
-        } catch (error) {
-          reject(new Error(`Failed to copy audio buffer for decode: ${error}`))
-          return
-        }
-        audioContext.decodeAudioData(
-          decodable,
-          (buffer) => {
-            if (signal.aborted) {
-              reject(new DOMException('Aborted', 'AbortError'))
-              return
-            }
-            resolve(buffer)
-          },
-          (error) => reject(new Error(`Failed to decode audio: ${error}`))
-        )
-      })
+      // The synthesis cache (lib/tts/client) hands the SAME ArrayBuffer instance
+      // to every caller for a given voice+text. `new Blob([buffer])` COPIES it,
+      // so — unlike the old Web Audio decode step, which detached its input and
+      // forced a slice(0) dance — replay / play-from-here / prefetch-then-play can all
+      // wrap the cached buffer again without any chance of a detached buffer.
+      return new Blob([arrayBuffer], { type: AUDIO_MIME_TYPE })
     },
-    [content, getAudioContext]
+    [content]
   )
 
   // Fill the buffer cache for chunks [startIndex .. startIndex + BUFFER_AHEAD)
@@ -284,15 +304,22 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
       const end = Math.min(startIndex + BUFFER_AHEAD, chunksRef.current.length)
       for (let i = startIndex; i < end; i++) {
-        if (bufferCacheRef.current.has(i) || fetchingRef.current.has(i)) continue
+        if (
+          objectUrlsRef.current.has(i) ||
+          bufferCacheRef.current.has(i) ||
+          fetchingRef.current.has(i)
+        ) continue
 
         fetchingRef.current.add(i)
 
-        fetchAudioBuffer(chunksRef.current[i], signal)
-          .then((buffer) => {
+        fetchAudioBlob(chunksRef.current[i], signal)
+          .then((blob) => {
             fetchingRef.current.delete(i)
             if (generation !== requestGenerationRef.current || signal.aborted) return
-            bufferCacheRef.current.set(i, buffer)
+            bufferCacheRef.current.set(i, blob)
+            // Prepare the URL now, not at the swap: `ended` must only have to
+            // assign a string.
+            ensureObjectUrl(i, blob)
           })
           .catch((err) => {
             fetchingRef.current.delete(i)
@@ -302,16 +329,52 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
           })
       }
     },
-    [fetchAudioBuffer]
+    [ensureObjectUrl, fetchAudioBlob]
   )
 
-  // Update progress via requestAnimationFrame
-  const updateProgress = useCallback(() => {
-    if (!isPlayingRef.current || !audioContextRef.current) return
+  /**
+   * THE progress emitter — the single source of truth both clocks go through.
+   *
+   * Progress has two clocks (see the change's design.md):
+   *   - `timeupdate` (~4Hz) is the AUTHORITATIVE one, because it keeps firing
+   *     while the page is hidden. That is the whole point of this change: phone
+   *     screen off, reader playing in the background. rAF stops there, so
+   *     without this clock `progress` and `currentTime` would freeze for the
+   *     entire hidden stretch and jump on return — and the reader's
+   *     media-session `previoustrack` handler, which reads `currentTime` to
+   *     choose restart-vs-previous-track, would answer a lock-screen press from
+   *     a stale value. (The prebuffer ladder is NOT a consumer: it is keyed on
+   *     `isPlaying`/`isBuffering`, not on progress.)
+   *   - `requestAnimationFrame` is cosmetic: it does not tick while hidden, and
+   *     exists only to move the reader bar smoothly between timeupdates.
+   *
+   * Both read the SAME `element.currentTime` through this one function; if the
+   * percentage maths were duplicated per clock they would drift apart.
+   */
+  const emitProgress = useCallback(() => {
+    const element = audioElementRef.current
+    // Also the "stop emitting" gate: after pause/stop/completion the element
+    // keeps its `timeupdate` listener attached, but this guard makes it inert.
+    if (!isPlayingRef.current || !element) return
 
-    const audioContext = audioContextRef.current
-    const elapsedInChunk = audioContext.currentTime - currentChunkStartTimeRef.current
-    const chunkProgress = Math.min(elapsedInChunk / currentChunkDurationRef.current, 1)
+    // Only the unit the element is ACTUALLY loaded with may be measured. Between
+    // `ended` for unit N and the `src` swap inside `playChunk(N+1)` there is a
+    // gap — as long as N+1's synthesis takes — where `completedChars` has already
+    // absorbed unit N and `currentChunkIndexRef` already points at N+1, while the
+    // element still holds unit N's exhausted media (`currentTime === duration`).
+    // Reading that reports "unit N+1 is 100% played", so progress spikes to the
+    // end of N+1 and then falls back the instant the swap rewinds the element.
+    // Progress must never go backwards, so the gap emits nothing at all.
+    if (loadedUnitIndexRef.current !== currentChunkIndexRef.current) return
+
+    // duration is NaN until the element has metadata, and the element rewinds to
+    // 0 on every src swap — so an unknown duration reads as "just started"
+    // rather than poisoning the percentage with NaN.
+    const duration = element.duration
+    const chunkProgress =
+      Number.isFinite(duration) && duration > 0
+        ? Math.min(element.currentTime / duration, 1)
+        : 0
 
     const completedChars = completedCharsRef.current
     const currentChunkChars = charCountsRef.current[currentChunkIndexRef.current] || 0
@@ -319,13 +382,16 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     const totalProgress = (currentProgress / totalCharsRef.current) * 100
 
     const clamped = Math.min(totalProgress, 100)
-    // Emit progress to callers EVERY frame — the reader's prefetch threshold
-    // depends on it.
+    // Callers see EVERY tick: this is the hook's only unthrottled view of
+    // progress, deliberately outside the whole-percent latch guarding setState
+    // below.
     onProgress?.(clamped)
 
     // Only re-render (setState) when the rounded percent actually changes,
     // cutting progress-driven re-renders from ~60/sec to ~1 per 1%. This keeps
     // the backdrop-blur reader bar from re-rendering at 60fps (hover flicker).
+    // The latch lives here, shared by both clocks, so a timeupdate and a frame
+    // landing on the same percent cost exactly one re-render between them.
     const pct = Math.round(clamped)
     if (pct !== lastEmittedPctRef.current) {
       lastEmittedPctRef.current = pct
@@ -336,11 +402,18 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         currentChunkIndex: currentChunkIndexRef.current,
       }))
     }
-
-    if (isPlayingRef.current) {
-      animationFrameRef.current = requestAnimationFrame(updateProgress)
-    }
   }, [onProgress])
+
+  emitProgressRef.current = emitProgress
+
+  // The cosmetic clock: emit, then re-arm. Self-rescheduling stops on its own
+  // as soon as playback does, and pause()/stop()/completion additionally cancel
+  // the frame already in flight.
+  const runProgressFrame = useCallback(() => {
+    if (!isPlayingRef.current || !audioElementRef.current) return
+    emitProgress()
+    animationFrameRef.current = requestAnimationFrame(runProgressFrame)
+  }, [emitProgress])
 
   // Play a single chunk
   const playChunk = useCallback(
@@ -354,124 +427,235 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
           cancelAnimationFrame(animationFrameRef.current)
           animationFrameRef.current = null
         }
+        detachUnitHandlers()
         invalidatePendingRequests()
         setState((prev) => ({ ...prev, isPlaying: false, progress: 100 }))
         onComplete?.()
 
         currentChunkIndexRef.current = 0
         completedCharsRef.current = 0
-        currentChunkBufferRef.current = null
+        loadedUnitIndexRef.current = null
         pauseOffsetRef.current = 0
         bufferCacheRef.current.clear()
         fetchingRef.current.clear()
+        // The last unit is consumed: nothing may outlive the article.
+        revokeAllObjectUrls()
         return
       }
 
-      const audioContext = getAudioContext()
-      // Resume unconditionally. `pause()`/`stop()` call `suspend()` without
-      // awaiting it, so on the play-from-here path the suspend can still be
-      // in flight here with `state` reading 'running'. A conditional resume
-      // would then be skipped and the pending suspend would freeze the audio.
-      // WebAudio processes suspend/resume control messages in call order, so a
-      // resume queued after an in-flight suspend leaves the context running;
-      // resume() on an already-running context is a no-op that resolves at once.
-      await audioContext.resume()
+      const element = getAudioElement()
 
-      if (generation !== requestGenerationRef.current || signal.aborted) return
+      /**
+       * End the session on an unrecoverable failure. There is exactly one output
+       * path now, so anything that reaches here would otherwise be silence with
+       * `isPlaying` still true — the failure mode this change exists to prevent.
+       *
+       * The animation-frame handle is cancelled AND nulled: `runProgressFrame`
+       * early-returns without clearing it, so a stale handle left here would make
+       * the next `play()` skip re-arming the loop
+       * (`if (!animationFrameRef.current)`). The `timeupdate` clock would carry
+       * on, so progress would not die outright — but the smooth clock would be
+       * gone for the rest of the session and the reader bar would lurch forward
+       * ~4×/second instead of gliding.
+       */
+      const stopWithError = (error: Error) => {
+        isPlayingRef.current = false
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current)
+          animationFrameRef.current = null
+        }
+        detachUnitHandlers()
+        invalidatePendingRequests()
+        setState((prev) => ({ ...prev, isPlaying: false, isBuffering: false }))
+        onError?.(error)
+      }
+
+      /**
+       * A unit can fail two ways — synthesis never produced bytes, or the element
+       * refused the bytes it was handed (`error`: undecodable MP3, dead object
+       * URL). Both mean "this unit is unreadable", so both get the same
+       * treatment: drop it, count its characters complete so progress does not
+       * stall on it, and continue — bounded by the same streak counter, so a
+       * systemic outage still stops loudly instead of racing silently through
+       * the rest of the article.
+       */
+      const failUnit = (failedIndex: number, error: Error) => {
+        consecutiveFailuresRef.current += 1
+
+        // The unit is abandoned, so nothing will ever read its object URL again.
+        // Revoke it here rather than leaving it to the next unit's prune: on the
+        // give-up path below there is no next unit to prune behind us.
+        const failedUrl = objectUrlsRef.current.get(failedIndex)
+        if (failedUrl) {
+          URL.revokeObjectURL(failedUrl)
+          objectUrlsRef.current.delete(failedIndex)
+          if (loadedUnitIndexRef.current === failedIndex) {
+            loadedUnitIndexRef.current = null
+          }
+        }
+
+        if (consecutiveFailuresRef.current > MAX_CONSECUTIVE_CHUNK_FAILURES) {
+          // Too many units in a row were unreadable: systemic (no network,
+          // edge-tts down, a decoder that rejects everything) rather than one bad
+          // paragraph. The session ends here, so the whole buffered window of
+          // object URLs goes with it.
+          revokeAllObjectUrls()
+          loadedUnitIndexRef.current = null
+          stopWithError(error)
+          return
+        }
+
+        // A single unreadable unit must not strand playback waiting for the user
+        // to press Play again.
+        completedCharsRef.current += charCountsRef.current[failedIndex] || 0
+        void playChunk(failedIndex + 1, 0, generation, signal)
+      }
 
       currentChunkIndexRef.current = index
 
       // Eagerly start buffering upcoming chunks
       fillBuffer(index + 1, generation, signal)
 
-      let buffer: AudioBuffer
+      // Resuming the unit the element already holds: keep its source (a src
+      // assignment rewinds) and just seek back to where pause() left off.
+      const resuming =
+        offset > 0 &&
+        loadedUnitIndexRef.current === index &&
+        objectUrlsRef.current.has(index)
 
-      if (offset > 0 && currentChunkBufferRef.current) {
-        // Resuming mid-chunk
-        buffer = currentChunkBufferRef.current
-      } else if (bufferCacheRef.current.has(index)) {
-        // Use cached buffer
-        buffer = bufferCacheRef.current.get(index)!
-        bufferCacheRef.current.delete(index)
-      } else {
-        // Not buffered yet — fetch inline and show buffering state
-        setState((prev) => ({ ...prev, isBuffering: true }))
+      if (!resuming) {
+        // The previous unit is abandoned the moment this branch commits to a new
+        // one — and it stays abandoned across the `await` below, which can be
+        // arbitrarily long when this unit is not buffered yet. Without a detach
+        // here the OLD unit's `onended`/`onerror` stay live for that whole
+        // window, and every one of their guards (generation, abort signal,
+        // `isPlaying`) still passes: a stray element `error` would run
+        // `failUnit(previous)` a SECOND time, double-counting that unit's
+        // characters into `completedChars` for the rest of the session and
+        // issuing a duplicate `playChunk` for this index. This is the case
+        // `detachUnitHandlers` exists to make structurally impossible. The
+        // resuming branch deliberately skips it: there the element keeps its
+        // `src` and position, and the handlers below are simply re-pointed at
+        // the same unit.
+        detachUnitHandlers()
 
-        try {
-          buffer = await fetchAudioBuffer(chunksRef.current[index], signal)
-        } catch (error) {
-          if (
-            generation !== requestGenerationRef.current ||
-            signal.aborted ||
-            (error as Error).name === 'AbortError'
-          ) return
-          console.warn(`[TTS] Chunk ${index} failed:`, error)
+        let url = objectUrlsRef.current.get(index)
 
-          consecutiveFailuresRef.current += 1
-          if (consecutiveFailuresRef.current > MAX_CONSECUTIVE_CHUNK_FAILURES) {
-            // Too many chunks in a row failed: treat as a systemic outage
-            // rather than skipping through the rest of the content silently.
-            isPlayingRef.current = false
-            invalidatePendingRequests()
-            setState((prev) => ({ ...prev, isPlaying: false, isBuffering: false }))
-            onError?.(error as Error)
-            return
+        if (!url) {
+          let blob = bufferCacheRef.current.get(index)
+
+          if (!blob) {
+            // Not buffered yet — fetch inline and show buffering state
+            setState((prev) => ({ ...prev, isBuffering: true }))
+
+            try {
+              blob = await fetchAudioBlob(chunksRef.current[index], signal)
+            } catch (error) {
+              if (
+                generation !== requestGenerationRef.current ||
+                signal.aborted ||
+                (error as Error).name === 'AbortError'
+              ) return
+              console.warn(`[TTS] Chunk ${index} failed:`, error)
+
+              // Synthesis stalled even after lib/tts-client's own retry.
+              failUnit(index, error as Error)
+              return
+            }
           }
 
-          // A single unreadable chunk (synthesis stalled even after the
-          // client's own retry) must not strand playback waiting for the user
-          // to press Play again. Count it as completed for progress purposes
-          // and move on to the next chunk automatically.
-          completedCharsRef.current += charCountsRef.current[index] || 0
-          void playChunk(index + 1, 0, generation, signal)
-          return
+          url = ensureObjectUrl(index, blob)
         }
+
+        if (
+          generation !== requestGenerationRef.current ||
+          signal.aborted ||
+          !isPlayingRef.current
+        ) return // Stopped while fetching
+
+        setState((prev) => ({ ...prev, isBuffering: false, currentChunkIndex: index }))
+
+        element.src = url
+        loadedUnitIndexRef.current = index
+        // Only now is the previous unit's URL safe to drop: the element has
+        // already been repointed away from it.
+        pruneObjectUrls(index)
+      } else {
+        setState((prev) => ({ ...prev, isBuffering: false, currentChunkIndex: index }))
+        element.currentTime = offset
       }
 
-      // Buffer obtained (cache hit, resumed mid-chunk, or freshly fetched):
-      // this chunk is readable, so the failure streak resets.
-      consecutiveFailuresRef.current = 0
-
-      if (
-        generation !== requestGenerationRef.current ||
-        signal.aborted ||
-        !isPlayingRef.current
-      ) return // Stopped while fetching
-
-      setState((prev) => ({ ...prev, isBuffering: false, currentChunkIndex: index }))
-
-      const source = audioContext.createBufferSource()
-      source.buffer = buffer
-      source.connect(streamDestinationRef.current ?? audioContext.destination)
-
-      currentSourceRef.current = source
-      currentChunkBufferRef.current = buffer
-      currentChunkStartTimeRef.current = audioContext.currentTime - offset
-      currentChunkDurationRef.current = buffer.duration
-
-      source.onended = () => {
-        try { source.disconnect() } catch (_) { /* already disconnected */ }
+      element.onended = () => {
         if (
           !isPlayingRef.current ||
           generation !== requestGenerationRef.current ||
           signal.aborted
         ) return
+        // A unit that played all the way through is the only real proof the
+        // pipeline is healthy, so THAT is what clears the failure streak.
+        // Synthesis merely resolving is not proof: an element `error` means the
+        // bytes were unusable, and resetting the streak on those would let a
+        // systemic decode failure skip every unit in the article without ever
+        // reaching MAX_CONSECUTIVE_CHUNK_FAILURES.
+        consecutiveFailuresRef.current = 0
         completedCharsRef.current += charCountsRef.current[index] || 0
         void playChunk(index + 1, 0, generation, signal)
       }
 
-      // Start the element FIRST. A MediaStreamAudioDestinationNode is a LIVE
-      // stream: the element plays from "now", not from stream start, so any
-      // element start latency clips the head of the chunk. Both calls are in
-      // the same synchronous task, so the window is tiny — but free to close.
-      playAudioElement(source)
-      source.start(0, offset)
+      // The element could not use the media it was handed. With the Web Audio
+      // carrier gone there is nothing to retry on, so this is a unit failure of
+      // exactly the same kind as a synthesis failure.
+      element.onerror = () => {
+        if (
+          !isPlayingRef.current ||
+          generation !== requestGenerationRef.current ||
+          signal.aborted
+        ) return
+        detachUnitHandlers()
+        const mediaError = element.error
+        failUnit(
+          index,
+          new Error(
+            `[TTS] Media element failed on unit ${index}` +
+              (mediaError?.message ? `: ${mediaError.message}` : '')
+          )
+        )
+      }
 
+      // A refused start is the one thing that must never be swallowed: there is
+      // no second output path, so silence with `isPlaying` left true is the only
+      // other outcome. (The gesture-unlock poke in play() is a separate call and
+      // swallows its own, expected, rejection.)
+      const started = element.play?.()
+      void started?.catch?.((error: unknown) => {
+        if (
+          !isPlayingRef.current ||
+          generation !== requestGenerationRef.current ||
+          signal.aborted
+        ) return
+        console.warn(`[TTS] Element refused to play unit ${index}:`, error)
+        stopWithError(error as Error)
+      })
+
+      // Only the smooth-bar clock needs starting here; `timeupdate` is already
+      // wired to the element and starts emitting on its own once it plays.
       if (!animationFrameRef.current) {
-        animationFrameRef.current = requestAnimationFrame(updateProgress)
+        animationFrameRef.current = requestAnimationFrame(runProgressFrame)
       }
     },
-    [fetchAudioBuffer, fillBuffer, getAudioContext, invalidatePendingRequests, onComplete, onError, playAudioElement, updateProgress]
+    [
+      detachUnitHandlers,
+      ensureObjectUrl,
+      fetchAudioBlob,
+      fillBuffer,
+      getAudioElement,
+      invalidatePendingRequests,
+      onComplete,
+      onError,
+      pruneObjectUrls,
+      revokeAllObjectUrls,
+      runProgressFrame,
+    ]
   )
 
   // Initialize chunks on first play or after completion reset. Prefer pre-split
@@ -501,11 +685,19 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   const play = useCallback(async () => {
     if (isPlayingRef.current) return
 
+    // FIRST, and before any await: this call may be running inside the user's
+    // tap, and on WebKit that is the only moment the element can be unlocked.
+    unlockElementForGesture(getAudioElement())
+
     ensureChunks()
 
     voiceRef.current = voice || null
     isPlayingRef.current = true
     lastEmittedPctRef.current = -1
+    // A new play session starts with a clean failure streak: whatever went wrong
+    // before was already surfaced (or skipped past), and a user pressing Play
+    // again deserves the same tolerance as the first time.
+    consecutiveFailuresRef.current = 0
     const generation = requestGenerationRef.current + 1
     requestGenerationRef.current = generation
     const abortController = new AbortController()
@@ -519,11 +711,16 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     const preBufferEnd = Math.min(startIdx + BUFFER_AHEAD, chunksRef.current.length)
 
     // Fetch first chunk (must have it to start playing)
-    if (pauseOffsetRef.current === 0 && !bufferCacheRef.current.has(startIdx)) {
+    if (
+      pauseOffsetRef.current === 0 &&
+      !objectUrlsRef.current.has(startIdx) &&
+      !bufferCacheRef.current.has(startIdx)
+    ) {
       try {
-        const buf = await fetchAudioBuffer(chunksRef.current[startIdx], signal)
+        const blob = await fetchAudioBlob(chunksRef.current[startIdx], signal)
         if (generation !== requestGenerationRef.current || signal.aborted) return
-        bufferCacheRef.current.set(startIdx, buf)
+        bufferCacheRef.current.set(startIdx, blob)
+        ensureObjectUrl(startIdx, blob)
       } catch (error) {
         if (
           generation !== requestGenerationRef.current ||
@@ -540,13 +737,18 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
     // Kick off prefetch for upcoming chunks (don't await)
     for (let i = startIdx + 1; i < preBufferEnd; i++) {
-      if (!bufferCacheRef.current.has(i) && !fetchingRef.current.has(i)) {
+      if (
+        !objectUrlsRef.current.has(i) &&
+        !bufferCacheRef.current.has(i) &&
+        !fetchingRef.current.has(i)
+      ) {
         fetchingRef.current.add(i)
-        fetchAudioBuffer(chunksRef.current[i], signal)
-          .then((buf) => {
+        fetchAudioBlob(chunksRef.current[i], signal)
+          .then((blob) => {
             fetchingRef.current.delete(i)
             if (generation !== requestGenerationRef.current || signal.aborted) return
-            bufferCacheRef.current.set(i, buf)
+            bufferCacheRef.current.set(i, blob)
+            ensureObjectUrl(i, blob)
           })
           .catch(() => { fetchingRef.current.delete(i) })
       }
@@ -557,24 +759,38 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     const offset = pauseOffsetRef.current
     pauseOffsetRef.current = 0
     void playChunk(startIdx, offset, generation, signal)
-  }, [ensureChunks, fetchAudioBuffer, invalidatePendingRequests, onError, playChunk, voice])
+  }, [
+    ensureChunks,
+    ensureObjectUrl,
+    fetchAudioBlob,
+    getAudioElement,
+    invalidatePendingRequests,
+    onError,
+    playChunk,
+    unlockElementForGesture,
+    voice,
+  ])
 
   // Pause
   const pause = useCallback(() => {
     isPlayingRef.current = false
     invalidatePendingRequests()
 
-    if (audioContextRef.current && currentChunkDurationRef.current > 0) {
-      const elapsed = audioContextRef.current.currentTime - currentChunkStartTimeRef.current
-      pauseOffsetRef.current = Math.min(elapsed, currentChunkDurationRef.current)
-    }
-
-    if (currentSourceRef.current) {
-      try {
-        currentSourceRef.current.stop()
-        currentSourceRef.current.disconnect()
-      } catch (_) { /* already stopped */ }
-      currentSourceRef.current = null
+    const element = audioElementRef.current
+    if (element) {
+      // The element keeps its currentTime across a pause; remember it anyway so
+      // play() can seek back explicitly even if something else moved the
+      // playhead in between.
+      const duration = element.duration
+      const elapsed = Number.isFinite(element.currentTime) ? element.currentTime : 0
+      pauseOffsetRef.current =
+        Number.isFinite(duration) && duration > 0 ? Math.min(elapsed, duration) : elapsed
+      // Detach BEFORE pausing: an `ended` already queued for this unit would
+      // otherwise still run and count the unit complete, inflating progress by a
+      // whole unit's characters for the rest of the session. play() re-attaches
+      // handlers for whichever unit it resumes.
+      detachUnitHandlers()
+      element.pause?.()
     }
 
     if (animationFrameRef.current) {
@@ -582,14 +798,8 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       animationFrameRef.current = null
     }
 
-    audioElementRef.current?.pause?.()
-
-    if (audioContextRef.current) {
-      audioContextRef.current.suspend()
-    }
-
     setState((prev) => ({ ...prev, isPlaying: false }))
-  }, [invalidatePendingRequests])
+  }, [detachUnitHandlers, invalidatePendingRequests])
 
   /**
    * Interrupting skip ("play from here"): abort whatever is playing and start at
@@ -598,8 +808,8 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
    */
   const playFromUnit = useCallback(
     async (unitIndex: number) => {
-      // Aborts in-flight synthesis and stops the current source. The mid-chunk
-      // offset it records belongs to the OLD unit, so it is dropped below.
+      // Aborts in-flight synthesis and pauses the element. The mid-unit offset
+      // it records belongs to the OLD unit, so it is dropped below.
       pause()
 
       ensureChunks()
@@ -615,7 +825,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       completedCharsRef.current = charCountsRef.current
         .slice(0, index)
         .reduce((a, b) => a + b, 0)
-      currentChunkBufferRef.current = null
+      // Forget which unit the element holds so the jump always re-points it,
+      // even when landing on the unit that was already loaded.
+      loadedUnitIndexRef.current = null
       pauseOffsetRef.current = 0
 
       await play()
@@ -632,12 +844,21 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     totalCharsRef.current = 0
     completedCharsRef.current = 0
     currentChunkIndexRef.current = 0
-    currentChunkBufferRef.current = null
+    loadedUnitIndexRef.current = null
     pauseOffsetRef.current = 0
     bufferCacheRef.current.clear()
     fetchingRef.current.clear()
     lastEmittedPctRef.current = -1
     consecutiveFailuresRef.current = 0
+
+    detachUnitHandlers()
+    const element = audioElementRef.current
+    if (element) {
+      // The URLs below are about to die, so the element must not keep reading
+      // one of them.
+      element.removeAttribute('src')
+    }
+    revokeAllObjectUrls()
 
     setState({
       isPlaying: false,
@@ -648,26 +869,22 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       currentChunkIndex: 0,
       totalChunks: 0,
     })
-  }, [pause])
+  }, [detachUnitHandlers, pause, revokeAllObjectUrls])
 
-  // Cleanup on unmount
+  // Exactly one <audio> element per hook instance, created on mount and torn
+  // down (with every object URL it ever handed out) on unmount.
   useEffect(() => {
+    const element = getAudioElement()
     return () => {
       stop()
-      if (audioContextRef.current) {
-        audioContextRef.current.close()
-        audioContextRef.current = null
-      }
-      const element = audioElementRef.current
-      if (element) {
-        element.pause?.()
-        element.srcObject = null
-        element.remove()
-        audioElementRef.current = null
-      }
-      streamDestinationRef.current = null
+      detachUnitHandlers()
+      element.pause?.()
+      element.removeAttribute('src')
+      element.remove()
+      audioElementRef.current = null
+      revokeAllObjectUrls()
     }
-  }, [stop])
+  }, [detachUnitHandlers, getAudioElement, revokeAllObjectUrls, stop])
 
   const playback: TTSPlayback = {
     ...state,

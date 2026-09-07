@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from '@testing-library/react'
+import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useTTS } from './useTTS'
@@ -11,249 +11,488 @@ vi.mock('@/lib/tts/client', () => ({
 }))
 
 /**
- * Regression test for "Play from here" while a section is actively PLAYING.
+ * Fake `HTMLMediaElement` harness.
  *
- * The reader's play-from-here path is: stop() -> play(). stop() -> pause()
- * calls AudioContext.suspend(), which is ASYNC: the promise resolves and the
- * context state flips to 'suspended' on a later task, NOT synchronously. So the
- * immediately-following play() -> playChunk() runs while a suspend is still
- * in flight and audioContext.state is still 'running'.
+ * `useTTS` plays each speech unit by pointing ONE real `<audio>` element at a
+ * `blob:` object URL, so the tests keep jsdom's actual element (appendChild,
+ * remove, querySelector, event dispatch all behave) and only replace the bits
+ * jsdom leaves unimplemented or inert:
  *
- * The OLD code only resumed the context when state === 'suspended', so from
- * that in-flight window it SKIPPED resume, started the source, and then the
- * pending suspend landed -> context suspended -> audio frozen.
- *
- * The fix resumes UNCONDITIONALLY before starting the source. WebAudio
- * processes suspend/resume control messages in call order, so a resume queued
- * after an in-flight suspend leaves the context running.
- *
- * We model the in-flight-suspend window by making the fake suspend() flip the
- * state on a macrotask (setTimeout) while its promise resolves immediately.
- * resume() (a synchronous control message) cancels that pending suspend, which
- * models "resume after suspend leaves the context running".
+ * - `play` / `pause` / `load` — jsdom's are "not implemented" stubs that log to
+ *   the virtual console and return `undefined` instead of a promise.
+ * - `currentTime` / `duration` — jsdom never advances a playback position, so
+ *   the clock is a module-level variable a test can move by hand.
+ * - `src` — recorded on assignment (that IS the unit swap, so tests count these
+ *   the way the old Web Audio harness counted `source.start()` calls), and
+ *   assigning it resets `currentTime` to 0 exactly as a browser does when the
+ *   media source changes.
+ * - `URL.createObjectURL` / `revokeObjectURL` — stubbed so every created URL is
+ *   observable and can be paired against its revocation.
  */
 
-// Sequence of relevant control events across the fake context's lifetime.
-let sequence: string[] = []
-// Separate ordering log for "who ran first" assertions. Kept out of `sequence`
-// because that array's adjacency (resume immediately before start) is itself
-// asserted by the play-from-here regression test.
-let order: string[] = []
-let contexts: FakeAudioContext[] = []
-// `offset` argument of every source.start() call, in order.
-let startOffsets: number[] = []
-// Every FakeBufferSource created, in order, so tests can fire its `onended`
-// to simulate a chunk finishing playback.
-let sources: FakeBufferSource[] = []
-// Every MediaStreamAudioDestinationNode handed out by the fake context.
-let streamDestinations: FakeStreamDestination[] = []
-// Flips off to model a browser without createMediaStreamDestination.
-let supportsStreamDestination = true
-// Stubs for HTMLMediaElement.play/pause — jsdom leaves both unimplemented and
-// play() throws, so the hook's calls are stubbed to stay observable.
+// Every value assigned to element.src, in order. One entry === one unit start.
+let srcAssignments: string[] = []
+// Every object URL handed out by the stubbed URL.createObjectURL, in order.
+let createdUrls: string[] = []
 let audioPlay: ReturnType<typeof vi.fn>
 let audioPause: ReturnType<typeof vi.fn>
-let originalPlay: HTMLMediaElement['play']
-let originalPause: HTMLMediaElement['pause']
+let audioLoad: ReturnType<typeof vi.fn>
+let createObjectURL: ReturnType<typeof vi.fn>
+let revokeObjectURL: ReturnType<typeof vi.fn>
+let cancelFrame: ReturnType<typeof vi.fn>
+// Constructing one is a hard failure: the whole point of this change is that the
+// playback path never touches Web Audio again.
+let audioContextCtor: ReturnType<typeof vi.fn>
+// Playback clock the hook reads for progress and for the pause offset.
+let mediaCurrentTime = 0
+let mediaDuration = 1
+// Pending rAF callbacks; `flushFrame()` runs exactly one round of them so the
+// progress loop can be stepped deterministically instead of free-running.
+let frameCallbacks: FrameRequestCallback[] = []
 
-class FakeStreamDestination {
-  stream: { id: string }
-  connect = vi.fn()
-  disconnect = vi.fn()
+const mediaProto = HTMLMediaElement.prototype
+let patchedDescriptors: Array<[string, PropertyDescriptor | undefined]> = []
 
-  constructor() {
-    this.stream = { id: `stream-${streamDestinations.length}` }
-    streamDestinations.push(this)
-  }
+const patchProto = (name: string, descriptor: PropertyDescriptor) => {
+  patchedDescriptors.push([name, Object.getOwnPropertyDescriptor(mediaProto, name)])
+  Object.defineProperty(mediaProto, name, { configurable: true, ...descriptor })
 }
 
-class FakeAudioBuffer {
-  duration = 1
-  numberOfChannels = 1
-  length = 1
-  sampleRate = 48000
+const restoreProto = () => {
+  for (const [name, descriptor] of patchedDescriptors) {
+    if (descriptor) Object.defineProperty(mediaProto, name, descriptor)
+    else delete (mediaProto as unknown as Record<string, unknown>)[name]
+  }
+  patchedDescriptors = []
 }
 
-class FakeBufferSource {
-  buffer: FakeAudioBuffer | null = null
-  onended: (() => void) | null = null
-  connect = vi.fn()
-  disconnect = vi.fn()
-  stop = vi.fn()
-  start = vi.fn((_when = 0, offset = 0) => {
-    sequence.push('start')
-    order.push('source-start')
-    startOffsets.push(offset)
-  })
-
-  constructor() {
-    sources.push(this)
-  }
-}
-
-class FakeAudioContext {
-  state: 'running' | 'suspended' | 'closed' = 'running'
-  currentTime = 0
-  destination = {}
-  private pendingSuspend: ReturnType<typeof setTimeout> | null = null
-
-  constructor() {
-    contexts.push(this)
-    // Assigned per instance (not on the prototype) so a test can model a
-    // browser lacking the API by clearing the flag.
-    if (supportsStreamDestination) {
-      ;(this as any).createMediaStreamDestination = () =>
-        new FakeStreamDestination() as unknown as MediaStreamAudioDestinationNode
-    }
-  }
-
-  createBufferSource() {
-    return new FakeBufferSource() as unknown as AudioBufferSourceNode
-  }
-
-  // Tracks buffers already handed to decodeAudioData. The real WebAudio
-  // decodeAudioData DETACHES its input, so decoding the same instance again
-  // throws DataCloneError. We model that: a second decode of the same
-  // ArrayBuffer instance throws synchronously, exactly like the browser.
-  private decodedBuffers = new WeakSet<ArrayBuffer>()
-
-  // Callback form, matching useTTS's usage.
-  decodeAudioData(
-    buffer: ArrayBuffer,
-    onSuccess: (b: AudioBuffer) => void,
-    _onError?: (e: unknown) => void
-  ) {
-    if (this.decodedBuffers.has(buffer)) {
-      throw new DOMException('Cannot decode detached ArrayBuffer', 'DataCloneError')
-    }
-    this.decodedBuffers.add(buffer)
-    // Resolve on a microtask so play()'s fetch chain completes before any
-    // macrotask (the pending suspend) fires.
-    Promise.resolve().then(() => onSuccess(new FakeAudioBuffer() as unknown as AudioBuffer))
-    return Promise.resolve(new FakeAudioBuffer() as unknown as AudioBuffer)
-  }
-
-  suspend() {
-    // Async: state flips on a later task, NOT synchronously. This recreates the
-    // in-flight window where state is still 'running' right after the call.
-    this.pendingSuspend = setTimeout(() => {
-      this.state = 'suspended'
-      this.pendingSuspend = null
-    }, 0)
-    return Promise.resolve()
-  }
-
-  resume() {
-    sequence.push('resume')
-    // A resume control message queued after an in-flight suspend wins: the net
-    // effect is a running context.
-    if (this.pendingSuspend) {
-      clearTimeout(this.pendingSuspend)
-      this.pendingSuspend = null
-    }
-    this.state = 'running'
-    return Promise.resolve()
-  }
-
-  close() {
-    this.state = 'closed'
-    return Promise.resolve()
-  }
-}
+const originalCreateObjectURL = URL.createObjectURL
+const originalRevokeObjectURL = URL.revokeObjectURL
 
 const flushMicrotasks = () => act(async () => { await Promise.resolve() })
 
-// The hook detects Apple/WebKit browsers via navigator.vendor and deliberately
-// keeps them off the media-element path (see isWebKitBrowser in useTTS.ts).
-// jsdom reports the APPLE vendor by default, so every test that exercises the
-// streaming path has to declare a non-WebKit browser explicitly.
-const WEBKIT_VENDOR = 'Apple Computer, Inc.'
-const NON_WEBKIT_VENDOR = 'Google Inc.'
-const setNavigatorVendor = (vendor: string) => {
-  Object.defineProperty(window.navigator, 'vendor', { value: vendor, configurable: true })
+const audioElements = () => Array.from(document.querySelectorAll('audio'))
+const currentAudio = () => audioElements()[0] as HTMLAudioElement
+
+// Run one round of scheduled animation frames. The array is swapped out first so
+// updateProgress's self-reschedule does not spin forever.
+const flushFrame = async () => {
+  const pending = frameCallbacks
+  frameCallbacks = []
+  await act(async () => {
+    pending.forEach((cb) => cb(0))
+  })
+}
+
+// Move the playback clock and fire the element's `timeupdate` — the clock that
+// keeps ticking (~4Hz) while the page is hidden and rAF is frozen.
+const emitTimeUpdate = async (currentTime: number) => {
+  mediaCurrentTime = currentTime
+  await act(async () => {
+    currentAudio().dispatchEvent(new Event('timeupdate'))
+  })
+}
+
+// Put the element back in the state a real one is in immediately after a `src`
+// swap: `duration` is NaN until `loadedmetadata` arrives, which happens once per
+// UNIT, not just once at startup. The harness otherwise pins a duration forever,
+// which no real element ever does.
+const clearDurationMetadata = () => {
+  mediaDuration = Number.NaN
+}
+
+// Fire the element's `error` event — the browser saying "these bytes are
+// unusable" (undecodable MP3, dead object URL). There is no second output path
+// to retry on, so the hook must treat it as a unit failure, and the skip chain
+// it starts needs the same settling turns as `endCurrentUnit`.
+const failCurrentUnitInElement = async (turns = 6) => {
+  await act(async () => {
+    currentAudio().dispatchEvent(new Event('error'))
+    for (let i = 0; i < turns; i += 1) await Promise.resolve()
+  })
+}
+
+// Fire the element's `ended` event — the hook's unit-advance trigger — and let
+// the follow-on synthesis/skip chain settle.
+const endCurrentUnit = async (turns = 6) => {
+  await act(async () => {
+    currentAudio().dispatchEvent(new Event('ended'))
+    for (let i = 0; i < turns; i += 1) await Promise.resolve()
+  })
 }
 
 beforeEach(() => {
-  sequence = []
-  order = []
-  contexts = []
-  startOffsets = []
-  sources = []
-  streamDestinations = []
-  supportsStreamDestination = true
-  setNavigatorVendor(NON_WEBKIT_VENDOR)
+  srcAssignments = []
+  createdUrls = []
+  frameCallbacks = []
+  mediaCurrentTime = 0
+  mediaDuration = 1
   document.querySelectorAll('audio').forEach((el) => el.remove())
-  originalPlay = HTMLMediaElement.prototype.play
-  originalPause = HTMLMediaElement.prototype.pause
-  audioPlay = vi.fn(() => {
-    order.push('element-play')
-    return Promise.resolve()
-  })
+
+  audioPlay = vi.fn(() => Promise.resolve())
   audioPause = vi.fn()
-  HTMLMediaElement.prototype.play = audioPlay as unknown as HTMLMediaElement['play']
-  HTMLMediaElement.prototype.pause = audioPause as unknown as HTMLMediaElement['pause']
-  vi.stubGlobal('AudioContext', FakeAudioContext as unknown as typeof AudioContext)
-  vi.stubGlobal('webkitAudioContext', FakeAudioContext as unknown as typeof AudioContext)
-  // Keep the rAF progress loop from actually running in jsdom.
-  vi.stubGlobal('requestAnimationFrame', () => 1)
-  vi.stubGlobal('cancelAnimationFrame', () => {})
+  audioLoad = vi.fn()
+  patchProto('play', { value: audioPlay, writable: true })
+  patchProto('pause', { value: audioPause, writable: true })
+  patchProto('load', { value: audioLoad, writable: true })
+  patchProto('currentTime', {
+    get: () => mediaCurrentTime,
+    set: (value: number) => { mediaCurrentTime = value },
+  })
+  patchProto('duration', { get: () => mediaDuration })
+  patchProto('src', {
+    get(this: HTMLElement) { return this.getAttribute('src') ?? '' },
+    set(this: HTMLElement, value: string) {
+      srcAssignments.push(value)
+      // A real element rewinds when the media source changes.
+      mediaCurrentTime = 0
+      this.setAttribute('src', value)
+    },
+  })
+
+  createObjectURL = vi.fn(() => {
+    const url = `blob:mock/${createdUrls.length}`
+    createdUrls.push(url)
+    return url
+  })
+  revokeObjectURL = vi.fn()
+  URL.createObjectURL = createObjectURL as unknown as typeof URL.createObjectURL
+  URL.revokeObjectURL = revokeObjectURL as unknown as typeof URL.revokeObjectURL
+
+  audioContextCtor = vi.fn(() => {
+    throw new Error('AudioContext must never be constructed by useTTS')
+  })
+  vi.stubGlobal('AudioContext', audioContextCtor)
+  vi.stubGlobal('webkitAudioContext', audioContextCtor)
+
+  vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+    frameCallbacks.push(cb)
+    return frameCallbacks.length
+  })
+  cancelFrame = vi.fn()
+  vi.stubGlobal('cancelAnimationFrame', cancelFrame)
+
+  vi.mocked(synthesizeSpeech).mockReset()
+  vi.mocked(synthesizeSpeech).mockImplementation(async () => new ArrayBuffer(8))
 })
 
 afterEach(() => {
-  HTMLMediaElement.prototype.play = originalPlay
-  HTMLMediaElement.prototype.pause = originalPause
-  // Own property only; deleting restores jsdom's prototype getter.
-  delete (window.navigator as unknown as Record<string, unknown>).vendor
+  // Unmount BEFORE restoring the prototype: the hook's teardown pauses the
+  // element, and jsdom's own pause() is an unimplemented stub that logs.
+  cleanup()
+  restoreProto()
+  URL.createObjectURL = originalCreateObjectURL
+  URL.revokeObjectURL = originalRevokeObjectURL
   vi.unstubAllGlobals()
   vi.clearAllMocks()
+  document.querySelectorAll('audio').forEach((el) => el.remove())
 })
 
-describe('useTTS play-from-here interruption', () => {
-  it('resumes the audio context unconditionally so a new source starts while running, even when the previous suspend is still in flight', async () => {
-    const { result } = renderHook(() => useTTS('Hello world. This is a test.'))
+describe('useTTS media-element playback', () => {
+  it('plays a unit from a blob: object URL on a single audio element', async () => {
+    const { result } = renderHook(() => useTTS('Hello world.'))
 
-    // First play: start a source.
     await act(async () => {
       await result.current.play()
     })
-    await waitFor(() => expect(sequence).toContain('start'))
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
 
-    const ctx = contexts[0]
-    expect(ctx).toBeTruthy()
+    // Exactly one element per hook instance, with its src swapped per unit —
+    // not a pair of ping-ponged elements (see design.md).
+    expect(audioElements()).toHaveLength(1)
 
-    // "Play from here" while playing: stop() (async suspend in flight) then
-    // immediately play() again -- this is the exact reader sequence.
+    const element = currentAudio() as HTMLAudioElement & { playsInline: boolean }
+    expect(element.getAttribute('src')).toMatch(/^blob:/)
+    expect(element.playsInline).toBe(true)
+    expect(element.controls).toBe(false)
+    expect(element.preload).toBe('auto')
+
+    // The MP3 the synthesis client already returns is played as-is.
+    const blob = createObjectURL.mock.calls[0][0] as Blob
+    expect(blob).toBeInstanceOf(Blob)
+    expect(blob.type).toBe('audio/mpeg')
+    expect(audioPlay).toHaveBeenCalled()
+  })
+
+  it('never constructs an AudioContext', async () => {
+    const units = ['unit one', 'unit two']
+    const { result } = renderHook(() => useTTS('irrelevant content', { units }))
+
     await act(async () => {
-      result.current.stop()
       await result.current.play()
     })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+    await endCurrentUnit()
+    await waitFor(() => expect(srcAssignments).toHaveLength(2))
 
-    // Let playChunk's (awaited) resume + synchronous start run.
+    // Chrome for Android gives a MediaStream-backed element no media treatment,
+    // so the Web Audio carrier is gone entirely — not merely bypassed.
+    expect(audioContextCtor).not.toHaveBeenCalled()
+  })
+
+  it('chains to the next unit when the element fires ended', async () => {
+    const units = ['a'.repeat(10), 'b'.repeat(30)]
+    const onProgress = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units, onProgress })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    await endCurrentUnit()
+
+    await waitFor(() => expect(srcAssignments).toHaveLength(2))
+    expect(srcAssignments[1]).not.toBe(srcAssignments[0])
+    await waitFor(() => expect(result.current.currentChunkIndex).toBe(1))
+
+    // Unit 0's 10 characters are counted complete; unit 1 has just started
+    // (currentTime 0), so progress is exactly 10/40.
+    onProgress.mockClear()
+    await flushFrame()
+    expect(onProgress).toHaveBeenCalledWith(25)
+  })
+
+  it('prepares the next unit\'s object URL before the current unit ends', async () => {
+    const units = ['unit one', 'unit two']
+    const { result } = renderHook(() => useTTS('irrelevant content', { units }))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    // The buffered-ahead unit already has its object URL while unit 0 is still
+    // playing, so the swap at `ended` is a local assignment.
+    await waitFor(() => expect(createObjectURL).toHaveBeenCalledTimes(2))
+    expect(srcAssignments).toHaveLength(1)
+
+    const preparedUrl = createdUrls[1]
+    await endCurrentUnit()
+
+    expect(srcAssignments[1]).toBe(preparedUrl)
+  })
+
+  it('pauses the element and resumes mid-unit from the same currentTime', async () => {
+    const { result } = renderHook(() => useTTS('Hello world.'))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    mediaCurrentTime = 0.4
+    act(() => {
+      result.current.pause()
+    })
+
+    expect(audioPause).toHaveBeenCalled()
+    expect(currentAudio().currentTime).toBe(0.4)
+
+    audioPlay.mockClear()
+    await act(async () => {
+      await result.current.play()
+    })
     await flushMicrotasks()
-    await waitFor(() => expect(sequence.filter((e) => e === 'start').length).toBe(2))
 
-    // Contract: resume() must be called (unconditionally) immediately before the
-    // second source.start(). OLD conditional-resume code never resumes here
-    // (state was still 'running'), so this is 'start' and the test fails.
-    expect(sequence[sequence.length - 2]).toBe('resume')
+    await waitFor(() => expect(audioPlay).toHaveBeenCalled())
+    // Same unit, same source: no re-assignment of src (which would rewind).
+    expect(srcAssignments).toHaveLength(1)
+    expect(currentAudio().currentTime).toBe(0.4)
+  })
 
-    // Let the previously in-flight suspend land. Under the fix, resume already
-    // cancelled it, so the context stays running. Under the old code, no resume
-    // ran and the context flips to 'suspended' -> frozen audio.
+  it('revokes every object URL it created on stop', async () => {
+    const units = ['unit one', 'unit two', 'unit three']
+    const { result } = renderHook(() => useTTS('irrelevant content', { units }))
+
     await act(async () => {
-      await new Promise((r) => setTimeout(r, 5))
+      await result.current.play()
     })
-    expect(ctx.state).toBe('running')
+    // BUFFER_AHEAD prepares all three units up front.
+    await waitFor(() => expect(createObjectURL).toHaveBeenCalledTimes(3))
+
+    act(() => {
+      result.current.stop()
+    })
+
+    const revoked = revokeObjectURL.mock.calls.map(([url]) => url as string)
+    expect([...new Set(revoked)].sort()).toEqual([...createdUrls].sort())
+  })
+
+  it('tears the element down and revokes URLs on unmount', async () => {
+    const { result, unmount } = renderHook(() => useTTS('Hello world.'))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+    audioPause.mockClear()
+
+    unmount()
+
+    expect(audioPause).toHaveBeenCalled()
+    expect(document.querySelector('audio')).toBeNull()
+    const revoked = revokeObjectURL.mock.calls.map(([url]) => url as string)
+    expect([...new Set(revoked)].sort()).toEqual([...createdUrls].sort())
+  })
+})
+
+/**
+ * Progress has two clocks (see design.md, "Progress has two clocks now"):
+ *
+ * - `timeupdate` — the AUTHORITATIVE one. It keeps firing while the page is
+ *   hidden, which is exactly the scenario this whole change exists for (screen
+ *   off, reader playing in the background). rAF is frozen there, so without this
+ *   clock the `progress` / `currentTime` STATE would freeze for the whole hidden
+ *   stretch and jump on return — and the reader's media-session `previoustrack`
+ *   handler, which reads `currentTime` to choose restart-vs-previous-track,
+ *   would answer a lock-screen press from a stale elapsed value. (The prebuffer
+ *   ladder is not a consumer: it is keyed on `isPlaying`/`isBuffering`.)
+ * - `requestAnimationFrame` — cosmetic only. It does NOT tick while hidden; it
+ *   exists so the reader bar moves smoothly at 60Hz while the screen is on.
+ *
+ * Both must read the same `element.currentTime` through the same emitter, or
+ * they drift apart.
+ */
+describe('useTTS progress clocks', () => {
+  it('emits progress from timeupdate when no animation frame runs', async () => {
+    const units = ['a'.repeat(10), 'b'.repeat(30)]
+    const onProgress = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units, onProgress })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    // Simulate a hidden page: drop every frame the hook has scheduled and never
+    // run one. Nothing but `timeupdate` may move progress from here on.
+    frameCallbacks = []
+    onProgress.mockClear()
+
+    mediaDuration = 2
+    await emitTimeUpdate(1)
+
+    // Halfway through unit 0 (10 of 40 total chars): 10 * 0.5 / 40 = 12.5%.
+    expect(onProgress).toHaveBeenCalledWith(12.5)
+    // No frame ran, and none was scheduled by the timeupdate path.
+    expect(frameCallbacks).toHaveLength(0)
+    await waitFor(() => expect(result.current.progress).toBeCloseTo(12.5))
+  })
+
+  it('still emits progress every animation frame while visible', async () => {
+    const units = ['a'.repeat(10), 'b'.repeat(30)]
+    const onProgress = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units, onProgress })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    onProgress.mockClear()
+    mediaDuration = 4
+
+    // The rAF loop is self-rescheduling: one emission per frame, forever, so the
+    // bar stays smooth between the ~4Hz timeupdates.
+    mediaCurrentTime = 1
+    await flushFrame()
+    expect(onProgress).toHaveBeenCalledTimes(1)
+    expect(onProgress).toHaveBeenLastCalledWith(6.25)
+
+    mediaCurrentTime = 2
+    await flushFrame()
+    expect(onProgress).toHaveBeenCalledTimes(2)
+    expect(onProgress).toHaveBeenLastCalledWith(12.5)
+  })
+
+  it('throttles setState to whole percents while onProgress stays unthrottled', async () => {
+    // One 100-char unit, so the percentage is just `currentTime / duration`.
+    const units = ['x'.repeat(100)]
+    const onProgress = vi.fn()
+    let renderCount = 0
+    const { result } = renderHook(() => {
+      renderCount += 1
+      return useTTS('irrelevant content', { units, onProgress })
+    })
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    mediaDuration = 1000
+    onProgress.mockClear()
+
+    // 3.00% — the first whole percent, so this one DOES re-render.
+    await emitTimeUpdate(30)
+    const rendersAtThreePercent = renderCount
+
+    // 3.02% / 3.04% and one rAF tick at the same position: all still "3", so the
+    // backdrop-blur reader bar must not re-render again (hover flicker fix) —
+    // including across the clock boundary, since both share one throttle.
+    await emitTimeUpdate(30.2)
+    await emitTimeUpdate(30.4)
+    await flushFrame()
+
+    expect(renderCount).toBe(rendersAtThreePercent)
+    // onProgress, however, fired for every single tick: it is the hook's only
+    // unthrottled view of progress, deliberately outside the whole-percent latch
+    // that guards setState.
+    expect(onProgress).toHaveBeenCalledTimes(4)
+    expect(onProgress.mock.calls.map(([p]) => Math.round((p as number) * 100) / 100))
+      .toEqual([3, 3.02, 3.04, 3.04])
+
+    // 4.00% — a new whole percent, so exactly one more re-render.
+    await emitTimeUpdate(40)
+    expect(renderCount).toBe(rendersAtThreePercent + 1)
+    expect(result.current.progress).toBeCloseTo(4)
+  })
+
+  it('stops emitting after playback ends', async () => {
+    const units = ['a'.repeat(10)]
+    const onProgress = vi.fn()
+    const onComplete = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units, onProgress, onComplete })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    cancelFrame.mockClear()
+    await endCurrentUnit()
+    await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1))
+    expect(result.current.isPlaying).toBe(false)
+    // The rAF loop is cancelled, not merely left to no-op.
+    expect(cancelFrame).toHaveBeenCalled()
+
+    onProgress.mockClear()
+    mediaDuration = 2
+    // Both clocks are dead: a stray timeupdate from the paused element and any
+    // frame still queued must emit nothing.
+    await emitTimeUpdate(1)
+    await flushFrame()
+    await flushFrame()
+
+    expect(onProgress).not.toHaveBeenCalled()
   })
 })
 
 describe('useTTS replay with a cached (shared) synthesis buffer', () => {
-  it('decodes a copy so a replayed chunk does not fail with detached ArrayBuffer', async () => {
-    // Model lib/tts-client's synthesis cache: the SAME ArrayBuffer instance is
-    // returned to every caller for a given voice+text. decodeAudioData detaches
-    // its input, so useTTS must decode a COPY or the second play (play-from-here
-    // clears the decoded-buffer cache and re-fetches the same cached buffer)
-    // throws "Cannot decode detached ArrayBuffer".
+  it('reuses the cached synthesis ArrayBuffer on replay without detaching it', async () => {
+    // Model lib/tts/client's synthesis cache: the SAME ArrayBuffer instance is
+    // handed to every caller for a given voice+text. `new Blob([buffer])`
+    // COPIES, so — unlike the old decodeAudioData path, which detached its input
+    // and needed a slice(0) dance — the cached buffer stays usable forever.
     const shared = new ArrayBuffer(8)
     vi.mocked(synthesizeSpeech).mockResolvedValue(shared)
 
@@ -262,25 +501,25 @@ describe('useTTS replay with a cached (shared) synthesis buffer', () => {
     await act(async () => {
       await result.current.play()
     })
-    await waitFor(() => expect(sequence.filter((e) => e === 'start').length).toBe(1))
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
 
-    // Replay the same content (as play-from-here does): stop() clears the
-    // decoded-buffer cache, so play() re-fetches the same cached `shared` buffer
-    // and decodes it again. With slice(0) this succeeds; without it, throws.
+    // Replay (the play-from-here shape): stop() drops the blob cache, so play()
+    // wraps the very same cached ArrayBuffer in a fresh Blob.
     await act(async () => {
       result.current.stop()
       await result.current.play()
     })
     await flushMicrotasks()
+    await waitFor(() => expect(srcAssignments).toHaveLength(2))
 
-    await waitFor(() => expect(sequence.filter((e) => e === 'start').length).toBe(2))
+    // byteLength 0 would mean the buffer had been detached.
+    expect(shared.byteLength).toBe(8)
     expect(result.current.isPlaying).toBe(true)
   })
 })
 
 describe('useTTS units option', () => {
   it('plays the provided units in order instead of length-chunking the content', async () => {
-    vi.mocked(synthesizeSpeech).mockClear()
     const units = ['Title unit', 'TLDR unit here.', 'Body chunk text.']
 
     const { result } = renderHook(() =>
@@ -290,7 +529,7 @@ describe('useTTS units option', () => {
     await act(async () => {
       await result.current.play()
     })
-    await waitFor(() => expect(sequence).toContain('start'))
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
 
     // First synthesis is the tiny title unit, not the whole content.
     expect(vi.mocked(synthesizeSpeech).mock.calls[0][0]).toBe('Title unit')
@@ -298,14 +537,12 @@ describe('useTTS units option', () => {
   })
 
   it('falls back to length-chunking when units is empty or omitted', async () => {
-    vi.mocked(synthesizeSpeech).mockClear()
-
     const { result } = renderHook(() => useTTS('Just one sentence.', { units: [] }))
 
     await act(async () => {
       await result.current.play()
     })
-    await waitFor(() => expect(sequence).toContain('start'))
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
 
     expect(vi.mocked(synthesizeSpeech).mock.calls[0][0]).toBe('Just one sentence.')
   })
@@ -315,14 +552,12 @@ describe('useTTS playFromUnit', () => {
   const units = ['a'.repeat(10), 'b'.repeat(20), 'c'.repeat(30)]
 
   it('starts playback at the requested unit index', async () => {
-    vi.mocked(synthesizeSpeech).mockClear()
-
     const { result } = renderHook(() => useTTS('irrelevant content', { units }))
 
     await act(async () => {
       await result.current.playFromUnit(2)
     })
-    await waitFor(() => expect(sequence).toContain('start'))
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
 
     // The chunk list is initialised even though play() was never called, and the
     // first synthesis is the requested unit -- not unit 0.
@@ -332,35 +567,26 @@ describe('useTTS playFromUnit', () => {
   })
 
   it('seeds progress with the characters of the units it skipped', async () => {
-    // One-shot rAF: run the progress loop exactly once, then stop rescheduling.
-    let rafCalls = 0
-    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
-      rafCalls += 1
-      if (rafCalls === 1) cb(0)
-      return 1
-    })
-
     const onProgress = vi.fn()
     const { result } = renderHook(() => useTTS('irrelevant content', { units, onProgress }))
 
     await act(async () => {
       await result.current.playFromUnit(2)
     })
-    await waitFor(() => expect(onProgress).toHaveBeenCalled())
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+    await flushFrame()
 
     // Units 0+1 = 30 of 60 total chars already behind us, unit 2 just started.
     expect(onProgress).toHaveBeenCalledWith(50)
   })
 
   it('clamps an out-of-range unit index instead of throwing', async () => {
-    vi.mocked(synthesizeSpeech).mockClear()
-
     const { result } = renderHook(() => useTTS('irrelevant content', { units }))
 
     await act(async () => {
       await result.current.playFromUnit(99)
     })
-    await waitFor(() => expect(sequence).toContain('start'))
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
     expect(vi.mocked(synthesizeSpeech).mock.calls[0][0]).toBe(units[2])
 
     await act(async () => {
@@ -368,7 +594,7 @@ describe('useTTS playFromUnit', () => {
       vi.mocked(synthesizeSpeech).mockClear()
       await result.current.playFromUnit(-5)
     })
-    await waitFor(() => expect(sequence.filter((e) => e === 'start').length).toBe(2))
+    await waitFor(() => expect(srcAssignments).toHaveLength(2))
     expect(vi.mocked(synthesizeSpeech).mock.calls[0][0]).toBe(units[0])
 
     // Nothing to play at all: must resolve, not throw.
@@ -379,14 +605,12 @@ describe('useTTS playFromUnit', () => {
   })
 
   it('clamps positive infinity to the last unit', async () => {
-    vi.mocked(synthesizeSpeech).mockClear()
-
     const { result } = renderHook(() => useTTS('irrelevant content', { units }))
 
     await act(async () => {
       await result.current.playFromUnit(Number.POSITIVE_INFINITY)
     })
-    await waitFor(() => expect(sequence).toContain('start'))
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
 
     // +Infinity reads as "past the end", so it clamps to the LAST unit.
     expect(vi.mocked(synthesizeSpeech).mock.calls[0][0]).toBe(units[2])
@@ -394,14 +618,12 @@ describe('useTTS playFromUnit', () => {
   })
 
   it('treats NaN as the first unit', async () => {
-    vi.mocked(synthesizeSpeech).mockClear()
-
     const { result } = renderHook(() => useTTS('irrelevant content', { units }))
 
     await act(async () => {
       await result.current.playFromUnit(Number.NaN)
     })
-    await waitFor(() => expect(sequence).toContain('start'))
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
 
     // NaN carries no position at all: fall back to unit 0.
     expect(vi.mocked(synthesizeSpeech).mock.calls[0][0]).toBe(units[0])
@@ -414,10 +636,10 @@ describe('useTTS playFromUnit', () => {
     await act(async () => {
       await result.current.play()
     })
-    await waitFor(() => expect(sequence).toContain('start'))
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
 
-    // Pause mid-chunk so pauseOffsetRef holds an offset into unit 0.
-    contexts[0].currentTime = 0.5
+    // Pause mid-unit so pauseOffsetRef holds an offset into unit 0.
+    mediaCurrentTime = 0.5
     act(() => {
       result.current.pause()
     })
@@ -426,10 +648,11 @@ describe('useTTS playFromUnit', () => {
       await result.current.playFromUnit(2)
     })
     await flushMicrotasks()
-    await waitFor(() => expect(sequence.filter((e) => e === 'start').length).toBe(2))
+    await waitFor(() => expect(srcAssignments).toHaveLength(2))
 
-    // The new unit starts from its beginning, not 0.5s into the old one.
-    expect(startOffsets[startOffsets.length - 1]).toBe(0)
+    // The new unit starts from its beginning, not 0.5s into the old one — a
+    // resume would have reused the same src instead of assigning a new one.
+    expect(currentAudio().currentTime).toBe(0)
     await waitFor(() => expect(result.current.currentChunkIndex).toBe(2))
   })
 })
@@ -448,33 +671,27 @@ describe('useTTS chunk-synthesis failure recovery', () => {
     const onError = vi.fn()
     const onComplete = vi.fn()
 
-    const { result } = renderHook(() => useTTS('irrelevant content', { units, onError, onComplete }))
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units, onError, onComplete })
+    )
 
     await act(async () => {
       await result.current.play()
     })
-    await waitFor(() => expect(sequence).toContain('start'))
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
     expect(result.current.currentChunkIndex).toBe(0)
 
-    // Chunk 0 finishes: playChunk(1) fetches 'fail-2', fails, and — instead of
-    // stopping — skips straight to chunk 2 without the user doing anything.
-    await act(async () => {
-      sources[0].onended?.()
-      await Promise.resolve()
-      await Promise.resolve()
-      await Promise.resolve()
-    })
+    // Unit 0 finishes: unit 1 fetches 'fail-2', fails, and — instead of
+    // stopping — skips straight to unit 2 without the user doing anything.
+    await endCurrentUnit()
 
     expect(onError).not.toHaveBeenCalled()
-    await waitFor(() => expect(sequence.filter((e) => e === 'start').length).toBe(2))
+    await waitFor(() => expect(srcAssignments).toHaveLength(2))
     await waitFor(() => expect(result.current.currentChunkIndex).toBe(2))
     expect(result.current.isPlaying).toBe(true)
 
-    // Chunk 2 finishes normally: playback completes as if nothing failed.
-    await act(async () => {
-      sources[1].onended?.()
-      await Promise.resolve()
-    })
+    // Unit 2 finishes normally: playback completes as if nothing failed.
+    await endCurrentUnit()
     expect(onComplete).toHaveBeenCalledTimes(1)
     expect(result.current.isPlaying).toBe(false)
   })
@@ -492,290 +709,511 @@ describe('useTTS chunk-synthesis failure recovery', () => {
     await act(async () => {
       await result.current.play()
     })
-    await waitFor(() => expect(sequence).toContain('start'))
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
 
-    // Chunk 0 finishes; chunks 1-4 all fail. The first 3 failures skip
+    // Unit 0 finishes; units 1-4 all fail. The first 3 failures skip
     // (consecutive count 1, 2, 3), the 4th exceeds the cap and stops instead
-    // of silently skipping through every remaining chunk.
-    await act(async () => {
-      sources[0].onended?.()
-      for (let i = 0; i < 6; i += 1) await Promise.resolve()
-    })
+    // of silently skipping through every remaining unit.
+    await endCurrentUnit()
 
     await waitFor(() => expect(onError).toHaveBeenCalledTimes(1))
     expect(result.current.isPlaying).toBe(false)
-    // Never reached a chunk that could actually play after chunk 0.
-    expect(sequence.filter((e) => e === 'start').length).toBe(1)
+    // Never reached a unit that could actually play after unit 0.
+    expect(srcAssignments).toHaveLength(1)
   })
 })
 
-describe('useTTS media-element playback routing', () => {
-  // Mobile browsers exempt a backgrounded page from tab freezing and
-  // timer/network throttling on the basis of MEDIA ELEMENT playback, not on a
-  // running AudioContext. Playback is therefore routed
-  // source -> MediaStreamAudioDestinationNode -> <audio srcObject> so the
-  // synthesis socket and chunk-advance chain survive a screen-off phone.
-  beforeEach(() => {
-    vi.mocked(synthesizeSpeech).mockImplementation(async () => new ArrayBuffer(8))
-  })
+/**
+ * With one output path there is nothing left to silently fall back to, so every
+ * way the element can refuse to produce sound has to reach the user. The failure
+ * mode this whole suite guards against is silence with `isPlaying` stuck true.
+ */
+describe('useTTS media-element failure paths', () => {
+  it('stops and reports onError when the element refuses to play', async () => {
+    // What Safari/Chrome throw at an un-gestured start; also what a broken
+    // element gives back once it has a source it cannot open.
+    const refusal = new DOMException('play() was not allowed', 'NotAllowedError')
+    audioPlay.mockImplementation(() => Promise.reject(refusal))
+    const onError = vi.fn()
 
-  const playOnce = async (content = 'Hello world.', options?: Parameters<typeof useTTS>[1]) => {
-    const rendered = renderHook(() => useTTS(content, options))
-    await act(async () => {
-      await rendered.result.current.play()
-    })
-    await waitFor(() => expect(sequence).toContain('start'))
-    return rendered
-  }
-
-  it('connects playback to the stream destination when the API is available', async () => {
-    await playOnce()
-
-    expect(streamDestinations).toHaveLength(1)
-    expect(sources[0].connect).toHaveBeenCalledWith(streamDestinations[0])
-  })
-
-  it('does not also connect to audioContext.destination when streaming', async () => {
-    await playOnce()
-
-    expect(sources[0].connect).toHaveBeenCalledTimes(1)
-    expect(sources[0].connect).not.toHaveBeenCalledWith(contexts[0].destination)
-  })
-
-  it('falls back to audioContext.destination when createMediaStreamDestination is missing', async () => {
-    supportsStreamDestination = false
-
-    await playOnce()
-
-    expect(streamDestinations).toHaveLength(0)
-    expect(sources[0].connect).toHaveBeenCalledWith(contexts[0].destination)
-    // No element is needed for audio to reach the output on this path.
-    expect(document.querySelector('audio')).toBeNull()
-  })
-
-  it('assigns the destination stream to the audio element', async () => {
-    await playOnce()
-
-    const element = document.querySelector('audio') as HTMLAudioElement & {
-      srcObject: unknown
-      playsInline: boolean
-    }
-    expect(element).toBeTruthy()
-    expect(element.srcObject).toBe(streamDestinations[0].stream)
-    expect(element.playsInline).toBe(true)
-    expect(element.controls).toBe(false)
-    expect(element.preload).toBe('none')
-  })
-
-  it('plays the audio element when playback starts', async () => {
-    await playOnce()
-
-    expect(audioPlay).toHaveBeenCalled()
-  })
-
-  it('pauses the audio element on pause and stop', async () => {
-    const { result } = await playOnce()
-
-    act(() => {
-      result.current.pause()
-    })
-    expect(audioPause).toHaveBeenCalled()
-
-    audioPause.mockClear()
-    act(() => {
-      result.current.stop()
-    })
-    expect(audioPause).toHaveBeenCalled()
-  })
-
-  it('plays the audio element again on resume', async () => {
-    const { result } = await playOnce()
-
-    act(() => {
-      result.current.pause()
-    })
-    audioPlay.mockClear()
+    const { result } = renderHook(() => useTTS('Hello world.', { onError }))
 
     await act(async () => {
-      await result.current.resume()
+      await result.current.play()
     })
-    await flushMicrotasks()
 
-    await waitFor(() => expect(audioPlay).toHaveBeenCalled())
+    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1))
+    expect(onError).toHaveBeenCalledWith(refusal)
+    // The rejection must clear the playing flag, or the UI shows a playing
+    // reader over silence with no way to notice.
+    await waitFor(() => expect(result.current.isPlaying).toBe(false))
+    // The gesture-unlock poke at the top of play() rejects on this mock too; it
+    // is a different call and must not be reported as a refused unit start.
+    expect(onError).toHaveBeenCalledTimes(1)
   })
 
-  it('tears the audio element down on unmount', async () => {
-    const { unmount } = await playOnce()
-
-    const element = document.querySelector('audio') as HTMLAudioElement & { srcObject: unknown }
-    expect(element).toBeTruthy()
-    audioPause.mockClear()
-
-    unmount()
-
-    expect(audioPause).toHaveBeenCalled()
-    expect(element.srcObject).toBeNull()
-    expect(element.isConnected).toBe(false)
-    expect(document.querySelector('audio')).toBeNull()
-  })
-
-  it('still chains to the next chunk on ended while streaming', async () => {
-    const units = ['unit one', 'unit two']
-    const { result } = await playOnce('irrelevant content', { units })
+  it('treats an element error as a unit failure and continues with the next unit', async () => {
+    const units = ['a'.repeat(10), 'b'.repeat(20), 'c'.repeat(30)]
+    const onError = vi.fn()
+    const onProgress = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units, onError, onProgress })
+    )
 
     await act(async () => {
-      sources[0].onended?.()
-      await Promise.resolve()
-      await Promise.resolve()
+      await result.current.play()
     })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+    const failedUrl = srcAssignments[0]
 
-    await waitFor(() => expect(sequence.filter((e) => e === 'start').length).toBe(2))
-    expect(sources[1].connect).toHaveBeenCalledWith(streamDestinations[0])
+    // Undecodable MP3 for unit 0: same treatment as a synthesis failure — skip
+    // it, count it complete, keep playing.
+    await failCurrentUnitInElement()
+
+    expect(onError).not.toHaveBeenCalled()
+    await waitFor(() => expect(srcAssignments).toHaveLength(2))
     await waitFor(() => expect(result.current.currentChunkIndex).toBe(1))
+    expect(result.current.isPlaying).toBe(true)
+
+    // The abandoned unit's object URL is released before moving on; the one the
+    // element is now reading obviously is not.
+    expect(revokeObjectURL).toHaveBeenCalledWith(failedUrl)
+    expect(revokeObjectURL).not.toHaveBeenCalledWith(srcAssignments[1])
+
+    // Unit 0's 10 of 60 characters are counted complete, so progress advances
+    // past the unreadable unit instead of stalling on it.
+    onProgress.mockClear()
+    await flushFrame()
+    expect(onProgress.mock.calls.at(-1)?.[0] as number).toBeCloseTo(100 / 6, 5)
   })
 
-  it('starts the element before starting the source, so no head of the live stream is clipped', async () => {
-    await playOnce()
+  it('stops and reports onError after too many consecutive element errors', async () => {
+    const units = ['u0', 'u1', 'u2', 'u3', 'u4']
+    const onError = vi.fn()
+    const { result } = renderHook(() => useTTS('irrelevant content', { units, onError }))
 
-    // A MediaStreamAudioDestinationNode is a LIVE stream: the element plays
-    // from "now", so it must be running before the source produces samples.
-    expect(order.indexOf('element-play')).toBeGreaterThanOrEqual(0)
-    expect(order.indexOf('element-play')).toBeLessThan(order.indexOf('source-start'))
-  })
-})
-
-describe('useTTS WebKit carve-out', () => {
-  // createMediaStreamDestination EXISTS in Safari, so feature detection alone
-  // would route iOS into <audio srcObject=MediaStream> — a path that has a long
-  // history of producing no sound for Web-Audio-originated MediaStreams on iOS.
-  // Since the routing is exclusive, that would be silence where direct output
-  // works today. WebKit therefore deliberately keeps audioContext.destination.
-  beforeEach(() => {
-    vi.mocked(synthesizeSpeech).mockImplementation(async () => new ArrayBuffer(8))
-  })
-
-  const playOnce = async () => {
-    const rendered = renderHook(() => useTTS('Hello world.'))
     await act(async () => {
-      await rendered.result.current.play()
+      await result.current.play()
     })
-    await waitFor(() => expect(sequence).toContain('start'))
-    return rendered
-  }
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
 
-  it('keeps an Apple/WebKit browser on audioContext.destination and creates no element', async () => {
-    setNavigatorVendor(WEBKIT_VENDOR)
+    // Every unit synthesizes fine but the element rejects all of them — a
+    // systemic decode failure, not one bad paragraph. Skips 1, 2 and 3 are
+    // tolerated; the 4th exceeds MAX_CONSECUTIVE_CHUNK_FAILURES and stops.
+    for (let i = 0; i < 4; i += 1) await failCurrentUnitInElement()
 
-    await playOnce()
+    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1))
+    expect(result.current.isPlaying).toBe(false)
+    // Units 0-3 were attempted; unit 4 was never reached.
+    expect(srcAssignments).toHaveLength(4)
 
-    // The API is available on this fake context, so only the vendor check can
-    // have kept us off the streaming path.
-    expect(supportsStreamDestination).toBe(true)
-    expect(streamDestinations).toHaveLength(0)
-    expect(document.querySelector('audio')).toBeNull()
-    expect(audioPlay).not.toHaveBeenCalled()
-    expect(sources[0].connect).toHaveBeenCalledTimes(1)
-    expect(sources[0].connect).toHaveBeenCalledWith(contexts[0].destination)
+    // Giving up ends the session, so nothing it created may outlive it.
+    const revoked = new Set(revokeObjectURL.mock.calls.map(([url]) => url as string))
+    expect([...revoked].sort()).toEqual([...new Set(createdUrls)].sort())
   })
 
-  it('catches Chrome/Firefox on iOS, which report the Apple vendor too', async () => {
-    setNavigatorVendor(WEBKIT_VENDOR)
-    Object.defineProperty(window.navigator, 'userAgent', {
-      value:
-        'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 CriOS/120.0',
-      configurable: true,
+  /**
+   * iOS/WebKit gates `play()` on the user-gesture task itself (Chrome for
+   * Android does not: its gate is sticky user activation, which survives for the
+   * document's lifetime). The first per-unit `play()` happens after
+   * `await fetchAudioBlob(...)`, i.e. in a later task, so without an in-gesture
+   * poke at the element it would reject with NotAllowedError — and the spec
+   * delta's claim that Apple browsers are no longer carved out would be false.
+   */
+  it('unlocks the element inside the user gesture before awaiting synthesis', async () => {
+    let resolveSynthesis: ((buffer: ArrayBuffer) => void) | undefined
+    vi.mocked(synthesizeSpeech).mockImplementation(
+      () => new Promise<ArrayBuffer>((resolve) => { resolveSynthesis = resolve })
+    )
+
+    const { result } = renderHook(() => useTTS('Hello world.'))
+
+    let started: Promise<void> | undefined
+    act(() => {
+      started = result.current.play()
     })
 
-    await playOnce()
+    // Still inside the gesture task: nothing has been synthesized or assigned
+    // yet, but the element has already been played (and left silent).
+    expect(audioPlay).toHaveBeenCalledTimes(1)
+    expect(audioPause).toHaveBeenCalledTimes(1)
+    expect(currentAudio().getAttribute('src')).toBeNull()
+    expect(srcAssignments).toHaveLength(0)
 
-    expect(streamDestinations).toHaveLength(0)
-    expect(sources[0].connect).toHaveBeenCalledWith(contexts[0].destination)
+    await act(async () => {
+      resolveSynthesis?.(new ArrayBuffer(8))
+      await started
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
 
-    delete (window.navigator as unknown as Record<string, unknown>).userAgent
+    // The real unit start is a separate call, on an element the gesture already
+    // unlocked.
+    expect(audioPlay.mock.calls.length).toBeGreaterThan(1)
   })
 
-  it('keeps the streaming behaviour on a non-WebKit browser', async () => {
-    setNavigatorVendor(NON_WEBKIT_VENDOR)
+  it('does not count a unit as complete when ended fires after pause', async () => {
+    const units = ['a'.repeat(10), 'b'.repeat(30)]
+    const onProgress = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units, onProgress })
+    )
 
-    await playOnce()
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
 
-    expect(streamDestinations).toHaveLength(1)
-    expect(document.querySelector('audio')).toBeTruthy()
-    expect(sources[0].connect).toHaveBeenCalledWith(streamDestinations[0])
-    expect(sources[0].connect).not.toHaveBeenCalledWith(contexts[0].destination)
+    mediaCurrentTime = 0.5
+    act(() => {
+      result.current.pause()
+    })
+
+    // Structural, not merely guarded: an abandoned unit's handler is detached,
+    // so a late `ended` cannot run at all.
+    expect(currentAudio().onended).toBeNull()
+
+    await endCurrentUnit()
+    expect(srcAssignments).toHaveLength(1)
+
+    // Resume mid-unit: progress is half of unit 0 (10 chars of 40) = 12.5%. If
+    // the stale `ended` had counted unit 0 complete it would read 37.5%.
+    onProgress.mockClear()
+    await act(async () => {
+      await result.current.play()
+    })
+    await flushFrame()
+    expect(onProgress.mock.calls.at(-1)?.[0] as number).toBeCloseTo(12.5, 5)
+  })
+
+  it('restarts the progress loop after recovering from the failure cap', async () => {
+    const units = ['ok-1', 'fail-2', 'fail-3', 'fail-4', 'fail-5']
+    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) => {
+      if (text.startsWith('fail-')) throw new Error('stalled')
+      return new ArrayBuffer(8)
+    })
+    const onError = vi.fn()
+    const onProgress = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units, onError, onProgress })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    await endCurrentUnit()
+    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1))
+    expect(result.current.isPlaying).toBe(false)
+
+    // The outage clears and the user presses Play again.
+    vi.mocked(synthesizeSpeech).mockImplementation(async () => new ArrayBuffer(8))
+    frameCallbacks = []
+    onProgress.mockClear()
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(2))
+
+    // A frame handle left behind by the give-up path would make playChunk's
+    // `if (!animationFrameRef.current)` skip re-arming the loop, so the smooth
+    // clock would be gone for the rest of the session and the reader bar would
+    // lurch forward at the ~4Hz timeupdate rate instead of gliding.
+    expect(frameCallbacks).not.toHaveLength(0)
+    await flushFrame()
+    expect(onProgress).toHaveBeenCalled()
   })
 })
 
-describe('useTTS media element that refuses to play', () => {
-  // Routing is EXCLUSIVE: the source is connected to the stream destination
-  // INSTEAD of audioContext.destination. So a rejected element play() (autoplay
-  // policy, no gesture, a stream the platform will not render) would otherwise
-  // mean the graph renders into a MediaStream nobody consumes — total silence
-  // while isPlaying stays true, progress advances and chunks keep chaining, with
-  // nothing surfaced to the UI. Recovery must make the audio audible again.
-  beforeEach(() => {
-    vi.mocked(synthesizeSpeech).mockImplementation(async () => new ArrayBuffer(8))
-    audioPlay = vi.fn(() => {
-      order.push('element-play')
-      return Promise.reject(new DOMException('play() blocked', 'NotAllowedError'))
+/**
+ * Behaviors that were already correct but that nothing pinned — a reviewer's
+ * mutants survived the whole suite. Each test below is the mutation-kill for one
+ * of them.
+ */
+describe('useTTS object-URL lifecycle and progress accumulation', () => {
+  it('revokes each consumed unit\'s object URL and never the one now playing', async () => {
+    const units = ['a'.repeat(10), 'b'.repeat(10), 'c'.repeat(10)]
+    const { result } = renderHook(() => useTTS('irrelevant content', { units }))
+
+    await act(async () => {
+      await result.current.play()
     })
-    HTMLMediaElement.prototype.play = audioPlay as unknown as HTMLMediaElement['play']
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    await endCurrentUnit()
+    await waitFor(() => expect(srcAssignments).toHaveLength(2))
+    await endCurrentUnit()
+    await waitFor(() => expect(srcAssignments).toHaveLength(3))
+
+    // Units 0 and 1 are behind the playhead: their URLs are released as the
+    // element moves on, which is the only thing keeping a Read All News session
+    // from retaining every paragraph's audio for the whole article.
+    expect(revokeObjectURL).toHaveBeenCalledWith(srcAssignments[0])
+    expect(revokeObjectURL).toHaveBeenCalledWith(srcAssignments[1])
+    // The URL the element is reading right now must survive — revoking it would
+    // pull the media out from under the current unit.
+    expect(revokeObjectURL).not.toHaveBeenCalledWith(srcAssignments[2])
+    expect(currentAudio().getAttribute('src')).toBe(srcAssignments[2])
   })
 
-  it('re-routes the playing source to audioContext.destination so audio still reaches the output', async () => {
+  it('reads an unknown (NaN) duration as "just started" instead of emitting NaN', async () => {
+    const units = ['a'.repeat(10), 'b'.repeat(30)]
+    const onProgress = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units, onProgress })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    await endCurrentUnit()
+    await waitFor(() => expect(srcAssignments).toHaveLength(2))
+
+    // Unit 1 has just been assigned and has no metadata yet — the real state of
+    // the element for a beat after EVERY swap.
+    onProgress.mockClear()
+    clearDurationMetadata()
+    await emitTimeUpdate(0.4)
+
+    // 10 of 40 characters are behind us and the new unit counts as 0% until its
+    // duration is known. A NaN would propagate into `progress` AND `currentTime`
+    // (derived from it), and every comparison against NaN is false — so the bar
+    // would stall and the reader's media-session `previoustrack` handler would
+    // read `elapsed > RESTART_THRESHOLD_SECONDS` as false forever, always
+    // stepping to the previous track instead of restarting the current one.
+    const emitted = onProgress.mock.calls.at(-1)?.[0] as number
+    expect(Number.isNaN(emitted)).toBe(false)
+    expect(emitted).toBeCloseTo(25, 5)
+    expect(Number.isNaN(result.current.progress)).toBe(false)
+    expect(result.current.progress).toBeCloseTo(25, 5)
+  })
+
+  it('accumulates completed characters across units as each one finishes', async () => {
+    // 10 + 20 + 70 = 100 characters, so progress reads directly as a percentage.
+    const units = ['a'.repeat(10), 'b'.repeat(20), 'c'.repeat(70)]
+    const onProgress = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units, onProgress })
+    )
+
+    const progressNow = async () => {
+      onProgress.mockClear()
+      await flushFrame()
+      return onProgress.mock.calls.at(-1)?.[0] as number
+    }
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    // Nothing finished yet.
+    expect(await progressNow()).toBeCloseTo(0, 5)
+
+    await endCurrentUnit()
+    await waitFor(() => expect(result.current.currentChunkIndex).toBe(1))
+    expect(await progressNow()).toBeCloseTo(10, 5)
+
+    // The second unit ADDS to the first — a per-unit assignment instead of an
+    // accumulation would read 20 here and the bar would jump backwards.
+    await endCurrentUnit()
+    await waitFor(() => expect(result.current.currentChunkIndex).toBe(2))
+    expect(await progressNow()).toBeCloseTo(30, 5)
+  })
+
+  it('unlocks the element only once, not again on resume', async () => {
     const { result } = renderHook(() => useTTS('Hello world.'))
 
     await act(async () => {
       await result.current.play()
     })
-    await waitFor(() => expect(sequence).toContain('start'))
-    // Let the rejected play() promise settle.
-    await flushMicrotasks()
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
 
-    expect(audioPlay).toHaveBeenCalled()
-    // The element was tried first (streaming path), then abandoned.
-    expect(sources[0].connect).toHaveBeenCalledWith(streamDestinations[0])
-    await waitFor(() =>
-      expect(sources[0].connect).toHaveBeenCalledWith(contexts[0].destination)
-    )
-    expect(sources[0].disconnect).toHaveBeenCalledWith(streamDestinations[0])
-    expect(result.current.isPlaying).toBe(true)
+    // The in-gesture unlock poke is a play() immediately followed by a pause(),
+    // on an element that has no source yet — so nothing is audible.
+    expect(audioPause).toHaveBeenCalledTimes(1)
+
+    mediaCurrentTime = 0.4
+    act(() => {
+      result.current.pause()
+    })
+    expect(audioPause).toHaveBeenCalledTimes(2)
+
+    audioPlay.mockClear()
+    await act(async () => {
+      await result.current.play()
+    })
+    await flushMicrotasks()
+    await waitFor(() => expect(audioPlay).toHaveBeenCalled())
+
+    // Resume must NOT poke again. WebKit's per-element unlock never expires, so
+    // the latch is pure win — and by now the element is LOADED, so a second
+    // play()+pause() pair would emit an audible blip of the current unit on a
+    // real device before settling back into the resume.
+    expect(audioPause).toHaveBeenCalledTimes(2)
+    expect(currentAudio().getAttribute('src')).toBe(srcAssignments[0])
+    expect(srcAssignments).toHaveLength(1)
   })
 
-  it('does not strand the rest of the article: later chunks go straight to the context destination', async () => {
-    const units = ['unit one', 'unit two']
-    const onComplete = vi.fn()
-    const onError = vi.fn()
-
-    const { result } = renderHook(() =>
-      useTTS('irrelevant content', { units, onComplete, onError })
+  it('routes timeupdate to the latest onProgress after a rerender', async () => {
+    const first = vi.fn()
+    const second = vi.fn()
+    const { result, rerender } = renderHook(
+      ({ onProgress }: { onProgress: (progress: number) => void }) =>
+        useTTS('irrelevant content', { units: ['a'.repeat(10)], onProgress }),
+      { initialProps: { onProgress: first } }
     )
 
     await act(async () => {
       await result.current.play()
     })
-    await waitFor(() => expect(sequence).toContain('start'))
-    await flushMicrotasks()
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    // The `timeupdate` listener is attached ONCE, at element creation, so it can
+    // only reach the current callback through a ref. Closing over `emitProgress`
+    // directly would pin the identity that existed at mount and every later
+    // `onProgress` would be dead.
+    rerender({ onProgress: second })
+    first.mockClear()
+    mediaDuration = 2
+    await emitTimeUpdate(1)
+
+    expect(second).toHaveBeenCalledWith(50)
+    expect(first).not.toHaveBeenCalled()
+  })
+
+  it('leaves the element src in place when paused', async () => {
+    const { result } = renderHook(() => useTTS('Hello world.'))
 
     await act(async () => {
-      sources[0].onended?.()
-      await Promise.resolve()
-      await Promise.resolve()
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    mediaCurrentTime = 0.4
+    act(() => {
+      result.current.pause()
     })
 
-    await waitFor(() => expect(sequence.filter((e) => e === 'start').length).toBe(2))
-    // Chunk 2 is wired for audibility from the start — never to the dead stream.
-    expect(sources[1].connect).toHaveBeenCalledWith(contexts[0].destination)
-    expect(sources[1].connect).not.toHaveBeenCalledWith(streamDestinations[0])
-    // The element is not driven again once it has refused.
-    expect(audioPlay).toHaveBeenCalledTimes(1)
+    // A pause must not drop the source: clearing it would rewind the unit, throw
+    // away the buffered media and tear down the OS media session the notification
+    // and car head unit are attached to.
+    expect(currentAudio().getAttribute('src')).toBe(srcAssignments[0])
+    expect(currentAudio().getAttribute('src')).toMatch(/^blob:/)
+  })
+})
+
+/**
+ * The window between `ended` firing for unit N and unit N+1 actually loading.
+ *
+ * `playChunk(N+1)` cannot reassign the element's handlers or its `src` until its
+ * own synthesis resolves, so for the whole length of that await the element is
+ * still carrying unit N's handlers AND unit N's finished media — while the
+ * hook's own bookkeeping (`completedChars`, `currentChunkIndex`) has already
+ * moved on to N+1. Both nits below live in exactly that gap.
+ */
+describe('useTTS starved unit boundary', () => {
+  const units = ['a'.repeat(10), 'b'.repeat(30)]
+
+  // Park unit 1's synthesis so playChunk(1) suspends mid-await, leaving the
+  // element loaded with the finished unit 0.
+  const parkSecondUnit = () => {
+    let release: ((buffer: ArrayBuffer) => void) | undefined
+    const parked = new Promise<ArrayBuffer>((resolve) => { release = resolve })
+    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) =>
+      text === units[1] ? parked : new ArrayBuffer(8)
+    )
+    return async () => {
+      await act(async () => {
+        release?.(new ArrayBuffer(8))
+        for (let i = 0; i < 8; i += 1) await Promise.resolve()
+      })
+    }
+  }
+
+  it('does not double-count a unit when a stray error fires during the next unit\'s synthesis', async () => {
+    const releaseSecondUnit = parkSecondUnit()
+    const onProgress = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units, onProgress })
+    )
 
     await act(async () => {
-      sources[1].onended?.()
-      await Promise.resolve()
+      await result.current.play()
     })
-    expect(onError).not.toHaveBeenCalled()
-    expect(onComplete).toHaveBeenCalledTimes(1)
-    expect(result.current.isPlaying).toBe(false)
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    // Unit 0 ends; playChunk(1) suspends on the parked synthesis.
+    await endCurrentUnit()
+    expect(srcAssignments).toHaveLength(1)
+
+    // Structural, not merely guarded: unit 0 is abandoned the moment the chain
+    // commits to unit 1, so its handlers cannot run at all. Unit 0's `onerror`
+    // guards (generation, abort signal, isPlaying) ALL still pass here, so only
+    // the detach stops it.
+    expect(currentAudio().onerror).toBeNull()
+    expect(currentAudio().onended).toBeNull()
+
+    // The stray event: the element gives up on the media it is still holding
+    // (unit 0's) while unit 1 is being synthesized.
+    await failCurrentUnitInElement()
+    await releaseSecondUnit()
+
+    await waitFor(() => expect(result.current.currentChunkIndex).toBe(1))
+    // Exactly one start for unit 1 — a live stale `onerror` would run failUnit(0)
+    // a second time and issue a duplicate playChunk(1).
+    expect(srcAssignments).toHaveLength(2)
+
+    // Unit 0's 10 of 40 characters, counted once. Counted twice it reads 50%,
+    // and every later percentage in the session stays inflated by that unit.
+    onProgress.mockClear()
+    await flushFrame()
+    expect(onProgress.mock.calls.at(-1)?.[0] as number).toBeCloseTo(25, 5)
+  })
+
+  it('does not emit a progress spike while the next unit is still being synthesized', async () => {
+    const releaseSecondUnit = parkSecondUnit()
+    const emitted: number[] = []
+    const onProgress = vi.fn((progress: number) => { emitted.push(progress) })
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units, onProgress })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    mediaDuration = 2
+    await emitTimeUpdate(1)
+    await emitTimeUpdate(2)
+
+    // Unit 0 ends. `completedChars` absorbs its 10 chars and `currentChunkIndex`
+    // moves to 1 immediately, but the element keeps unit 0's exhausted media
+    // (currentTime === duration) for as long as unit 1's synthesis takes.
+    await endCurrentUnit()
+    expect(srcAssignments).toHaveLength(1)
+
+    // Both clocks read that stale element during the gap. Ungated they compute
+    // "unit 1 is 100% done" (10 + 30 * 1) / 40 — a spike to 100% that then falls
+    // back to 25% the instant the src swap rewinds the element.
+    await flushFrame()
+    await emitTimeUpdate(2)
+    await flushFrame()
+
+    await releaseSecondUnit()
+    await waitFor(() => expect(srcAssignments).toHaveLength(2))
+    await flushFrame()
+
+    // Nothing above the honest 25% ever escaped, and progress never went
+    // backwards.
+    expect(Math.max(...emitted)).toBeCloseTo(25, 5)
+    emitted.forEach((progress, i) => {
+      if (i > 0) expect(progress).toBeGreaterThanOrEqual(emitted[i - 1])
+    })
+    expect(emitted.at(-1)).toBeCloseTo(25, 5)
   })
 })
