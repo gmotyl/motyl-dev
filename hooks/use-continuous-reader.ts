@@ -11,6 +11,7 @@ import {
 } from '@/lib/reader/media-session-tracks'
 import { useMediaSession } from './use-media-session'
 import { useTTS } from './useTTS'
+import { useWakeLock } from './useWakeLock'
 import type { TTSPlayback } from './useTTS'
 
 /** Shown as the album on every OS media control. */
@@ -325,6 +326,27 @@ export function useContinuousReader(
     stop: playbackStop,
     resume: playbackResume,
   } = playback
+
+  const { requestWakeLock, releaseWakeLock } = useWakeLock()
+
+  // The lock is scoped to PLAYBACK, not to the page: held while the voice runs,
+  // dropped on pause/stop/unmount, so a reader left paused on screen does not
+  // keep burning battery. Read All News gets no control for it — it is entirely
+  // derived from `isPlaying`.
+  //
+  // Keyed on the `isPlaying` VALUE, never on `playback`: that object's identity
+  // churns on every progress tick (~1%/render), and an effect keyed on it would
+  // release-and-re-request the lock several times a second. The two callbacks
+  // are `useCallback`-stable by `useWakeLock`'s contract, so they are honest
+  // deps that never fire the effect on their own.
+  useEffect(() => {
+    if (!isPlaying) return
+    void requestWakeLock()
+    // Runs on pause/stop (isPlaying → false) and on unmount alike.
+    return () => {
+      void releaseWakeLock()
+    }
+  }, [isPlaying, requestWakeLock, releaseWakeLock])
 
   // The position's section disappeared (mark-as-read, DOM eviction): the derived
   // index has already resolved to a survivor per the previous order, so adopt it
