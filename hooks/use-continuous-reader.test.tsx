@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from '@testing-library/react'
+import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { sectionKey, type SpeechSection } from '@/lib/tts/speech'
@@ -252,12 +252,46 @@ const sharedLineItem: SpeechSection = {
   key: sectionKey('shared', 0),
 }
 
+// jsdom leaves `HTMLMediaElement.play()` / `.pause()` unimplemented: calling
+// either logs "Not implemented: HTMLMediaElement's play() method" to the virtual
+// console instead of doing anything. `useTTS` creates a real <audio> element on
+// mount and unlocks it (play() then pause()) inside the user gesture, so every
+// reader test that starts playback printed that noise to stderr and buried real
+// failures. Same descriptor-swap shape as the fuller harness in `useTTS.test.tsx`.
+const mediaProto = HTMLMediaElement.prototype
+let patchedMediaDescriptors: Array<[string, PropertyDescriptor | undefined]> = []
+
+const installMediaElementStubs = () => {
+  const stubs: Array<[string, unknown]> = [
+    ['play', vi.fn(() => Promise.resolve())],
+    ['pause', vi.fn()],
+  ]
+
+  for (const [name, value] of stubs) {
+    patchedMediaDescriptors.push([name, Object.getOwnPropertyDescriptor(mediaProto, name)])
+    Object.defineProperty(mediaProto, name, { configurable: true, writable: true, value })
+  }
+}
+
+const removeMediaElementStubs = () => {
+  for (const [name, descriptor] of patchedMediaDescriptors) {
+    if (descriptor) Object.defineProperty(mediaProto, name, descriptor)
+    else delete (mediaProto as unknown as Record<string, unknown>)[name]
+  }
+  patchedMediaDescriptors = []
+}
+
 describe('useContinuousReader', () => {
   afterEach(() => {
+    // Unmount BEFORE restoring the prototype: the hook's teardown pauses the
+    // element, and jsdom's own pause() is the unimplemented stub that logs.
+    cleanup()
+    removeMediaElementStubs()
     vi.restoreAllMocks()
   })
 
   beforeEach(() => {
+    installMediaElementStubs()
     localStorage.clear()
     localStorage.setItem(TTS_VOICE_STORAGE_KEY, 'pl-PL-ZofiaNeural')
     ttsMock.reset()
