@@ -51,6 +51,47 @@ const installWakeLock = () => {
   })
 }
 
+/** Resolvers for grants parked by `installDeferredWakeLock`, in request order. */
+let parkedGrants: Array<() => void>
+
+/**
+ * Swap in a `request('screen')` that parks every grant until the test resolves
+ * it. Concurrency defects only exist inside the window between the request and
+ * its grant, so these tests have to hold that window open deliberately — the
+ * default stub resolves too fast for anything to overlap.
+ */
+const installDeferredWakeLock = () => {
+  sentinels = []
+  parkedGrants = []
+  wakeLockRequest = vi.fn((type: string) => {
+    expect(type).toBe('screen')
+    return new Promise<SentinelStub>((resolve) => {
+      parkedGrants.push(() => {
+        // Created on grant, so `sentinels` order matches resolution order.
+        const sentinel = makeSentinel()
+        sentinels.push(sentinel)
+        resolve(sentinel)
+      })
+    })
+  })
+
+  Object.defineProperty(navigator, 'wakeLock', {
+    value: { request: wakeLockRequest },
+    configurable: true,
+    writable: true,
+  })
+}
+
+/** Hand out every parked sentinel and let the hook's continuations run. */
+const settleGrants = async () => {
+  await act(async () => {
+    for (const grant of parkedGrants.splice(0)) grant()
+  })
+}
+
+/** A sentinel nobody released still holds the screen on for the page's life. */
+const leakedSentinels = () => sentinels.filter((sentinel) => !sentinel.released)
+
 const removeWakeLock = () => {
   delete (navigator as unknown as Record<string, unknown>).wakeLock
 }
@@ -192,5 +233,109 @@ describe('useWakeLock', () => {
     expect(result.current.isActive).toBe(true)
     expect(result.current.requestWakeLock).toBe(firstRequest)
     expect(result.current.releaseWakeLock).toBe(firstRelease)
+  })
+
+  it('does not issue a second request while one is already in flight', async () => {
+    installDeferredWakeLock()
+    const { result, unmount } = renderHook(() => useWakeLock())
+
+    let pending: Promise<void> | undefined
+    await act(async () => {
+      // `requestWakeLock` flips the intent flag synchronously, then parks on the
+      // grant — so the hook is now "wants a lock, holds nothing".
+      pending = result.current.requestWakeLock()
+    })
+
+    // A visibility flip landing in that window re-enters `acquire()`. The
+    // settled-ref guard is still empty, so only an in-flight guard stops it.
+    await showPage()
+    expect(wakeLockRequest).toHaveBeenCalledTimes(1)
+
+    await settleGrants()
+    await act(async () => {
+      await pending
+    })
+
+    expect(sentinels).toHaveLength(1)
+    expect(result.current.isActive).toBe(true)
+
+    await act(async () => {
+      unmount()
+    })
+    expect(leakedSentinels()).toHaveLength(0)
+  })
+
+  it('does not issue a second request when the lock is already held', async () => {
+    const { result } = renderHook(() => useWakeLock())
+
+    await act(async () => {
+      await result.current.requestWakeLock()
+    })
+    expect(wakeLockRequest).toHaveBeenCalledTimes(1)
+
+    // Both re-entry paths — an explicit re-request and a visibility flip while
+    // the page never actually hid — must no-op on the held sentinel.
+    await act(async () => {
+      await result.current.requestWakeLock()
+    })
+    await showPage()
+
+    expect(wakeLockRequest).toHaveBeenCalledTimes(1)
+    expect(sentinels).toHaveLength(1)
+    expect(result.current.isActive).toBe(true)
+  })
+
+  it('releases a sentinel granted after intent was withdrawn', async () => {
+    installDeferredWakeLock()
+    const { result } = renderHook(() => useWakeLock())
+
+    let pending: Promise<void> | undefined
+    await act(async () => {
+      pending = result.current.requestWakeLock()
+    })
+
+    // The reader pauses (or the user toggles off) while the grant is in flight.
+    // `releaseWakeLock` has nothing to release yet, so the arriving sentinel is
+    // the only thing that can still keep the screen lit.
+    await act(async () => {
+      await result.current.releaseWakeLock()
+    })
+
+    await settleGrants()
+    await act(async () => {
+      await pending
+    })
+
+    expect(sentinels).toHaveLength(1)
+    expect(sentinels[0].release).toHaveBeenCalledTimes(1)
+    expect(leakedSentinels()).toHaveLength(0)
+    expect(result.current.isActive).toBe(false)
+  })
+
+  it('issues one request for two synchronous requestWakeLock calls', async () => {
+    installDeferredWakeLock()
+    const { result, unmount } = renderHook(() => useWakeLock())
+
+    // What StrictMode's double-invoked effect does to the toggle in Next dev.
+    let first: Promise<void> | undefined
+    let second: Promise<void> | undefined
+    await act(async () => {
+      first = result.current.requestWakeLock()
+      second = result.current.requestWakeLock()
+    })
+    expect(wakeLockRequest).toHaveBeenCalledTimes(1)
+
+    await settleGrants()
+    await act(async () => {
+      await Promise.all([first, second])
+    })
+
+    expect(sentinels).toHaveLength(1)
+    expect(result.current.isActive).toBe(true)
+
+    await act(async () => {
+      unmount()
+    })
+    expect(leakedSentinels()).toHaveLength(0)
   })
 })
