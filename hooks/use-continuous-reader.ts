@@ -136,6 +136,14 @@ export function useContinuousReader(
   const itemsRef = useRef(items)
   const onItemChangeRef = useRef(onItemChange)
   const pendingStartRef = useRef<ReadingPosition | null>(null)
+  // The reader is BETWEEN sections: `useTTS` has already reported the finished
+  // section (dropping `isPlaying`) and the next section's start is queued in
+  // `pendingStartRef`, waiting for the position to commit before it can run. So
+  // playback has not stopped — it is mid-stride — and anything scoped to "the
+  // voice is running" must span this gap instead of seeing a true → false → true
+  // blip once per section. State, not a ref, because the wake-lock effect below
+  // has to re-key on it.
+  const [isHandingOff, setIsHandingOff] = useState(false)
   const playbackRef = useRef<TTSPlayback | null>(null)
   // The section keys of the previously rendered queue, in order — the only way
   // to tell where a removed section used to sit when resolving the fallback.
@@ -282,8 +290,10 @@ export function useContinuousReader(
       }
 
       // Another section: `useTTS` only sees its units after the position commits,
-      // so hand the start to the effect below.
+      // so hand the start to the effect below. From here until playback actually
+      // resumes the reader counts as running — see `isHandingOff`.
       pendingStartRef.current = { sectionKey: selectedItem.key, unitIndex }
+      setIsHandingOff(true)
       updatePosition(selectedItem.key, unitIndex)
     },
     [updatePosition]
@@ -303,6 +313,9 @@ export function useContinuousReader(
     }, [currentKey, selectAndStart]),
     onError: useCallback((nextError: Error) => {
       playbackRef.current?.stop()
+      // A start that failed is not a handoff in progress: without this the
+      // reader would look eternally "about to play" and never drop the lock.
+      setIsHandingOff(false)
       setError(nextError)
     }, []),
   })
@@ -329,24 +342,44 @@ export function useContinuousReader(
 
   const { requestWakeLock, releaseWakeLock } = useWakeLock()
 
+  // The voice is running again, so the handoff that was bridging the gap is
+  // over. Deliberately keyed on `isPlaying` turning true — NOT cleared where the
+  // queued start is consumed below — because `play()` only flips `isPlaying` as
+  // part of that same commit's batch; clearing on the call site would reopen the
+  // very gap this flag exists to close.
+  useEffect(() => {
+    if (isPlaying) setIsHandingOff(false)
+  }, [isPlaying])
+
   // The lock is scoped to PLAYBACK, not to the page: held while the voice runs,
   // dropped on pause/stop/unmount, so a reader left paused on screen does not
   // keep burning battery. Read All News gets no control for it — it is entirely
-  // derived from `isPlaying`.
+  // derived from playback state.
   //
-  // Keyed on the `isPlaying` VALUE, never on `playback`: that object's identity
-  // churns on every progress tick (~1%/render), and an effect keyed on it would
+  // "Playing" here spans a section handoff. `useTTS` drops `isPlaying` when a
+  // section's last unit ends and the next section can only start a commit later,
+  // so a lock keyed on `isPlaying` alone would churn once per section. That is
+  // not merely wasteful: with the page hidden (screen off — the exact scenario
+  // this lock exists for) the re-request calls `wakeLock.request('screen')`
+  // while `visibilityState !== 'visible'`, which the spec rejects with
+  // NotAllowedError, so `useWakeLock` logs an error per section. Per design.md's
+  // state diagram, Held → Released is for pause / stop / unmount only.
+  //
+  // Keyed on VALUES, never on `playback`: that object's identity churns on every
+  // progress tick (~1%/render), and an effect keyed on it would
   // release-and-re-request the lock several times a second. The two callbacks
   // are `useCallback`-stable by `useWakeLock`'s contract, so they are honest
   // deps that never fire the effect on their own.
+  const holdsScreenAwake = isPlaying || isHandingOff
   useEffect(() => {
-    if (!isPlaying) return
+    if (!holdsScreenAwake) return
     void requestWakeLock()
-    // Runs on pause/stop (isPlaying → false) and on unmount alike.
+    // Runs on a real pause/stop (playback ended and nothing queued behind it)
+    // and on unmount alike.
     return () => {
       void releaseWakeLock()
     }
-  }, [isPlaying, requestWakeLock, releaseWakeLock])
+  }, [holdsScreenAwake, requestWakeLock, releaseWakeLock])
 
   // The position's section disappeared (mark-as-read, DOM eviction): the derived
   // index has already resolved to a survivor per the previous order, so adopt it
@@ -355,6 +388,12 @@ export function useContinuousReader(
   // Declared after the `playbackRef` sync so it sees this commit's playback.
   useEffect(() => {
     if (position.sectionKey === currentKey) return
+
+    // Reaching here means the section under the position vanished, which also
+    // voids any queued handoff — its target may be one of the removed sections,
+    // in which case the start below never fires and the flag would stick.
+    // Whether audio continues on the survivor is decided by `wasActive` below.
+    setIsHandingOff(false)
 
     if (!currentItem) {
       playbackRef.current?.stop()
