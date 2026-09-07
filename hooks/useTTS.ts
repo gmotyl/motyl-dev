@@ -26,10 +26,12 @@ export interface UseTTSOptions {
    */
   units?: string[]
   /**
-   * Fired on EVERY requestAnimationFrame tick during playback (~60Hz) with the
-   * 0–100 progress percent — intentionally NOT throttled, so the continuous
-   * reader's prefetch threshold sees continuous progress. Keep the handler
-   * cheap; do not do heavy work here or it runs 60×/second.
+   * Fired on EVERY progress tick during playback with the 0–100 progress
+   * percent — that is every animation frame while the page is visible (~60Hz)
+   * AND every element `timeupdate` (~4Hz, and the only one that survives a
+   * hidden page). Intentionally NOT throttled, so the continuous reader's
+   * prefetch threshold sees continuous progress even with the screen off. Keep
+   * the handler cheap; do not do heavy work here or it runs 60×/second.
    */
   onProgress?: (progress: number) => void
   onComplete?: () => void
@@ -114,6 +116,10 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   // surface as a stop + onError instead of racing silently through every
   // remaining chunk.
   const consecutiveFailuresRef = useRef(0)
+  // The element's `timeupdate` handler is attached once, at element creation,
+  // so it has to reach the CURRENT progress emitter — whose identity changes
+  // with `onProgress` — instead of closing over the one that existed at mount.
+  const emitProgressRef = useRef<() => void>(() => {})
 
   // Buffer cache: pre-fetched MP3 blobs keyed by chunk index. An entry is
   // dropped once its object URL exists — the URL then owns the bytes.
@@ -145,6 +151,12 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       // the next unit's blob is already local — 'auto' lets the element decode
       // its head immediately so the swap at `ended` is inaudible.
       element.preload = 'auto'
+      // The authoritative progress clock. Unlike requestAnimationFrame this
+      // keeps firing (~4Hz) while the page is hidden, which is the only reason
+      // background prefetch keeps being evaluated with the screen off. Attached
+      // once for the element's whole life — no per-unit add/remove — so a src
+      // swap can never drop it mid-article.
+      element.addEventListener('timeupdate', () => emitProgressRef.current())
       document.body.appendChild(element)
       audioElementRef.current = element
     }
@@ -243,9 +255,26 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     [ensureObjectUrl, fetchAudioBlob]
   )
 
-  // Update progress via requestAnimationFrame
-  const updateProgress = useCallback(() => {
+  /**
+   * THE progress emitter — the single source of truth both clocks go through.
+   *
+   * Progress has two clocks (see the change's design.md):
+   *   - `timeupdate` (~4Hz) is the AUTHORITATIVE one, because it keeps firing
+   *     while the page is hidden. That is the whole point of this change: phone
+   *     screen off, reader playing in the background. `use-continuous-reader`
+   *     evaluates its prefetch threshold from `onProgress`, so a progress
+   *     stream that dies with the page would stall the prefetch ladder and
+   *     starve the reader at a section boundary.
+   *   - `requestAnimationFrame` is cosmetic: it does not tick while hidden, and
+   *     exists only to move the reader bar smoothly between timeupdates.
+   *
+   * Both read the SAME `element.currentTime` through this one function; if the
+   * percentage maths were duplicated per clock they would drift apart.
+   */
+  const emitProgress = useCallback(() => {
     const element = audioElementRef.current
+    // Also the "stop emitting" gate: after pause/stop/completion the element
+    // keeps its `timeupdate` listener attached, but this guard makes it inert.
     if (!isPlayingRef.current || !element) return
 
     // duration is NaN until the element has metadata, and the element rewinds to
@@ -270,6 +299,8 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     // Only re-render (setState) when the rounded percent actually changes,
     // cutting progress-driven re-renders from ~60/sec to ~1 per 1%. This keeps
     // the backdrop-blur reader bar from re-rendering at 60fps (hover flicker).
+    // The latch lives here, shared by both clocks, so a timeupdate and a frame
+    // landing on the same percent cost exactly one re-render between them.
     const pct = Math.round(clamped)
     if (pct !== lastEmittedPctRef.current) {
       lastEmittedPctRef.current = pct
@@ -280,11 +311,18 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         currentChunkIndex: currentChunkIndexRef.current,
       }))
     }
-
-    if (isPlayingRef.current) {
-      animationFrameRef.current = requestAnimationFrame(updateProgress)
-    }
   }, [onProgress])
+
+  emitProgressRef.current = emitProgress
+
+  // The cosmetic clock: emit, then re-arm. Self-rescheduling stops on its own
+  // as soon as playback does, and pause()/stop()/completion additionally cancel
+  // the frame already in flight.
+  const runProgressFrame = useCallback(() => {
+    if (!isPlayingRef.current || !audioElementRef.current) return
+    emitProgress()
+    animationFrameRef.current = requestAnimationFrame(runProgressFrame)
+  }, [emitProgress])
 
   // Play a single chunk
   const playChunk = useCallback(
@@ -408,8 +446,10 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       // swallowing it here only keeps it from becoming an unhandled rejection.
       void element.play?.()?.catch?.(() => {})
 
+      // Only the smooth-bar clock needs starting here; `timeupdate` is already
+      // wired to the element and starts emitting on its own once it plays.
       if (!animationFrameRef.current) {
-        animationFrameRef.current = requestAnimationFrame(updateProgress)
+        animationFrameRef.current = requestAnimationFrame(runProgressFrame)
       }
     },
     [
@@ -422,7 +462,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       onError,
       pruneObjectUrls,
       revokeAllObjectUrls,
-      updateProgress,
+      runProgressFrame,
     ]
   )
 

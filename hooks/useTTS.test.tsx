@@ -39,6 +39,7 @@ let audioPause: ReturnType<typeof vi.fn>
 let audioLoad: ReturnType<typeof vi.fn>
 let createObjectURL: ReturnType<typeof vi.fn>
 let revokeObjectURL: ReturnType<typeof vi.fn>
+let cancelFrame: ReturnType<typeof vi.fn>
 // Constructing one is a hard failure: the whole point of this change is that the
 // playback path never touches Web Audio again.
 let audioContextCtor: ReturnType<typeof vi.fn>
@@ -80,6 +81,15 @@ const flushFrame = async () => {
   frameCallbacks = []
   await act(async () => {
     pending.forEach((cb) => cb(0))
+  })
+}
+
+// Move the playback clock and fire the element's `timeupdate` — the clock that
+// keeps ticking (~4Hz) while the page is hidden and rAF is frozen.
+const emitTimeUpdate = async (currentTime: number) => {
+  mediaCurrentTime = currentTime
+  await act(async () => {
+    currentAudio().dispatchEvent(new Event('timeupdate'))
   })
 }
 
@@ -140,7 +150,8 @@ beforeEach(() => {
     frameCallbacks.push(cb)
     return frameCallbacks.length
   })
-  vi.stubGlobal('cancelAnimationFrame', () => {})
+  cancelFrame = vi.fn()
+  vi.stubGlobal('cancelAnimationFrame', cancelFrame)
 
   vi.mocked(synthesizeSpeech).mockReset()
   vi.mocked(synthesizeSpeech).mockImplementation(async () => new ArrayBuffer(8))
@@ -306,6 +317,151 @@ describe('useTTS media-element playback', () => {
     expect(document.querySelector('audio')).toBeNull()
     const revoked = revokeObjectURL.mock.calls.map(([url]) => url as string)
     expect([...new Set(revoked)].sort()).toEqual([...createdUrls].sort())
+  })
+})
+
+/**
+ * Progress has two clocks (see design.md, "Progress has two clocks now"):
+ *
+ * - `timeupdate` — the AUTHORITATIVE one. It keeps firing while the page is
+ *   hidden, which is exactly the scenario this whole change exists for (screen
+ *   off, reader playing in the background). `use-continuous-reader` drives its
+ *   prefetch threshold off `onProgress`, so if progress died with the page the
+ *   prefetch ladder would stop evaluating and the reader would starve at a
+ *   section boundary.
+ * - `requestAnimationFrame` — cosmetic only. It does NOT tick while hidden; it
+ *   exists so the reader bar moves smoothly at 60Hz while the screen is on.
+ *
+ * Both must read the same `element.currentTime` through the same emitter, or
+ * they drift apart.
+ */
+describe('useTTS progress clocks', () => {
+  it('emits progress from timeupdate when no animation frame runs', async () => {
+    const units = ['a'.repeat(10), 'b'.repeat(30)]
+    const onProgress = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units, onProgress })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    // Simulate a hidden page: drop every frame the hook has scheduled and never
+    // run one. Nothing but `timeupdate` may move progress from here on.
+    frameCallbacks = []
+    onProgress.mockClear()
+
+    mediaDuration = 2
+    await emitTimeUpdate(1)
+
+    // Halfway through unit 0 (10 of 40 total chars): 10 * 0.5 / 40 = 12.5%.
+    expect(onProgress).toHaveBeenCalledWith(12.5)
+    // No frame ran, and none was scheduled by the timeupdate path.
+    expect(frameCallbacks).toHaveLength(0)
+    await waitFor(() => expect(result.current.progress).toBeCloseTo(12.5))
+  })
+
+  it('still emits progress every animation frame while visible', async () => {
+    const units = ['a'.repeat(10), 'b'.repeat(30)]
+    const onProgress = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units, onProgress })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    onProgress.mockClear()
+    mediaDuration = 4
+
+    // The rAF loop is self-rescheduling: one emission per frame, forever, so the
+    // bar stays smooth between the ~4Hz timeupdates.
+    mediaCurrentTime = 1
+    await flushFrame()
+    expect(onProgress).toHaveBeenCalledTimes(1)
+    expect(onProgress).toHaveBeenLastCalledWith(6.25)
+
+    mediaCurrentTime = 2
+    await flushFrame()
+    expect(onProgress).toHaveBeenCalledTimes(2)
+    expect(onProgress).toHaveBeenLastCalledWith(12.5)
+  })
+
+  it('throttles setState to whole percents while onProgress stays unthrottled', async () => {
+    // One 100-char unit, so the percentage is just `currentTime / duration`.
+    const units = ['x'.repeat(100)]
+    const onProgress = vi.fn()
+    let renderCount = 0
+    const { result } = renderHook(() => {
+      renderCount += 1
+      return useTTS('irrelevant content', { units, onProgress })
+    })
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    mediaDuration = 1000
+    onProgress.mockClear()
+
+    // 3.00% — the first whole percent, so this one DOES re-render.
+    await emitTimeUpdate(30)
+    const rendersAtThreePercent = renderCount
+
+    // 3.02% / 3.04% and one rAF tick at the same position: all still "3", so the
+    // backdrop-blur reader bar must not re-render again (hover flicker fix) —
+    // including across the clock boundary, since both share one throttle.
+    await emitTimeUpdate(30.2)
+    await emitTimeUpdate(30.4)
+    await flushFrame()
+
+    expect(renderCount).toBe(rendersAtThreePercent)
+    // onProgress, however, fired for every single tick: the reader's prefetch
+    // threshold needs continuous progress, not one sample per percent.
+    expect(onProgress).toHaveBeenCalledTimes(4)
+    expect(onProgress.mock.calls.map(([p]) => Math.round((p as number) * 100) / 100))
+      .toEqual([3, 3.02, 3.04, 3.04])
+
+    // 4.00% — a new whole percent, so exactly one more re-render.
+    await emitTimeUpdate(40)
+    expect(renderCount).toBe(rendersAtThreePercent + 1)
+    expect(result.current.progress).toBeCloseTo(4)
+  })
+
+  it('stops emitting after playback ends', async () => {
+    const units = ['a'.repeat(10)]
+    const onProgress = vi.fn()
+    const onComplete = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units, onProgress, onComplete })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    cancelFrame.mockClear()
+    await endCurrentUnit()
+    await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1))
+    expect(result.current.isPlaying).toBe(false)
+    // The rAF loop is cancelled, not merely left to no-op.
+    expect(cancelFrame).toHaveBeenCalled()
+
+    onProgress.mockClear()
+    mediaDuration = 2
+    // Both clocks are dead: a stray timeupdate from the paused element and any
+    // frame still queued must emit nothing.
+    await emitTimeUpdate(1)
+    await flushFrame()
+    await flushFrame()
+
+    expect(onProgress).not.toHaveBeenCalled()
   })
 })
 
