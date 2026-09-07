@@ -1,63 +1,88 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+
+const wakeLockSupported = () =>
+  typeof navigator !== 'undefined' && 'wakeLock' in navigator
 
 /**
- * Hook to prevent screen from sleeping while reading articles
- * Uses the Wake Lock API (supported on most modern mobile browsers)
+ * Hook to prevent the screen from sleeping while reading articles.
+ *
+ * The browser auto-releases a `WakeLockSentinel` whenever the page hides, so a
+ * lock taken once is dead after the first screen-off. We therefore remember the
+ * *desired* state and re-acquire on `visibilitychange → visible`; only an
+ * explicit `releaseWakeLock()` clears that intent.
  */
 export function useWakeLock() {
   const [isSupported, setIsSupported] = useState(false)
   const [isActive, setIsActive] = useState(false)
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
+  // Intent, not browser state: survives the browser's auto-release on hide.
+  const wantsLockRef = useRef(false)
 
   useEffect(() => {
-    // Check if Wake Lock API is supported (client-side only)
-    setIsSupported(typeof navigator !== 'undefined' && 'wakeLock' in navigator)
+    // Client-side only: the server render must not claim support.
+    setIsSupported(wakeLockSupported())
   }, [])
 
-  const requestWakeLock = async () => {
-    if (!isSupported) {
-      console.log('Wake Lock API not supported')
-      return
-    }
+  // Support is read from `navigator` rather than from state so every callback
+  // below can keep empty deps — consumers hang effects off these identities.
+  const acquire = useCallback(async () => {
+    if (!wakeLockSupported() || wakeLockRef.current) return
 
     try {
-      wakeLockRef.current = await navigator.wakeLock.request('screen')
+      const sentinel = await navigator.wakeLock.request('screen')
+      wakeLockRef.current = sentinel
       setIsActive(true)
 
-      console.log('Wake Lock active - screen will stay on')
-
-      // Handle wake lock release (e.g., when tab becomes inactive)
-      wakeLockRef.current.addEventListener('release', () => {
-        console.log('Wake Lock released')
+      // Fires both for our own release() and for the browser's auto-release.
+      sentinel.addEventListener('release', () => {
+        if (wakeLockRef.current === sentinel) wakeLockRef.current = null
         setIsActive(false)
       })
     } catch (err) {
       console.error('Failed to activate Wake Lock:', err)
+      wakeLockRef.current = null
       setIsActive(false)
     }
-  }
+  }, [])
 
-  const releaseWakeLock = async () => {
-    if (wakeLockRef.current) {
-      try {
-        await wakeLockRef.current.release()
-        wakeLockRef.current = null
-        setIsActive(false)
-        console.log('Wake Lock manually released')
-      } catch (err) {
-        console.error('Failed to release Wake Lock:', err)
+  const requestWakeLock = useCallback(async () => {
+    wantsLockRef.current = true
+    await acquire()
+  }, [acquire])
+
+  const releaseWakeLock = useCallback(async () => {
+    wantsLockRef.current = false
+
+    const sentinel = wakeLockRef.current
+    wakeLockRef.current = null
+    if (!sentinel) {
+      setIsActive(false)
+      return
+    }
+
+    try {
+      await sentinel.release()
+    } catch (err) {
+      console.error('Failed to release Wake Lock:', err)
+    }
+    setIsActive(false)
+  }, [])
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && wantsLockRef.current) {
+        void acquire()
       }
     }
-  }
 
-  // Cleanup: release wake lock on unmount
-  useEffect(() => {
+    document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => {
-      releaseWakeLock()
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      void releaseWakeLock()
     }
-  }, [])
+  }, [acquire, releaseWakeLock])
 
   return {
     isSupported,
