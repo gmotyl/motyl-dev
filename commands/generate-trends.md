@@ -1,108 +1,129 @@
 ---
 description: Generate weekly trends summary from vote data and create a PR
-allowed-tools: ["Bash", "Read", "Write", "Glob"]
+allowed-tools: ["Bash", "Read", "Write", "Glob", "Skill"]
 ---
 
 Generate a curated weekly trends summary from vote data, create a markdown file, and open a PR for review.
 
+All commands below run from the repository root. Never hardcode an absolute checkout path: this repo lives at a different location on macOS, Linux/WSL and Windows. If you need the root explicitly, resolve it at runtime with `git rev-parse --show-toplevel`.
+
 ## Workflow
 
-### 1. Fetch vote data
+### 1. Sync with main
 
-Run:
+Start from an up-to-date checkout. Drafting on a stale branch produces the wrong issue number and misses content merged since your last session.
+
 ```bash
-cd /Users/gmotyl/git/prv/motyl-dev && pnpm generate:trends
+git checkout main && git pull --ff-only
+```
+
+If the working tree is dirty or the pull is not a fast-forward, stop and tell the user rather than forcing or stashing anything.
+
+### 2. Fetch vote data
+
+```bash
+pnpm generate:trends
 ```
 
 This queries the database and saves vote data to `.trends-input.json`. If the output says "No votes found", stop and inform the user.
 
-### 2. Read the input
+### 3. Read the input
 
-Read `.trends-input.json` from the project root. Parse: `week`, `weekLabel`, `totalVotes`, `byCategory`.
+Read `.trends-input.json` from the project root. It contains:
 
-### 3. Draft the summary
+- `week` (e.g. `2026-w36`)
+- `weekLabel` (e.g. `Week 36 (Aug 31 – Sep 6, 2026)`)
+- `issueNumber` (integer, already incremented for this issue)
+- `items` (flat array) and `byCategory` (same items grouped)
 
-Create a curated markdown file at `content/trends/{week}-summary.md`.
+Each item has `title`, `linkUrl`, `category`, and `contentSlug`. When `contentSlug` is non-null the article was already covered in `news/`; grep that file for its `TLDR` / `Why do I care` block and reuse the reporting rather than guessing at the article's contents. For unmatched items, fetch the URL before writing about it. Do not invent claims about an article you have not read.
+
+### 4. Draft the summary
+
+Write to `content/trends/motyl-dev-{issueNumber}.md`.
 
 **Frontmatter:**
 ```yaml
 ---
-week: "2026-w09"
-weekLabel: "Week 9 (Feb 24 – Mar 2, 2026)"
-totalVotes: 342
-publishedAt: "YYYY-MM-DD"
+issueNumber: 27
+week: '2026-w36'
+weekLabel: 'Week 36 (Aug 31 – Sep 6, 2026)'
+publishedAt: 'YYYY-MM-DD'
 ---
 ```
 
-Use today's date for `publishedAt`.
+Use today's date for `publishedAt`. Leave out `image:` — the `publish-image` skill writes that field later.
 
-**Body format:**
+**Body format:** read the previous issue (`content/trends/motyl-dev-{issueNumber - 1}.md`) and match it. The shape is:
+
 ```markdown
-# Frontend & AI Trends: {weekLabel}
+# motyl.dev Weekly #{issueNumber}: {weekLabel}
 
-> {totalVotes} votes cast by the community this week.
+> A curated digest of what I found worth reading this week.
 
-## 🚀 Frontend
+{One paragraph naming the through-line of the week and how the pieces argue with each other.}
 
-- **[Title](url)** *(89 votes)* — Engaging one-line description
-- **[Title](url)** *(67 votes)* — Engaging one-line description
+## ✨ Featured
 
-## 🤖 AI
+**[Title](url)**
+{Two to four sentences on why this one leads the issue.}
 
-...
+## {emoji} {Themed section heading}
 
-## 🛠️ Tools
-
-...
-
-## 📦 Other
-
-...
+**[Title](url)**
+{Two to four sentences.}
 
 ---
 
-*Curated by [Grzegorz Motyl](https://motyl.dev). [Subscribe for weekly summaries.](https://motyl.dev/#newsletter)*
+_Curated by [Grzegorz Motyl](https://motyl.dev). [Subscribe for weekly updates.](https://motyl.dev/#newsletter)_
 ```
 
 **Curation guidelines:**
-- Write engaging descriptions — not just copy-paste from the raw data
-- Skip categories that have 0 items
-- Sort by votes descending within each category
-- Keep it concise — quality over quantity
-- Category icons: Frontend = 🚀, AI = 🤖, Tools = 🛠️, Other = 📦
+- Group items into themed sections you derive from the actual items. Do not force them into fixed Frontend/AI/Tools/Other buckets; the vote data usually reports every item as `general`.
+- One `✨ Featured` item leads, then two to four themed sections of two to four items each.
+- Write in Grzegorz's voice: first person, opinionated, willing to disagree with a linked piece.
+- Section headings use an emoji plus a short phrase, matching the previous issue.
+- There are no vote counts in the input. Never print vote numbers.
 
-### 4. Create branch and commit
+**Unslop pass:** before writing the file, invoke `Skill: unslop` on the intro paragraph and every item description, and rewrite anything it flags. In particular: no em dashes in prose. Keep the frontmatter, headings, emoji, and links untouched.
+
+### 5. Create branch and commit
+
+Skip this step and step 6 when this skill was invoked from `newsletter-wizard`; that wizard commits to the current branch itself. Report the issue number and file path and stop.
+
+Otherwise:
 
 ```bash
-cd /Users/gmotyl/git/prv/motyl-dev
 git checkout -b feature/trends-{week}
 git add content/trends/
 git commit -m "feat(trends): add {week} summary"
 ```
 
-### 5. Create PR
+### 6. Create PR
 
 ```bash
 gh pr create \
   --title "Trends: {weekLabel} summary" \
-  --body "Weekly trends summary for {weekLabel}. Review and edit before merging — the markdown is fully editable.\n\nAfter merging, run \`pnpm trends:reset\` to archive votes and start the new week."
+  --body "Weekly trends summary for {weekLabel}. Review and edit before merging; the markdown is fully editable. After merging, run \`pnpm trends:reset\` to archive votes and start the new week."
 ```
 
-### 6. Generate social media snippets
+### 7. Generate social media snippets
 
 Based on the newsletter content, generate **3 short teaser proposals for each platform**: LinkedIn and Twitter/X.
+
+Before output, invoke `Skill: unslop` on all 6 drafts and rewrite anything it flags, keeping each platform's length limit intact.
 
 Output them directly in the chat (do NOT write to a file).
 
 **LinkedIn (aim for ~150–200 words each):**
-- Professional tone, but conversational — not corporate-speak
+- Professional tone, but conversational, not corporate-speak
 - Lead with the most interesting insight or a provocative question
 - Mention 2–3 specific topics from the newsletter
 - End with a CTA linking to the newsletter: `https://motyl.dev/newsletter`
 - Use line breaks for readability, 2–4 relevant hashtags at the end
 
 **Twitter/X (aim for ~240 characters each, hard limit 280):**
-- Sharp, punchy — one key idea per tweet
+- Sharp, punchy, one key idea per tweet
 - Can highlight a surprising stat, a counterintuitive take, or a "did you know"
 - End with the newsletter link: `https://motyl.dev/newsletter`
 - 1–2 hashtags max
@@ -132,9 +153,9 @@ Output them directly in the chat (do NOT write to a file).
 [tweet text]
 ```
 
-### 7. Report
+### 8. Report
 
-Show the PR URL and remind the user:
+Show the issue number and file path, plus the PR URL if one was created, and remind the user:
 
 > "After reviewing and merging the PR, run `pnpm trends:reset` to archive this week's votes and reset the counter for the new week."
 
