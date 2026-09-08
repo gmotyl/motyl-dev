@@ -16,10 +16,12 @@ export function BottomNav() {
   const tabCount = navItems.length
 
   return (
-    <nav
-      className="fixed bottom-0 left-0 right-0 z-50 flex sm:hidden h-16 border-t border-border/40 backdrop-blur-sm bg-background/80"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-    >
+    // Safe-area padding is a class, not an inline style: React's hydration check
+    // compares the server-rendered `style` attribute byte-for-byte against its own
+    // client serialization, so an inline declaration is one more string that has
+    // to survive the round trip untouched. The `0px` fallback keeps the
+    // declaration valid where env() is unsupported, as in app/globals.css.
+    <nav className="fixed bottom-0 left-0 right-0 z-50 flex sm:hidden h-16 border-t border-border/40 backdrop-blur-sm bg-background/80 pb-[env(safe-area-inset-bottom,0px)]">
       {/* Sliding indicator — single element that moves between tabs */}
       {activeIndex >= 0 && (
         <div
