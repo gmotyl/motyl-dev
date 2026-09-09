@@ -1,0 +1,36 @@
+---
+title: "Nobody agrees on how to review AI generated code"
+excerpt: "Pull requests on GitHub grew fivefold in three years and nearly doubled since late 2025, and engineering leaders are improvising six different answers to the review problem."
+publishedAt: "2026-09-09"
+slug: "what-is-happening-with-code-reviews"
+hashtags: "#pragmaticengineer #engineering #agents #ai #review #teams #testing #architecture #management #generated #en"
+source_pattern: "Pragmatic engineer"
+---
+
+## What is happening with code reviews
+
+**TLDR:** Gergely Orosz asked CTOs and heads of engineering how they handle review now that agents write most of the code, and got six different answers with no consensus. GitHub's own numbers show pull requests up fivefold over three years and nearly doubling since the end of 2025.
+
+**Summary:** Start with the number, because it explains the panic. GitHub's data shows the count of pull requests opened has grown fivefold across three years, and the growth accelerated sharply from the end of 2025 onward, with PRs and commits nearly doubling in that window alone. The size of individual pull requests is also going up. So the same number of engineers now face several times the review load, and every one of those reviews is of code that no human on the team wrote. That is not a tooling gap. That is a process that has stopped working.
+
+The most common response is to add an AI review step to every pull request and have humans review the review rather than the code. There are dozens of vendors doing this, and Orosz names CodeRabbit, Gitar, Greptile, GitHub Copilot Code Review, Qodo, Claude Code Review and Ellipsis. Some teams run more than one. The Bun project has CodeRabbit, GitHub Code Review and Claude Code Review all commenting on the same pull requests, which tells you something about how much confidence anyone has in a single reviewer. Etienne Dilocker, CTO at Weaviate, described his preferred loop plainly. An adversarial agent reviews, a human makes the scope decision, an agent implements the feedback, then you either repeat or break the loop. Roughly 90% is agents, with humans holding the scope calls and the exit criteria.
+
+The failure mode of this approach is noise, and Orosz is honest about it. WeTravel decided against AI code review because of how much noise it generated, re-evaluated in June, found real improvement, and still concluded it was not worth adopting. Uber built an agentic pipeline called uReview specifically to fix this. Bots generate a large number of comments, the comments get graded and low confidence ones removed, then the survivors are merged, categorized and filtered again, so what reaches the developer is a short list. That is a lot of engineering to make a review tool usable, and small teams do not have it.
+
+The second approach is triage by blast radius, and this is the one used at both Anthropic and OpenAI. Low risk changes ship on agent approval alone. High risk changes get mandatory human review. At Anthropic a human still merges even the low risk ones, with the stated goal of eventually letting another Claude instance do it. The most useful data point comes from a five person startup rather than a lab. Duckbill Group found themselves with 60 open pull requests and two solid days of review work, and asked what would happen if they just did not review them. They defined a risk rule, meaning any change touching the public API, auth, the design system, non additive schema changes or agent skills gets a human, and enforced it with a shell script that applies a GitHub label. Then they spent tokens on guardrails, turning on nearly every rule in ruff, prettier, eslint and ty, and raising unit test coverage to a floor of 85%. Merged pull requests went from 353 to 684, from 80 a week to 154. Median merge time for human reviewed changes stayed at 26 hours. For the rest it was one hour.
+
+The third group stopped reviewing implementation and moved the attention to the states on either side of it. Some teams put far more effort into the plan, using something like Matt Pocock's grill-me skill to produce a much more detailed spec before any code exists. Andrea Francesco Speziale at Musixmatch put it as bluntly as anyone: after three hours of grilling, it had better one shot the implementation, and he is not spending a minute on review. Others review the tests instead, which test driven development makes easier now that writing tests upfront is no longer a chore. And Jackie Luo, cofounder of Sigil, argues that at a startup the only thing that really matters is the database schema, because everything except data is fluid and recoverable, and the schema is the hard representation of what has been built.
+
+That last argument is the sharpest in the piece and also the one with the shortest shelf life. Orosz says so himself. It makes sense for a startup still chasing product market fit, where code is cheap to regenerate and the schema is the one thing you cannot easily undo. Once you have paying users, business logic stops being disposable, because breaking it makes those users unhappy regardless of how easy the fix is. What nobody in the piece addresses is what happens to the engineers. Review has always been how people learn a codebase and how tacit knowledge moves between teams. Delete it and you get faster merges and a team that collectively understands its own system less well each quarter. There is also almost no evidence in the article of anyone dropping human review entirely. Orosz went looking and found talk rather than practice, with the closest examples being AI startups that compensated with extra production safety layers.
+
+**Key takeaways:**
+- Pull requests on GitHub are up fivefold in three years and nearly doubled since late 2025
+- The most common approach is an AI review on every PR, with developers reviewing the review rather than the code
+- Noise is the main reason teams abandon AI review, and Uber built a grading and filtering pipeline to fix it
+- Duckbill Group's risk based rule took merged PRs from 80 a week to 154, with unreviewed changes merging in one hour against 26
+- Anthropic and OpenAI both triage by risk, and neither has actually removed the human merge step
+- Reviewing the plan, the tests or the schema instead of the implementation is now a real pattern, with real limits once you have users
+
+**Why do I care:** For a frontend team this hits harder than the article lets on, because the one thing automated tests genuinely cannot verify is whether a UI looks and feels right. Orosz flags it in a single sentence and moves on, and it deserves more. If you adopt schema first or test first review, you have quietly decided that nobody checks the visual result, and on a product team that is the thing users actually see. The practical move I would make is Duckbill's, not because the numbers are impressive but because their risk list is concrete and enforced by a script rather than by good intentions. Write your own version of that list this week, put the design system on it, and you have a defensible policy instead of a backlog of 60 pull requests nobody wants to open.
+
+**Link:** [What is happening with code reviews?](https://newsletter.pragmaticengineer.com/p/what-is-happening-with-code-reviews)
