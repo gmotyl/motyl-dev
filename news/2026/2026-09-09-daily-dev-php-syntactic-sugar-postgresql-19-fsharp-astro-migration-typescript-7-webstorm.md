@@ -1,5 +1,3 @@
-# daily.dev: cukier składniowy PHP kontra architektura, PostgreSQL 19 z grafami, F# kontra C#, Gatsby na Astro i TypeScript 7 w WebStorm
-
 ---
 title: "daily.dev: cukier składniowy PHP kontra architektura, PostgreSQL 19 z grafami, F# kontra C#, Gatsby na Astro i TypeScript 7 w WebStorm"
 excerpt: "Dlaczego wygodne skróty PHP mogą po cichu psuć architekturę, co nowego wnosi PostgreSQL 19, dlaczego F# bywa lepszym wyborem architektonicznym niż C#, jak jeden inżynier przeniósł 1000-stronicowy serwis z Gatsby na Astro w dziewięć dni i co daje WebStormowi silnik TypeScript 7."
