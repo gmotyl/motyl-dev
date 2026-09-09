@@ -34,6 +34,7 @@ export const PRONUNCIATION_MAP: Readonly<Record<string, string>> = Object.freeze
 
   // Product / library names
   ai: 'ej aj',
+  aws: 'ej dablju es',
   spacexai: 'spejs eks ej aj',
   openai: 'oupen ej aj',
   gpt: 'dżi pi ti',
@@ -108,6 +109,7 @@ export const PRONUNCIATION_MAP: Readonly<Record<string, string>> = Object.freeze
   'js/ts': 'dżej es / ti es',
   'key takeaways': 'kluczowe wnioski:',
   "pipeline'y": 'pajplajny',
+  worker: 'łerker',
 
   // Multi-word phrases (safe: longest-key-first beats the component words;
   // the phrase also avoids the `face`→"facet" collision of a bare `face` stem)
