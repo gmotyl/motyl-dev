@@ -1,121 +1,121 @@
 ---
-title: "10,000 agents, a Millennium Prize claim and nobody showing the proof"
-excerpt: "OpenAI says a swarm of agents cracked Navier-Stokes, Meta shipped a personal agent with a real security design, and the serving infrastructure numbers are quietly the best part."
+title: "10 000 agentów, roszczenie do Nagrody Milenijnej i nikt nie pokazuje dowodu"
+excerpt: "OpenAI twierdzi, że rój agentów rozgryzł równania Naviera-Stokesa, Meta wypuściła osobistego agenta z realnym projektem bezpieczeństwa, a liczby z infrastruktury serwowania są po cichu najlepszą częścią."
 publishedAt: "2026-09-09"
 slug: "openai-navier-stokes-claim-meta-muse-agent-serving"
-hashtags: "#AINews #ai #llm #agents #openai #meta #infrastructure #performance #security #generated #en"
+hashtags: "#AINews #ai #llm #agents #openai #meta #infrastructure #performance #security #generated #pl"
 source_pattern: "AINews"
 ---
 
-## The Navier-Stokes claim and what was actually disclosed
+## Roszczenie wobec Naviera-Stokesa i co właściwie ujawniono
 
-**TLDR:** OpenAI said a group of agents using an unreleased model produced a solution to the Navier-Stokes Millennium Prize problem. The public claims include roughly 10,000 agents and about a year of multi agent reinforcement learning. What is missing is a theorem statement, a preprint, a proof sketch or any verification artifact.
+**TLDR:** OpenAI podało, że grupa agentów korzystających z niewydanego modelu wyprodukowała rozwiązanie problemu milenijnego Naviera-Stokesa. Publiczne deklaracje obejmują mniej więcej 10 000 agentów i około roku wieloagentowego uczenia ze wzmocnieniem. Brakuje treści twierdzenia, preprintu, szkicu dowodu i jakiegokolwiek artefaktu weryfikacyjnego.
 
-**Summary:** The most concrete public claim came from Ethan Knight, who said the result came from a collaboration of about 10,000 agents working together, that OpenAI had spent the past year training models to collaborate through multi agent reinforcement learning, and that hard problems may yield to large amounts of unstructured parallel test time compute with the models deciding how to organize themselves. That is a systems description. It is not a mathematical one, and the distinction is the whole story here.
+**Summary:** Najbardziej konkretna publiczna deklaracja padła od Ethana Knighta, który powiedział, że wynik powstał ze współpracy około 10 000 agentów, że OpenAI spędziło ostatni rok na trenowaniu modeli do współpracy przez wieloagentowe uczenie ze wzmocnieniem oraz że trudne problemy mogą ustępować pod naporem dużych ilości nieustrukturyzowanej, równoległej mocy obliczeniowej w czasie testu, przy czym modele same decydują, jak się zorganizować. To opis systemowy. Nie jest matematyczny i właśnie ta różnica jest tu całą historią.
 
-The AINews writeup does something I wish more coverage did, which is separate what the tweets establish from what people extrapolated. Established: an OpenAI linked claim about roughly 10,000 agents, a year of multi agent RL, and an emphasis on parallel test time compute over a single long proof attempt. Not established: any theorem statement, the scope of the proof, whether it addresses standard 3D incompressible global regularity or a variant, and how much of the work was human. A collaboration of 10,000 agents does not tell you whether humans decomposed the search, curated lemmas, verified steps, or just launched the infrastructure. The widely repeated 88 hours figure appears only in a satirical post in the set, which did not stop it becoming the headline number everywhere.
+Tekst AINews robi coś, czego życzyłbym sobie po większej liczbie relacji, czyli oddziela to, co ustalają tweety, od tego, co ludzie sobie ekstrapolowali. Ustalone: powiązana z OpenAI deklaracja o mniej więcej 10 000 agentów, roku wieloagentowego RL i nacisku na równoległą moc obliczeniową w czasie testu zamiast jednej długiej próby dowodu. Nieustalone: treść jakiegokolwiek twierdzenia, zakres dowodu, to, czy dotyczy standardowej globalnej regularności dla trójwymiarowego przypadku nieściśliwego, czy jakiegoś wariantu, oraz jaka część pracy była ludzka. Współpraca 10 000 agentów nie mówi ci, czy ludzie rozłożyli przeszukiwanie na czynniki, wyselekcjonowali lematy, zweryfikowali kroki, czy tylko uruchomili infrastrukturę. Szeroko powtarzana liczba 88 godzin pojawia się w tym zestawie wyłącznie w poście satyrycznym, co nie przeszkodziło jej stać się wszędzie liczbą z nagłówka.
 
-Solution is doing a lot of unmarked work too. In mathematics it could mean a complete proof, a proof strategy, a candidate counterexample, a formalized derivation or a research lead. Navier-Stokes is a bad problem to be vague about, because a claim that finite time singularities can occur implies a negative answer to global regularity in the relevant formulation, and that requires extraordinary precision.
+Słowo "rozwiązanie" też odwala tu sporo nieoznaczonej roboty. W matematyce może oznaczać kompletny dowód, strategię dowodu, kandydata na kontrprzykład, sformalizowane wyprowadzenie albo trop badawczy. Navier-Stokes to zły problem na to, żeby być nieprecyzyjnym, bo twierdzenie, że osobliwości w skończonym czasie mogą wystąpić, implikuje negatywną odpowiedź na pytanie o globalną regularność w odpowiednim sformułowaniu, a to wymaga nadzwyczajnej precyzji.
 
-The reactions split predictably. Theo Jensen called it the science world's moment of realizing AI can actually code. Hrishikesh framed it as evidence of a high compute regime and told people to adjust their plans. Someone connected ChatGPT latency warnings to compute being redirected at the run, which was pure conjecture. The neutral reading is the one I would hold. Even if the theorem does not survive review, a system that generates mathematically nontrivial candidate paths on a problem of this stature is a real capability milestone, and the multi agent RL plus parallel test time compute architecture may matter more as a research method than as a result.
+Reakcje rozłożyły się przewidywalnie. Theo Jensen nazwał to momentem, w którym świat nauki orientuje się, że AI naprawdę potrafi kodować. Hrishikesh ujął to jako dowód na reżim wysokiej mocy obliczeniowej i kazał ludziom skorygować plany. Ktoś powiązał ostrzeżenia o opóźnieniach ChatGPT z przekierowaniem mocy na ten przebieg, co było czystym domysłem. Neutralny odczyt to ten, którego bym się trzymał. Nawet jeśli twierdzenie nie przetrwa recenzji, system generujący matematycznie nietrywialne ścieżki kandydujące dla problemu tego kalibru to realny kamień milowy zdolności, a architektura wieloagentowego RL plus równoległej mocy w czasie testu może mieć większe znaczenie jako metoda badawcza niż jako wynik.
 
-What is genuinely absent from the disclosure is worth listing, because it is what a reviewer would need. No theorem prover integration described, no formal verification, no proof assistant stack, no model size, no compute budget, no ablation against a single agent baseline, no proof check success rate. OpenAI's separate statement that no specific user data was accessed, with a caveat about possible de-identified derivative improvement, became its own flashpoint for reasons that are obvious to anyone who read the other side of this story.
+Warto wypisać to, czego w ujawnieniu naprawdę brakuje, bo to właśnie tego potrzebowałby recenzent. Żadnego opisu integracji z systemem dowodzenia twierdzeń, żadnej weryfikacji formalnej, żadnego stosu z asystentem dowodu, żadnego rozmiaru modelu, żadnego budżetu obliczeniowego, żadnej ablacji względem punktu odniesienia z jednym agentem, żadnego wskaźnika skuteczności sprawdzania dowodu. Osobne oświadczenie OpenAI, że nie sięgnięto po żadne konkretne dane użytkowników, z zastrzeżeniem o możliwej zanonimizowanej poprawie pochodnej, stało się własnym punktem zapalnym z powodów oczywistych dla każdego, kto zna drugą stronę tej historii.
 
 **Key takeaways:**
-- The disclosed facts are systems level: roughly 10,000 agents, about a year of multi agent RL, heavy parallel test time compute
-- No theorem statement, preprint, proof sketch or verification artifact appeared alongside the claim
-- The 88 hours figure that spread everywhere traces to a satirical post, not to OpenAI
-- Provenance matters technically here, since who framed the conjecture and who verified the steps changes what the artifact is
-- The architecture may be the more durable contribution even if the specific proof does not hold up
+- Ujawnione fakty są na poziomie systemowym: mniej więcej 10 000 agentów, około roku wieloagentowego RL, dużo równoległej mocy w czasie testu
+- Wraz z deklaracją nie pojawiła się treść twierdzenia, preprint, szkic dowodu ani artefakt weryfikacyjny
+- Liczba 88 godzin, która rozeszła się wszędzie, pochodzi z posta satyrycznego, a nie z OpenAI
+- Pochodzenie wyniku ma tu znaczenie techniczne, bo to, kto sformułował hipotezę i kto zweryfikował kroki, zmienia charakter artefaktu
+- Architektura może być trwalszym wkładem, nawet jeśli konkretny dowód się nie obroni
 
-**Why do I care:** The part worth carrying into your own work is the shift from bigger single model to coordinated ensembles with compute spent at solve time. If that direction holds, the interesting engineering moves to task decomposition, inter agent communication and candidate selection, which are ordinary distributed systems problems rather than machine learning ones. That is a set of skills a senior engineer already has. Treat the Millennium Prize framing as marketing until a proof exists you can read.
+**Why do I care:** Do własnej pracy warto zabrać przesunięcie od większego pojedynczego modelu w stronę skoordynowanych zespołów z mocą wydawaną w momencie rozwiązywania. Jeśli ten kierunek się utrzyma, ciekawa inżynieria przenosi się na dekompozycję zadań, komunikację między agentami i wybór kandydatów, czyli zwykłe problemy systemów rozproszonych, a nie uczenia maszynowego. To zestaw umiejętności, który starszy inżynier już ma. Ramę z Nagrodą Milenijną traktuj jak marketing, dopóki nie pojawi się dowód, który da się przeczytać.
 
 **Link:** [OpenAI reports Navier-Stokes singularity find using Astra-next](https://www.latent.space/p/ainews-openai-reports-navier-stokes)
 
-## Meta Muse and a personal agent with a real security design
+## Meta Muse i osobisty agent z realnym projektem bezpieczeństwa
 
-**TLDR:** Meta launched Muse, an always on personal agent with app connectors and browser access, distributed through Meta's own properties. Each Muse runs in its own isolated Linux VM, a separate component called Sentinel mediates actions, secrets are never exposed to the agent, and there is a bug bounty up to $300k.
+**TLDR:** Meta uruchomiła Muse, stale działającego osobistego agenta z konektorami do aplikacji i dostępem do przeglądarki, dystrybuowanego przez własne serwisy Mety. Każdy Muse działa we własnej izolowanej maszynie wirtualnej z Linuksem, osobny komponent o nazwie Sentinel pośredniczy w akcjach, sekrety nigdy nie trafiają do agenta, a bug bounty sięga 300 tysięcy dolarów.
 
-**Summary:** The product shape is familiar by now. Persistent VMs, browser use, a WhatsApp interface, connectors to Gmail, Calendar, Outlook, Plaid, OpenTable, Docs, Spotify and Peloton, plus Meta native connectors to Instagram, Messenger, Facebook and Marketplace. Meta says day one usage came in ten times above internal projections, which is the kind of number a launch post always produces and which nobody can check.
+**Summary:** Kształt produktu jest już znajomy. Trwałe maszyny wirtualne, korzystanie z przeglądarki, interfejs na WhatsAppie, konektory do Gmaila, Kalendarza, Outlooka, Plaid, OpenTable, Dokumentów, Spotify i Pelotona, plus natywne konektory Mety do Instagrama, Messengera, Facebooka i Marketplace'u. Meta twierdzi, że użycie pierwszego dnia wypadło dziesięciokrotnie powyżej wewnętrznych prognoz, czyli podaje liczbę, jaką zawsze produkuje wpis premierowy i której nikt nie może sprawdzić.
 
-The security architecture is what Meta pushed hardest and it is the reason practitioners reacted well. Each Muse gets its own isolated VM. Actions are mediated by a separate component rather than executed directly by the agent. Secrets are never handed to the model. Sensitive actions require approval. There is a public bug bounty topping out at $300k, which is a real commitment rather than a slide. Commerce runs through Stripe Link with an agentic payment protection and refund guarantee, with Shop Pay coming.
+Architektura bezpieczeństwa to element, który Meta wypchnęła najmocniej, i to dlatego praktycy zareagowali dobrze. Każdy Muse dostaje własną izolowaną maszynę wirtualną. W akcjach pośredniczy osobny komponent, zamiast żeby wykonywał je bezpośrednio agent. Sekrety nigdy nie trafiają do modelu. Wrażliwe akcje wymagają zatwierdzenia. Jest publiczny bug bounty z pułapem 300 tysięcy dolarów, co jest realnym zobowiązaniem, a nie slajdem. Handel obsługuje Stripe Link z agentową ochroną płatności i gwarancją zwrotu, a Shop Pay jest w drodze.
 
-That reception is the interesting signal. The people quoted were positive specifically about permissioning and secrets management rather than about model quality, which suggests Muse may be one of the first personal agent products where the bottleneck is context and access rather than raw intelligence. That has been true for a while and most launches have not acted like it.
+To przyjęcie jest ciekawym sygnałem. Cytowani ludzie chwalili konkretnie zarządzanie uprawnieniami i sekretami, a nie jakość modelu, co sugeruje, że Muse może być jednym z pierwszych produktów z osobistym agentem, gdzie wąskim gardłem jest kontekst i dostęp, a nie surowa inteligencja. To jest prawdą już od jakiegoś czasu, a większość premier zachowywała się, jakby nie było.
 
-Meta also exposed Muse Spark 1.3 in third party tooling including Cursor almost immediately, and arena style benchmarking positioned Muse Spark 1.3 Max as competitive on price and performance for web development coding workloads. Shipping a consumer agent and a developer accessible model in the same week is a distribution move more than a technical one, and Meta has the distribution.
+Meta udostępniła też Muse Spark 1.3 w narzędziach zewnętrznych, w tym w Cursorze, niemal natychmiast, a benchmarki w stylu areny ustawiły Muse Spark 1.3 Max jako konkurencyjny cenowo i wydajnościowo w zadaniach kodowania webowego. Wypuszczenie konsumenckiego agenta i modelu dostępnego dla programistów w tym samym tygodniu to ruch dystrybucyjny bardziej niż techniczny, a Meta dystrybucję ma.
 
 **Key takeaways:**
-- Each Muse runs in its own isolated Linux VM with a separate mediator between the agent and any action
-- Secrets stay out of the agent's reach entirely, and sensitive actions need approval
-- The bug bounty goes up to $300k, which is a stronger signal than the architecture diagram
-- Muse Spark 1.3 landed in Cursor immediately and benchmarked competitively for web dev coding
+- Każdy Muse działa we własnej izolowanej maszynie wirtualnej z Linuksem, z osobnym pośrednikiem między agentem a każdą akcją
+- Sekrety zostają całkowicie poza zasięgiem agenta, a wrażliwe akcje wymagają zatwierdzenia
+- Bug bounty sięga 300 tysięcy dolarów, co jest mocniejszym sygnałem niż diagram architektury
+- Muse Spark 1.3 wylądował w Cursorze natychmiast i wypadł konkurencyjnie w benchmarkach kodowania webowego
 
-**Why do I care:** The permission and secrets design is the part to steal, and it is directly relevant if you are building anything agentic for a product team. Keeping credentials out of the model's context and putting a mediator between intent and execution is not novel, and it is still the thing most internal agent projects skip because it slows the demo down. Meta having done it publicly gives you something to point at in a design review. The rest is a distribution story that does not affect your architecture either way.
+**Why do I care:** Do podkradzenia jest projekt uprawnień i sekretów, bezpośrednio przydatny, jeśli budujesz cokolwiek agentowego dla zespołu produktowego. Trzymanie poświadczeń poza kontekstem modelu i wstawienie pośrednika między intencją a wykonaniem nie jest nowatorskie i wciąż jest tym, co większość wewnętrznych projektów agentowych pomija, bo spowalnia demo. To, że Meta zrobiła to publicznie, daje ci coś, na co możesz wskazać podczas przeglądu projektu. Reszta to historia o dystrybucji, która i tak nie wpływa na twoją architekturę.
 
 **Link:** [Meta Muse launch coverage in AINews](https://www.latent.space/p/ainews-openai-reports-navier-stokes)
 
-## Agent harnesses, post training and the numbers that matter
+## Uprzęże agentowe, post-training i liczby, które mają znaczenie
 
-**TLDR:** Harvey and Baseten published the clearest case yet that the harness and the post training matter as much as the model. Moving from a standard tool loop to a recursive harness took mean rubric pass rate from 23% to 62%. Reinforcement learning on top took one model from 30% to 63%.
+**TLDR:** Harvey i Baseten opublikowały najczytelniejszy jak dotąd argument, że uprząż i post-training znaczą tyle samo co model. Przejście ze standardowej pętli narzędziowej na uprząż rekurencyjną podniosło średni wskaźnik zaliczeń rubryki z 23% do 62%. Uczenie ze wzmocnieniem na wierzchu przeniosło jeden model z 30% na 63%.
 
-**Summary:** The setup is legal due diligence over corpora up to 80 million tokens. A root agent searches a data room, delegates document review to sub agents, and aggregates findings. On a synthetic benchmark called LAB Diligence, swapping a standard tool loop for that recursive structure raised mean rubric pass rate from 23% to 62% across models. That is a bigger delta than most model upgrades produce, achieved without changing the model.
+**Summary:** Scenerią jest prawnicze due diligence na korpusach sięgających 80 milionów tokenów. Agent główny przeszukuje data room, deleguje przegląd dokumentów do subagentów i agreguje ustalenia. Na syntetycznym benchmarku LAB Diligence zamiana standardowej pętli narzędziowej na tę rekurencyjną strukturę podniosła średni wskaźnik zaliczeń rubryki z 23% do 62% w różnych modelach. To większa różnica, niż produkuje większość podmian modelu, osiągnięta bez zmiany modelu.
 
-Then post training compounded it. Self distilled supervised fine tuning on GLM-5.2 moved pass rate from 46% to 60%. GRPO on Qwen3.5-122B-A10B moved it from 30% to 63% on held out data rooms, and improved document coverage from 62% to 96%. The coverage number is the one to notice, because a legal review that misses a third of the documents is worse than useless regardless of how good its findings are.
+Potem post-training to zwielokrotnił. Samodystylowane nadzorowane dostrajanie GLM-5.2 przesunęło wskaźnik zaliczeń z 46% na 60%. GRPO na Qwen3.5-122B-A10B przeniosło go z 30% na 63% na odłożonych data roomach i poprawiło pokrycie dokumentów z 62% do 96%. To liczba pokrycia jest tą, którą warto zauważyć, bo przegląd prawny pomijający jedną trzecią dokumentów jest gorszy niż bezużyteczny, niezależnie od jakości ustaleń.
 
-The implication both teams draw is that agent benchmarks need to treat orchestration and post training as part of the system rather than as glue around it. That is consistent with the ARC-AGI-3 result OpenAI published, where two API settings tripled a score with no model change, and with Harness-Bench finding a 23.8 point spread across harnesses on identical tasks with an identical model. Three independent results pointing the same direction is enough to act on.
+Wniosek wyciągany przez oba zespoły jest taki, że benchmarki agentowe muszą traktować orkiestrację i post-training jako część systemu, a nie jako klej wokół niego. Jest to spójne z wynikiem ARC-AGI-3 opublikowanym przez OpenAI, gdzie dwa ustawienia API potroiły wynik bez zmiany modelu, oraz z Harness-Bench, gdzie rozrzut między uprzężami na identycznych zadaniach i przy identycznym modelu wyniósł 23,8 punktu. Trzy niezależne wyniki wskazujące w tę samą stronę to wystarczająco dużo, żeby działać.
 
-LangChain shipped supporting pieces in deepagents: sub agent forking that passes supervisor context down, and managed connections that abstract OAuth, token and consent flows for either agent owned or user owned identities. Unglamorous plumbing, and exactly what long horizon agent work has been missing.
+LangChain wypuścił elementy wspierające w deepagents: forkowanie subagentów przekazujące w dół kontekst nadzorcy oraz zarządzane połączenia abstrahujące przepływy OAuth, tokenów i zgód, zarówno dla tożsamości należących do agenta, jak i do użytkownika. Nieefektowna hydraulika i dokładnie to, czego długodystansowej pracy agentowej brakowało.
 
 **Key takeaways:**
-- A recursive harness took mean rubric pass rate from 23% to 62% with no model change
-- GRPO on Qwen3.5-122B-A10B raised pass rate from 30% to 63% and document coverage from 62% to 96%
-- Harness-Bench measured a 23.8 point spread across harnesses running the same model on the same 106 tasks
-- Agent benchmarks that hold the harness constant are measuring the wrong thing
-- deepagents added sub agent forking with inherited supervisor context and managed OAuth style connections
+- Uprząż rekurencyjna podniosła średni wskaźnik zaliczeń rubryki z 23% do 62% bez zmiany modelu
+- GRPO na Qwen3.5-122B-A10B podniosło wskaźnik zaliczeń z 30% do 63%, a pokrycie dokumentów z 62% do 96%
+- Harness-Bench zmierzył rozrzut 23,8 punktu między uprzężami na tych samych 106 zadaniach i tym samym modelu
+- Benchmarki agentowe trzymające uprząż na stałe mierzą niewłaściwą rzecz
+- deepagents dorzuciło forkowanie subagentów z dziedziczonym kontekstem nadzorcy i zarządzane połączenia w stylu OAuth
 
-**Why do I care:** If you have concluded that agents cannot do some task in your product, the honest next step is to check whether you tested the model or your loop around it. A 23 to 62 point swing from restructuring the orchestration means most internal evaluations are measuring their own plumbing. For architects this reframes the build decision entirely. The gains sit in decomposition, delegation and aggregation, which your team can iterate on weekly, rather than in waiting for the next model.
+**Why do I care:** Jeśli doszedłeś do wniosku, że agenty nie poradzą sobie z jakimś zadaniem w twoim produkcie, uczciwym kolejnym krokiem jest sprawdzenie, czy testowałeś model, czy własną pętlę wokół niego. Skok z 23 na 62 punkty z samej przebudowy orkiestracji oznacza, że większość wewnętrznych ewaluacji mierzy własną hydraulikę. Dla architektów zmienia to całkowicie ramę decyzji o budowie. Zyski siedzą w dekompozycji, delegowaniu i agregacji, nad którymi twój zespół może iterować co tydzień, a nie w czekaniu na kolejny model.
 
 **Link:** [Harvey and Baseten harness results in AINews](https://www.latent.space/p/ainews-openai-reports-navier-stokes)
 
-## Serving infrastructure is where the real numbers are
+## Prawdziwe liczby są w infrastrukturze serwowania
 
-**TLDR:** vLLM published sparse attention offloading that took sustained concurrency from 5 or 6 requests to 19 to 25 at a million tokens of context on one node. It also found that session sticky routing beats naive load balancing for agent traffic, because a warm cache matters more than an even queue.
+**TLDR:** vLLM opublikowało odciążanie rzadkiej uwagi, które podniosło utrzymywaną współbieżność z 5-6 żądań do 19-25 przy milionie tokenów kontekstu na jednym węźle. Okazało się też, że trasowanie z przypięciem sesji bije naiwne równoważenie obciążenia w ruchu agentowym, bo ciepły cache znaczy więcej niż równa kolejka.
 
-**Summary:** The long context work is the headline. vLLM's Hybrid HiSparse keeps the KV cache on GPU while it can, offloads cold pages to host memory, and keeps a hot buffer for the indexer. Running GLM 5.3 with a million tokens of context on an eight by H200 node at configured concurrency 32, plain offloading sustained 5 to 6 requests while Hybrid HiSparse sustained 19 to 25. That is a three to four times improvement in how many long context requests one node can actually serve, which matters directly for reinforcement learning rollouts where decode is VRAM bound.
+**Summary:** Nagłówkiem jest praca nad długim kontekstem. Hybrid HiSparse od vLLM trzyma cache KV na GPU, dopóki się da, odciąża zimne strony do pamięci hosta i utrzymuje gorący bufor dla indeksera. Przy GLM 5.3 z milionem tokenów kontekstu na węźle osiem razy H200 i skonfigurowanej współbieżności 32 zwykłe odciążanie utrzymywało 5-6 żądań, a Hybrid HiSparse 19-25. To trzy-, czterokrotna poprawa liczby żądań z długim kontekstem, które jeden węzeł realnie obsłuży, i przekłada się wprost na przebiegi uczenia ze wzmocnieniem, gdzie dekodowanie jest ograniczone przez VRAM.
 
-The full stack optimization pass is more surprising and more useful. Benchmarked on real agent traffic, pipeline parallelism helps for cold long prompts and loses for warm short turns, so the right configuration depends on your traffic mix rather than on a general rule. Decode context parallelism depends heavily on the model's attention design. And session sticky routing beats naive load balancing, because in fast turn agent workloads a warm KV cache is worth more than an evenly distributed queue. That last finding is the one that contradicts a default most people ship with, and it is the sort of thing you only learn from production shaped traffic.
+Przebieg optymalizacji całego stosu jest bardziej zaskakujący i bardziej użyteczny. Zmierzone na prawdziwym ruchu agentowym, zrównoleglenie potokowe pomaga przy zimnych długich promptach i przegrywa przy ciepłych krótkich turach, więc właściwa konfiguracja zależy od twojego miksu ruchu, a nie od ogólnej reguły. Zrównoleglenie kontekstu przy dekodowaniu mocno zależy od konstrukcji uwagi w modelu. A trasowanie z przypięciem sesji bije naiwne równoważenie obciążenia, bo w obciążeniach agentowych z szybkimi turami ciepły cache KV jest wart więcej niż równo rozłożona kolejka. To ostatnie ustalenie przeczy domyślnemu ustawieniu, z którym większość ludzi wypuszcza systemy, i jest dokładnie tym, czego uczy tylko ruch o produkcyjnym kształcie.
 
-Cohere released an open source serving stack built around a decode megakernel, claiming up to 1.58 times faster than vLLM on North Mini Code and 1.25 to 1.41 times end to end at higher batch sizes. Baseten separately reported that frontier RL rollouts now receive new policy weights globally in under 40 seconds with a 6 second pause. Put those together and the direction is clear. Serving infrastructure is being rebuilt for continuous post training and rollout refresh rather than for static model serving, which is a different set of constraints than most of us learned.
+Cohere wydało otwartoźródłowy stos serwujący zbudowany wokół megakernela dekodującego, deklarując do 1,58 raza szybsze działanie niż vLLM na North Mini Code i 1,25 do 1,41 raza end to end przy większych rozmiarach wsadu. Baseten osobno raportuje, że przebiegi RL z pierwszej ligi otrzymują dziś nowe wagi polityki globalnie w mniej niż 40 sekund, przy 6-sekundowej pauzie. Złóż to razem, a kierunek jest jasny. Infrastruktura serwowania jest przebudowywana pod ciągły post-training i odświeżanie przebiegów, a nie pod statyczne serwowanie modeli, a to inny zestaw ograniczeń niż ten, którego się uczyliśmy.
 
 **Key takeaways:**
-- Hybrid HiSparse took sustained concurrency from 5 or 6 to 19 to 25 at a million tokens on an eight by H200 node
-- Session sticky routing beats naive load balancing for agent traffic, because warm KV caches matter more than queue evenness
-- Pipeline parallelism helps cold long prompts and hurts warm short turns, so the answer depends on your traffic
-- Cohere's decode megakernel claims up to 1.58 times faster than vLLM on one workload
-- Baseten reports new policy weights live globally in under 40 seconds with a 6 second pause
+- Hybrid HiSparse podniósł utrzymywaną współbieżność z 5-6 do 19-25 przy milionie tokenów na węźle osiem razy H200
+- Trasowanie z przypięciem sesji bije naiwne równoważenie obciążenia w ruchu agentowym, bo ciepłe cache KV znaczą więcej niż równa kolejka
+- Zrównoleglenie potokowe pomaga przy zimnych długich promptach i szkodzi przy ciepłych krótkich turach, więc odpowiedź zależy od twojego ruchu
+- Megakernel dekodujący Cohere deklaruje do 1,58 raza szybsze działanie niż vLLM na jednym obciążeniu
+- Baseten raportuje nowe wagi polityki dostępne globalnie w mniej niż 40 sekund, przy 6-sekundowej pauzie
 
-**Why do I care:** This is not frontend work and one finding transfers directly anyway. Session sticky routing beating even load distribution is the same insight as sticky sessions in front of a stateful web tier, and if you are putting a load balancer in front of self hosted inference you are probably shipping the wrong default today. More broadly, if your product depends on self hosted models, these numbers say your inference cost is more a serving configuration problem than a hardware budget problem, and that is a much cheaper thing to fix.
+**Why do I care:** To nie jest praca frontendowa, a jedno ustalenie i tak przenosi się wprost. Trasowanie z przypięciem sesji bijące równe rozłożenie obciążenia to ta sama intuicja co sticky sessions przed stanową warstwą webową, i jeśli stawiasz load balancer przed własnym hostowanym wnioskowaniem, prawdopodobnie wypuszczasz dziś złe ustawienie domyślne. Szerzej: jeśli twój produkt zależy od modeli hostowanych u siebie, te liczby mówią, że koszt wnioskowania jest bardziej problemem konfiguracji serwowania niż budżetu na sprzęt, a to znacznie tańsza rzecz do naprawienia.
 
 **Link:** [vLLM and Cohere serving results in AINews](https://www.latent.space/p/ainews-openai-reports-navier-stokes)
 
-## Images 2.5, Astra rollout and the rest of a crowded day
+## Images 2.5, wdrożenie Astry i reszta zatłoczonego dnia
 
-**TLDR:** OpenAI shipped ChatGPT Images 2.5 with up to 50% lower latency and better edit consistency, and finished rolling Astra out to Plus, Pro, Business and Enterprise. Cognition raised over $2B at a $48B valuation. A researcher resigned from Anthropic over safety.
+**TLDR:** OpenAI wypuściło ChatGPT Images 2.5 z opóźnieniem niższym nawet o 50% i lepszą spójnością edycji oraz zakończyło wdrażanie Astry dla planów Plus, Pro, Business i Enterprise. Cognition zebrało ponad 2 miliardy dolarów przy wycenie 48 miliardów. Badacz odszedł z Anthropic z powodów związanych z bezpieczeństwem.
 
-**Summary:** Images 2.5 got overshadowed and is a solid release. Up to 50% lower latency than Images 2.0, better realism, edit consistency that holds across repeated edits, comment based localized changes, transparent backgrounds, and a Sketch tool for guided generation. Two API variants shipped, Flare for speed and Sunburst for higher precision detail work. Arena results claimed first and second across text to image, image edit and multi image edit, with the largest gains in multi image editing. Integrations landed at fal, Higgsfield, Manus and Hermes Agent within the day.
+**Summary:** Images 2.5 zostało przyćmione, a jest solidnym wydaniem. Opóźnienie niższe nawet o 50% wobec Images 2.0, lepszy realizm, spójność edycji utrzymująca się przez kolejne poprawki, zlokalizowane zmiany na podstawie komentarzy, przezroczyste tła i narzędzie Sketch do prowadzonej generacji. Wyszły dwa warianty API: Flare do szybkości i Sunburst do pracy nad detalem o wyższej precyzji. Wyniki z areny deklarowały pierwsze i drugie miejsce w kategoriach tekst na obraz, edycja obrazu i edycja wielu obrazów, przy czym największe zyski przypadły na edycję wielu obrazów. Integracje wylądowały w fal, Higgsfield, Manus i Hermes Agent jeszcze tego samego dnia.
 
-Astra availability widened to all Plus, Pro, Business and Enterprise users in Codex and ChatGPT Work. Two community demos are worth the anecdote value. Theo reported Astra compiling and running Super Smash Bros. Melee on macOS at 120 FPS after roughly a six hour loop. Vals reported it nearly saturating an unreleased computer use evaluation by building a Minecraft Nether portal in under three hours with no specialized harness. Both are cherry picked and both are the kind of task that would have been impossible last year.
+Dostępność Astry rozszerzono na wszystkich użytkowników Plus, Pro, Business i Enterprise w Codeksie oraz ChatGPT Work. Dwa demo od społeczności są warte wartości anegdotycznej. Theo raportował, że Astra skompilowała i uruchomiła Super Smash Bros. Melee na macOS w 120 FPS po mniej więcej sześciogodzinnej pętli. Vals raportował, że niemal wysyciła niewydaną ewaluację obsługi komputera, budując w Minecrafcie portal do Netheru w niecałe trzy godziny, bez wyspecjalizowanej uprzęży. Oba przypadki są wyselekcjonowane i oba są zadaniami, które rok temu byłyby niemożliwe.
 
-The financing and personnel news is the part with consequences. Cognition raised over $2B at a $48B valuation, saying run rate revenue grew from $492M to nearly $900M since May. Separately, Jacob Hilton resigned from Anthropic, arguing both Anthropic and OpenAI are racing toward self improving superintelligence irresponsibly and that insiders privately treat extinction risk as real. Two decacorn rounds, Cognition's and Mistral's $24B, landed on the same day as everything else and did not make the headline, which tells you what the news cycle now costs to break into.
+Wiadomości o finansowaniu i kadrach to część z konsekwencjami. Cognition zebrało ponad 2 miliardy dolarów przy wycenie 48 miliardów, podając, że przychód w ujęciu rocznym wzrósł od maja z 492 milionów do prawie 900 milionów. Osobno Jacob Hilton odszedł z Anthropic, argumentując, że zarówno Anthropic, jak i OpenAI pędzą nieodpowiedzialnie w stronę samodoskonalącej się superinteligencji i że ludzie wewnątrz prywatnie traktują ryzyko wyginięcia jako realne. Dwie rundy dekakornów, Cognition i 24 miliardy Mistrala, wylądowały tego samego dnia co cała reszta i nie trafiły na nagłówek, co pokazuje, ile dziś kosztuje przebicie się przez cykl informacyjny.
 
 **Key takeaways:**
-- Images 2.5 cuts latency up to 50% and adds edit consistency across repeated edits plus a Sketch tool
-- Flare and Sunburst are the speed and precision API variants
-- Astra is now fully rolled out to Plus, Pro, Business and Enterprise in Codex and ChatGPT Work
-- Cognition raised over $2B at $48B, reporting run rate revenue up from $492M to nearly $900M since May
-- Jacob Hilton resigned from Anthropic citing an irresponsible race toward self improving systems
-- Mistral's $24B round landed the same day and did not make the headline
+- Images 2.5 tnie opóźnienie nawet o 50% i dokłada spójność przy kolejnych edycjach oraz narzędzie Sketch
+- Flare i Sunburst to warianty API nastawione odpowiednio na szybkość i precyzję
+- Astra jest już w pełni wdrożona dla Plus, Pro, Business i Enterprise w Codeksie i ChatGPT Work
+- Cognition zebrało ponad 2 miliardy przy wycenie 48 miliardów, raportując wzrost przychodu rocznego z 492 milionów do prawie 900 milionów od maja
+- Jacob Hilton odszedł z Anthropic, wskazując na nieodpowiedzialny wyścig w stronę systemów samodoskonalących się
+- Runda Mistrala na 24 miliardy wylądowała tego samego dnia i nie trafiła na nagłówek
 
-**Why do I care:** The Images 2.5 edit consistency is the one with a direct product use, because holding a subject stable across repeated edits is exactly what breaks when you try to generate a set of related assets for a design system or a marketing page. If you evaluated image generation for that and gave up, this is worth a second look. Everything else here is context for planning conversations rather than for code, and the Hilton resignation is worth reading in full if you make procurement decisions, since it is a first hand account rather than commentary.
+**Why do I care:** Bezpośrednie zastosowanie produktowe ma spójność edycji w Images 2.5, bo utrzymanie stabilnego obiektu przez kolejne poprawki to dokładnie to, co się sypie, gdy próbujesz wygenerować zestaw powiązanych assetów do design systemu albo strony marketingowej. Jeśli oceniałeś generowanie obrazów pod tym kątem i odpuściłeś, warto spojrzeć drugi raz. Cała reszta to kontekst do rozmów planistycznych, a nie do kodu, a rezygnację Hiltona warto przeczytać w całości, jeśli podejmujesz decyzje zakupowe, bo to relacja z pierwszej ręki, a nie komentarz.
 
 **Link:** [AINews for 9/8/2026](https://www.latent.space/p/ainews-openai-reports-navier-stokes)
