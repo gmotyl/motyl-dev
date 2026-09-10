@@ -1,5 +1,5 @@
 import type { NextConfig } from 'next'
-import { getAllContent } from './lib/content/articles'
+import { getAllContentMetadata } from './lib/content/articles'
 import { ItemType } from './lib/content/types'
 
 const nextConfig: NextConfig = {
@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
     // Legacy /articles/<news-slug> URLs have to land on /news/<slug>. Emitting one
     // redirect per news item pushed the build past Vercel's 2048-route limit, so
     // match everything that is *not* a real article slug in a single rule instead.
-    const allContent = await getAllContent()
+    const allContent = await getAllContentMetadata()
     const articleSlugs = allContent
       .filter((item) => item.itemType === ItemType.Article)
       .map((item) => item.slug)
