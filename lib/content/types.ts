@@ -1,3 +1,7 @@
+// This module is reachable from next.config.ts via articles.ts and bodies.ts, so Next 16's
+// config transpiler processes it too. Keep this file import-free (or relative-only if that
+// ever changes) — a '@/*' alias here breaks `next build` at config-load time, same as it
+// would in articles.ts and bodies.ts.
 export const ItemType = {
   Article: 'article',
   News: 'news',
