@@ -1,7 +1,13 @@
 import { describe, expect, it, vi, beforeEach, beforeAll } from 'vitest'
-import { getAllContentMetadata, getContentItemBySlug, getAllHashtags } from '@/lib/content/articles'
+import {
+  getAllContentMetadata,
+  getContentItemBySlug,
+  getAllHashtags,
+  getContentPageData,
+} from '@/lib/content/articles'
 import { filterHiddenSections, type SectionType } from '@/lib/content/section-filter'
 import { getNewsBody } from '@/lib/content/bodies'
+import { ItemType } from '@/lib/content/types'
 
 vi.mock('@/lib/content/bodies')
 
@@ -448,5 +454,139 @@ describe('getContentItemBySlug resolves bodies by itemType', () => {
     expect(first).toEqual(second)
     expect(first?.content).toBe('shared body')
     expect(getNewsBody).toHaveBeenCalledWith(newsSlug)
+  })
+})
+
+describe('getContentPageData paginated body loading', () => {
+  // As with the describe block above, slugs and slice boundaries are derived from the
+  // live cache (via getAllContentMetadata()) rather than hardcoded, so these tests stay
+  // immune to the rolling 3-month news retention window and to corpus changes.
+  let newsSlugs: string[]
+
+  beforeAll(async () => {
+    const items = await getAllContentMetadata()
+    newsSlugs = items.filter((item) => item.itemType === 'news').map((item) => item.slug)
+
+    if (newsSlugs.length < 4) {
+      throw new Error(
+        'Fewer than 4 news items in data/content-cache.json — cannot run the ' +
+          'getContentPageData pagination tests. Run "pnpm prebuild" against a corpus with ' +
+          'at least 4 recent news items to regenerate the cache.'
+      )
+    }
+  })
+
+  beforeEach(() => {
+    vi.mocked(getNewsBody).mockReset()
+  })
+
+  it('fetches exactly the paginated slice, not the corpus', async () => {
+    vi.mocked(getNewsBody).mockImplementation(async (slug) => ({
+      content: `body for ${slug}`,
+      externalLinks: [],
+    }))
+
+    const page1Slugs = newsSlugs.slice(0, 2)
+    const page2Slugs = newsSlugs.slice(2, 4)
+
+    const page = await getContentPageData({
+      contentType: ItemType.News,
+      includeContent: true,
+      limit: 2,
+      page: 1,
+    })
+
+    expect(getNewsBody).toHaveBeenCalledTimes(2)
+    const calledSlugs = vi.mocked(getNewsBody).mock.calls.map(([slug]) => slug)
+    expect(calledSlugs.sort()).toEqual([...page1Slugs].sort())
+    page2Slugs.forEach((slug) => expect(calledSlugs).not.toContain(slug))
+
+    expect(page.items.map((item) => item.slug)).toEqual(page1Slugs)
+    page.items.forEach((item, i) => {
+      expect((item as { content?: string }).content).toBe(`body for ${page1Slugs[i]}`)
+    })
+    expect(page.currentPage).toBe(1)
+    expect(typeof page.totalPages).toBe('number')
+    expect(typeof page.totalItems).toBe('number')
+    expect(page.hashtagCounts).toBeTypeOf('object')
+  })
+
+  it('issues no body fetch when includeContent is false', async () => {
+    const page = await getContentPageData({
+      contentType: ItemType.News,
+      includeContent: false,
+      limit: 5,
+      page: 1,
+    })
+
+    expect(getNewsBody).not.toHaveBeenCalled()
+    expect(page.items.length).toBeGreaterThan(0)
+  })
+
+  it('mixes cached article bodies with fetched news bodies in one page', async () => {
+    const items = await getAllContentMetadata()
+    const firstArticleIndex = items.findIndex((item) => item.itemType === 'article')
+    expect(firstArticleIndex).toBeGreaterThan(0) // an article preceded by at least one news item
+
+    // A 2-item slice straddling the news/article boundary: the news item right before the
+    // first article, and the first article itself.
+    const limit = 2
+    const startIndex = firstArticleIndex - 1
+    const page = Math.floor(startIndex / limit) + 1
+    // Only proceed if the slice actually lands on [startIndex, startIndex + limit) as expected
+    // (true whenever startIndex is even, i.e. divisible by limit boundary math above).
+    const actualStart = (page - 1) * limit
+    expect(actualStart).toBe(startIndex)
+
+    const newsSlug = items[firstArticleIndex - 1].slug
+    const articleSlug = items[firstArticleIndex].slug
+
+    vi.mocked(getNewsBody).mockResolvedValue({ content: 'fetched news body', externalLinks: [] })
+
+    const pageData = await getContentPageData({
+      contentType: 'all',
+      includeContent: true,
+      limit,
+      page,
+    })
+
+    expect(pageData.items.map((item) => item.slug)).toEqual([newsSlug, articleSlug])
+    expect(getNewsBody).toHaveBeenCalledTimes(1)
+    expect(getNewsBody).toHaveBeenCalledWith(newsSlug)
+
+    const newsItem = pageData.items[0] as { content?: string }
+    const articleItem = pageData.items[1] as { content?: string }
+    expect(newsItem.content).toBe('fetched news body')
+    expect(typeof articleItem.content).toBe('string')
+    expect((articleItem.content ?? '').length).toBeGreaterThan(0)
+  })
+
+  it('keeps the rest of the page intact when one body asset fails', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const [okSlug, failSlug] = newsSlugs.slice(0, 2)
+
+    vi.mocked(getNewsBody).mockImplementation(async (slug) => {
+      if (slug === failSlug) return null
+      return { content: `body for ${slug}`, externalLinks: [] }
+    })
+
+    const page = await getContentPageData({
+      contentType: ItemType.News,
+      includeContent: true,
+      limit: 2,
+      page: 1,
+    })
+
+    expect(page.items.map((item) => item.slug)).toEqual([okSlug, failSlug])
+
+    const okItem = page.items[0] as { content?: string; externalLinks?: unknown[] }
+    const failItem = page.items[1] as { content?: string; externalLinks?: unknown[] }
+
+    expect(okItem.content).toBe(`body for ${okSlug}`)
+    expect(failItem.content).toBe('')
+    expect(failItem.externalLinks).toEqual([])
+    expect(consoleErrorSpy).toHaveBeenCalled()
+
+    consoleErrorSpy.mockRestore()
   })
 })

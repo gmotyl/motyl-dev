@@ -266,11 +266,15 @@ export async function getContentPageData({
 
   let paginatedArticles: (ContentItemMetadata | ContentItem)[]
   if (includeContent) {
-    const contentMap = await getCachedContentMap()
-    paginatedArticles = paginatedSlice.map(meta => {
-      const full = contentMap.get(meta.slug)
-      return full || meta
-    })
+    // Resolve bodies for exactly this page's slice, in parallel. Reuses
+    // getContentItemBySlug's itemType-aware merge/degrade logic (blog bodies from
+    // the module cache, news bodies fetched via getNewsBody) rather than duplicating it.
+    paginatedArticles = await Promise.all(
+      paginatedSlice.map(async (meta) => {
+        const full = await getContentItemBySlug(meta.slug)
+        return full ?? meta
+      })
+    )
   } else {
     paginatedArticles = paginatedSlice
   }
