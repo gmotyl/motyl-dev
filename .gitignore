@@ -41,6 +41,7 @@ next-env.d.ts
 /public/data/batches/
 /public/data/tags/
 /public/data/manifest.json
+/public/data/items/
 .gitnexus
 .trends-input.json
 .wrangler/

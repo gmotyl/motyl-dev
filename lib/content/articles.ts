@@ -1,7 +1,10 @@
 'use server'
 
 import { cache } from 'react'
-import { type ExternalLink, type Content, ItemType } from '@/lib/content/types'
+// Relative imports below are required: next.config.ts imports this module, and Next 16's
+// config transpiler cannot resolve '@/*' aliases in that graph.
+import { type Content, ItemType } from './types'
+import { getNewsBody } from './bodies'
 
 // --- Type Definitions ---
 
@@ -57,7 +60,23 @@ export async function getAllContentMetadata(): Promise<ContentItemMetadata[]> {
 
 export const getContentItemBySlug = cache(async (slug: string): Promise<ContentItem | null> => {
   const map = await getCachedContentMap()
-  return map.get(slug) || null
+  const item = map.get(slug)
+  if (!item) return null
+
+  if (item.itemType !== ItemType.News) {
+    // Blog article bodies are inlined in the module cache at build time.
+    return item
+  }
+
+  // News bodies were stripped from the module cache and live as public static
+  // assets (see lib/content/bodies.ts); resolve one per request.
+  const body = await getNewsBody(slug)
+  if (body) {
+    return { ...item, content: body.content, externalLinks: body.externalLinks }
+  }
+
+  console.error(`getContentItemBySlug: failed to resolve body asset for news slug "${slug}"`)
+  return { ...item, content: '', externalLinks: [] }
 })
 
 export async function getAllContent(): Promise<ContentItem[]> {
@@ -249,11 +268,15 @@ export async function getContentPageData({
 
   let paginatedArticles: (ContentItemMetadata | ContentItem)[]
   if (includeContent) {
-    const contentMap = await getCachedContentMap()
-    paginatedArticles = paginatedSlice.map(meta => {
-      const full = contentMap.get(meta.slug)
-      return full || meta
-    })
+    // Resolve bodies for exactly this page's slice, in parallel. Reuses
+    // getContentItemBySlug's itemType-aware merge/degrade logic (blog bodies from
+    // the module cache, news bodies fetched via getNewsBody) rather than duplicating it.
+    paginatedArticles = await Promise.all(
+      paginatedSlice.map(async (meta) => {
+        const full = await getContentItemBySlug(meta.slug)
+        return full ?? meta
+      })
+    )
   } else {
     paginatedArticles = paginatedSlice
   }

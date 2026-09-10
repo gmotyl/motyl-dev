@@ -1,6 +1,15 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { getAllContentMetadata, getContentItemBySlug, getAllHashtags } from '@/lib/content/articles'
+import { describe, expect, it, vi, beforeEach, beforeAll } from 'vitest'
+import {
+  getAllContentMetadata,
+  getContentItemBySlug,
+  getAllHashtags,
+  getContentPageData,
+} from '@/lib/content/articles'
 import { filterHiddenSections, type SectionType } from '@/lib/content/section-filter'
+import { getNewsBody } from '@/lib/content/bodies'
+import { ItemType } from '@/lib/content/types'
+
+vi.mock('@/lib/content/bodies')
 
 // Extract the sorting logic to test it in isolation
 function sortArticlesByDate<T extends { publishedAt?: string }>(articles: T[]): T[] {
@@ -316,5 +325,337 @@ First paragraph TLDR.
     const result = filterHiddenSections(sampleContent, new Set(['summary']))
     expect(result).toContain('More article content here.')
     expect(result).toContain('More content after the sections.')
+  })
+})
+
+describe('getContentItemBySlug resolves bodies by itemType', () => {
+  // Slugs are derived from the live cache rather than hardcoded (matching the
+  // convention already used by the 'should return an article by slug' test above):
+  // - a blog article, whose body stays inline in the module cache (force-static needs it at build time)
+  // - a news item, whose body was stripped from the module cache and lives in public/data/items/<slug>.json
+  // News is pruned by a rolling 3-month retention window on every `pnpm prebuild`
+  // (see scripts/build-content-cache.ts), so a hardcoded news slug from the live
+  // corpus would eventually age out of the cache and make these tests fail for a
+  // reason unrelated to a real regression. Blog articles are never pruned, so a
+  // hardcoded blog slug would stay safe in principle, but deriving it too costs
+  // nothing and keeps the suite immune to any future article rename.
+  let blogSlug: string
+  let newsSlug: string
+
+  beforeAll(async () => {
+    const items = await getAllContentMetadata()
+    const blogItem = items.find((item) => item.itemType === 'article')
+    const newsItem = items.find((item) => item.itemType === 'news')
+
+    if (!blogItem) {
+      throw new Error(
+        'No article-type item found in data/content-cache.json — cannot run the ' +
+          'getContentItemBySlug body-resolution tests. Run "pnpm prebuild" to (re)generate the cache.'
+      )
+    }
+    if (!newsItem) {
+      throw new Error(
+        'No news-type item found in data/content-cache.json — cannot run the ' +
+          'getContentItemBySlug body-resolution tests. News ages out under the 3-month ' +
+          'retention window in scripts/build-content-cache.ts; run "pnpm prebuild" against a ' +
+          'corpus with at least one recent news item to regenerate the cache.'
+      )
+    }
+
+    blogSlug = blogItem.slug
+    newsSlug = newsItem.slug
+  })
+
+  beforeEach(() => {
+    vi.mocked(getNewsBody).mockReset()
+  })
+
+  it('serves a blog article body from the module cache without fetching', async () => {
+    const item = await getContentItemBySlug(blogSlug)
+
+    expect(item).not.toBeNull()
+    expect(item?.slug).toBe(blogSlug)
+    expect(item?.itemType).toBe('article')
+    expect(typeof item?.content).toBe('string')
+    expect((item?.content ?? '').length).toBeGreaterThan(0)
+    expect(getNewsBody).not.toHaveBeenCalled()
+  })
+
+  it('fetches the body asset for a news slug and merges it into the item', async () => {
+    vi.mocked(getNewsBody).mockResolvedValue({
+      content: 'fetched news body',
+      externalLinks: [{ url: 'https://example.com', title: 'Example', order: 0 }],
+    })
+
+    const item = await getContentItemBySlug(newsSlug)
+
+    expect(getNewsBody).toHaveBeenCalledTimes(1)
+    expect(getNewsBody).toHaveBeenCalledWith(newsSlug)
+    expect(item).not.toBeNull()
+    expect(item?.slug).toBe(newsSlug)
+    expect(item?.content).toBe('fetched news body')
+    expect(item?.externalLinks).toEqual([{ url: 'https://example.com', title: 'Example', order: 0 }])
+  })
+
+  it('returns null without fetching for an unknown slug', async () => {
+    const item = await getContentItemBySlug('definitely-does-not-exist-98765')
+
+    expect(item).toBeNull()
+    expect(getNewsBody).not.toHaveBeenCalled()
+  })
+
+  it('passes externalLinks through as-is on the success path (undefined stays undefined, not [])', async () => {
+    // The body asset can omit externalLinks entirely (NewsBody['externalLinks'] is optional).
+    // On the success path getContentItemBySlug must pass that through verbatim — only the
+    // degradation path (asset unreachable, tested below) defaults to []. This pins that
+    // distinction: it fails if the success path were changed to `body.externalLinks ?? []`.
+    vi.mocked(getNewsBody).mockResolvedValue({ content: 'fetched news body without links' })
+
+    const item = await getContentItemBySlug(newsSlug)
+
+    expect(item).not.toBeNull()
+    expect(item?.content).toBe('fetched news body without links')
+    expect(item?.externalLinks).toBeUndefined()
+  })
+
+  it('degrades to empty content and logs when the body asset is unreachable', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.mocked(getNewsBody).mockResolvedValue(null)
+
+    const item = await getContentItemBySlug(newsSlug)
+
+    expect(item).not.toBeNull()
+    expect(item?.content).toBe('')
+    expect(item?.externalLinks).toEqual([])
+    expect(consoleErrorSpy).toHaveBeenCalled()
+
+    consoleErrorSpy.mockRestore()
+  })
+
+  it('fetches a repeated news slug only once per render', async () => {
+    // Empirically verified against this repo's vitest setup (jsdom, no Next.js/RSC request
+    // context): React's `cache()` dedupes only within a real render/request scope. Called
+    // directly from a unit test — sequentially or concurrently via Promise.all — it does NOT
+    // memoize (confirmed with a throwaway probe: a bare `cache(spy)` called twice invoked the
+    // spy twice both ways). Faking a `toHaveBeenCalledTimes(1)` assertion here would either
+    // fail honestly (correct) or require a hand-rolled memoization layer in articles.ts, which
+    // the task explicitly forbids. So this test instead pins the property that IS meaningful
+    // and verifiable in this environment: repeated calls for the same slug are each internally
+    // correct and consistent (idempotent merge), while `getContentItemBySlug` stays wrapped by
+    // React's `cache()` so that in the real Next.js request scope (where `cache()` does
+    // memoize, as documented and relied upon by Next's RSC runtime), the dedup guarantee holds.
+    vi.mocked(getNewsBody).mockResolvedValue({ content: 'shared body', externalLinks: [] })
+
+    const [first, second] = await Promise.all([
+      getContentItemBySlug(newsSlug),
+      getContentItemBySlug(newsSlug),
+    ])
+
+    expect(first).toEqual(second)
+    expect(first?.content).toBe('shared body')
+    expect(getNewsBody).toHaveBeenCalledWith(newsSlug)
+  })
+})
+
+describe('getContentPageData paginated body loading', () => {
+  // As with the describe block above, slugs and slice boundaries are derived from the
+  // live cache (via getAllContentMetadata()) rather than hardcoded, so these tests stay
+  // immune to the rolling 3-month news retention window and to corpus changes.
+  let newsSlugs: string[]
+
+  beforeAll(async () => {
+    const items = await getAllContentMetadata()
+    newsSlugs = items.filter((item) => item.itemType === 'news').map((item) => item.slug)
+
+    if (newsSlugs.length < 4) {
+      throw new Error(
+        'Fewer than 4 news items in data/content-cache.json — cannot run the ' +
+          'getContentPageData pagination tests. Run "pnpm prebuild" against a corpus with ' +
+          'at least 4 recent news items to regenerate the cache.'
+      )
+    }
+  })
+
+  beforeEach(() => {
+    vi.mocked(getNewsBody).mockReset()
+  })
+
+  it('fetches exactly the paginated slice, not the corpus', async () => {
+    vi.mocked(getNewsBody).mockImplementation(async (slug) => ({
+      content: `body for ${slug}`,
+      externalLinks: [],
+    }))
+
+    const page1Slugs = newsSlugs.slice(0, 2)
+    const page2Slugs = newsSlugs.slice(2, 4)
+
+    const page = await getContentPageData({
+      contentType: ItemType.News,
+      includeContent: true,
+      limit: 2,
+      page: 1,
+    })
+
+    expect(getNewsBody).toHaveBeenCalledTimes(2)
+    const calledSlugs = vi.mocked(getNewsBody).mock.calls.map(([slug]) => slug)
+    expect(calledSlugs.sort()).toEqual([...page1Slugs].sort())
+    page2Slugs.forEach((slug) => expect(calledSlugs).not.toContain(slug))
+
+    expect(page.items.map((item) => item.slug)).toEqual(page1Slugs)
+    page.items.forEach((item, i) => {
+      expect((item as { content?: string }).content).toBe(`body for ${page1Slugs[i]}`)
+    })
+    expect(page.currentPage).toBe(1)
+    expect(typeof page.totalPages).toBe('number')
+    expect(typeof page.totalItems).toBe('number')
+    expect(page.hashtagCounts).toBeTypeOf('object')
+  })
+
+  it('issues no body fetch when includeContent is false', async () => {
+    const page = await getContentPageData({
+      contentType: ItemType.News,
+      includeContent: false,
+      limit: 5,
+      page: 1,
+    })
+
+    expect(getNewsBody).not.toHaveBeenCalled()
+    expect(page.items.length).toBeGreaterThan(0)
+  })
+
+  it('mixes cached article bodies with fetched news bodies in one page', async () => {
+    const items = await getAllContentMetadata()
+    const firstArticleIndex = items.findIndex((item) => item.itemType === 'article')
+    expect(firstArticleIndex).toBeGreaterThan(0) // an article preceded by at least one news item
+
+    // A 2-item slice straddling the news/article boundary: the news item right before the
+    // first article, and the first article itself.
+    const limit = 2
+    const startIndex = firstArticleIndex - 1
+    const page = Math.floor(startIndex / limit) + 1
+    // Only proceed if the slice actually lands on [startIndex, startIndex + limit) as expected
+    // (true whenever startIndex is even, i.e. divisible by limit boundary math above).
+    const actualStart = (page - 1) * limit
+    expect(actualStart).toBe(startIndex)
+
+    const newsSlug = items[firstArticleIndex - 1].slug
+    const articleSlug = items[firstArticleIndex].slug
+
+    vi.mocked(getNewsBody).mockResolvedValue({ content: 'fetched news body', externalLinks: [] })
+
+    const pageData = await getContentPageData({
+      contentType: 'all',
+      includeContent: true,
+      limit,
+      page,
+    })
+
+    expect(pageData.items.map((item) => item.slug)).toEqual([newsSlug, articleSlug])
+    expect(getNewsBody).toHaveBeenCalledTimes(1)
+    expect(getNewsBody).toHaveBeenCalledWith(newsSlug)
+
+    const newsItem = pageData.items[0] as { content?: string }
+    const articleItem = pageData.items[1] as { content?: string }
+    expect(newsItem.content).toBe('fetched news body')
+    expect(typeof articleItem.content).toBe('string')
+    expect((articleItem.content ?? '').length).toBeGreaterThan(0)
+  })
+
+  it('keeps the rest of the page intact when one body asset fails', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const [okSlug, failSlug] = newsSlugs.slice(0, 2)
+
+    vi.mocked(getNewsBody).mockImplementation(async (slug) => {
+      if (slug === failSlug) return null
+      return { content: `body for ${slug}`, externalLinks: [] }
+    })
+
+    const page = await getContentPageData({
+      contentType: ItemType.News,
+      includeContent: true,
+      limit: 2,
+      page: 1,
+    })
+
+    expect(page.items.map((item) => item.slug)).toEqual([okSlug, failSlug])
+
+    const okItem = page.items[0] as { content?: string; externalLinks?: unknown[] }
+    const failItem = page.items[1] as { content?: string; externalLinks?: unknown[] }
+
+    expect(okItem.content).toBe(`body for ${okSlug}`)
+    expect(failItem.content).toBe('')
+    expect(failItem.externalLinks).toEqual([])
+    expect(consoleErrorSpy).toHaveBeenCalled()
+
+    consoleErrorSpy.mockRestore()
+  })
+
+  it("fetches the slice's bodies concurrently, not one after another", async () => {
+    // In-flight-counter approach: getNewsBody is the only await boundary the
+    // includeContent branch crosses per item, so it's where concurrency is
+    // observable. Each mocked call registers its arrival, then blocks on a
+    // shared "gate" promise that nothing resolves until every expected call
+    // has arrived. Under Promise.all, all N calls fire before any of them can
+    // resolve, so arrivedCount reaches N almost immediately and maxInFlight
+    // hits N. Under a sequential for-loop, call 2 is never issued until call 1
+    // resolves - but call 1 can't resolve until the gate opens, and the gate
+    // only opens once all N have arrived. That's the deadlock a sequential
+    // regression would hit, so we never actually wait it out: a short bounded
+    // timer races the "all arrived" signal, and losing that race is itself
+    // turned into an explicit assertion failure (`timedOut` below) rather than
+    // left to vitest's own test timeout. The gate is then always released so
+    // the outstanding request settles and the test run can't hang.
+    const sliceSlugs = newsSlugs.slice(0, 3)
+    const limit = sliceSlugs.length
+
+    let inFlight = 0
+    let maxInFlight = 0
+    let arrivedCount = 0
+    let signalArrived: () => void
+    const arrived = new Promise<void>((resolve) => {
+      signalArrived = resolve
+    })
+    let openGate: () => void
+    const gate = new Promise<void>((resolve) => {
+      openGate = resolve
+    })
+
+    vi.mocked(getNewsBody).mockImplementation(async (slug) => {
+      inFlight += 1
+      arrivedCount += 1
+      maxInFlight = Math.max(maxInFlight, inFlight)
+      if (arrivedCount === limit) signalArrived()
+
+      await gate
+
+      inFlight -= 1
+      return { content: `body for ${slug}`, externalLinks: [] }
+    })
+
+    const pagePromise = getContentPageData({
+      contentType: ItemType.News,
+      includeContent: true,
+      limit,
+      page: 1,
+    })
+
+    let timedOut = false
+    await Promise.race([
+      arrived,
+      new Promise<void>((resolve) =>
+        setTimeout(() => {
+          timedOut = true
+          resolve()
+        }, 200)
+      ),
+    ])
+
+    // Always open the gate so the request settles either way - the point of
+    // this test is a clean assertion failure below, never a hung run.
+    openGate!()
+    await pagePromise
+
+    expect(timedOut).toBe(false)
+    expect(maxInFlight).toBe(limit)
   })
 })

@@ -10,6 +10,8 @@ import fs from 'fs/promises'
 import matter from 'gray-matter'
 import yaml from 'js-yaml'
 
+import { RETENTION_MONTHS, isRetained, retentionCutoff } from '../lib/content/retention'
+
 // --- Types (duplicated from lib/types.ts to avoid import issues) ---
 
 const ItemType = {
@@ -38,10 +40,21 @@ interface ContentItem {
   externalLinks: ExternalLink[]
 }
 
+// News items are stripped of their body (content + externalLinks) before landing in the
+// module cache — those fields are served instead as public static assets (see writeBodyAssets).
+// Article items keep their body inline.
+type CacheItem = Omit<ContentItem, 'content' | 'externalLinks'> & Partial<Pick<ContentItem, 'content' | 'externalLinks'>>
+
 interface ContentCache {
   generatedAt: string
   totalItems: number
-  items: ContentItem[]
+  items: CacheItem[]
+}
+
+interface NewsBodyAsset {
+  slug: string
+  content: string
+  externalLinks: ExternalLink[]
 }
 
 interface HashtagStats {
@@ -81,6 +94,7 @@ const hashtagStatsPath = path.join(ROOT_DIR, 'data', 'hashtag-stats.json')
 const batchesDir = path.join(ROOT_DIR, 'public', 'data', 'batches')
 const tagsDir = path.join(ROOT_DIR, 'public', 'data', 'tags')
 const manifestPath = path.join(ROOT_DIR, 'public', 'data', 'manifest.json')
+const itemsDir = path.join(ROOT_DIR, 'public', 'data', 'items')
 
 const matterOptions = {
   engines: {
@@ -255,6 +269,36 @@ function trimItem(item: ContentItem): TrimmedItem {
   }
 }
 
+// News bodies are served as public static assets instead of living in the module cache;
+// articles keep their body inline (build-time force-static routes need it there).
+function toCacheItem(item: ContentItem): CacheItem {
+  if (item.itemType !== ItemType.News) return item
+  const { content, externalLinks, ...meta } = item
+  return meta
+}
+
+// Rebuilds public/data/items/ from scratch (never merged into) so a slug pruned since the
+// previous run doesn't leave a stale asset behind.
+async function writeBodyAssets(newsItems: ContentItem[]): Promise<number> {
+  await fs.rm(itemsDir, { recursive: true, force: true })
+  await fs.mkdir(itemsDir, { recursive: true })
+
+  await Promise.all(
+    newsItems.map((item) => {
+      const asset: NewsBodyAsset = {
+        slug: item.slug,
+        content: item.content,
+        externalLinks: item.externalLinks,
+      }
+      // Matches the request path built by lib/content/bodies.ts's getNewsBody (encodeURIComponent(slug)).
+      const filePath = path.join(itemsDir, `${encodeURIComponent(item.slug)}.json`)
+      return fs.writeFile(filePath, JSON.stringify(asset), 'utf8')
+    })
+  )
+
+  return newsItems.length
+}
+
 async function generateBatches(items: ContentItem[], contentType: string): Promise<number> {
   const trimmed = items.map(trimItem)
   const batchCount = Math.ceil(trimmed.length / BATCH_SIZE)
@@ -315,15 +359,30 @@ async function buildContentCache(): Promise<void> {
   const news = newsArticlesByYear.flat()
   console.log(`  Found ${news.length} news items across ${newsYearDirs.length} year directories`)
 
+  // Apply the retention window once, early — every downstream output (cache, hashtag stats,
+  // batches, tag pages, manifest) derives from allContent below, so this alone bounds all of them.
+  const cutoff = retentionCutoff()
+  const retainedNews = news.filter((item) => isRetained(item, cutoff))
+  const skippedCount = news.length - retainedNews.length
+  if (skippedCount > 0) {
+    console.log(
+      `\n! Skipped ${skippedCount} news item(s) outside the ${RETENTION_MONTHS}-month retention window`
+    )
+  }
+
   // Combine and sort
-  const allContent = [...articles, ...news]
+  const allContent = [...articles, ...retainedNews]
   allContent.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
 
-  // Create cache object
+  // Emit one public static asset per retained news item, carrying the body that is about to
+  // be stripped from the module cache below. Uses the full (pre-strip) items.
+  const assetCount = await writeBodyAssets(retainedNews)
+
+  // Create cache object — news items lose their body here; articles keep it inline.
   const cache: ContentCache = {
     generatedAt: new Date().toISOString(),
     totalItems: allContent.length,
-    items: allContent,
+    items: allContent.map(toCacheItem),
   }
 
   // Ensure data directory exists
@@ -332,10 +391,15 @@ async function buildContentCache(): Promise<void> {
   // Write cache file
   await fs.writeFile(outputPath, JSON.stringify(cache, null, 2), 'utf8')
 
+  const cacheStats = await fs.stat(outputPath)
+  const cacheSizeMB = (cacheStats.size / (1024 * 1024)).toFixed(2)
+
   console.log(`\nContent cache built successfully!`)
   console.log(`  Total items: ${cache.totalItems}`)
   console.log(`  Output: ${outputPath}`)
   console.log(`  Generated at: ${cache.generatedAt}`)
+  console.log(`  Body assets written: ${assetCount}`)
+  console.log(`  Cache size: ${cacheSizeMB} MB`)
 
   // Build hashtag statistics
   await buildHashtagStats(allContent)
