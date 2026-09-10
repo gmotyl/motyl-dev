@@ -40,6 +40,11 @@ export async function getNewsBody(slug: string): Promise<NewsBody | null> {
       return null
     }
 
+    if (data.externalLinks !== undefined && !Array.isArray(data.externalLinks)) {
+      console.error(`getNewsBody: malformed externalLinks in body payload at ${url}`)
+      return null
+    }
+
     return data as NewsBody
   } catch (error) {
     console.error(`getNewsBody: error fetching ${url}`, error)
