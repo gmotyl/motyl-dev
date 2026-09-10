@@ -86,6 +86,10 @@
         { "key": "Cache-Control", "value": "public, max-age=300, stale-while-revalidate=60" },
         { "key": "CDN-Cache-Control", "value": "max-age=2592000, stale-while-revalidate=60" }
       ]
+    },
+    {
+      "source": "/data/:path*",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex" }]
     }
   ]
 }
