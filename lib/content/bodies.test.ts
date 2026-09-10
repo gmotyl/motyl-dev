@@ -127,6 +127,26 @@ describe('getNewsBody', () => {
     consoleErrorSpy.mockRestore()
   })
 
+  it('returns null and logs when the parsed body is missing a content string', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ externalLinks: [] }),
+        })
+      )
+    )
+
+    const result = await getNewsBody('some-slug')
+
+    expect(result).toBeNull()
+    expect(consoleErrorSpy).toHaveBeenCalled()
+    consoleErrorSpy.mockRestore()
+  })
+
   it('encodes the slug into the asset path', async () => {
     const fetchMock = vi.fn(() =>
       Promise.resolve({
