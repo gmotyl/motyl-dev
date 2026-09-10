@@ -246,6 +246,15 @@ describe('build-content-cache news body assets', () => {
     }
   })
 
+  it('logs the asset count and resulting cache size', async () => {
+    const { output } = await setupAndRun()
+
+    // Loosely matched so this survives the fixture's small numbers, not pinned to the
+    // real corpus's 575 assets / 0.48 MB.
+    expect(output).toMatch(/Body assets written: \d+/)
+    expect(output).toMatch(/Cache size: [\d.]+ MB/)
+  })
+
   it('writes no body asset for an out-of-window news item', async () => {
     const { dir } = await setupAndRun()
 
