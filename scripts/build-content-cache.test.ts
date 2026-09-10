@@ -175,3 +175,101 @@ describe('build-content-cache retention window', () => {
     expect(hashtagStats.frequency[SHARED_NEWS_TAG]).toBe(2)
   })
 })
+
+describe('build-content-cache news body assets', () => {
+  const fixtures: string[] = []
+
+  afterAll(async () => {
+    await Promise.all(fixtures.map((dir) => cleanupFixture(dir)))
+  })
+
+  async function setupAndRun(): Promise<{ dir: string; output: string }> {
+    const { dir } = await createFixture()
+    fixtures.push(dir)
+    const output = runPrebuild(dir)
+    return { dir, output }
+  }
+
+  function itemsAssetPath(dir: string, slug: string): string {
+    return path.join(dir, 'public', 'data', 'items', `${slug}.json`)
+  }
+
+  async function assetExists(filePath: string): Promise<boolean> {
+    try {
+      await fs.access(filePath)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  it('news items in the module cache carry no content and no externalLinks', async () => {
+    const { dir } = await setupAndRun()
+
+    const cache = await readJSON(path.join(dir, 'data', 'content-cache.json'))
+    const newsItems = cache.items.filter((item: any) => item.itemType === 'news')
+
+    expect(newsItems.length).toBeGreaterThan(0)
+    for (const item of newsItems) {
+      expect(item).not.toHaveProperty('content')
+      expect(item).not.toHaveProperty('externalLinks')
+    }
+  })
+
+  it('blog article items keep content and externalLinks inline', async () => {
+    const { dir } = await setupAndRun()
+
+    const cache = await readJSON(path.join(dir, 'data', 'content-cache.json'))
+    const article = cache.items.find((item: any) => item.slug === FIXTURE_SLUGS.oldArticle)
+
+    expect(article).toBeDefined()
+    expect(typeof article.content).toBe('string')
+    expect(article.content.length).toBeGreaterThan(0)
+    expect(Array.isArray(article.externalLinks)).toBe(true)
+    expect(article.externalLinks.length).toBeGreaterThan(0)
+  })
+
+  it('writes one body asset per retained news item in the documented shape', async () => {
+    const { dir } = await setupAndRun()
+
+    for (const slug of [FIXTURE_SLUGS.inWindowNews1, FIXTURE_SLUGS.inWindowNews2]) {
+      const asset = await readJSON(itemsAssetPath(dir, slug))
+      expect(asset.slug).toBe(slug)
+      expect(typeof asset.content).toBe('string')
+      expect(asset.content.length).toBeGreaterThan(0)
+      expect(Array.isArray(asset.externalLinks)).toBe(true)
+      expect(asset.externalLinks[0]).toMatchObject({
+        url: expect.any(String),
+        title: expect.any(String),
+        order: expect.any(Number),
+      })
+    }
+  })
+
+  it('writes no body asset for an out-of-window news item', async () => {
+    const { dir } = await setupAndRun()
+
+    expect(await assetExists(itemsAssetPath(dir, FIXTURE_SLUGS.outOfWindowNews))).toBe(false)
+    // Articles never get body assets — they stay inline in the module cache.
+    expect(await assetExists(itemsAssetPath(dir, FIXTURE_SLUGS.oldArticle))).toBe(false)
+  })
+
+  it('removes a body asset that is no longer retained on a rebuild', async () => {
+    const { dir } = await createFixture()
+    fixtures.push(dir)
+
+    const staleSlug = 'stale-asset-news'
+    const newsFilePath = path.join(dir, 'news', '2026', `${staleSlug}.md`)
+
+    // First run: the item sits well inside the retention window.
+    await fs.writeFile(newsFilePath, newsFrontmatter(staleSlug, daysAgoISODate(80), '#solo'))
+    runPrebuild(dir)
+    expect(await assetExists(itemsAssetPath(dir, staleSlug))).toBe(true)
+
+    // Second run: the same slug is now well outside the window — the stale asset
+    // from run 1 must be gone, not merely left un-updated.
+    await fs.writeFile(newsFilePath, newsFrontmatter(staleSlug, daysAgoISODate(400), '#solo'))
+    runPrebuild(dir)
+    expect(await assetExists(itemsAssetPath(dir, staleSlug))).toBe(false)
+  })
+})
