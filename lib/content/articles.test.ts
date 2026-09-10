@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, vi, beforeEach, beforeAll } from 'vitest'
 import { getAllContentMetadata, getContentItemBySlug, getAllHashtags } from '@/lib/content/articles'
 import { filterHiddenSections, type SectionType } from '@/lib/content/section-filter'
 import { getNewsBody } from '@/lib/content/bodies'
@@ -323,12 +323,42 @@ First paragraph TLDR.
 })
 
 describe('getContentItemBySlug resolves bodies by itemType', () => {
-  // Known real slugs from data/content-cache.json:
+  // Slugs are derived from the live cache rather than hardcoded (matching the
+  // convention already used by the 'should return an article by slug' test above):
   // - a blog article, whose body stays inline in the module cache (force-static needs it at build time)
   // - a news item, whose body was stripped from the module cache and lives in public/data/items/<slug>.json
-  const blogSlug = 'pavilio-mission-control-ai-agents'
-  const newsSlug =
-    'daily-dev-php-syntactic-sugar-postgresql-19-fsharp-astro-migration-typescript-7-webstorm'
+  // News is pruned by a rolling 3-month retention window on every `pnpm prebuild`
+  // (see scripts/build-content-cache.ts), so a hardcoded news slug from the live
+  // corpus would eventually age out of the cache and make these tests fail for a
+  // reason unrelated to a real regression. Blog articles are never pruned, so a
+  // hardcoded blog slug would stay safe in principle, but deriving it too costs
+  // nothing and keeps the suite immune to any future article rename.
+  let blogSlug: string
+  let newsSlug: string
+
+  beforeAll(async () => {
+    const items = await getAllContentMetadata()
+    const blogItem = items.find((item) => item.itemType === 'article')
+    const newsItem = items.find((item) => item.itemType === 'news')
+
+    if (!blogItem) {
+      throw new Error(
+        'No article-type item found in data/content-cache.json — cannot run the ' +
+          'getContentItemBySlug body-resolution tests. Run "pnpm prebuild" to (re)generate the cache.'
+      )
+    }
+    if (!newsItem) {
+      throw new Error(
+        'No news-type item found in data/content-cache.json — cannot run the ' +
+          'getContentItemBySlug body-resolution tests. News ages out under the 3-month ' +
+          'retention window in scripts/build-content-cache.ts; run "pnpm prebuild" against a ' +
+          'corpus with at least one recent news item to regenerate the cache.'
+      )
+    }
+
+    blogSlug = blogItem.slug
+    newsSlug = newsItem.slug
+  })
 
   beforeEach(() => {
     vi.mocked(getNewsBody).mockReset()
@@ -366,6 +396,20 @@ describe('getContentItemBySlug resolves bodies by itemType', () => {
 
     expect(item).toBeNull()
     expect(getNewsBody).not.toHaveBeenCalled()
+  })
+
+  it('passes externalLinks through as-is on the success path (undefined stays undefined, not [])', async () => {
+    // The body asset can omit externalLinks entirely (NewsBody['externalLinks'] is optional).
+    // On the success path getContentItemBySlug must pass that through verbatim — only the
+    // degradation path (asset unreachable, tested below) defaults to []. This pins that
+    // distinction: it fails if the success path were changed to `body.externalLinks ?? []`.
+    vi.mocked(getNewsBody).mockResolvedValue({ content: 'fetched news body without links' })
+
+    const item = await getContentItemBySlug(newsSlug)
+
+    expect(item).not.toBeNull()
+    expect(item?.content).toBe('fetched news body without links')
+    expect(item?.externalLinks).toBeUndefined()
   })
 
   it('degrades to empty content and logs when the body asset is unreachable', async () => {
