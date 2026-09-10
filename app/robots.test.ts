@@ -33,5 +33,9 @@ describe('vercel.json', () => {
 
     expect(entry).toBeDefined()
     expect(entry?.headers).toContainEqual({ key: 'X-Robots-Tag', value: 'noindex' })
+    expect(entry?.headers).toContainEqual({
+      key: 'Cache-Control',
+      value: 'public, max-age=300, stale-while-revalidate=60',
+    })
   })
 })
