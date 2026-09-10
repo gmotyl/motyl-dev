@@ -1,4 +1,5 @@
-import type { ExternalLink } from '@/lib/content/types'
+// Relative import: reachable from next.config.ts via articles.ts, whose config-transpiler constraint is documented there.
+import type { ExternalLink } from './types'
 
 export interface NewsBody {
   content: string

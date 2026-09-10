@@ -1,8 +1,10 @@
 'use server'
 
 import { cache } from 'react'
-import { type ExternalLink, type Content, ItemType } from '@/lib/content/types'
-import { getNewsBody } from '@/lib/content/bodies'
+// Relative imports below are required: next.config.ts imports this module, and Next 16's
+// config transpiler cannot resolve '@/*' aliases in that graph.
+import { type Content, ItemType } from './types'
+import { getNewsBody } from './bodies'
 
 // --- Type Definitions ---
 
