@@ -589,4 +589,73 @@ describe('getContentPageData paginated body loading', () => {
 
     consoleErrorSpy.mockRestore()
   })
+
+  it("fetches the slice's bodies concurrently, not one after another", async () => {
+    // In-flight-counter approach: getNewsBody is the only await boundary the
+    // includeContent branch crosses per item, so it's where concurrency is
+    // observable. Each mocked call registers its arrival, then blocks on a
+    // shared "gate" promise that nothing resolves until every expected call
+    // has arrived. Under Promise.all, all N calls fire before any of them can
+    // resolve, so arrivedCount reaches N almost immediately and maxInFlight
+    // hits N. Under a sequential for-loop, call 2 is never issued until call 1
+    // resolves - but call 1 can't resolve until the gate opens, and the gate
+    // only opens once all N have arrived. That's the deadlock a sequential
+    // regression would hit, so we never actually wait it out: a short bounded
+    // timer races the "all arrived" signal, and losing that race is itself
+    // turned into an explicit assertion failure (`timedOut` below) rather than
+    // left to vitest's own test timeout. The gate is then always released so
+    // the outstanding request settles and the test run can't hang.
+    const sliceSlugs = newsSlugs.slice(0, 3)
+    const limit = sliceSlugs.length
+
+    let inFlight = 0
+    let maxInFlight = 0
+    let arrivedCount = 0
+    let signalArrived: () => void
+    const arrived = new Promise<void>((resolve) => {
+      signalArrived = resolve
+    })
+    let openGate: () => void
+    const gate = new Promise<void>((resolve) => {
+      openGate = resolve
+    })
+
+    vi.mocked(getNewsBody).mockImplementation(async (slug) => {
+      inFlight += 1
+      arrivedCount += 1
+      maxInFlight = Math.max(maxInFlight, inFlight)
+      if (arrivedCount === limit) signalArrived()
+
+      await gate
+
+      inFlight -= 1
+      return { content: `body for ${slug}`, externalLinks: [] }
+    })
+
+    const pagePromise = getContentPageData({
+      contentType: ItemType.News,
+      includeContent: true,
+      limit,
+      page: 1,
+    })
+
+    let timedOut = false
+    await Promise.race([
+      arrived,
+      new Promise<void>((resolve) =>
+        setTimeout(() => {
+          timedOut = true
+          resolve()
+        }, 200)
+      ),
+    ])
+
+    // Always open the gate so the request settles either way - the point of
+    // this test is a clean assertion failure below, never a hung run.
+    openGate!()
+    await pagePromise
+
+    expect(timedOut).toBe(false)
+    expect(maxInFlight).toBe(limit)
+  })
 })
