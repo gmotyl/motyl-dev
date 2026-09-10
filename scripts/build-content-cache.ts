@@ -10,6 +10,8 @@ import fs from 'fs/promises'
 import matter from 'gray-matter'
 import yaml from 'js-yaml'
 
+import { RETENTION_MONTHS, isRetained, retentionCutoff } from '../lib/content/retention'
+
 // --- Types (duplicated from lib/types.ts to avoid import issues) ---
 
 const ItemType = {
@@ -315,8 +317,19 @@ async function buildContentCache(): Promise<void> {
   const news = newsArticlesByYear.flat()
   console.log(`  Found ${news.length} news items across ${newsYearDirs.length} year directories`)
 
+  // Apply the retention window once, early — every downstream output (cache, hashtag stats,
+  // batches, tag pages, manifest) derives from allContent below, so this alone bounds all of them.
+  const cutoff = retentionCutoff()
+  const retainedNews = news.filter((item) => isRetained(item, cutoff))
+  const skippedCount = news.length - retainedNews.length
+  if (skippedCount > 0) {
+    console.log(
+      `\n! Skipped ${skippedCount} news item(s) outside the ${RETENTION_MONTHS}-month retention window`
+    )
+  }
+
   // Combine and sort
-  const allContent = [...articles, ...news]
+  const allContent = [...articles, ...retainedNews]
   allContent.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
 
   // Create cache object
