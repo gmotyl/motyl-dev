@@ -2,6 +2,7 @@
 
 import { cache } from 'react'
 import { type ExternalLink, type Content, ItemType } from '@/lib/content/types'
+import { getNewsBody } from '@/lib/content/bodies'
 
 // --- Type Definitions ---
 
@@ -57,7 +58,23 @@ export async function getAllContentMetadata(): Promise<ContentItemMetadata[]> {
 
 export const getContentItemBySlug = cache(async (slug: string): Promise<ContentItem | null> => {
   const map = await getCachedContentMap()
-  return map.get(slug) || null
+  const item = map.get(slug)
+  if (!item) return null
+
+  if (item.itemType !== ItemType.News) {
+    // Blog article bodies are inlined in the module cache at build time.
+    return item
+  }
+
+  // News bodies were stripped from the module cache and live as public static
+  // assets (see lib/content/bodies.ts); resolve one per request.
+  const body = await getNewsBody(slug)
+  if (body) {
+    return { ...item, content: body.content, externalLinks: body.externalLinks }
+  }
+
+  console.error(`getContentItemBySlug: failed to resolve body asset for news slug "${slug}"`)
+  return { ...item, content: '', externalLinks: [] }
 })
 
 export async function getAllContent(): Promise<ContentItem[]> {
