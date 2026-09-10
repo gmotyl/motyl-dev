@@ -26,7 +26,7 @@ export const FIXTURE_SLUGS = {
 
 const SHARED_NEWS_TAG = 'shared'
 
-function newsFrontmatter(slug: string, publishedAt: string, hashtags: string): string {
+export function newsFrontmatter(slug: string, publishedAt: string, hashtags: string): string {
   return `---
 title: "${slug}"
 slug: "${slug}"
