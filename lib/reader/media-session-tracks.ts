@@ -8,8 +8,9 @@ import type { SpeechSection } from '@/lib/tts/speech'
  * instead of silently skipping a digest's unheard sections again.
  *
  * `resolveArticleTitle` is the one function here that genuinely reads the slug:
- * naming the ALBUM is exactly where the md file still matters, even though
- * moving between tracks no longer cares which file a track sits in.
+ * naming the ARTIST — the album is the constant `Motyl.dev` — is exactly
+ * where the md file still matters, even though moving between tracks no longer
+ * cares which file a track sits in.
  */
 type QueueItem = Pick<SpeechSection, 'sourceSlug' | 'sourceTitle'>
 
@@ -105,10 +106,7 @@ export function resolvePreviousTrackIndex(
  * section of this article carries a title at all, as happens for an md file with
  * no front-matter title.
  */
-export function resolveArticleTitle(
-  items: readonly QueueItem[],
-  currentIndex: number
-): string {
+export function resolveArticleTitle(items: readonly QueueItem[], currentIndex: number): string {
   if (!inRange(items, currentIndex)) return ''
 
   const { sourceSlug } = items[currentIndex]

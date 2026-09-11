@@ -22,7 +22,7 @@ const ENDS_MULTI_SECTION = queue(['a', 'b', 'b'])
 // precisely why the article title has to be resolved by scanning back rather
 // than read off the current item.
 //   a(0,'Article A') a(1) | b(0,'Digest B') b(1) b(2) | c(0) — 'c' is untitled
-const TITLED: readonly { sourceSlug: string; sourceTitle?: string }[] = [
+const TITLED = [
   { sourceSlug: 'a', sourceTitle: 'Article A' },
   { sourceSlug: 'a' },
   { sourceSlug: 'b', sourceTitle: 'Digest B' },
@@ -111,7 +111,7 @@ describe('defensive inputs', () => {
 })
 
 describe('resolveArticleTitle', () => {
-  it("names the article on its own first section", () => {
+  it('names the article on its own first section', () => {
     expect(resolveArticleTitle(TITLED, 0)).toBe('Article A')
     expect(resolveArticleTitle(TITLED, 2)).toBe('Digest B')
   })
