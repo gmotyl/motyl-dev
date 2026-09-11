@@ -5,6 +5,7 @@ import { splitIntoSpeechUnits, type SpeechSection } from '@/lib/tts/speech'
 import { synthesizeSpeech } from '@/lib/tts/client'
 import { DEFAULT_TTS_VOICE, getStoredTtsVoice, TTS_VOICE_CHANGE_EVENT, type TtsVoice } from '@/lib/tts/voices'
 import {
+  resolveArticleTitle,
   resolveNextTrackIndex,
   resolvePreviousTrackIndex,
 } from '@/lib/reader/media-session-tracks'
@@ -695,16 +696,27 @@ export function useContinuousReader(
   // A track is a section, so the line a head unit renders largest — `title` —
   // names the section, and the md file it came from is the smaller `artist`
   // line. That is what makes the prominent line the one that changes on every
-  // skip; with the fields the other way round it sat still across a whole digest.
+  // skip. With the fields the other way round the two lines went incoherent from
+  // an article's second section onward: `sourceTitle ?? title` fell through to
+  // the section heading exactly where `sourceTitle` is absent, so the driver read
+  // the article name on top and the same section heading twice from there on.
   //
   // `mediaTitle === null` is the seam that publishes no metadata at all, so it is
   // driven off the ABSENCE of an item rather than off a falsy title: a section
   // title is always present (it is the `##` heading), so a falsy-title test would
   // never fire and an empty queue would leak a metadata object.
   const mediaTitle = currentItem ? currentItem.title : null
-  // Optional, unlike the title — `?? ''` below is where it lands for a section
-  // whose md file carries no front-matter title.
-  const mediaArtist = currentItem?.sourceTitle ?? null
+  // NOT `currentItem.sourceTitle`: production stamps that on an article's first
+  // section only, so reading it here blanked the artist line on every later
+  // section of a digest. `resolveArticleTitle` recovers it from the queue, whose
+  // per-article runs are contiguous — see that function for why the field is not
+  // simply copied onto every section instead (it is the SPOKEN title unit and a
+  // synthesis-cache key). Memoized because it walks backwards through the queue
+  // and this sits in a render path that re-runs on every progress tick.
+  const mediaArtist = useMemo(
+    () => resolveArticleTitle(items, currentIndex),
+    [items, currentIndex]
+  )
   // Memoized on the primitives it is built from. `useMediaSession` keys its
   // effects on those primitives too, so a fresh object here would be inert —
   // this only avoids handing a new literal to the hook on every progress tick.
@@ -712,7 +724,7 @@ export function useContinuousReader(
     () =>
       mediaTitle === null
         ? null
-        : { title: mediaTitle, artist: mediaArtist ?? '', album: MEDIA_SESSION_ALBUM },
+        : { title: mediaTitle, artist: mediaArtist, album: MEDIA_SESSION_ALBUM },
     [mediaTitle, mediaArtist]
   )
 

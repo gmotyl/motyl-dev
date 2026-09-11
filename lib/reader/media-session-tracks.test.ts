@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   RESTART_THRESHOLD_SECONDS,
+  resolveArticleTitle,
   resolveNextTrackIndex,
   resolvePreviousTrackIndex,
 } from '@/lib/reader/media-session-tracks'
@@ -15,6 +16,20 @@ const MULTI = queue(['a', 'a', 'b', 'b', 'b', 'c'])
 const SINGLE = queue(['a', 'a', 'a'])
 // a(0) | b(0) b(1) — ends on a MULTI-section article
 const ENDS_MULTI_SECTION = queue(['a', 'b', 'b'])
+
+// The production shape `splitReviewedSections` emits: ONLY each article's first
+// section carries `sourceTitle`, every later one carries `undefined`. That is
+// precisely why the article title has to be resolved by scanning back rather
+// than read off the current item.
+//   a(0,'Article A') a(1) | b(0,'Digest B') b(1) b(2) | c(0) — 'c' is untitled
+const TITLED: readonly { sourceSlug: string; sourceTitle?: string }[] = [
+  { sourceSlug: 'a', sourceTitle: 'Article A' },
+  { sourceSlug: 'a' },
+  { sourceSlug: 'b', sourceTitle: 'Digest B' },
+  { sourceSlug: 'b' },
+  { sourceSlug: 'b' },
+  { sourceSlug: 'c' },
+]
 
 describe('RESTART_THRESHOLD_SECONDS', () => {
   it('is the conventional 3 seconds', () => {
@@ -92,5 +107,41 @@ describe('defensive inputs', () => {
   it('rejects a fractional index instead of indexing between sections', () => {
     expect(resolveNextTrackIndex(MULTI, 1.5)).toBe(null)
     expect(resolvePreviousTrackIndex(MULTI, 1.5, 0)).toBe(0)
+  })
+})
+
+describe('resolveArticleTitle', () => {
+  it("names the article on its own first section", () => {
+    expect(resolveArticleTitle(TITLED, 0)).toBe('Article A')
+    expect(resolveArticleTitle(TITLED, 2)).toBe('Digest B')
+  })
+
+  it('keeps naming the article on every later section of it', () => {
+    // The defect this function exists for: sections 1..n carry no `sourceTitle`
+    // of their own, so reading the current item alone blanks the artist line
+    // for the MAJORITY of a digest's sections.
+    expect(resolveArticleTitle(TITLED, 1)).toBe('Article A')
+    expect(resolveArticleTitle(TITLED, 3)).toBe('Digest B')
+    expect(resolveArticleTitle(TITLED, 4)).toBe('Digest B')
+  })
+
+  it('stops at the article boundary instead of leaking the previous title', () => {
+    // Index 5 opens article 'c', which carries no title. Scanning one step too
+    // far would answer 'Digest B' — the article the driver already left.
+    expect(resolveArticleTitle(TITLED, 5)).toBe('')
+  })
+
+  it('answers empty when no section of the article carries a title', () => {
+    expect(resolveArticleTitle(queue(['a', 'a']), 1)).toBe('')
+    expect(resolveArticleTitle(queue(['a', 'a']), 0)).toBe('')
+  })
+
+  it('resolves defensively for an empty queue or an index it does not have', () => {
+    // Same guard as the two index resolvers: `''` is the OS's "no artist line",
+    // so a nonsense index cannot put stale words on a head unit.
+    expect(resolveArticleTitle([], 0)).toBe('')
+    expect(resolveArticleTitle(TITLED, -1)).toBe('')
+    expect(resolveArticleTitle(TITLED, 9)).toBe('')
+    expect(resolveArticleTitle(TITLED, 1.5)).toBe('')
   })
 })

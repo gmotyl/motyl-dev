@@ -197,13 +197,20 @@ const makeItem = (index: number): SpeechSection => ({
 // A section of a named article. Several of these sharing a slug make a
 // multi-section article, and a queue mixing slugs is the shape the OS skip
 // tests care about: it is the one a file-level jump would behave differently on.
+//
+// `sourceTitle` lands on ordinal 0 ONLY, mirroring `splitReviewedSections`,
+// which emits `ordinal === 0 ? source.title : undefined`. Callers still pass the
+// article title at every ordinal — that reads as "these sections belong to this
+// article" — but the fixture drops it everywhere production would, so a test can
+// no longer pass on a queue shape the app never builds. Letting any ordinal
+// carry a title is what hid the blank-artist defect on sections 1..n.
 const makeSection = (
   sourceSlug: string,
   ordinal: number,
   sourceTitle?: string
 ): SpeechSection => ({
   sourceSlug,
-  sourceTitle,
+  sourceTitle: ordinal === 0 ? sourceTitle : undefined,
   title: `${sourceSlug} section ${ordinal}`,
   markdown: `## ${sourceSlug} ${ordinal}\nBody ${ordinal}`,
   ordinal,
@@ -1448,7 +1455,14 @@ describe('useContinuousReader', () => {
 
   // The whole point of the swap: a section step must rewrite the *title* line,
   // because that is the line a driver reads to see the skip landed somewhere new.
-  // Before the swap that line was the digest's and sat still across every skip.
+  // Before the swap the two lines went incoherent from section 1 onward — the
+  // article title on top and the same article title again underneath, because
+  // `sourceTitle ?? title` fell through to the section heading only on the
+  // sections that carry no `sourceTitle`.
+  //
+  // This is also the regression test for the blank artist: section 1 carries no
+  // `sourceTitle` of its own (production never gives it one), so reading the
+  // current item alone would publish `artist: ''` here.
   it('retitles the media metadata when the reader moves to the next section', async () => {
     const { result } = renderReader([
       makeSection('alpha', 0, 'Alpha Article'),
@@ -1463,6 +1477,42 @@ describe('useContinuousReader', () => {
     expect(latestMediaSession().metadata?.artist).toBe('Alpha Article')
   })
 
+  // The same rule one article further along: the artist line must FOLLOW the
+  // reader across a file boundary. A backward scan that ran past the boundary
+  // would still be showing 'Alpha Article' while 'beta section 0' plays.
+  it('renames the artist when the reader crosses into the next article', async () => {
+    const { result } = renderReader([
+      makeSection('alpha', 0, 'Alpha Article'),
+      makeSection('alpha', 1, 'Alpha Article'),
+      makeSection('beta', 0, 'Beta Digest'),
+      makeSection('beta', 1, 'Beta Digest'),
+    ])
+
+    act(() => result.current.playFrom(3))
+    await waitFor(() =>
+      expect(latestMediaSession().metadata?.title).toBe('beta section 1')
+    )
+    expect(latestMediaSession().metadata?.artist).toBe('Beta Digest')
+  })
+
+  // An article whose md file has no front-matter title gives its sections no
+  // `sourceTitle` at all, at ordinal 0 or anywhere after it. The scan must then
+  // answer `''` — the OS reads that as "no artist line" — and must not reach
+  // back into the article before it for words to show.
+  it('publishes an empty artist deep inside an untitled article', async () => {
+    const { result } = renderReader([
+      makeSection('alpha', 0, 'Alpha Article'),
+      makeSection('gamma', 0),
+      makeSection('gamma', 1),
+    ])
+
+    act(() => result.current.playFrom(2))
+    await waitFor(() =>
+      expect(latestMediaSession().metadata?.title).toBe('gamma section 1')
+    )
+    expect(latestMediaSession().metadata?.artist).toBe('')
+  })
+
   it('keeps canPrevious and the media session on for a single-section queue', () => {
     const { result } = renderReader([makeSection('gamma', 0)])
 
@@ -1470,6 +1520,24 @@ describe('useContinuousReader', () => {
     // section there is still somewhere to go back to — the track restarts.
     expect(result.current.canPrevious).toBe(true)
     expect(latestMediaSession().active).toBe(true)
+  })
+
+  // The "publish no metadata at all" seam is keyed on the ABSENCE of an item,
+  // never on a falsy title. Nothing else in the suite distinguishes the two,
+  // so moving the seam onto the title string (`currentItem?.title || null`, or
+  // `!mediaTitle ? null : ...`) would stay green and silently blank the OS
+  // controls for any section whose heading happened to be empty.
+  it('still publishes metadata for a section whose title is empty', () => {
+    const [section] = [makeSection('gamma', 0, 'Gamma Article')]
+
+    renderReader([{ ...section, title: '' }])
+
+    expect(latestMediaSession().active).toBe(true)
+    expect(latestMediaSession().metadata).toEqual({
+      title: '',
+      artist: 'Gamma Article',
+      album: 'Motyl.dev',
+    })
   })
 
   it('keeps the media session inactive for an empty queue', () => {
