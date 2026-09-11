@@ -685,8 +685,19 @@ export function useContinuousReader(
   // Equal to `hasQueue` by the skip-back rule, not by being the same question.
   const canPrevious = hasQueue
 
-  const mediaTitle = currentItem ? (currentItem.sourceTitle ?? currentItem.title) : null
-  const mediaArtist = currentItem?.title ?? null
+  // A track is a section, so the line a head unit renders largest — `title` —
+  // names the section, and the md file it came from is the smaller `artist`
+  // line. That is what makes the prominent line the one that changes on every
+  // skip; with the fields the other way round it sat still across a whole digest.
+  //
+  // `mediaTitle === null` is the seam that publishes no metadata at all, so it is
+  // driven off the ABSENCE of an item rather than off a falsy title: a section
+  // title is always present (it is the `##` heading), so a falsy-title test would
+  // never fire and an empty queue would leak a metadata object.
+  const mediaTitle = currentItem ? currentItem.title : null
+  // Optional, unlike the title — `?? ''` below is where it lands for a section
+  // whose md file carries no front-matter title.
+  const mediaArtist = currentItem?.sourceTitle ?? null
   // Memoized on the primitives it is built from. `useMediaSession` keys its
   // effects on those primitives too, so a fresh object here would be inert —
   // this only avoids handing a new literal to the hook on every progress tick.

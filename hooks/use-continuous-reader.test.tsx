@@ -1388,32 +1388,51 @@ describe('useContinuousReader', () => {
     expect(result.current.currentIndex).toBe(1)
   })
 
-  it('publishes article title, section title and album as media metadata', async () => {
-    const { result } = renderReader([
+  // A head unit shows `title` largest, and it is the line that has to change on
+  // every skip — so it names the SECTION, which is what a track now is. The md
+  // file the section came from is the smaller, slower-changing line: `artist`.
+  it('publishes the section title as the media title and the article title as the artist', () => {
+    renderReader([
       makeSection('alpha', 0, 'Alpha Article'),
       makeSection('alpha', 1, 'Alpha Article'),
     ])
 
     expect(latestMediaSession().active).toBe(true)
     expect(latestMediaSession().metadata).toEqual({
-      title: 'Alpha Article',
-      artist: 'alpha section 0',
+      title: 'alpha section 0',
+      artist: 'Alpha Article',
       album: 'Motyl.dev',
     })
+  })
+
+  // A section always has a title — it IS the `##` heading — while `sourceTitle`
+  // is optional, so the swap moves the fallback onto the artist. It is `''`, not
+  // the section title repeated: the same words on both lines say nothing.
+  it('falls back to an empty artist when the item carries no source title', () => {
+    renderReader([makeSection('gamma', 0)])
+
+    expect(latestMediaSession().metadata).toEqual({
+      title: 'gamma section 0',
+      artist: '',
+      album: 'Motyl.dev',
+    })
+  })
+
+  // The whole point of the swap: a section step must rewrite the *title* line,
+  // because that is the line a driver reads to see the skip landed somewhere new.
+  // Before the swap that line was the digest's and sat still across every skip.
+  it('retitles the media metadata when the reader moves to the next section', async () => {
+    const { result } = renderReader([
+      makeSection('alpha', 0, 'Alpha Article'),
+      makeSection('alpha', 1, 'Alpha Article'),
+    ])
 
     act(() => result.current.playFrom(1))
     await waitFor(() =>
-      expect(latestMediaSession().metadata?.artist).toBe('alpha section 1')
+      expect(latestMediaSession().metadata?.title).toBe('alpha section 1')
     )
-
-    // No article title: the section's own title stands in.
-    const untitled = renderReader([makeSection('gamma', 0)])
-    expect(latestMediaSession().metadata).toEqual({
-      title: 'gamma section 0',
-      artist: 'gamma section 0',
-      album: 'Motyl.dev',
-    })
-    untitled.unmount()
+    // The artist line holds still — both sections came from the same md file.
+    expect(latestMediaSession().metadata?.artist).toBe('Alpha Article')
   })
 
   it('keeps canPrevious and the media session on for a single-section queue', () => {
