@@ -1263,9 +1263,6 @@ describe('useContinuousReader', () => {
     })
   })
 
-  // The reported bug, pinned: one press in the car used to discard `alpha 1`
-  // unheard because the queue spanned two md files. A track is a section, so the
-  // number of `sourceSlug`s in the queue may not change where next lands.
   // Deep inside a multi-section digest, elapsed-in-track used to be unknowable
   // and was forced past the threshold, so back always rewound to the digest's
   // first section. With a track = a section, `currentTime` IS elapsed-in-track.
@@ -1317,6 +1314,37 @@ describe('useContinuousReader', () => {
     expect(ttsMock.calls.at(-1)?.content).toBe('prepared alpha 1')
   })
 
+  // Pins the `?? 0` in `previous`. Elapsed-in-section is read off the live
+  // playback, and the two plausible fallbacks for "no reading available" are
+  // opposites: `0` means nothing has been heard yet, which steps BACK a section,
+  // while `Infinity` would force the restart branch and pin the driver to the
+  // section already playing. Every other previoustrack test supplies a number, so
+  // the fallback could be flipped to `Infinity` and the suite would stay green.
+  it('previoustrack with no playback steps back a section', async () => {
+    const { result } = renderReader([
+      makeSection('alpha', 0, 'Alpha'),
+      makeSection('alpha', 1, 'Alpha'),
+      makeSection('alpha', 2, 'Alpha'),
+    ])
+
+    act(() => result.current.playFrom(2))
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+    ttsMock.playback.stop.mockClear()
+    // What `playbackRef.current?.currentTime` evaluates to when there is nothing
+    // to read it from — no playback yet, or one not reporting a time.
+    ttsMock.playback.currentTime = undefined as unknown as number
+
+    act(() => latestMediaSession().handlers.previoustrack())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledTimes(2))
+
+    expect(ttsMock.playback.stop).toHaveBeenCalled()
+    expect(result.current.currentIndex).toBe(1)
+    expect(ttsMock.calls.at(-1)?.content).toBe('prepared alpha 1')
+  })
+
+  // The reported bug, pinned: one press in the car used to discard `alpha 1`
+  // unheard because the queue spanned two md files. A track is a section, so the
+  // number of `sourceSlug`s in the queue may not change where next lands.
   it('nexttrack steps one section on a multi-article queue', async () => {
     const { result } = renderReader([
       makeSection('alpha', 0, 'Alpha'),

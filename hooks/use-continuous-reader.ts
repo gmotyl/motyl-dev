@@ -659,9 +659,16 @@ export function useContinuousReader(
    * non-interrupting soft advance. At the end of the queue it does nothing,
    * leaving the current audio running.
    *
-   * It targets the very same section in-app `next` advances to, however many md
-   * files the queue spans: one press on a head unit can no longer discard a
-   * digest's unheard sections. Only the interrupt differs between the two.
+   * It targets the adjacent section — the same step in-app `next` takes, however
+   * many md files the queue spans: one press on a head unit can no longer discard
+   * a digest's unheard sections.
+   *
+   * The step is shared; the point it steps FROM is not. This advances from
+   * `currentIndexRef`, the playback position, while in-app `next` advances from
+   * the eye (`previewKeyRef`). Those coincide while reading straight through and
+   * diverge once the eye has run ahead — see the "stopped Next continues from the
+   * eye, not the playback position, after a paused cascade" test — so the two are
+   * the same rule applied to two different cursors, not the same destination.
    *
    * Deliberately internal: it is reachable only through the media-session
    * `nexttrack` handler below. `previous`/`canPrevious` ARE returned because the
