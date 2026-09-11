@@ -17,13 +17,25 @@ type QueueItem = Pick<SpeechSection, 'sourceSlug'>
 export const RESTART_THRESHOLD_SECONDS = 3
 
 /**
- * Fractional indexes are rejected as out of range: they would otherwise point
- * between two sections, and every caller here means a whole queue position.
+ * Is `index` a position this queue actually has? The single guard both resolvers
+ * fall back on, which is why they each have a defensive answer for a queue that
+ * emptied or an index that outlived it — an OS transport button can fire at any
+ * moment, including one where the reader has nothing sensible to skip to.
+ *
+ * Fractional indexes are rejected alongside the out-of-range and negative ones:
+ * they would otherwise point between two sections, and every caller here means a
+ * whole queue position.
  */
 const inRange = (items: readonly QueueItem[], index: number): boolean =>
   Number.isInteger(index) && index >= 0 && index < items.length
 
-/** Index of the next section, or `null` at the end of the queue. */
+/**
+ * Index of the next section, or `null` at the end of the queue.
+ *
+ * Also `null` for an index this queue does not have — out of range, negative or
+ * fractional, an empty queue included. `null` means "leave playback alone", so a
+ * nonsense index cannot silently restart the queue from somewhere.
+ */
 export function resolveNextTrackIndex(
   items: readonly QueueItem[],
   currentIndex: number
@@ -37,6 +49,10 @@ export function resolveNextTrackIndex(
 /**
  * Target of `previoustrack`, always a section index (never null — the first
  * section restarts rather than doing nothing).
+ *
+ * An index this queue does not have — out of range, negative or fractional, an
+ * empty queue included — resolves defensively to `0`: skipping back has to name
+ * some section, and the head of the queue is the only one always safe to name.
  *
  * Because a track is a section, the caller's time-in-section IS elapsed-in-track,
  * so the threshold can be applied directly: past it the current section restarts,
