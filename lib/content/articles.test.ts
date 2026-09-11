@@ -525,21 +525,32 @@ describe('getContentPageData paginated body loading', () => {
 
   it('mixes cached article bodies with fetched news bodies in one page', async () => {
     const items = await getAllContentMetadata()
-    const firstArticleIndex = items.findIndex((item) => item.itemType === 'article')
-    expect(firstArticleIndex).toBeGreaterThan(0) // an article preceded by at least one news item
 
-    // A 2-item slice straddling the news/article boundary: the news item right before the
-    // first article, and the first article itself.
-    const limit = 2
-    const startIndex = firstArticleIndex - 1
-    const page = Math.floor(startIndex / limit) + 1
-    // Only proceed if the slice actually lands on [startIndex, startIndex + limit) as expected
-    // (true whenever startIndex is even, i.e. divisible by limit boundary math above).
-    const actualStart = (page - 1) * limit
-    expect(actualStart).toBe(startIndex)
+    // Content is sorted by date across both types, and new news items are published daily,
+    // so the exact index of the news/article boundary (and its parity) shifts over time.
+    // Rather than assuming a fixed limit=2 window lands on it, find the boundary first, then
+    // pick the smallest limit whose origin-aligned page actually contains both sides of it
+    // (this only fails to hold for a given limit when boundary+1 is an exact multiple of it,
+    // so the loop below terminates quickly in practice).
+    const transitionIndex = items.findIndex(
+      (item, i) => i + 1 < items.length && item.itemType !== items[i + 1].itemType
+    )
+    expect(transitionIndex).toBeGreaterThanOrEqual(0) // at least one news/article boundary exists
 
-    const newsSlug = items[firstArticleIndex - 1].slug
-    const articleSlug = items[firstArticleIndex].slug
+    let limit = 2
+    while ((transitionIndex + 1) % limit === 0) limit++
+    const windowStart = Math.floor(transitionIndex / limit) * limit
+    const page = windowStart / limit + 1
+
+    const windowItems = items.slice(windowStart, windowStart + limit)
+    const newsSlugsInWindow = windowItems
+      .filter((item) => item.itemType === 'news')
+      .map((item) => item.slug)
+    const articleSlugsInWindow = windowItems
+      .filter((item) => item.itemType === 'article')
+      .map((item) => item.slug)
+    expect(newsSlugsInWindow.length).toBeGreaterThan(0)
+    expect(articleSlugsInWindow.length).toBeGreaterThan(0)
 
     vi.mocked(getNewsBody).mockResolvedValue({ content: 'fetched news body', externalLinks: [] })
 
@@ -550,15 +561,21 @@ describe('getContentPageData paginated body loading', () => {
       page,
     })
 
-    expect(pageData.items.map((item) => item.slug)).toEqual([newsSlug, articleSlug])
-    expect(getNewsBody).toHaveBeenCalledTimes(1)
-    expect(getNewsBody).toHaveBeenCalledWith(newsSlug)
+    expect(pageData.items.map((item) => item.slug)).toEqual(windowItems.map((item) => item.slug))
+    expect(getNewsBody).toHaveBeenCalledTimes(newsSlugsInWindow.length)
+    newsSlugsInWindow.forEach((slug) => expect(getNewsBody).toHaveBeenCalledWith(slug))
 
-    const newsItem = pageData.items[0] as { content?: string }
-    const articleItem = pageData.items[1] as { content?: string }
-    expect(newsItem.content).toBe('fetched news body')
-    expect(typeof articleItem.content).toBe('string')
-    expect((articleItem.content ?? '').length).toBeGreaterThan(0)
+    const resolvedBySlug = new Map(
+      pageData.items.map((item) => [item.slug, item as { content?: string }])
+    )
+    newsSlugsInWindow.forEach((slug) => {
+      expect(resolvedBySlug.get(slug)?.content).toBe('fetched news body')
+    })
+    articleSlugsInWindow.forEach((slug) => {
+      const content = resolvedBySlug.get(slug)?.content
+      expect(typeof content).toBe('string')
+      expect((content ?? '').length).toBeGreaterThan(0)
+    })
   })
 
   it('keeps the rest of the page intact when one body asset fails', async () => {
