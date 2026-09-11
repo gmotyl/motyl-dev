@@ -7,7 +7,6 @@ import { DEFAULT_TTS_VOICE, getStoredTtsVoice, TTS_VOICE_CHANGE_EVENT, type TtsV
 import {
   resolveNextTrackIndex,
   resolvePreviousTrackIndex,
-  resolveTrackGranularity,
 } from '@/lib/reader/media-session-tracks'
 import { useMediaSession } from './use-media-session'
 import { useTTS } from './useTTS'
@@ -628,11 +627,16 @@ export function useContinuousReader(
   }, [])
 
   /**
-   * Interrupting Media-session skip backwards. Restarts the current track past
-   * `RESTART_THRESHOLD_SECONDS`, otherwise steps to the previous track.
-   * Elapsed-in-section is read off the last committed playback: `playback`'s
-   * identity churns every progress tick, so the ref always holds a fresh
-   * `currentTime` without this callback depending on it.
+   * Interrupting Media-session skip backwards. A track is a section, so this
+   * restarts the current section past `RESTART_THRESHOLD_SECONDS` and otherwise
+   * steps back exactly one section — across an article boundary like any other
+   * step, never rewinding to the top of the article being read.
+   *
+   * That is also why `currentTime` can be handed to the resolver as-is: it is
+   * time-in-section, and a section IS the track, so it needs no translation.
+   * It is read off the last committed playback because `playback`'s identity
+   * churns every progress tick — the ref keeps a fresh `currentTime` here
+   * without this callback depending on it.
    *
    * It goes through `playFromHere`, so from a PAUSED reader it does not merely
    * move the position — it starts speaking the target. That is the OS transport
@@ -645,7 +649,6 @@ export function useContinuousReader(
     const target = resolvePreviousTrackIndex(
       currentItems,
       currentIndexRef.current,
-      resolveTrackGranularity(currentItems),
       playbackRef.current?.currentTime ?? 0
     )
     playFromHere(target, 0)
@@ -655,6 +658,10 @@ export function useContinuousReader(
    * Interrupting Media-session skip forwards — NOT the in-app `next`, which is a
    * non-interrupting soft advance. At the end of the queue it does nothing,
    * leaving the current audio running.
+   *
+   * It targets the very same section in-app `next` advances to, however many md
+   * files the queue spans: one press on a head unit can no longer discard a
+   * digest's unheard sections. Only the interrupt differs between the two.
    *
    * Deliberately internal: it is reachable only through the media-session
    * `nexttrack` handler below. `previous`/`canPrevious` ARE returned because the
@@ -666,11 +673,7 @@ export function useContinuousReader(
     const currentItems = itemsRef.current
     if (currentItems.length === 0) return
 
-    const target = resolveNextTrackIndex(
-      currentItems,
-      currentIndexRef.current,
-      resolveTrackGranularity(currentItems)
-    )
+    const target = resolveNextTrackIndex(currentItems, currentIndexRef.current)
     if (target === null) return
     playFromHere(target, 0)
   }, [playFromHere])

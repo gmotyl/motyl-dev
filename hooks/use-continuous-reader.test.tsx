@@ -195,8 +195,8 @@ const makeItem = (index: number): SpeechSection => ({
 })
 
 // A section of a named article. Several of these sharing a slug make a
-// multi-section article, which is what separates section- from
-// article-granularity media-session skips.
+// multi-section article, and a queue mixing slugs is the shape the OS skip
+// tests care about: it is the one a file-level jump would behave differently on.
 const makeSection = (
   sourceSlug: string,
   ordinal: number,
@@ -1263,7 +1263,61 @@ describe('useContinuousReader', () => {
     })
   })
 
-  it('nexttrack skips a whole article on a multi-article queue', async () => {
+  // The reported bug, pinned: one press in the car used to discard `alpha 1`
+  // unheard because the queue spanned two md files. A track is a section, so the
+  // number of `sourceSlug`s in the queue may not change where next lands.
+  // Deep inside a multi-section digest, elapsed-in-track used to be unknowable
+  // and was forced past the threshold, so back always rewound to the digest's
+  // first section. With a track = a section, `currentTime` IS elapsed-in-track.
+  it('previoustrack restarts the current section past the threshold instead of rewinding to the article', async () => {
+    const { result } = renderReader([
+      makeSection('alpha', 0, 'Alpha'),
+      makeSection('alpha', 1, 'Alpha'),
+      makeSection('alpha', 2, 'Alpha'),
+      makeSection('beta', 0, 'Beta'),
+    ])
+
+    act(() => result.current.playFrom(2))
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+    ttsMock.playback.stop.mockClear()
+    ttsMock.playback.currentTime = 10
+
+    act(() => latestMediaSession().handlers.previoustrack())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledTimes(2))
+
+    expect(ttsMock.playback.stop).toHaveBeenCalled()
+    expect(result.current.currentIndex).toBe(2)
+    expect(ttsMock.calls.at(-1)?.content).toBe('prepared alpha 2')
+    expect(result.current.position).toEqual({
+      sectionKey: sectionKey('alpha', 2),
+      unitIndex: 0,
+    })
+  })
+
+  // Within the threshold the step back is one section, article boundaries being
+  // just another index — the mirror of `nexttrack` stepping one section forward.
+  it('previoustrack steps back one section within the threshold', async () => {
+    const { result } = renderReader([
+      makeSection('alpha', 0, 'Alpha'),
+      makeSection('alpha', 1, 'Alpha'),
+      makeSection('alpha', 2, 'Alpha'),
+      makeSection('beta', 0, 'Beta'),
+    ])
+
+    act(() => result.current.playFrom(2))
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+    ttsMock.playback.stop.mockClear()
+    ttsMock.playback.currentTime = 1
+
+    act(() => latestMediaSession().handlers.previoustrack())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledTimes(2))
+
+    expect(ttsMock.playback.stop).toHaveBeenCalled()
+    expect(result.current.currentIndex).toBe(1)
+    expect(ttsMock.calls.at(-1)?.content).toBe('prepared alpha 1')
+  })
+
+  it('nexttrack steps one section on a multi-article queue', async () => {
     const { result } = renderReader([
       makeSection('alpha', 0, 'Alpha'),
       makeSection('alpha', 1, 'Alpha'),
@@ -1271,6 +1325,26 @@ describe('useContinuousReader', () => {
     ])
 
     act(() => result.current.play())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+
+    act(() => latestMediaSession().handlers.nexttrack())
+    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledTimes(2))
+
+    expect(ttsMock.playback.stop).toHaveBeenCalled()
+    expect(result.current.currentIndex).toBe(1)
+    expect(ttsMock.calls.at(-1)?.content).toBe('prepared alpha 1')
+  })
+
+  // The other half of the same rule: an article boundary is crossed, but only
+  // because it happens to be the next index — never as a jump over sections.
+  it("nexttrack crosses into the next article only from an article's last section", async () => {
+    const { result } = renderReader([
+      makeSection('alpha', 0, 'Alpha'),
+      makeSection('alpha', 1, 'Alpha'),
+      makeSection('beta', 0, 'Beta'),
+    ])
+
+    act(() => result.current.playFrom(1))
     await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
 
     act(() => latestMediaSession().handlers.nexttrack())
@@ -1297,7 +1371,7 @@ describe('useContinuousReader', () => {
     expect(ttsMock.calls.at(-1)?.content).toBe('prepared alpha 1')
   })
 
-  it('nexttrack on the last track leaves playback alone', async () => {
+  it('nexttrack on the last section leaves playback alone', async () => {
     const { result } = renderReader([
       makeSection('alpha', 0, 'Alpha'),
       makeSection('alpha', 1, 'Alpha'),
