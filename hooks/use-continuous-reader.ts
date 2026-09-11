@@ -5,9 +5,9 @@ import { splitIntoSpeechUnits, type SpeechSection } from '@/lib/tts/speech'
 import { synthesizeSpeech } from '@/lib/tts/client'
 import { DEFAULT_TTS_VOICE, getStoredTtsVoice, TTS_VOICE_CHANGE_EVENT, type TtsVoice } from '@/lib/tts/voices'
 import {
+  resolveArticleTitle,
   resolveNextTrackIndex,
   resolvePreviousTrackIndex,
-  resolveTrackGranularity,
 } from '@/lib/reader/media-session-tracks'
 import { useMediaSession } from './use-media-session'
 import { useTTS } from './useTTS'
@@ -628,11 +628,16 @@ export function useContinuousReader(
   }, [])
 
   /**
-   * Interrupting Media-session skip backwards. Restarts the current track past
-   * `RESTART_THRESHOLD_SECONDS`, otherwise steps to the previous track.
-   * Elapsed-in-section is read off the last committed playback: `playback`'s
-   * identity churns every progress tick, so the ref always holds a fresh
-   * `currentTime` without this callback depending on it.
+   * Interrupting Media-session skip backwards. A track is a section, so this
+   * restarts the current section past `RESTART_THRESHOLD_SECONDS` and otherwise
+   * steps back exactly one section — across an article boundary like any other
+   * step, never rewinding to the top of the article being read.
+   *
+   * That is also why `currentTime` can be handed to the resolver as-is: it is
+   * time-in-section, and a section IS the track, so it needs no translation.
+   * It is read off the last committed playback because `playback`'s identity
+   * churns every progress tick — the ref keeps a fresh `currentTime` here
+   * without this callback depending on it.
    *
    * It goes through `playFromHere`, so from a PAUSED reader it does not merely
    * move the position — it starts speaking the target. That is the OS transport
@@ -645,7 +650,6 @@ export function useContinuousReader(
     const target = resolvePreviousTrackIndex(
       currentItems,
       currentIndexRef.current,
-      resolveTrackGranularity(currentItems),
       playbackRef.current?.currentTime ?? 0
     )
     playFromHere(target, 0)
@@ -655,6 +659,17 @@ export function useContinuousReader(
    * Interrupting Media-session skip forwards — NOT the in-app `next`, which is a
    * non-interrupting soft advance. At the end of the queue it does nothing,
    * leaving the current audio running.
+   *
+   * It targets the adjacent section — the same step in-app `next` takes, however
+   * many md files the queue spans: one press on a head unit can no longer discard
+   * a digest's unheard sections.
+   *
+   * The step is shared; the point it steps FROM is not. This advances from
+   * `currentIndexRef`, the playback position, while in-app `next` advances from
+   * the eye (`previewKeyRef`). Those coincide while reading straight through and
+   * diverge once the eye has run ahead — see the "stopped Next continues from the
+   * eye, not the playback position, after a paused cascade" test — so the two are
+   * the same rule applied to two different cursors, not the same destination.
    *
    * Deliberately internal: it is reachable only through the media-session
    * `nexttrack` handler below. `previous`/`canPrevious` ARE returned because the
@@ -666,11 +681,7 @@ export function useContinuousReader(
     const currentItems = itemsRef.current
     if (currentItems.length === 0) return
 
-    const target = resolveNextTrackIndex(
-      currentItems,
-      currentIndexRef.current,
-      resolveTrackGranularity(currentItems)
-    )
+    const target = resolveNextTrackIndex(currentItems, currentIndexRef.current)
     if (target === null) return
     playFromHere(target, 0)
   }, [playFromHere])
@@ -682,8 +693,30 @@ export function useContinuousReader(
   // Equal to `hasQueue` by the skip-back rule, not by being the same question.
   const canPrevious = hasQueue
 
-  const mediaTitle = currentItem ? (currentItem.sourceTitle ?? currentItem.title) : null
-  const mediaArtist = currentItem?.title ?? null
+  // A track is a section, so the line a head unit renders largest — `title` —
+  // names the section, and the md file it came from is the smaller `artist`
+  // line. That is what makes the prominent line the one that changes on every
+  // skip. With the fields the other way round the two lines went incoherent from
+  // an article's second section onward: `sourceTitle ?? title` fell through to
+  // the section heading exactly where `sourceTitle` is absent, so the driver read
+  // the article name on top and the same section heading twice from there on.
+  //
+  // `mediaTitle === null` is the seam that publishes no metadata at all, so it is
+  // driven off the ABSENCE of an item rather than off a falsy title: a section
+  // title is always present (it is the `##` heading), so a falsy-title test would
+  // never fire and an empty queue would leak a metadata object.
+  const mediaTitle = currentItem ? currentItem.title : null
+  // NOT `currentItem.sourceTitle`: production stamps that on an article's first
+  // section only, so reading it here blanked the artist line on every later
+  // section of a digest. `resolveArticleTitle` recovers it from the queue, whose
+  // per-article runs are contiguous — see that function for why the field is not
+  // simply copied onto every section instead (it is the SPOKEN title unit and a
+  // synthesis-cache key). Memoized because it walks backwards through the queue
+  // and this sits in a render path that re-runs on every progress tick.
+  const mediaArtist = useMemo(
+    () => resolveArticleTitle(items, currentIndex),
+    [items, currentIndex]
+  )
   // Memoized on the primitives it is built from. `useMediaSession` keys its
   // effects on those primitives too, so a fresh object here would be inert —
   // this only avoids handing a new literal to the hook on every progress tick.
@@ -691,7 +724,7 @@ export function useContinuousReader(
     () =>
       mediaTitle === null
         ? null
-        : { title: mediaTitle, artist: mediaArtist ?? '', album: MEDIA_SESSION_ALBUM },
+        : { title: mediaTitle, artist: mediaArtist, album: MEDIA_SESSION_ALBUM },
     [mediaTitle, mediaArtist]
   )
 
