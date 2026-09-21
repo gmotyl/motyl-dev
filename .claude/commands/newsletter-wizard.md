@@ -8,7 +8,7 @@ Run the full weekly newsletter publishing flow as a guided wizard. Each step req
 ## How the wizard works
 
 1. **Create a TodoList with all 9 steps up front** using TaskCreate. Mark exactly one step `in_progress` at a time. Mark steps `completed` only after the user confirms that step is done.
-2. **Stop after every step** and ask the user via AskUserQuestion whether to proceed, retry the current step, or stop the wizard. Never silently chain into the next step.
+2. **Stop after every step** and ask the user via AskUserQuestion whether to proceed, retry the current step, or stop the wizard. Never silently chain into the next step. The single exception is step 1, which flows straight into step 2 with no confirmation, because step 2 is itself a review gate.
 3. **Back-navigation is opt-in.** If the user says "go back to step 3" or "I want to redo the image", mark steps from that point onward as `pending` and resume from there. Do NOT offer back-navigation in your default confirmation prompt — only honor it when the user asks explicitly.
 4. **Stash key values across steps**: `issueNumber`, `issueFile` (e.g. `content/trends/motyl-dev-11.md`), `imageTopic` (optional), `imagePath` (after publish). Repeat these in your status messages so the user sees the wizard's working state.
 
@@ -25,13 +25,19 @@ When it completes, capture the resulting `issueNumber` and `issueFile` path from
 
 Report the issue number and path to the user.
 
-**Confirm:** "Issue #N generated at `<path>`. Move to step 2 (manual review)?"
+**Do not ask for confirmation here.** Go straight into step 2, which is itself the review gate.
 
 ### Step 2 — User reviews and edits manually
 
-Tell the user: "Open `<issueFile>` and edit freely — fix prose, reorder items, drop articles. Tell me 'done' when you're ready to move on, or 'go back to step 1' to regenerate."
+First, **print the full text of `<issueFile>` in the chat**, verbatim and complete. Do not summarize it, do not abridge it, and do not describe its structure instead of showing it. The user reviews the draft in the conversation, not by opening an editor, so the whole file has to be on screen.
 
-Wait for the user. Do not edit the file yourself unless they ask. When they say done, confirm and move on.
+**Render it, do not fence it.** Print the draft as live markdown so the terminal renders it the way the newsletter will read: real `##` headings, bold links, and prose as prose. Put body paragraphs in `>` blockquotes so they stand apart from your own wizard commentary. Do NOT wrap the draft in a fenced code block, which renders as raw source and is much harder to read. The only parts worth showing as literal source are the YAML frontmatter and any inline code spans, which markdown already handles.
+
+Use the same presentation whenever you show revised text later in this step, so a rewritten intro or section appears as a blockquote rather than as a diff or a code block.
+
+Then tell the user: "That's the full draft of `<issueFile>`. Edit it yourself or tell me what to change — fix prose, reorder items, drop articles. Tell me 'done' when you're ready to move on, or 'go back to step 1' to regenerate."
+
+Wait for the user. Do not edit the file yourself unless they ask. If they ask for changes, apply them and print the changed sections again. When they say done, confirm and move on.
 
 ### Step 3 — Generate hero image prompt
 
