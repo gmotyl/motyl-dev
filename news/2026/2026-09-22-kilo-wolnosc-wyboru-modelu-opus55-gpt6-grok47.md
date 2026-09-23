@@ -1,5 +1,5 @@
 ---
-title: "Kilo: trzy nowe modele w 48 godzin i dlaczego pytanie „który model jest najlepszy" traci sens"
+title: "Kilo: trzy nowe modele w 48 godzin i dlaczego pytanie „który model jest najlepszy” traci sens"
 excerpt: "Grok 4.7, Claude Opus 5.5 i rodzina GPT-6 wystartowały niemal jednocześnie, każdy optymalizując pod inny kompromis kosztu, szybkości i niezawodności, co zdaniem Kilo oznacza koniec ery jednego uniwersalnego modelu na wszystko."
 publishedAt: "2026-09-22"
 slug: "kilo-wolnosc-wyboru-modelu-opus55-gpt6-grok47"
