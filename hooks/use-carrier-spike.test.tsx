@@ -91,6 +91,7 @@ const makeCarrier = () => {
         contiguous: true,
         ranges: appends.length > 0 ? [[0, expected] as const] : [],
         bufferedDuration: expected,
+        contentDuration: expected,
         expectedDuration: expected,
         drift: 0,
         gapsAtBoundaries: [],

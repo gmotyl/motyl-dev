@@ -16,11 +16,35 @@ export interface SeamReport {
   contiguous: boolean
   /** Buffered ranges as [start, end] pairs, in order. */
   ranges: ReadonlyArray<readonly [number, number]>
-  /** buffered.end(last) - buffered.start(0). */
+  /**
+   * buffered.end(last) - buffered.start(0) — the SPAN, gaps included.
+   *
+   * Kept because it is what a listener experiences as the length of the
+   * timeline, but it is not a measure of content: on a gapped buffer it counts
+   * the silence between the ranges as if it were audio.
+   */
   bufferedDuration: number
+  /**
+   * Sum of the ranges' own lengths, Σ(end − start) — the CONTENT, gaps excluded.
+   *
+   * `bufferedDuration - contentDuration` is exactly the total gap time, so the
+   * two numbers together say both how long the timeline is and how much of it
+   * actually holds audio.
+   */
+  contentDuration: number
   /** Sum of the fragments' own durations, as measured individually. */
   expectedDuration: number
-  /** bufferedDuration - expectedDuration; accumulated encoder delay/padding. */
+  /**
+   * contentDuration - expectedDuration; accumulated encoder delay/padding.
+   *
+   * Derived from the content, NOT from the span, and deliberately so. Against
+   * the span the two failure modes cancel: ranges [[0,19.7],[20,39.7],[40,60]]
+   * with durations [20,20,20] lose 0.6 s of content to encoder padding and gain
+   * 0.6 s of gaps, and a span-derived drift reads a reassuring 0.000 on a buffer
+   * gapped at two boundaries. `drift` is the only number in this report that
+   * corroborates `contiguous` independently, and the report gets pasted into a
+   * chat to be interpreted, so it must not agree with a lie.
+   */
   drift: number
   /** For a gapped buffer, the 1-based fragment boundaries the gaps fall at. */
   gapsAtBoundaries: readonly number[]
@@ -43,6 +67,19 @@ export interface SeamReport {
  * seconds away would invent a fact. `ranges` still carries every gap verbatim,
  * so nothing is lost: when `gapsAtBoundaries.length < ranges.length - 1`, some
  * gap could not be attributed and `ranges` is the ground truth to read.
+ *
+ * ## How much margin 0.5 s actually is
+ *
+ * At WORST-CASE MP3 padding the margin is only about 1.4×, not the comfortable
+ * order of magnitude the numbers above suggest. LAME writes 1105 samples of
+ * encoder delay, and the tail is padded out to a whole 1152-sample frame:
+ * ~2257 samples ≈ 51 ms per fragment at 44.1 kHz. Eight fragments meet at seven
+ * joins, so the accumulated skew at the last one is ~358 ms against the 500 ms
+ * window. That holds for eight fragments and degrades past roughly 10–13 of
+ * them, where the accumulation crosses the window and the last joins start
+ * going unnamed. The constant also assumes fragments MUCH longer than a second:
+ * it is safe only because the next boundary sits ~20 s away, and a run of short
+ * fragments would make the window ambiguous instead of merely generous.
  */
 const GAP_BOUNDARY_TOLERANCE_SECONDS = 0.5
 
@@ -63,7 +100,12 @@ export function buildSeamReport(
       contiguous: false,
       ranges: EMPTY_RANGES,
       bufferedDuration: 0,
+      contentDuration: 0,
       expectedDuration,
+      // Not clamped to zero. A buffer that ingested nothing while fragments
+      // were expected has drifted by the whole of what is missing, and saying
+      // so is the point: 0 here would be the most reassuring number available,
+      // printed over the emptiest possible buffer.
       drift: 0 - expectedDuration,
       gapsAtBoundaries: [],
     }
@@ -76,13 +118,15 @@ export function buildSeamReport(
 
   const origin = ranges[0][0]
   const bufferedDuration = ranges[ranges.length - 1][1] - origin
+  const contentDuration = ranges.reduce((total, [start, end]) => total + (end - start), 0)
 
   return {
     contiguous: ranges.length === 1,
     ranges,
     bufferedDuration,
+    contentDuration,
     expectedDuration,
-    drift: bufferedDuration - expectedDuration,
+    drift: contentDuration - expectedDuration,
     gapsAtBoundaries: findGapBoundaries(ranges, fragmentDurations, origin),
   }
 }
