@@ -104,4 +104,41 @@ describe('createUnitTimeline', () => {
 
     expect(timeline.oldest()).toEqual({ index: 2, start: 20, duration: 10 })
   })
+
+  it('keeps a span whole when the cut lands inside it', () => {
+    const timeline = createUnitTimeline()
+    timeline.push(0, 10)
+    timeline.push(1, 10)
+    timeline.push(2, 10)
+
+    // Retention cuts at `currentTime - RETAIN_SECONDS`, which practically never
+    // lands on a unit boundary. Unit 1 still holds media at 15 s, so it survives
+    // whole rather than being split at the cut.
+    timeline.dropBefore(15)
+
+    expect(timeline.oldest()).toEqual({ index: 1, start: 10, duration: 10 })
+    expect(timeline.startOf(1)).toBeCloseTo(10, 6)
+    // The retained span keeps its original start, so the stretch before the cut
+    // still resolves to it.
+    expect(timeline.unitAt(11)?.index).toBe(1)
+    expect(timeline.unitAt(16)?.index).toBe(1)
+    // Unit 0 ended before the cut and is gone.
+    expect(timeline.unitAt(5)).toBeNull()
+  })
+
+  it('does not rewind the append point when a drop empties the timeline', () => {
+    const timeline = createUnitTimeline()
+    timeline.push(0, 10)
+    timeline.push(1, 10)
+
+    // Every span is evicted, but the media that was appended still occupied the
+    // first 20 s of the buffer, so the next append has to land after it.
+    timeline.dropBefore(100)
+
+    expect(timeline.oldest()).toBeNull()
+    expect(timeline.end()).toBeCloseTo(20, 6)
+    expect(timeline.push(2, 10)).toEqual({ index: 2, start: 20, duration: 10 })
+    expect(timeline.end()).toBeCloseTo(30, 6)
+    expect(timeline.unitAt(25)?.index).toBe(2)
+  })
 })
