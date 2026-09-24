@@ -1,9 +1,23 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { logReaderEvent } from '@/lib/reader/diagnostic-log'
 
 const wakeLockSupported = () =>
   typeof navigator !== 'undefined' && 'wakeLock' in navigator
+
+/**
+ * The rejection's `name` where it has one, else its string form — what comes
+ * back from `wakeLock.request('screen')` is a DOMException in every browser
+ * that implements it, but a rejection value is not guaranteed to be an `Error`
+ * at all, and a `[object Object]` in the log is worse than useless.
+ */
+const rejectionName = (reason: unknown): string => {
+  if (typeof reason === 'object' && reason !== null && 'name' in reason) {
+    return String((reason as { name: unknown }).name)
+  }
+  return String(reason)
+}
 
 /**
  * Hook to prevent the screen from sleeping while reading articles.
@@ -70,6 +84,16 @@ export function useWakeLock() {
         })
       } catch (err) {
         console.error('Failed to activate Wake Lock:', err)
+        // Logged HERE, at the rejection, NOT at the consumer. This catch
+        // swallows the failure by design — a refused lock is non-fatal and the
+        // reader deliberately keeps reading — so `requestWakeLock()` RESOLVES
+        // and the reader's own `.catch` can never run. An entry written only
+        // there would be permanently absent on a device, and the runbook tells
+        // the operator that frequent `wakelock-failed NotAllowedError` lines
+        // are normal with the screen off and that a different name is the
+        // interesting signal; a blank row would invert that reading.
+        // Observation only: nothing is re-thrown and the contract is unchanged.
+        logReaderEvent('wakelock-failed', rejectionName(err))
         wakeLockRef.current = null
         setIsActive(false)
       }

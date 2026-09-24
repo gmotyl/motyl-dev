@@ -87,6 +87,17 @@ const describeError = (error: unknown): string => {
   return message ? `${name}: ${message}` : name
 }
 
+/**
+ * The one detail convention every indexed call site in this file follows:
+ * the unit index leads, and `: ` separates it from any free-form remainder.
+ * Sites with nothing to add (`play-called`, `unit-ended`, `element-error`) stay
+ * a bare index; `unit-start` carries `index/total` instead, which is a position
+ * rather than a remainder. Before this, `play-rejected` used a space and
+ * `synthesis-failed` a colon, so the same log mixed both.
+ */
+const detailFor = (index: number, rest?: string): string =>
+  rest ? `${index}: ${rest}` : String(index)
+
 export function useTTS(content: string, options: UseTTSOptions = {}) {
   const { voice, units, onProgress, onComplete, onError } = options
 
@@ -434,12 +445,28 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   // Play a single chunk
   const playChunk = useCallback(
     async (index: number, offset: number, generation: number, signal: AbortSignal) => {
-      // ABOVE the generation guard, like every other call in this file: the one
+      // ABOVE the entry guard, like every other call in this file: the one
       // thing the device log has to be able to say is "the chain reached here",
       // and a call that recorded only after passing the guard could not say it.
-      logReaderEvent('unit-start', String(index))
+      // Read into a boolean first so the entry can be written before the guard
+      // is applied and can carry `suppressed` — `||` still short-circuits and
+      // both refs are read at the same moment, so playback is untouched.
+      //
+      // The detail is `index/total`, not a bare index, because the completion
+      // path below enters this function once more with `index ===
+      // chunksRef.current.length`. `unit-start 6/6` reads as "past the last
+      // unit" (the article finished); `unit-start 6/12` is a real next unit —
+      // and a real next unit with no `play-called` after it is precisely the
+      // screen-off death this instrument is hunting. A bare index made those
+      // two outcomes produce an identical log tail. `chunksRef.current` is the
+      // live list (`stop()` clears it, `ensureChunks()` fills it), so the count
+      // is this call's, not a stale capture.
+      const entryRejected = generation !== requestGenerationRef.current || signal.aborted
+      logReaderEvent('unit-start', `${index}/${chunksRef.current.length}`, {
+        suppressed: entryRejected,
+      })
 
-      if (generation !== requestGenerationRef.current || signal.aborted) return
+      if (entryRejected) return
 
       if (index >= chunksRef.current.length) {
         // All chunks played
@@ -502,9 +529,10 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
        * the rest of the article.
        */
       const failUnit = (failedIndex: number, error: Error) => {
-        // The index leads the detail: which unit was dropped is the first thing
-        // the log is read for.
-        logReaderEvent('synthesis-failed', `${failedIndex}: ${error?.message ?? ''}`)
+        // The index leads the detail, `: ` separates it from anything free-form
+        // (see `detailFor`): which unit was dropped is the first thing the log
+        // is read for.
+        logReaderEvent('synthesis-failed', detailFor(failedIndex, error?.message))
         consecutiveFailuresRef.current += 1
 
         // The unit is abandoned, so nothing will ever read its object URL again.
@@ -629,7 +657,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
       element.onended = () => {
         const suppressed = guardRejects()
-        logReaderEvent('unit-ended', String(index), { suppressed })
+        logReaderEvent('unit-ended', detailFor(index), { suppressed })
         if (suppressed) return
         // A unit that played all the way through is the only real proof the
         // pipeline is healthy, so THAT is what clears the failure streak.
@@ -647,7 +675,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       // exactly the same kind as a synthesis failure.
       element.onerror = () => {
         const suppressed = guardRejects()
-        logReaderEvent('element-error', String(index), { suppressed })
+        logReaderEvent('element-error', detailFor(index), { suppressed })
         if (suppressed) return
         detachUnitHandlers()
         const mediaError = element.error
@@ -664,11 +692,13 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       // no second output path, so silence with `isPlaying` left true is the only
       // other outcome. (The gesture-unlock poke in play() is a separate call and
       // swallows its own, expected, rejection.)
-      logReaderEvent('play-called', String(index))
+      logReaderEvent('play-called', detailFor(index))
       const started = element.play?.()
       void started?.catch?.((error: unknown) => {
         const suppressed = guardRejects()
-        logReaderEvent('play-rejected', `${index} ${describeError(error)}`, { suppressed })
+        logReaderEvent('play-rejected', detailFor(index, describeError(error)), {
+          suppressed,
+        })
         if (suppressed) return
         console.warn(`[TTS] Element refused to play unit ${index}:`, error)
         stopWithError(error as Error)

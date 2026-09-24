@@ -1,6 +1,11 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import {
+  READER_LOG_FLAG,
+  clearReaderLog,
+  readReaderLog,
+} from '@/lib/reader/diagnostic-log'
 import { useWakeLock } from './useWakeLock'
 
 type ReleaseListener = () => void
@@ -124,12 +129,16 @@ describe('useWakeLock', () => {
   beforeEach(() => {
     installWakeLock()
     setVisibility('visible')
+    window.localStorage.clear()
+    clearReaderLog()
   })
 
   afterEach(() => {
     removeWakeLock()
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
+    window.localStorage.clear()
+    clearReaderLog()
   })
 
   it('re-requests the lock when the page becomes visible again after a hide released it', async () => {
@@ -148,6 +157,54 @@ describe('useWakeLock', () => {
 
     expect(wakeLockRequest).toHaveBeenCalledTimes(2)
     expect(result.current.isActive).toBe(true)
+  })
+
+  it('records wakelock-failed with the error name when the request is refused', async () => {
+    // The flag is a plain `localStorage` key. NOT `vi.spyOn(window.localStorage,
+    // …)` — jsdom 27's `Storage` is a Proxy, so an instance spy stores an *item*
+    // named after the method and the real method still runs.
+    window.localStorage.setItem(READER_LOG_FLAG, '1')
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    // What the spec throws at a `request('screen')` issued while the page is
+    // hidden — routine and once-per-section with the screen off, by design.
+    const denial = new DOMException('document is not visible', 'NotAllowedError')
+    wakeLockRequest.mockRejectedValue(denial)
+
+    const { result } = renderHook(() => useWakeLock())
+
+    await act(async () => {
+      // The refusal is non-fatal by contract: the reader treats a denied lock
+      // as "keep reading", so this must resolve rather than throw.
+      await expect(result.current.requestWakeLock()).resolves.toBeUndefined()
+    })
+
+    expect(wakeLockRequest).toHaveBeenCalledTimes(1)
+    expect(error).toHaveBeenCalled()
+    expect(result.current.isActive).toBe(false)
+
+    // Logged HERE, where the rejection actually is. The consumer's `.catch`
+    // never runs — this method swallows the rejection — so an entry written
+    // only there would be permanently absent on a device.
+    const failed = readReaderLog().filter((entry) => entry.type === 'wakelock-failed')
+    expect(failed).toHaveLength(1)
+    expect(failed[0].detail).toBe('NotAllowedError')
+  })
+
+  it('records nothing while the diagnostic flag is unset', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    wakeLockRequest.mockRejectedValue(
+      new DOMException('document is not visible', 'NotAllowedError'),
+    )
+
+    const { result } = renderHook(() => useWakeLock())
+    await act(async () => {
+      await result.current.requestWakeLock()
+    })
+
+    // The path was really walked…
+    expect(error).toHaveBeenCalled()
+    // …and with the flag unset nothing was recorded.
+    expect(readReaderLog()).toHaveLength(0)
   })
 
   it('does not re-request after an explicit release', async () => {

@@ -172,7 +172,7 @@ describe('useTTS diagnostic log — playback path', () => {
     })
     await waitFor(() => expect(srcAssignments).toHaveLength(1))
 
-    expect(loggedLines()).toEqual(['unit-start 0', 'play-called 0'])
+    expect(loggedLines()).toEqual(['unit-start 0/2', 'play-called 0'])
 
     await endCurrentUnit()
     await waitFor(() => expect(srcAssignments).toHaveLength(2))
@@ -180,16 +180,47 @@ describe('useTTS diagnostic log — playback path', () => {
     // The whole chain is visible: the unit that finished, the unit that was
     // entered next, and the start it asked the element for.
     expect(loggedLines()).toEqual([
-      'unit-start 0',
+      'unit-start 0/2',
       'play-called 0',
       'unit-ended 0',
-      'unit-start 1',
+      'unit-start 1/2',
       'play-called 1',
     ])
     // `play-called` records the intent to start, so it must precede the
     // element's answer — a log written after `play()` resolved would go missing
     // for exactly the refusal it exists to catch.
     expect(audioPlay).toHaveBeenCalled()
+  })
+
+  it('records the completion entry as M/M so a finished article is unambiguous', async () => {
+    enableLog()
+    const units = ['unit one', 'unit two']
+    const onComplete = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units, onComplete })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    await endCurrentUnit()
+    await waitFor(() => expect(srcAssignments).toHaveLength(2))
+
+    await endCurrentUnit()
+    await waitFor(() => expect(onComplete).toHaveBeenCalledTimes(1))
+
+    // The completion path enters `playChunk` once more, for a unit that does
+    // not exist. `M/M` is what tells the operator "past the last unit" — a bare
+    // index there reads exactly like a real next unit that died before
+    // `element.play()`, which is the failure this log exists to find.
+    expect(loggedLines().at(-1)).toBe('unit-start 2/2')
+    // …and nothing was asked of the element for it.
+    expect(loggedLines().filter((line) => line.startsWith('play-called'))).toEqual([
+      'play-called 0',
+      'play-called 1',
+    ])
   })
 
   it('records a play rejection with the error name', async () => {
@@ -236,7 +267,7 @@ describe('useTTS diagnostic log — playback path', () => {
  * the only way to observe what the guard does when it does run.
  */
 describe('useTTS diagnostic log — guard-suppressed events', () => {
-  it('records a play rejection that the isPlaying guard suppresses, marked suppressed', async () => {
+  it('records a play rejection that the shared guard suppresses, marked suppressed', async () => {
     enableLog()
     let rejectUnitPlay: ((reason: unknown) => void) | undefined
     let playCalls = 0
@@ -278,7 +309,7 @@ describe('useTTS diagnostic log — guard-suppressed events', () => {
     expect(firstOfType('stop-with-error')).toBeUndefined()
   })
 
-  it('records an element error that the generation guard suppresses, marked suppressed', async () => {
+  it('records an element error that the shared guard suppresses, marked suppressed', async () => {
     enableLog()
     const units = ['a'.repeat(10), 'b'.repeat(20)]
     const { result } = renderHook(() => useTTS('irrelevant content', { units }))
@@ -350,8 +381,47 @@ describe('useTTS diagnostic log — guard-suppressed events', () => {
     expect(ended?.detail).toBe('0')
     // The guard ate it: the unit was not counted complete and nothing advanced.
     expect(srcAssignments).toHaveLength(1)
-    expect(firstOfType('unit-start')?.detail).toBe('0')
+    expect(firstOfType('unit-start')?.detail).toBe('0/2')
     expect(logged().filter((entry) => entry.type === 'unit-start')).toHaveLength(1)
+  })
+
+  it('records a unit-start that the entry guard suppresses, marked suppressed', async () => {
+    enableLog()
+    const units = ['unit one', 'unit two']
+    let pauseDuringPrebuffer: (() => void) | undefined
+    let synthCalls = 0
+    vi.mocked(synthesizeSpeech).mockImplementation(async () => {
+      synthCalls += 1
+      // Call 1 is the blocking fetch for unit 0; call 2 is the prefetch the
+      // pre-buffer loop kicks off AFTER `play()` has already passed its own
+      // generation check but BEFORE it hands control to `playChunk`. A user tap
+      // landing in that window is the real-world shape of the entry guard
+      // firing — and an async mock body runs synchronously up to its first
+      // await, so this lands inside exactly that window.
+      if (synthCalls === 2) pauseDuringPrebuffer?.()
+      return new ArrayBuffer(8)
+    })
+
+    const { result } = renderHook(() => useTTS('irrelevant content', { units }))
+    pauseDuringPrebuffer = () => result.current.pause()
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle()
+
+    expect(synthCalls).toBeGreaterThanOrEqual(2)
+    // `playChunk` was entered and turned away at the door: without the entry
+    // log that is byte-for-byte identical, on a device, to a chain that never
+    // reached `playChunk` at all.
+    const start = firstOfType('unit-start')
+    expect(start).toBeDefined()
+    expect(start?.suppressed).toBe(true)
+    expect(start?.detail).toBe('0/2')
+    // The guard did its job: no source swap, nothing asked of the element.
+    expect(srcAssignments).toHaveLength(0)
+    expect(firstOfType('play-called')).toBeUndefined()
+    expect(audioPlay).toHaveBeenCalledTimes(1) // the gesture-unlock poke only
   })
 })
 

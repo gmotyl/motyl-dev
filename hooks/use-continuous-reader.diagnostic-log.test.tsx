@@ -220,31 +220,17 @@ describe('useContinuousReader diagnostic log', () => {
     expect(firstOfType('wakelock-acquired')).toBeDefined()
   })
 
-  it('records wakelock-failed carrying the error name', async () => {
-    enableLog()
-    const items = [makeItem(0)]
-    const denial = new Error('document is not visible')
-    denial.name = 'NotAllowedError'
-    wakeLockMock.requestWakeLock.mockRejectedValue(denial)
-
-    const { result, rerender } = renderReader(items)
-
-    act(() => result.current.play())
-    await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
-    setPlaying(true, rerender, items)
-
-    expect(wakeLockMock.requestWakeLock).toHaveBeenCalledOnce()
-    await waitFor(() => expect(firstOfType('wakelock-failed')).toBeDefined())
-    // The name, so a routine NotAllowedError (re-requesting while hidden, once
-    // per section — by design) is distinguishable from anything else.
-    expect(firstOfType('wakelock-failed')?.detail).toBe('NotAllowedError')
-  })
+  // `wakelock-failed` is NOT asserted here. The real `useWakeLock.acquire()`
+  // swallows the rejection — a refused lock is non-fatal by design — so
+  // `requestWakeLock()` resolves and the reader's own `.catch` never runs in a
+  // browser. A test here could only prove it by driving a MOCK that rejects,
+  // i.e. by asserting against a hook contract the real one does not have. The
+  // entry is recorded at the rejection, inside `useWakeLock`, and pinned by
+  // `useWakeLock.test.tsx` — one source of truth. The reader's `.catch` stays
+  // as a belt-and-braces net for a future hook that does propagate.
 
   it('records nothing while the flag is unset', async () => {
     const items = [makeItem(0), makeItem(1)]
-    const denial = new Error('document is not visible')
-    denial.name = 'NotAllowedError'
-    wakeLockMock.requestWakeLock.mockRejectedValue(denial)
 
     const { result, rerender } = renderReader(items)
 
@@ -255,7 +241,7 @@ describe('useContinuousReader diagnostic log', () => {
     act(() => (ttsMock.getLatestOptions()?.onComplete as () => void)())
     await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledTimes(2))
 
-    // Wake-lock request (rejected) and then a granted lock.
+    // Wake-lock request, then a granted lock.
     setPlaying(true, rerender, items)
     wakeLockMock.state.isActive = true
     act(() => rerender({ items }))
