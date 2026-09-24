@@ -2,6 +2,7 @@ import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { sectionKey, splitIntoSpeechUnits, type SpeechSection } from '@/lib/tts/speech'
+import { synthesizeSpeech } from '@/lib/tts/client'
 import { createMseCarrier } from '@/lib/reader/mse-carrier'
 import type { SeamReport } from '@/lib/reader/seam-report'
 import { useContinuousReader } from './use-continuous-reader'
@@ -30,6 +31,15 @@ import { useContinuousReader } from './use-continuous-reader'
  *   - the play-from-here and re-seat tests are the inverse control: they assert
  *     the same counter DOES move, so an implementation that continued the
  *     timeline everywhere fails them.
+ *
+ * And the pairing has a second axis, because a continued timeline is numbered
+ * in ABSOLUTE indices while everything downstream of it — the boundary tracker,
+ * the end-of-content question, the seek — is written in the hook's own
+ * per-section indices. "What was appended, and where" cannot see a translation
+ * that has been dropped: the appends are identical either way and the damage is
+ * entirely in WHAT PLAYS AFTERWARDS. So the tests below also pin the playback
+ * that follows a handoff — the crossing inside the new section, the stall in
+ * the middle of it, and the second the playhead is moved to when it begins.
  *
  * `useTTS` is deliberately NOT mocked here — this file exists to test the two
  * hooks against each other. `use-continuous-reader.test.tsx` keeps its mock and
@@ -177,6 +187,35 @@ const makeItem = (index: number): SpeechSection => ({
   key: sectionKey(`news-${index}`, index),
 })
 
+/** Paragraph n of a `makeLongItem` section starts with this; see `stallUnit`. */
+const STALL_MARKER = 'q'
+
+/**
+ * A section of `paragraphs + 1` speech units (the title, then one unit per
+ * paragraph), so a section can be made LONGER than `BUFFER_AHEAD` and therefore
+ * stall mid-section with units of its own still unappended.
+ *
+ * Each paragraph is its own unit because it clears `UNIT_MIN_CHARS` on its own
+ * and carries no punctuation to merge across, exactly as `makeItem`'s single
+ * paragraph does.
+ */
+const makeLongItem = (index: number, paragraphs: number): SpeechSection => {
+  const body = Array.from(
+    { length: paragraphs },
+    (_, p) => `${STALL_MARKER}${p}${'x'.repeat(208)}`
+  ).join('\n\n')
+  return { ...makeItem(index), markdown: `## Section ${index}\n\n${body}` }
+}
+
+/** Make one unit's synthesis hang forever — the buffer stops there. */
+const stallUnit = (item: SpeechSection, unitIndex: number) => {
+  const text = splitIntoSpeechUnits(item)[unitIndex].text
+  vi.mocked(synthesizeSpeech).mockImplementation(
+    async (candidate: string) =>
+      candidate === text ? new Promise<ArrayBuffer>(() => {}) : new ArrayBuffer(8)
+  )
+}
+
 const unitCount = (item: SpeechSection) => splitIntoSpeechUnits(item).length
 
 const renderReader = (items: SpeechSection[]) =>
@@ -221,6 +260,11 @@ beforeEach(() => {
   mse.end = 0
   document.querySelectorAll('audio').forEach((el) => el.remove())
   window.localStorage.clear()
+
+  // Re-armed per test: `stallUnit` replaces it, and the shared mock survives
+  // `restoreAllMocks` with whatever the last test left on it.
+  vi.mocked(synthesizeSpeech).mockReset()
+  vi.mocked(synthesizeSpeech).mockImplementation(async () => new ArrayBuffer(8))
 
   audioPlay = vi.fn(() => {
     mediaPaused = false
@@ -322,6 +366,21 @@ describe('section handoffs on the MSE carrier', () => {
     // 3. The reader is reading the next section, not merely quiet.
     await waitFor(() => expect(result.current.isPlaying).toBe(true))
 
+    // 3b. ...and it is reading the next section's MEDIA. On one continuous
+    // timeline a unit is a POSITION, so the handoff's only way to start the new
+    // section is to move the playhead onto it — and the finished section is
+    // still sitting on that timeline under indices of its own. A seek that
+    // asked for "unit 0" in the hook's numbering rather than the carrier's
+    // lands on the FIRST unit of the article instead, which is second 0: every
+    // handoff would quietly restart the whole article's audio while the UI
+    // showed the new section. The seat has to be inside the new section's span.
+    const newSectionStart = firstSectionUnits * mse.spanSeconds
+    const newSectionEnd = (firstSectionUnits + unitCount(items[1])) * mse.spanSeconds
+    await waitFor(() =>
+      expect(currentAudio().currentTime).toBeGreaterThanOrEqual(newSectionStart)
+    )
+    expect(currentAudio().currentTime).toBeLessThan(newSectionEnd)
+
     // 4. And the completion it came through did not follow it across. The
     // playhead is now inside the new section's first unit on a timeline that
     // still holds the finished section, at a position that was the END of
@@ -331,6 +390,95 @@ describe('section handoffs on the MSE carrier', () => {
     await emitTimeUpdate(firstSectionUnits * mse.spanSeconds + 2)
     expect(result.current.currentIndex).toBe(1)
     expect(result.current.isPlaying).toBe(true)
+  })
+
+  it('reads the new section unit by unit instead of jumping at its first boundary', async () => {
+    /**
+     * What the handoff test above cannot see: the boundary tracker runs on the
+     * continued timeline, which is numbered ABSOLUTELY, while every index the
+     * tracker hands back is used as an index into THIS section's chunk list.
+     * The subtraction that turns one into the other has no effect at all before
+     * the first handoff (the base is 0) and no effect on what gets appended
+     * after one — so dropping it leaves every append, every source count and
+     * every "is the reader playing?" answer exactly as they are.
+     *
+     * What it does instead is make the first crossing INSIDE a continued
+     * section report an index past the end of the section's chunk list, which
+     * is the completion branch: every section after the first would play its
+     * unit 0 and jump. Three sections and one crossing in the middle of the
+     * second is what tells the two apart.
+     */
+    const items = [makeItem(0), makeItem(1), makeItem(2)]
+    const { result } = renderReader(items)
+    await startFirstSection(result, items)
+
+    const sourcesAtStart = mse.created
+    await playOutOnMse(items)
+
+    await waitFor(() => expect(result.current.currentIndex).toBe(1))
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2, 3]))
+
+    // A boundary INSIDE section 1: absolute unit 2 → 3, which is that section's
+    // own unit 0 → 1. The reader must still be on section 1, one unit further
+    // in — not already on section 2.
+    await emitTimeUpdate(2 * mse.spanSeconds + 12)
+    expect(result.current.currentIndex).toBe(1)
+    expect(result.current.currentChunkIndex).toBe(1)
+
+    // And section 1's REAL end still hands off, on the same timeline.
+    await emitTimeUpdate(4 * mse.spanSeconds - 0.05)
+    await waitFor(() => expect(result.current.currentIndex).toBe(2))
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2, 3, 4, 5]))
+    expect(mse.created).toBe(sourcesAtStart)
+  })
+
+  it('does not complete the article at a buffer stall inside a continued section', async () => {
+    /**
+     * The other half of what the absolute numbering protects, and the one the
+     * handoff test's assertion 4 only LOOKS like it covers.
+     *
+     * `reachedEndOfContent` asks two questions — "is every remaining unit of
+     * this section on the timeline?" and "is the playhead at its end?" — and
+     * completing the article needs both. Assertion 4 parks the playhead well
+     * short of the end, so question 2 answers no and question 1 is never
+     * reached; an untranslated lookup survives it untouched.
+     *
+     * Discriminating needs a section that the buffer cannot finish: four units
+     * against a `BUFFER_AHEAD` of three, with the fourth one's synthesis never
+     * arriving. Five units are then on the timeline (0–4 absolute), the
+     * playhead parks at its very end — and asked in the section's own numbering
+     * the answer is "unit 3 has no media, keep reading", while asked in the
+     * carrier's it is "units 0–3 all have media, the article is over".
+     */
+    const items = [makeItem(0), makeLongItem(1, 3)]
+    expect(unitCount(items[0])).toBe(2)
+    expect(unitCount(items[1])).toBe(4)
+    stallUnit(items[1], 3)
+
+    const { result } = renderReader(items)
+    await startFirstSection(result, items)
+
+    const sourcesAtStart = mse.created
+    await playOutOnMse(items)
+
+    // Five units on one timeline: the finished section's two, plus the three
+    // of the new one the buffer got to before the stall.
+    await waitFor(() => expect(result.current.currentIndex).toBe(1))
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2, 3, 4]))
+
+    // Walk to the last second of everything that is buffered, crossing this
+    // section's own boundaries on the way.
+    await emitTimeUpdate(2 * mse.spanSeconds + 12)
+    await emitTimeUpdate(4 * mse.spanSeconds + 2)
+    await emitTimeUpdate(5 * mse.spanSeconds - 0.02)
+
+    // The article is NOT over — the section has a fourth unit that is merely
+    // late. The reader waits for it, still on this section, still playing.
+    expect(result.current.isPlaying).toBe(true)
+    expect(result.current.currentIndex).toBe(1)
+    expect(result.current.currentChunkIndex).toBe(2)
+    expect(mse.appended).toEqual([0, 1, 2, 3, 4])
+    expect(mse.created).toBe(sourcesAtStart)
   })
 
   it('rebuilds the timeline on play-from-here', async () => {
@@ -374,6 +522,56 @@ describe('section handoffs on the MSE carrier', () => {
     await waitFor(() => expect(mse.appended.length).toBe(unitCount(items[1])))
 
     expect(mse.created).toBe(sourcesAtStart + 1)
+    expect(mse.appended).toEqual([0, 1])
+  })
+
+  it('rebuilds the timeline on play-from-here taken AFTER a handoff', async () => {
+    /**
+     * Both inverse controls above start from a virgin timeline, where "do not
+     * continue" and "there is nothing to continue" are the same state — so
+     * neither of them actually tests the invariant they document, which is that
+     * continuation is claimed per BOUNDARY and not once per session. Taken
+     * after a handoff, a tap must still drop the timeline the handoff built,
+     * and the new section's units must be numbered from 0 again: a base left
+     * where the continuation put it would offer the carrier indices the
+     * abandoned timeline already used.
+     */
+    const items = [makeItem(0), makeItem(1), makeItem(2)]
+    const { result } = renderReader(items)
+    await startFirstSection(result, items)
+
+    await playOutOnMse(items)
+    await waitFor(() => expect(result.current.currentIndex).toBe(1))
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2, 3]))
+
+    const sourcesAfterHandoff = mse.created
+
+    act(() => result.current.playFrom(2))
+    await waitFor(() => expect(result.current.currentIndex).toBe(2))
+    await waitFor(() => expect(mse.appended.length).toBe(unitCount(items[2])))
+
+    expect(mse.created).toBe(sourcesAfterHandoff + 1)
+    expect(mse.appended).toEqual([0, 1])
+  })
+
+  it('rebuilds the timeline on a queue re-seat taken AFTER a handoff', async () => {
+    /** The same point for the other inverse control. */
+    const items = [makeItem(0), makeItem(1), makeItem(2)]
+    const { result, rerender } = renderReader(items)
+    await startFirstSection(result, items)
+
+    await playOutOnMse(items)
+    await waitFor(() => expect(result.current.currentIndex).toBe(1))
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2, 3]))
+
+    const sourcesAfterHandoff = mse.created
+
+    // The section being read is marked read and evicted; the reader re-seats.
+    rerender({ items: [items[0], items[2]] })
+    await waitFor(() => expect(result.current.currentSlug).toBe('news-2'))
+    await waitFor(() => expect(mse.appended.length).toBe(unitCount(items[2])))
+
+    expect(mse.created).toBe(sourcesAfterHandoff + 1)
     expect(mse.appended).toEqual([0, 1])
   })
 })
