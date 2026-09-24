@@ -47,12 +47,17 @@ vi.mock('@/lib/tts/client', () => ({
  * playback carrier reads back — `report().ranges` — so that every append gains
  * exactly `spanSeconds` of buffer and the timeline it builds is predictable:
  * unit 0 is [0, 10), unit 1 is [10, 20), unit 2 is [20, 30).
+ *
+ * `refuse` models the one failure only this carrier has: a `SourceBuffer` that
+ * rejects an append and poisons its own queue. The real one rejects the promise
+ * `appendUnits` returns, which is exactly what this does.
  */
 const mse = vi.hoisted(() => ({
   available: true,
   spanSeconds: 10,
   created: 0,
   appended: [] as number[],
+  refuse: [] as number[],
   start: 0,
   end: 0,
 }))
@@ -67,6 +72,9 @@ vi.mock('@/lib/reader/mse-carrier', () => ({
     return {
       src: `mse:mock/${mse.created}`,
       append: async (index: number) => {
+        if (mse.refuse.includes(index)) {
+          throw new Error(`[mock] SourceBuffer refused unit ${index}`)
+        }
         mse.appended.push(index)
         mse.end += mse.spanSeconds
       },
@@ -154,9 +162,24 @@ const emitTimeUpdate = async (currentTime: number) => {
   })
 }
 
+/**
+ * Fire the element's `error` event — the browser saying "these bytes are
+ * unusable". It is the one way into the hook's unit-failure chain that does not
+ * need a boundary crossing, and therefore the only way to reach `playChunk` for
+ * a unit the MSE buffer does not hold.
+ */
+const failCurrentUnitInElement = async (turns = 8) => {
+  await act(async () => {
+    currentAudio().dispatchEvent(new Event('error'))
+    for (let i = 0; i < turns; i += 1) await Promise.resolve()
+  })
+}
+
 const enableLog = () => window.localStorage.setItem(READER_LOG_FLAG, '1')
 const firstOfType = (type: ReaderLogEntry['type']) =>
   readReaderLog().find((entry) => entry.type === type)
+const entriesOfType = (type: ReaderLogEntry['type']) =>
+  readReaderLog().filter((entry) => entry.type === type)
 
 /** Three units of ten characters each — so a unit is exactly a third of the article. */
 const UNITS = ['a'.repeat(10), 'b'.repeat(10), 'c'.repeat(10)]
@@ -180,6 +203,7 @@ beforeEach(() => {
   mse.spanSeconds = 10
   mse.created = 0
   mse.appended = []
+  mse.refuse = []
   mse.start = 0
   mse.end = 0
   document.querySelectorAll('audio').forEach((el) => el.remove())
@@ -467,5 +491,472 @@ describe('useTTS on the MSE carrier', () => {
     // The guard still did its job — nothing was reported and nothing stopped.
     expect(onError).not.toHaveBeenCalled()
     expect(firstOfType('stop-with-error')).toBeUndefined()
+  })
+
+  it('ignores a `ended` that reaches the element on this carrier', async () => {
+    /**
+     * There is no `ended` at a seam inside one buffer, so the handler the
+     * src-swap path lives on is not merely idle here — it is a SECOND counter
+     * for a crossing the boundary tracker already reports. Left assigned, an
+     * `ended` arriving for any reason (a truncated append, a source some later
+     * caller ends) would advance the unit a second time and add its characters
+     * again. So the MSE path must not assign it at all.
+     */
+    const onComplete = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: UNITS, onComplete })
+    )
+    await startAllThree(result)
+    await emitTimeUpdate(2.5)
+
+    expect(currentAudio().onended).toBeNull()
+
+    await act(async () => {
+      currentAudio().dispatchEvent(new Event('ended'))
+      for (let i = 0; i < 6; i += 1) await Promise.resolve()
+    })
+
+    // Nothing moved: not the unit, not the completed-character total behind
+    // progress, not the article's completion.
+    expect(result.current.currentChunkIndex).toBe(0)
+    await emitTimeUpdate(5)
+    expect(result.current.progress).toBeCloseTo((10 * 0.5) / 30 * 100, 4)
+    expect(onComplete).not.toHaveBeenCalled()
+  })
+})
+
+describe('useTTS completing an article on the MSE carrier', () => {
+  it('completes the article when the playhead runs out of the last unit', async () => {
+    /**
+     * THE bug this file exists to close. `mse-carrier` calls `endOfStream()`
+     * only in `dispose()` — deliberately, because a section handoff appends
+     * MORE units to the same timeline and an ended `MediaSource` refuses them —
+     * so `ended` can never fire and the tracker, which keeps its seat past the
+     * final append, never reports the last unit either. Nothing else reaches
+     * `playChunk(chunks.length)`, so without a completion signal of its own the
+     * article stalls at ~99% with `isPlaying` still true and the whole
+     * article's audio still retained. `use-continuous-reader` drives section
+     * auto-advance from `onComplete`, so on every device that picks this
+     * carrier "Read All News" would stop dead after the first section.
+     */
+    const onComplete = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: UNITS, onComplete })
+    )
+    await startAllThree(result)
+    const sourcesAtStart = mse.created
+
+    await emitTimeUpdate(12)
+    await emitTimeUpdate(22)
+    expect(result.current.currentChunkIndex).toBe(2)
+    expect(onComplete).not.toHaveBeenCalled()
+
+    // The playhead reaches the end of the last appended span. On a device this
+    // is where the element runs out of media and stalls — there is no `ended`
+    // behind it, and the position it reports is the last DECODED frame's, a
+    // fraction of a second short of the buffer's end rather than exactly on it.
+    // Requiring equality would leave every article hanging there.
+    await emitTimeUpdate(29.95)
+
+    expect(onComplete).toHaveBeenCalledTimes(1)
+    expect(result.current.isPlaying).toBe(false)
+    expect(result.current.progress).toBe(100)
+    // The article is over, so nothing it prepared may outlive it: the carrier
+    // is rebuilt, which is what releases every unit's audio.
+    expect(mse.created).toBe(sourcesAtStart + 1)
+
+    // Exactly once — the element keeps ticking at the end of a stalled buffer.
+    await emitTimeUpdate(30)
+    await emitTimeUpdate(30)
+    expect(onComplete).toHaveBeenCalledTimes(1)
+  })
+
+  it('waits for a final unit that is still in synthesis', async () => {
+    /**
+     * Why "the playhead reached the end of the timeline" is NOT "the article
+     * finished". `timeline.end()` is the BUFFER's end and grows with every
+     * append, so a pipeline that outran the appender sits at it for as long as
+     * the next unit takes to synthesise — the ordinary mid-article stall. The
+     * end of CONTENT is a question only the hook can answer, and the answer
+     * turns on the unit the hook is on being the last one there is.
+     *
+     * This is also the property Task 7 rests on: nothing here assumes the
+     * timeline ever stops growing.
+     */
+    let releaseLast!: (audio: ArrayBuffer) => void
+    const lastAudio = new Promise<ArrayBuffer>((resolve) => {
+      releaseLast = resolve
+    })
+    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) =>
+      text === UNITS[2] ? lastAudio : new ArrayBuffer(8)
+    )
+
+    const onComplete = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: UNITS, onComplete })
+    )
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0, 1]))
+    await settle()
+
+    await emitTimeUpdate(5)
+    await emitTimeUpdate(15)
+    expect(result.current.currentChunkIndex).toBe(1)
+
+    // The playhead runs off the end of everything appended — with a unit still
+    // to come.
+    await emitTimeUpdate(20)
+    expect(onComplete).not.toHaveBeenCalled()
+    expect(result.current.isPlaying).toBe(true)
+
+    await act(async () => {
+      releaseLast(new ArrayBuffer(8))
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2]))
+    await settle()
+
+    await emitTimeUpdate(25)
+    expect(result.current.currentChunkIndex).toBe(2)
+    await emitTimeUpdate(30)
+    expect(onComplete).toHaveBeenCalledTimes(1)
+  })
+
+  it('waits for the last unit\'s media even when the hook is already on it', async () => {
+    /**
+     * The other half of the same race, and the one the unit index alone cannot
+     * answer. A skipped unit moves the hook onto the LAST index while that
+     * unit's audio is still being fetched, so `currentChunkIndex` says "last
+     * unit" and the playhead is sitting at the buffer's end — the two halves of
+     * a completion — with nothing of the article's final unit read at all.
+     * Only the timeline can say whether that unit's media exists.
+     */
+    let releaseLast!: (audio: ArrayBuffer) => void
+    const lastAudio = new Promise<ArrayBuffer>((resolve) => {
+      releaseLast = resolve
+    })
+    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) => {
+      if (text === UNITS[1]) throw new Error('stalled')
+      return text === UNITS[2] ? lastAudio : new ArrayBuffer(8)
+    })
+
+    enableLog()
+    const onComplete = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: UNITS, onComplete })
+    )
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0]))
+    await settle()
+
+    // Unit 0 is dropped by the element, unit 1 is unsynthesisable: the skip
+    // chain lands the hook on unit 2 while unit 2's bytes are still pending.
+    // The log is what says so — the STATE cannot, because `playChunk` publishes
+    // the new index only on the far side of the fetch it is parked in.
+    await failCurrentUnitInElement()
+    expect(entriesOfType('unit-start').map((entry) => entry.detail)).toContain('2/3')
+    expect(result.current.isBuffering).toBe(true)
+
+    await emitTimeUpdate(10)
+    expect(onComplete).not.toHaveBeenCalled()
+    expect(result.current.isPlaying).toBe(true)
+
+    await act(async () => {
+      releaseLast(new ArrayBuffer(8))
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0, 2]))
+    await settle()
+
+    await emitTimeUpdate(20)
+    expect(onComplete).toHaveBeenCalledTimes(1)
+    expect(result.current.progress).toBe(100)
+  })
+
+  it('completes when one tick skips the whole tail of the article', async () => {
+    /**
+     * The same throttling that makes a crossing several units wide can skip the
+     * tail of an article outright: the last tick lands inside unit 0 and the
+     * next one is already past the end of the buffer, so the tracker — whose
+     * `unitAt` answers null there and which keeps its seat on purpose — reports
+     * nothing at all. Every unit the tick flew over still has to be counted and
+     * the article still has to finish, or the stall is back in the one place
+     * the reader is least able to recover from it.
+     */
+    enableLog()
+    const onComplete = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: UNITS, onComplete })
+    )
+    await startAllThree(result)
+
+    await emitTimeUpdate(5)
+    await emitTimeUpdate(30)
+
+    expect(onComplete).toHaveBeenCalledTimes(1)
+    expect(result.current.progress).toBe(100)
+    // All three, in order — none of them silently dropped.
+    expect(
+      entriesOfType('unit-ended')
+        .filter((entry) => !entry.suppressed)
+        .map((entry) => entry.detail)
+    ).toEqual(['0', '1', '2'])
+  })
+
+  it('does not complete while a unit behind the last one is still missing', async () => {
+    /**
+     * Prefetch resolves in whatever order the bytes arrive, so the buffer can
+     * hold the FINAL unit while an earlier one is still in flight — and then
+     * "the last unit is on the timeline and the playhead is at the buffer's
+     * end" is true with a unit nobody has read. Asking about the last index
+     * alone would end the article there; asking about every index from the one
+     * being read through the last is what refuses to.
+     */
+    let releaseMiddle!: (audio: ArrayBuffer) => void
+    const middleAudio = new Promise<ArrayBuffer>((resolve) => {
+      releaseMiddle = resolve
+    })
+    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) =>
+      text === UNITS[1] ? middleAudio : new ArrayBuffer(8)
+    )
+
+    const onComplete = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: UNITS, onComplete })
+    )
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0, 2]))
+    await settle()
+
+    await emitTimeUpdate(5)
+    // The crossing puts the hook on unit 1, which is nowhere on the timeline.
+    await emitTimeUpdate(15)
+    // The playhead then runs off the end of everything the buffer holds.
+    await emitTimeUpdate(20)
+
+    expect(onComplete).not.toHaveBeenCalled()
+    expect(result.current.isPlaying).toBe(true)
+
+    await act(async () => {
+      releaseMiddle(new ArrayBuffer(8))
+    })
+    await settle()
+    await emitTimeUpdate(30)
+    expect(onComplete).toHaveBeenCalledTimes(1)
+  })
+
+  it('completes through the CURRENT render\'s onComplete, not the one at mount', async () => {
+    /**
+     * The `reportStartRef` staleness class again, and live rather than
+     * theoretical: `use-continuous-reader` builds `onComplete` over the section
+     * key, so its identity changes on every handoff. The `timeupdate` listener
+     * is attached once for the element's whole life, so an advance bound at
+     * that moment — rather than reached through a ref every tick — would drive
+     * completion into the PREVIOUS section's handler and auto-advance would
+     * replay the section that just ended, or stop.
+     *
+     * Completion is what makes the staleness observable: a natural crossing
+     * passes the session's own generation and signal through, so a stale
+     * advance and a fresh one behave identically until a captured PROP is
+     * reached.
+     */
+    const atMount = vi.fn()
+    const afterRerender = vi.fn()
+    const { result, rerender } = renderHook(
+      ({ onComplete }: { onComplete: () => void }) =>
+        useTTS('irrelevant content', { units: UNITS, onComplete }),
+      { initialProps: { onComplete: atMount } }
+    )
+    await startAllThree(result)
+
+    rerender({ onComplete: afterRerender })
+
+    await emitTimeUpdate(12)
+    await emitTimeUpdate(22)
+    await emitTimeUpdate(30)
+
+    expect(afterRerender).toHaveBeenCalledTimes(1)
+    expect(atMount).not.toHaveBeenCalled()
+  })
+})
+
+describe('useTTS advancing units on the MSE carrier', () => {
+  it('counts every unit a single tick flew over', async () => {
+    /**
+     * THE scenario this whole change exists for: a hidden page is throttled
+     * hard enough to skip `timeupdate`s outright, so one tick can land whole
+     * units later. The tracker returns every span the playhead left behind, and
+     * the advance has to resume from the LAST of them.
+     *
+     * Taking the first instead is not a cosmetic off-by-one. `playChunk` would
+     * be entered for a unit the playhead has already left; `resuming` would be
+     * true, so nothing would seek; and the progress span-guard — which refuses
+     * to measure a span the current unit does not own — would then suppress
+     * every emission for the rest of the article.
+     */
+    const progress: number[] = []
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: UNITS, onProgress: (p) => progress.push(p) })
+    )
+    await startAllThree(result)
+    enableLog()
+
+    await emitTimeUpdate(5)
+    // One tick, two spans: the playhead leaves unit 0 AND unit 1 behind.
+    await emitTimeUpdate(25)
+
+    // It landed on the unit it is actually inside...
+    expect(result.current.currentChunkIndex).toBe(2)
+    // ...counted BOTH skipped units' characters, not just the first...
+    expect(progress.at(-1)).toBeCloseTo((20 + 10 * 0.5) / 30 * 100, 4)
+    // ...and keeps measuring afterwards, which is what the span-guard would
+    // have killed had the hook landed a unit short.
+    await emitTimeUpdate(27)
+    expect(progress.at(-1)).toBeCloseTo((20 + 10 * 0.7) / 30 * 100, 4)
+  })
+
+  it('does not measure progress against a span the current unit does not own', async () => {
+    /**
+     * Prefetch is parallel and resolves in whatever order the network hands the
+     * bytes back, so the buffer can hold unit 2 while unit 1 is still in
+     * flight — and on one continuous timeline the unit at a given second is
+     * then NOT the unit whose index the hook is on. Measuring the current
+     * unit's fraction against somebody else's span is the spike-then-fall the
+     * emitter's guard exists to prevent.
+     *
+     * The same moment pins `resuming`: the hook is pointed at unit 1, the
+     * element is carrying unit 2's media, and the carrier does not hold unit 1
+     * at all. Only the `carrierHasUnit` half of `resuming` can tell those
+     * apart — without it the advance would call this a resume, never fetch
+     * unit 1, never seek, and leave the reader reading unit 2 under unit 1's
+     * name.
+     */
+    let releaseMiddle!: (audio: ArrayBuffer) => void
+    const middleAudio = new Promise<ArrayBuffer>((resolve) => {
+      releaseMiddle = resolve
+    })
+    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) =>
+      text === UNITS[1] ? middleAudio : new ArrayBuffer(8)
+    )
+
+    const progress: number[] = []
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: UNITS, onProgress: (p) => progress.push(p) })
+    )
+    await act(async () => {
+      await result.current.play()
+    })
+    // Unit 2's bytes overtook unit 1's, so the buffer is 0 then 2.
+    await waitFor(() => expect(mse.appended).toEqual([0, 2]))
+    await settle()
+
+    await emitTimeUpdate(5)
+    const emissionsBeforeCrossing = progress.length
+    currentTimeWrites = []
+
+    // The playhead crosses out of unit 0 and into the span unit 2 occupies.
+    // The hook's next unit is 1 — which is nowhere on the timeline.
+    await emitTimeUpdate(15)
+    // The advance entered unit 1 as a JUMP and is now fetching it: `resuming`
+    // cannot be true for media the element never held.
+    expect(result.current.isBuffering).toBe(true)
+    // ...and nothing may be emitted from a span unit 1 does not own.
+    expect(progress).toHaveLength(emissionsBeforeCrossing)
+
+    await act(async () => {
+      releaseMiddle(new ArrayBuffer(8))
+    })
+    await settle()
+
+    // Unit 1 was fetched, appended and SOUGHT — a resume would have done none
+    // of it and left the element reading unit 2 under unit 1's name.
+    expect(result.current.currentChunkIndex).toBe(1)
+    expect(mse.appended).toEqual([0, 2, 1])
+    expect(currentTimeWrites).toEqual([20])
+  })
+
+  it('ignores a tick that arrives after the session was torn down', async () => {
+    /**
+     * The window is `playFromUnit`: `interrupt` ends the session and — on this
+     * carrier, deliberately — leaves the element RUNNING, so `timeupdate` keeps
+     * arriving until the next session is seated. Every leg of the guard
+     * describes that window: playback is no longer on, the session is gone, its
+     * generation has been superseded and its signal aborted. A crossing counted
+     * there adds a unit's characters to a session that is over.
+     *
+     * And it is recorded before it is dropped: a suppressed crossing that left
+     * no entry would read, on a device, exactly like a page that never resumed
+     * executing — the ambiguity the log exists to remove.
+     */
+    enableLog()
+    const { result } = renderHook(() => useTTS('irrelevant content', { units: UNITS }))
+    await startAllThree(result)
+
+    await emitTimeUpdate(5)
+    act(() => {
+      result.current.pause()
+    })
+    const progressWhilePaused = result.current.progress
+
+    await emitTimeUpdate(12)
+
+    expect(result.current.currentChunkIndex).toBe(0)
+    expect(result.current.progress).toBe(progressWhilePaused)
+
+    const crossings = entriesOfType('unit-ended')
+    expect(crossings).toHaveLength(1)
+    expect(crossings[0].suppressed).toBe(true)
+    expect(crossings[0].detail).toBe('0')
+  })
+})
+
+describe('useTTS when the MSE buffer refuses an append', () => {
+  it('counts a refused append against the failure streak and stops at the cap', async () => {
+    /**
+     * The src-swap carrier cannot refuse a unit; this one can — a `SourceBuffer`
+     * that rejects an append poisons its own queue, and `appendUnits` rejects to
+     * say so. Nothing awaits `playChunk`, so an unhandled refusal is silence
+     * with `isPlaying` still true: the precise failure this change exists to
+     * remove. A refusal is a unit failure of the same kind as synthesis never
+     * producing bytes, and has to be treated as one — logged, counted, and
+     * eventually fatal.
+     */
+    enableLog()
+    // Unit 0 is buffered and played; every unit after it is refused by the
+    // buffer, so the skip chain can never recover.
+    mse.refuse = [1, 2, 3, 4]
+    const units = Array.from({ length: 5 }, (_, i) => String.fromCharCode(97 + i).repeat(10))
+    const onError = vi.fn()
+
+    const { result } = renderHook(() => useTTS('irrelevant content', { units, onError }))
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0]))
+    await settle()
+
+    // The element drops unit 0 — the one entry into the skip chain that does
+    // not need a boundary crossing. Units 1..4 then each fail on the append.
+    await failCurrentUnitInElement(12)
+    await settle()
+
+    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1))
+    expect(result.current.isPlaying).toBe(false)
+
+    // Every refusal was recorded as the unit failure it is...
+    const failures = entriesOfType('synthesis-failed').map((entry) => entry.detail)
+    expect(failures).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/^1: /),
+        expect.stringMatching(/^2: /),
+        expect.stringMatching(/^3: /),
+      ])
+    )
+    // ...and the streak they built is what ended the session loudly.
+    expect(firstOfType('stop-with-error')).toBeDefined()
   })
 })

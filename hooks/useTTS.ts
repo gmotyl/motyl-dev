@@ -72,6 +72,22 @@ const BUFFER_AHEAD = 3
 // no network) and surfaced as a real stop + onError.
 const MAX_CONSECUTIVE_CHUNK_FAILURES = 3
 
+// How close to the end of the appended media counts as the playhead having
+// reached it — the MSE path's replacement for the exactness of `ended`.
+//
+// A `MediaSource` that has not been told `endOfStream()` never fires `ended`,
+// and it deliberately is not told: a section handoff extends the SAME timeline
+// with more appends, and an ended MediaSource accepts none. So the element
+// simply runs out of media and stalls, and the last position it reports is the
+// last decoded frame's — a frame short of the buffer's end rather than exactly
+// on it (an MP3 frame is ~26 ms). Requiring equality would leave every article
+// hanging a frame from its end forever.
+//
+// A tenth of a second is several frames longer than that shortfall and orders
+// of magnitude shorter than any real unit, so nothing but a playhead that has
+// actually consumed the last unit can be inside it.
+const END_OF_CONTENT_TOLERANCE_SECONDS = 0.1
+
 export function useTTS(content: string, options: UseTTSOptions = {}) {
   const { voice, units, onProgress, onComplete, onError } = options
 
@@ -799,20 +815,34 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         generation !== requestGenerationRef.current ||
         signal.aborted
 
-      element.onended = () => {
-        const suppressed = guardRejects()
-        logReaderEvent('unit-ended', detailFor(index), { suppressed })
-        if (suppressed) return
-        // A unit that played all the way through is the only real proof the
-        // pipeline is healthy, so THAT is what clears the failure streak.
-        // Synthesis merely resolving is not proof: an element `error` means the
-        // bytes were unusable, and resetting the streak on those would let a
-        // systemic decode failure skip every unit in the article without ever
-        // reaching MAX_CONSECUTIVE_CHUNK_FAILURES.
-        consecutiveFailuresRef.current = 0
-        completedCharsRef.current += charCountsRef.current[index] || 0
-        void playChunk(index + 1, 0, generation, signal)
-      }
+      // A unit's completion, on the carrier that HAS one per unit.
+      //
+      // There is no `ended` at a seam inside one MSE buffer — `advanceUnits`
+      // reads the crossing off the clock instead — so on that carrier this
+      // handler is not merely unreachable, it is a SECOND counter for the same
+      // event. An `ended` that did arrive there (a truncated append, a source
+      // ended by a future caller) would add the unit's characters on top of the
+      // crossing's and issue a duplicate `playChunk` for the next unit; today
+      // only the progress span-guard hides it. So the MSE path detaches the
+      // handler rather than resting on it never firing.
+      element.onended =
+        carrier.kind === 'mse'
+          ? null
+          : () => {
+              const suppressed = guardRejects()
+              logReaderEvent('unit-ended', detailFor(index), { suppressed })
+              if (suppressed) return
+              // A unit that played all the way through is the only real proof
+              // the pipeline is healthy, so THAT is what clears the failure
+              // streak. Synthesis merely resolving is not proof: an element
+              // `error` means the bytes were unusable, and resetting the streak
+              // on those would let a systemic decode failure skip every unit in
+              // the article without ever reaching
+              // MAX_CONSECUTIVE_CHUNK_FAILURES.
+              consecutiveFailuresRef.current = 0
+              completedCharsRef.current += charCountsRef.current[index] || 0
+              void playChunk(index + 1, 0, generation, signal)
+            }
 
       // The element could not use the media it was handed. With the Web Audio
       // carrier gone there is nothing to retry on, so this is a unit failure of
@@ -904,6 +934,63 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   )
 
   /**
+   * Whether the playhead has read the article out — the MSE path's replacement
+   * for the `ended` the src-swap path gets from the element.
+   *
+   * There is no `ended` here and there deliberately will not be one:
+   * `endOfStream()` would close the `MediaSource`, and a section handoff
+   * extends the SAME timeline with more appends, which an ended source refuses.
+   * The end of the CONTENT is therefore a question only the hook can answer,
+   * because only the hook knows whether more units are coming. It asks two
+   * independent ones:
+   *
+   * 1. IS EVERY UNIT STILL AHEAD OF ME ON THE TIMELINE? Not "is the timeline
+   *    finished" — it never is, it only stops growing for a while. So the
+   *    question is asked about the CHUNK LIST instead: every index from the one
+   *    being read through the last one must have media. That is what separates
+   *    the article ending from the ordinary mid-article stall where the
+   *    pipeline outran the appender and the playhead is parked at the buffer's
+   *    end waiting for the next unit to synthesise. It is asked over a RANGE,
+   *    not just about the last index, because prefetch is parallel and resolves
+   *    in whatever order the bytes come back: the buffer can hold the final
+   *    unit while an earlier one is still in flight, and finishing there would
+   *    drop a unit nobody read. The range starts at the current unit rather
+   *    than at 0 so that a retention trim, which evicts only media far behind
+   *    the playhead, cannot make a finished article look unfinished.
+   *
+   * 2. HAS THE PLAYHEAD CONSUMED EVERYTHING APPENDED? `end()` is the buffer's
+   *    own absolute end (the spans telescope onto it and a retention trim
+   *    cannot rewind it), so this is a fact about the playhead, not a claim
+   *    that nothing more will ever be appended.
+   *
+   * That is what makes it race-free and what makes it compose with a timeline
+   * that keeps growing. Mid-article the first question is false while units are
+   * still arriving; across a section handoff the chunk list is replaced, the
+   * new section's units are not on the timeline yet, and `end()` starts moving
+   * again — so the answer goes back to false on its own without anything here
+   * assuming the timeline ever stops.
+   *
+   * The loop is bounded in practice as well as in principle: it only runs at a
+   * buffer stall, and the buffer never holds more than `BUFFER_AHEAD` units
+   * beyond the one being read, so either the last index is within a few of the
+   * current one or the very first lookup answers null.
+   */
+  const reachedEndOfContent = useCallback(
+    (currentTime: number): boolean => {
+      const lastIndex = chunksRef.current.length - 1
+      if (lastIndex < 0) return false
+
+      const timeline = getLiveTimeline()
+      for (let index = currentChunkIndexRef.current; index <= lastIndex; index += 1) {
+        if (timeline.startOf(index) === null) return false
+      }
+
+      return currentTime >= timeline.end() - END_OF_CONTENT_TOLERANCE_SECONDS
+    },
+    [getLiveTimeline]
+  )
+
+  /**
    * THE unit advance on the MSE carrier.
    *
    * One continuous timeline has no `ended` at a seam, so "unit N has been read"
@@ -922,31 +1009,104 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     if (getCarrier().kind !== 'mse') return
 
     const element = audioElementRef.current
+    if (element === null) return
+
     const session = sessionRef.current
-    // The same three-legged guard the element handlers apply, for the same
+    // The same guard the element handlers apply, leg for leg, and for the same
     // reason: a tick delivered after a pause or a superseded session must not
-    // count a unit complete.
-    if (!isPlayingRef.current || !element || session === null) return
-    if (session.generation !== requestGenerationRef.current || session.signal.aborted) return
+    // count a unit complete. The window is real rather than theoretical —
+    // `playFromUnit` calls `interrupt()` and deliberately leaves the element
+    // RUNNING, so ticks keep arriving until the next session is seated.
+    //
+    // Read into a boolean, like `playChunk`'s own entry guard, so the log can
+    // be written before the guard is applied.
+    const suppressed =
+      !isPlayingRef.current ||
+      session === null ||
+      session.generation !== requestGenerationRef.current ||
+      session.signal.aborted
 
-    const completed = getBoundaryTracker().advance(element.currentTime)
-    if (completed.length === 0) return
-
-    for (const finished of completed) {
-      logReaderEvent('unit-ended', detailFor(finished))
-      // A unit read all the way through is the only real proof the pipeline is
-      // healthy — the same reason `onended` clears the streak on the other path.
-      consecutiveFailuresRef.current = 0
-      completedCharsRef.current += charCountsRef.current[finished] || 0
+    if (suppressed) {
+      // Recorded ABOVE the guard's effect, matching every other entry in this
+      // file: a crossing dropped here is otherwise byte-for-byte identical, in
+      // the log, to a page that never resumed executing — the exact ambiguity
+      // the instrument was built to remove.
+      //
+      // The tracker is deliberately NOT consulted: `advance` moves the seat,
+      // and consuming the very crossing the guard is refusing would lose it for
+      // the session that resumes. The timeline is peeked at instead — a
+      // read-only question — so the entry is written on the ticks that WOULD
+      // have reported something and on no others.
+      const span = getLiveTimeline().unitAt(element.currentTime)
+      if (span !== null && span.index !== currentChunkIndexRef.current) {
+        logReaderEvent('unit-ended', detailFor(currentChunkIndexRef.current), {
+          suppressed: true,
+        })
+      }
+      return
     }
 
-    const next = completed[completed.length - 1] + 1
-    // The element is already carrying it: the playhead walked in on its own.
-    // Saying so here is what makes the `playChunk` below a resume rather than a
-    // jump, and therefore what keeps the advance free of a seek.
-    loadedUnitIndexRef.current = next
-    void playChunk(next, 0, session.generation, session.signal)
-  }, [getBoundaryTracker, getCarrier, playChunk])
+    const completed = getBoundaryTracker().advance(element.currentTime)
+
+    if (completed.length > 0) {
+      for (const finished of completed) {
+        logReaderEvent('unit-ended', detailFor(finished), { suppressed: false })
+        // A unit read all the way through is the only real proof the pipeline
+        // is healthy — the same reason `onended` clears the streak on the other
+        // path.
+        consecutiveFailuresRef.current = 0
+        completedCharsRef.current += charCountsRef.current[finished] || 0
+      }
+
+      // The LAST completion, not the first. The tracker returns several indices
+      // precisely because a hidden page skips ticks, so one tick can land whole
+      // units later — and entering `playChunk` for a unit the playhead has
+      // already left would make that call a "resume" of a span nothing is
+      // reading, with the progress span-guard then suppressing every emission
+      // for the rest of the article.
+      const next = completed[completed.length - 1] + 1
+      // The element is already carrying it: the playhead walked in on its own.
+      // Saying so here is what makes the `playChunk` below a resume rather than
+      // a jump, and therefore what keeps the advance free of a seek.
+      loadedUnitIndexRef.current = next
+      void playChunk(next, 0, session.generation, session.signal)
+      return
+    }
+
+    // Nothing crossed. Either the playhead is still inside the unit it was in,
+    // or it has run off the end of everything appended — and only the second of
+    // those can be the end of the article. The two cases are exclusive with the
+    // branch above: a reported crossing means `unitAt` found a span, which puts
+    // the playhead strictly before `end()`.
+    if (!reachedEndOfContent(element.currentTime)) return
+
+    // The tail the tracker will never report: `unitAt` past the final append
+    // returns null and the seat is KEPT, so the pipeline outrunning the
+    // appender mid-article is not mistaken for a completion — which also means
+    // the last unit's own crossing never arrives. It is booked here instead,
+    // exactly as `onended` books it on the other path. Everything from the
+    // current unit to the last, not just the last: the same throttled page that
+    // makes a crossing several units wide can skip the whole tail of an article
+    // in one tick, and `reachedEndOfContent` has already established that every
+    // one of them had media.
+    for (
+      let finished = currentChunkIndexRef.current;
+      finished < chunksRef.current.length;
+      finished += 1
+    ) {
+      logReaderEvent('unit-ended', detailFor(finished), { suppressed: false })
+      completedCharsRef.current += charCountsRef.current[finished] || 0
+    }
+    consecutiveFailuresRef.current = 0
+
+    // The one entry into the completion branch on this carrier. It runs
+    // synchronously — no `await` precedes it — so `isPlaying` is already false
+    // and the generation already bumped by the time this tick returns, and the
+    // guard above rejects every later tick. The rebuild it performs empties the
+    // timeline too, so `reachedEndOfContent` cannot answer true a second time
+    // either.
+    void playChunk(chunksRef.current.length, 0, session.generation, session.signal)
+  }, [getBoundaryTracker, getCarrier, getLiveTimeline, playChunk, reachedEndOfContent])
 
   advanceUnitsRef.current = advanceUnits
 
