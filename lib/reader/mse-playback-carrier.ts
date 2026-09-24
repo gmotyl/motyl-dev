@@ -35,17 +35,37 @@
  * source, because the number fed to the timeline IS the number the element's
  * `currentTime` uses.
  *
- * Two places the drift can still get in, both deliberate and both recorded:
+ * ## The spans telescope, so a mis-measured unit cannot compound
  *
- * - A unit whose append gains the buffer nothing measurable contributes NO
- *   span (`reader-error` says so). If its media is nevertheless in the buffer,
- *   every later unit's start is short by its length. The alternative — guessing
- *   a length — shifts every later unit by the error of the guess instead, and
- *   silently. `UnitTimeline` chains starts and takes no explicit start, so a
- *   carrier cannot re-seat a span from the buffer without changing that
- *   interface.
- * - The nominal duration is used only when the buffer reports no ranges at all,
- *   i.e. when it told us nothing rather than when it told us zero.
+ * That is the stronger half of the argument, and it is a property of the whole
+ * module rather than of `spanFor` alone. Appends are STRICTLY SERIALISED — the
+ * wrapped carrier serialises `appendBuffer`, `appendInOrder` awaits each append
+ * before enqueuing the next, and `appendChain` serialises overlapping callers —
+ * and nothing else in the reader touches the buffer. So the end read after unit
+ * k IS the end read before unit k+1, every span is the difference between two
+ * adjacent ABSOLUTE readings, and the spans telescope: their sum is the
+ * buffer's absolute end. `timeline.end()` is the buffer's end at all times.
+ *
+ * That is what makes each measurement self-correcting. A unit measured wrong is
+ * wrong about ITSELF; the next unit re-anchors on an absolute position that owes
+ * nothing to it. So a zero-span unit does NOT leave every later start short by
+ * its length — the later units sit exactly where the buffer put them. The whole
+ * defect is local to the zero-span unit: its own `startOf` points at where the
+ * NEXT unit's media begins.
+ *
+ * The one thing that would break the property is putting a span on the timeline
+ * that the buffer never reported, so `spanFor` never does:
+ *
+ * - When the buffer reports ranges, its answer is the only answer — including
+ *   when that answer is a gain of zero. Such a unit contributes NO span and
+ *   `reader-error` says so. Substituting a nominal duration here would push
+ *   `end()` past the buffer's real end, and every later unit would be
+ *   mis-placed by that much for the rest of the run: the one error mode in this
+ *   module that would compound.
+ * - The nominal duration is used only when the buffer reports no ranges AT ALL,
+ *   i.e. when it told us nothing rather than when it told us zero. That
+ *   substitution is logged too, so the one span on the timeline that was not
+ *   measured is never a silent one.
  */
 
 import type { Carrier, PreparedUnit } from '@/lib/reader/carrier'
@@ -107,13 +127,33 @@ export function createMsePlaybackCarrier(): Carrier {
 
   /** The span to give a unit: the buffer's answer, the caller's, or none. */
   const spanFor = (unit: PreparedUnit, before: number | null, after: number | null): number => {
-    // A null `before` means the buffer was empty, so the whole of `after` is
-    // this append's gain — which also folds a non-zero buffer origin into the
-    // first unit's span rather than leaving the timeline half an origin ahead
-    // of the element.
-    const gained = after === null ? null : after - (before ?? 0)
-    if (gained !== null && isMeasurable(gained)) return gained
-    if (isMeasurable(unit.duration)) return unit.duration
+    if (after !== null) {
+      // The buffer spoke, so it decides — this is what keeps the spans
+      // telescoping onto the buffer's own absolute end. A null `before` means
+      // it was empty, so the whole of `after` is this append's gain, which also
+      // folds a non-zero buffer origin into the first unit's span rather than
+      // leaving the timeline half an origin ahead of the element.
+      const gained = after - (before ?? 0)
+      if (isMeasurable(gained)) return gained
+
+      // It answered ZERO (or went backwards under eviction). That is an answer,
+      // not a silence: the nominal must NOT be substituted here, or `end()`
+      // stops being the buffer's end and every later unit is mis-placed.
+      logReaderEvent('reader-error', detailFor(unit.index, 'duration unmeasurable, counted as 0'))
+      return 0
+    }
+
+    // No ranges at all — the buffer told us nothing, so the caller's number is
+    // the only one there is. Never silently: this is the single span on the
+    // timeline that was not measured, and it is the only way the telescoping
+    // can be off, so it is recorded like any other reader fault.
+    if (isMeasurable(unit.duration)) {
+      logReaderEvent(
+        'reader-error',
+        detailFor(unit.index, `buffer reported no ranges, counted nominal ${unit.duration}`)
+      )
+      return unit.duration
+    }
 
     logReaderEvent('reader-error', detailFor(unit.index, 'duration unmeasurable, counted as 0'))
     return 0

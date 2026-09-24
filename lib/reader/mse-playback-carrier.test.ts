@@ -46,6 +46,16 @@ function fakeTimeRanges(ranges: ReadonlyArray<readonly [number, number]>): TimeR
 let appendGains: number[] = []
 /** Used once `appendGains` runs out, so a test that does not care need not care. */
 const DEFAULT_APPEND_GAIN = 10
+/**
+ * Whole `buffered` layouts for the next appends, consumed in order; `null`
+ * defers to the growing-single-range model above.
+ *
+ * A real `SourceBuffer` is GAPPED whenever eviction takes a bite out of the
+ * middle or the front, and then "where the next append landed" is the LAST
+ * range's end, not the first's. The gain model can never produce that shape, so
+ * an entry here states the layout the append leaves behind directly.
+ */
+let appendRanges: (ReadonlyArray<readonly [number, number]> | null)[] = []
 
 class FakeSourceBuffer extends EventTarget {
   updating = false
@@ -63,13 +73,24 @@ class FakeSourceBuffer extends EventTarget {
     this.accepted.push(data.byteLength)
     this.updating = true
 
-    const gain = appendGains.length > 0 ? (appendGains.shift() as number) : DEFAULT_APPEND_GAIN
+    const layout = appendRanges.length > 0 ? appendRanges.shift()! : null
+    const gain =
+      layout !== null
+        ? 0
+        : appendGains.length > 0
+          ? (appendGains.shift() as number)
+          : DEFAULT_APPEND_GAIN
     // A real buffer ingests asynchronously and its `buffered` range only covers
     // the new media once `updateend` fires. Growing it here, on the same tick as
     // the event, is what lets the carrier measure the append.
     setTimeout(() => {
-      this.bufferedEnd += gain
-      this.buffered = fakeTimeRanges(this.bufferedEnd > 0 ? [[0, this.bufferedEnd]] : [])
+      if (layout !== null) {
+        this.bufferedEnd = layout.length > 0 ? layout[layout.length - 1][1] : 0
+        this.buffered = fakeTimeRanges(layout)
+      } else {
+        this.bufferedEnd += gain
+        this.buffered = fakeTimeRanges(this.bufferedEnd > 0 ? [[0, this.bufferedEnd]] : [])
+      }
       this.updating = false
       this.dispatchEvent(new Event('updateend'))
     }, 0)
@@ -197,6 +218,7 @@ beforeEach(() => {
   revokedUrls = []
   sourceOfUrl = new Map()
   appendGains = []
+  appendRanges = []
   FakeMediaSource.isTypeSupported.mockClear().mockReturnValue(true)
   URL.createObjectURL = vi.fn((object: MediaSource | Blob) => {
     const url = `blob:mse-playback/${createdUrls.length}`
@@ -424,7 +446,122 @@ describe('mse playback carrier', () => {
     expect(detailsOfType('reader-error')).toEqual([
       '0: duration unmeasurable, counted as 0',
       '1: duration unmeasurable, counted as 0',
+      // Unit 2's span is the ONE number on this timeline that the buffer never
+      // reported, so the substitution is recorded as loudly as a failure is.
+      '2: buffer reported no ranges, counted nominal 5',
     ])
+  })
+
+  it('trusts a measured gain of zero over a non-zero nominal duration', async () => {
+    const { carrier } = attached()
+    // Unit 1's append lands in a buffer that ALREADY has ranges and gains it
+    // nothing. The buffer has spoken — and it said zero.
+    appendGains = [10, 0, 6]
+
+    await carrier.appendUnits([unit(0), unit(1, 3), unit(2)], { continueTimeline: false })
+
+    // The nominal 3 is NOT substituted. Substituting it would seat unit 2 at 13
+    // and leave `end()` at 19 while the buffer really ends at 16 — a permanent
+    // three-second mis-location of every later unit, and the only error in this
+    // module that compounds instead of being re-anchored by the next append.
+    expect(carrier.timeline().startOf(0)).toBe(0)
+    expect(carrier.timeline().startOf(1)).toBe(10)
+    expect(carrier.timeline().startOf(2)).toBe(10)
+    expect(carrier.timeline().end()).toBe(16)
+    // The telescoping property itself: the spans sum to the buffer's real end.
+    expect(created[0].sourceBuffer.buffered.end(0)).toBe(carrier.timeline().end())
+
+    // And it is not silent — a unit that was counted as 0 says so.
+    expect(detailsOfType('reader-error')).toEqual(['1: duration unmeasurable, counted as 0'])
+  })
+
+  it('measures the gain from the last buffered range, not the first', async () => {
+    const { carrier } = attached()
+    // Unit 0 fills [0, 10]. Unit 1's append evicts the middle and lands after
+    // the hole; unit 2 extends the tail. The FIRST range shrinks while the
+    // append point only ever moves forward.
+    appendGains = [10]
+    appendRanges = [
+      null,
+      [
+        [0, 6],
+        [10, 16],
+      ],
+      [
+        [0, 6],
+        [10, 22],
+      ],
+    ]
+
+    await carrier.appendUnits([unit(0), unit(1), unit(2)], { continueTimeline: false })
+
+    // Reading `ranges[0]` instead would measure unit 1's gain as 6 − 10 = −4 and
+    // unit 2's as 0, seating unit 2 at 10 with `end()` stuck at 10.
+    expect(carrier.timeline().startOf(0)).toBe(0)
+    expect(carrier.timeline().startOf(1)).toBe(10)
+    expect(carrier.timeline().startOf(2)).toBe(16)
+    expect(carrier.timeline().end()).toBe(22)
+    expect(detailsOfType('reader-error')).toEqual([])
+  })
+
+  it('serialises overlapping appendUnits calls into the order the callers chose', async () => {
+    const { carrier } = attached()
+    appendGains = [4, 5, 6, 7]
+
+    // The production shape: `prepareUnit` is async and fires per prefetch, so a
+    // second batch is offered while the first is still in flight. Both promises
+    // are started before either is awaited.
+    const first = carrier.appendUnits([unit(0), unit(1)], { continueTimeline: false })
+    const second = carrier.appendUnits([unit(2), unit(3)], { continueTimeline: true })
+    await Promise.all([first, second])
+
+    // Caller order, not interleaved arrival order — and the spans telescope onto
+    // the buffer's absolute end, which only holds if each unit's `before` was
+    // the previous unit's `after`.
+    expect(carrier.timeline().startOf(0)).toBe(0)
+    expect(carrier.timeline().startOf(1)).toBe(4)
+    expect(carrier.timeline().startOf(2)).toBe(9)
+    expect(carrier.timeline().startOf(3)).toBe(15)
+    expect(carrier.timeline().end()).toBe(22)
+    expect(created[0].sourceBuffer.buffered.end(0)).toBe(22)
+    expect(created).toHaveLength(1)
+  })
+
+  it('refuses a seek to a unit that was never prepared', async () => {
+    const { carrier, element } = attached()
+    appendGains = [4, 5]
+
+    await carrier.appendUnits([unit(0), unit(1)], { continueTimeline: false })
+    carrier.seekToUnit(1)
+    element.touches.length = 0
+    clearReaderLog()
+
+    carrier.seekToUnit(7)
+
+    // A never-appended index is not an eviction, so clamping it would be an
+    // invention: the reader would play unit 0's section while believing it is
+    // reading unit 7. Refusing leaves the playhead where the caller can see it.
+    expect(element.touches).toEqual([])
+    expect(element.node.currentTime).toBe(4)
+    expect(detailsOfType('reader-error')).toEqual(['7: seek refused: unit not prepared'])
+  })
+
+  it('reports every unit as failed when no element is attached', async () => {
+    const carrier = createMsePlaybackCarrier()
+    appendGains = [4, 5]
+
+    // No `attach`: the source could never open, so every append would wait on
+    // `sourceopen` forever. The call resolves instead, and says why per unit.
+    await expect(
+      carrier.appendUnits([unit(0), unit(1)], { continueTimeline: false })
+    ).resolves.toBeUndefined()
+
+    expect(created).toEqual([])
+    expect(detailsOfType('append-failed')).toEqual([
+      '0: no element attached',
+      '1: no element attached',
+    ])
+    expect(carrier.timeline().end()).toBe(0)
   })
 
   it('revokes the URL and clears src on dispose', async () => {
