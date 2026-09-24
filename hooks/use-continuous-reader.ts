@@ -18,18 +18,6 @@ import type { TTSPlayback } from './useTTS'
 /** Shown as the album on every OS media control. */
 const MEDIA_SESSION_ALBUM = 'Motyl.dev'
 
-/**
- * The `name` of a rejection, for the diagnostic log's detail. A wake-lock
- * refusal is identified by its name (`NotAllowedError` when the page is hidden),
- * and the reject value is not guaranteed to be an `Error`.
- */
-const rejectionName = (reason: unknown): string => {
-  if (typeof reason === 'object' && reason !== null && 'name' in reason) {
-    return String((reason as { name: unknown }).name)
-  }
-  return String(reason)
-}
-
 // Where the consumer should anchor the scroll for this change:
 //  - { line }  paragraph play → scroll to that exact paragraph.
 //  - { link: true }  Next → scroll to the section's source link (bottom "Link:"),
@@ -392,14 +380,11 @@ export function useContinuousReader(
   const holdsScreenAwake = isPlaying || isHandingOff
   useEffect(() => {
     if (!holdsScreenAwake) return
-    // The `.catch` is observation only — it adds no await and changes no
-    // ordering. A refusal here is EXPECTED and frequent: re-requesting while the
-    // page is hidden (the screen-off case this lock exists for) is rejected with
-    // NotAllowedError once per section, by design. The detail carries the name
-    // so a routine refusal is distinguishable from anything else.
-    requestWakeLock().catch((reason: unknown) => {
-      logReaderEvent('wakelock-failed', rejectionName(reason))
-    })
+    // No `.catch` here, deliberately. `useWakeLock.acquire()` swallows the
+    // rejection — a refused lock is non-fatal and the reader keeps reading — so
+    // this promise RESOLVES even on a refusal and a handler here could never
+    // run. `wakelock-failed` is logged at the rejection, inside `useWakeLock`.
+    void requestWakeLock()
     // Runs on a real pause/stop (playback ended and nothing queued behind it)
     // and on unmount alike.
     return () => {

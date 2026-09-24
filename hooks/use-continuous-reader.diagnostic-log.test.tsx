@@ -220,14 +220,14 @@ describe('useContinuousReader diagnostic log', () => {
     expect(firstOfType('wakelock-acquired')).toBeDefined()
   })
 
-  // `wakelock-failed` is NOT asserted here. The real `useWakeLock.acquire()`
-  // swallows the rejection — a refused lock is non-fatal by design — so
-  // `requestWakeLock()` resolves and the reader's own `.catch` never runs in a
-  // browser. A test here could only prove it by driving a MOCK that rejects,
-  // i.e. by asserting against a hook contract the real one does not have. The
-  // entry is recorded at the rejection, inside `useWakeLock`, and pinned by
-  // `useWakeLock.test.tsx` — one source of truth. The reader's `.catch` stays
-  // as a belt-and-braces net for a future hook that does propagate.
+  // `wakelock-failed` is NOT asserted here, and the reader no longer has a
+  // `.catch` to assert against. The real `useWakeLock.acquire()` swallows the
+  // rejection — a refused lock is non-fatal by design — so `requestWakeLock()`
+  // resolves and a handler in the reader could never run in a browser. A test
+  // here could only prove it by driving a MOCK that rejects, i.e. by asserting
+  // against a hook contract the real one does not have. The entry is recorded
+  // at the rejection, inside `useWakeLock`, and pinned by `useWakeLock.test.tsx`
+  // — one source of truth.
 
   it('records nothing while the flag is unset', async () => {
     const items = [makeItem(0), makeItem(1)]

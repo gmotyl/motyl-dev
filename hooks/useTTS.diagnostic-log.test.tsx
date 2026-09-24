@@ -348,7 +348,7 @@ describe('useTTS diagnostic log — guard-suppressed events', () => {
     expect(firstOfType('synthesis-failed')).toBeUndefined()
   })
 
-  it('records an ended event that the abort guard suppresses, marked suppressed', async () => {
+  it('records an ended event that the shared guard suppresses, marked suppressed', async () => {
     enableLog()
     const units = ['a'.repeat(10), 'b'.repeat(30)]
     const { result } = renderHook(() => useTTS('irrelevant content', { units }))
