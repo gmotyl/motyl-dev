@@ -9,19 +9,45 @@ import {
 import { SPIKE_FRAGMENTS } from '@/lib/reader/spike-fragments'
 
 /**
- * Speech-rate assumption for the length floor below.
+ * A floor on fragment length. It is NOT a guarantee of twenty seconds.
  *
- * Polish TTS at a normal rate reads roughly 150 words per minute; a Polish word
- * plus its following space averages about 7 characters. That is ~17.5 chars/s,
- * which we round DOWN to 13 chars/s so a slower voice still clears the bar.
- * Twenty seconds at 13 chars/s is 260 characters, and we require 240 to leave
- * the wording a little room without letting a one-liner through.
+ * What it actually guards against is a one-liner: a fragment short enough that
+ * the run would be mostly boundaries, which would quietly change what the
+ * protocol measures.
+ *
+ * The arithmetic, stated honestly. Polish TTS at a normal rate reads roughly
+ * 150 words per minute and a Polish word plus its following space averages
+ * about 7 characters: ~17.5 chars/s. 240 was derived by rounding that DOWN to
+ * 13 chars/s — i.e. from the SLOWEST plausible voice, which is the direction
+ * that makes fragments PASS, not the direction that makes the audio long
+ * enough. To actually guarantee twenty seconds you divide by the FASTEST
+ * plausible rate, and at ~17.5 chars/s that is ~350 characters.
+ *
+ * The floor is deliberately left at 240 anyway. The eight committed fragments
+ * run 288–303 characters, so raising it would rewrite prose against a number
+ * nobody has checked against a real synth: no measured duration exists yet.
+ * The seam report's `expectedDuration` settles the true durations on the first
+ * screen-on bench run, and the floor can be set from that instead of from an
+ * estimate.
+ *
+ * What a passing-but-short fragment would cost, so the risk is on the record:
+ * a 243-character fragment speaks for about 14–16 s rather than 20 s, which is
+ * 27–43% more fragment boundaries per ten-minute run. Boundaries survived over
+ * time is the measurement, so that is silent drift in the instrument itself.
  */
 const MIN_FRAGMENT_CHARS = 240
 
 const enable = () => window.localStorage.setItem(READER_LOG_FLAG, '1')
 
-/** The vocabulary Task 1 adds; every one must be loggable like any existing type. */
+/**
+ * The vocabulary Task 1 adds; every one must be loggable like any existing type.
+ *
+ * The `readonly ReaderLogEventType[]` annotation is the ENTIRE compile-time
+ * gate for "nine new types": it fails only on a name that is not in the union.
+ * A member DELETED from the union is invisible to `pnpm test` — this array
+ * would simply stop compiling, which only `npx tsc --noEmit` reports. The
+ * length assertion below is what stops the array itself being emptied.
+ */
 const NEW_EVENT_TYPES: readonly ReaderLogEventType[] = [
   'spike-mode',
   'append',
@@ -52,7 +78,8 @@ describe('SPIKE_FRAGMENTS', () => {
 
     for (const fragment of SPIKE_FRAGMENTS) {
       expect(fragment.text.trim()).not.toBe('')
-      // Roughly twenty seconds of speech; see MIN_FRAGMENT_CHARS above.
+      // Long enough not to be a one-liner — NOT a proof of twenty seconds.
+      // See MIN_FRAGMENT_CHARS above for why the two differ.
       expect(fragment.text.trim().length).toBeGreaterThanOrEqual(MIN_FRAGMENT_CHARS)
     }
 
@@ -66,6 +93,10 @@ describe('SPIKE_FRAGMENTS', () => {
 describe('the widened diagnostic log vocabulary', () => {
   it('records each of the new spike event types', () => {
     enable()
+
+    // The criterion says nine. Without this the whole test passes vacuously on
+    // an emptied array, and only a hand count stands behind the number.
+    expect(NEW_EVENT_TYPES).toHaveLength(9)
 
     for (const type of NEW_EVENT_TYPES) {
       logReaderEvent(type, type)

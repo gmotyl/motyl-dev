@@ -10,10 +10,15 @@
  * 2. Distinct prose. The operator identifies the fragment BY EAR, so a repeat
  *    in the log has to mean a real repeat, not a copy-paste. Eight paraphrases
  *    of one sentence would make a loop indistinguishable from a stall.
- * 3. Roughly twenty seconds each. Polish TTS at a normal rate reads about 150
- *    words per minute and a Polish word plus its space averages ~7 characters,
- *    so ~17.5 chars/s; the test floors that at 13 chars/s and requires 240
- *    characters, which a slower voice still stretches past twenty seconds.
+ * 3. Long enough not to be a one-liner. The test floors each fragment at 240
+ *    characters, and that floor is exactly what it says — a rejection of prose
+ *    so short that the run would be mostly boundaries. It is NOT a guarantee
+ *    of twenty seconds: 240 was derived from the SLOWEST plausible speech rate,
+ *    which is the direction that makes fragments pass, while guaranteeing
+ *    twenty seconds means dividing by the FASTEST rate (~350 characters).
+ *    These eight run 288–303, no real synth has been measured yet, and the
+ *    seam report's `expectedDuration` will settle the true durations on the
+ *    first screen-on bench run. See `MIN_FRAGMENT_CHARS` next door.
  *
  * Text only, deliberately: no audio is committed. Synthesis happens at runtime
  * through the production pipeline so the encoder headers under test are the
