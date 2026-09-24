@@ -9,6 +9,7 @@ import {
   resolveNextTrackIndex,
   resolvePreviousTrackIndex,
 } from '@/lib/reader/media-session-tracks'
+import { logReaderEvent } from '@/lib/reader/diagnostic-log'
 import { useMediaSession } from './use-media-session'
 import { useTTS } from './useTTS'
 import { useWakeLock } from './useWakeLock'
@@ -16,6 +17,18 @@ import type { TTSPlayback } from './useTTS'
 
 /** Shown as the album on every OS media control. */
 const MEDIA_SESSION_ALBUM = 'Motyl.dev'
+
+/**
+ * The `name` of a rejection, for the diagnostic log's detail. A wake-lock
+ * refusal is identified by its name (`NotAllowedError` when the page is hidden),
+ * and the reject value is not guaranteed to be an `Error`.
+ */
+const rejectionName = (reason: unknown): string => {
+  if (typeof reason === 'object' && reason !== null && 'name' in reason) {
+    return String((reason as { name: unknown }).name)
+  }
+  return String(reason)
+}
 
 // Where the consumer should anchor the scroll for this change:
 //  - { line }  paragraph play → scroll to that exact paragraph.
@@ -308,10 +321,16 @@ export function useContinuousReader(
 
       const nextIndex = itemsRef.current.findIndex((section) => section.key === currentKey) + 1
       if (nextIndex > 0 && nextIndex < itemsRef.current.length) {
+        // Observation only. The detail is the STABLE key, never `nextIndex`: the
+        // queue mutates while the reader runs (mark-as-read, DOM eviction), so a
+        // numeric index would name a different section by the time the log is
+        // read off the device.
+        logReaderEvent('section-advance', itemsRef.current[nextIndex].key)
         selectAndStart(nextIndex, 0, true)
       }
     }, [currentKey, selectAndStart]),
     onError: useCallback((nextError: Error) => {
+      logReaderEvent('reader-error', nextError.message)
       playbackRef.current?.stop()
       // A start that failed is not a handoff in progress: without this the
       // reader would look eternally "about to play" and never drop the lock.
@@ -340,7 +359,7 @@ export function useContinuousReader(
     resume: playbackResume,
   } = playback
 
-  const { requestWakeLock, releaseWakeLock } = useWakeLock()
+  const { isActive: isWakeLockActive, requestWakeLock, releaseWakeLock } = useWakeLock()
 
   // The voice is running again, so the handoff that was bridging the gap is
   // over. Deliberately keyed on `isPlaying` turning true — NOT cleared where the
@@ -373,13 +392,29 @@ export function useContinuousReader(
   const holdsScreenAwake = isPlaying || isHandingOff
   useEffect(() => {
     if (!holdsScreenAwake) return
-    void requestWakeLock()
+    // The `.catch` is observation only — it adds no await and changes no
+    // ordering. A refusal here is EXPECTED and frequent: re-requesting while the
+    // page is hidden (the screen-off case this lock exists for) is rejected with
+    // NotAllowedError once per section, by design. The detail carries the name
+    // so a routine refusal is distinguishable from anything else.
+    requestWakeLock().catch((reason: unknown) => {
+      logReaderEvent('wakelock-failed', rejectionName(reason))
+    })
     // Runs on a real pause/stop (playback ended and nothing queued behind it)
     // and on unmount alike.
     return () => {
       void releaseWakeLock()
     }
   }, [holdsScreenAwake, requestWakeLock, releaseWakeLock])
+
+  // A GRANT, not a request: `isActive` turns true only once a sentinel has been
+  // taken and kept, so this cannot report a swallowed failure as a success the
+  // way "the request promise settled" would. Observation only — it records the
+  // re-acquire after the browser's auto-release on hide as its own entry, which
+  // is exactly the sequence a screen-off log is read for.
+  useEffect(() => {
+    if (isWakeLockActive) logReaderEvent('wakelock-acquired')
+  }, [isWakeLockActive])
 
   // The position's section disappeared (mark-as-read, DOM eviction): the derived
   // index has already resolved to a survivor per the previous order, so adopt it
