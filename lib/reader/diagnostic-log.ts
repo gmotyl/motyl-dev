@@ -29,6 +29,20 @@ export type ReaderLogEventType =
   | 'freeze'
   | 'resume'
   | 'pagehide'
+  // Carrier spike: which mode a run selected.
+  | 'spike-mode'
+  // MSE carrier: one SourceBuffer append, and its failure.
+  | 'append'
+  | 'append-failed'
+  // Element-level blind spots the first device run exposed.
+  | 'media-pause'
+  | 'media-stalled'
+  | 'media-waiting'
+  | 'media-suspend'
+  // navigator.mediaSession.playbackState transitions — the lock-screen widget.
+  | 'mediasession-state'
+  // Periodic proof-of-life while playing; carries currentTime.
+  | 'heartbeat'
 
 export type ReaderLogEntry = {
   /** `Date.now()` when the event was recorded. */
