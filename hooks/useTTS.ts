@@ -7,6 +7,10 @@ import { synthesizeSpeech } from '@/lib/tts/client'
 import { describeError, detailFor, logReaderEvent } from '@/lib/reader/diagnostic-log'
 import type { Carrier } from '@/lib/reader/carrier'
 import { createSrcSwapCarrier } from '@/lib/reader/src-swap-carrier'
+import { isMseAudioSupported } from '@/lib/reader/mse-carrier'
+import { createMsePlaybackCarrier } from '@/lib/reader/mse-playback-carrier'
+import { createBoundaryTracker, type BoundaryTracker } from '@/lib/reader/boundary-tracker'
+import type { UnitTimeline } from '@/lib/reader/unit-timeline'
 
 export interface TTSState {
   isPlaying: boolean
@@ -135,6 +139,19 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   const reportStartRef = useRef<(index: number, started: Promise<void> | undefined) => void>(
     () => {}
   )
+  // The `timeupdate`-driven unit advance, reached through a ref for the same
+  // reason as the progress emitter: the listener is attached once, at element
+  // creation, and the handler it has to reach carries the CURRENT session.
+  const advanceUnitsRef = useRef<() => void>(() => {})
+  /**
+   * The generation and abort signal of the play session now running, or null
+   * between sessions.
+   *
+   * The advance above is driven by an element listener rather than by a call
+   * chain, so it cannot close over either — and without them it could not tell
+   * a live crossing from one arriving after the user pressed pause.
+   */
+  const sessionRef = useRef<{ generation: number; signal: AbortSignal } | null>(null)
 
   // Buffer cache: pre-fetched MP3 bytes keyed by chunk index. An entry is
   // dropped once the carrier holds the unit — the carrier then owns the audio.
@@ -148,13 +165,20 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   const carrierRef = useRef<Carrier | null>(null)
   const getCarrier = useCallback((): Carrier => {
     if (!carrierRef.current) {
-      carrierRef.current = createSrcSwapCarrier({
-        // The prefetch depth IS the retention window: a unit is prepared
-        // BUFFER_AHEAD ahead of the playhead and released once the playhead is
-        // past it.
-        retainAhead: BUFFER_AHEAD,
-        onStarted: (index, started) => reportStartRef.current(index, started),
-      })
+      // Chosen ONCE, on the first use (the mount effect), and never revisited:
+      // the element and the OS media session hanging off it outlive every
+      // content change, and a carrier swapped underneath them would take both
+      // with it. iPhone Safari has no MediaSource at all, so the src-swap
+      // branch is a live path on real devices rather than a legacy one.
+      carrierRef.current = isMseAudioSupported()
+        ? createMsePlaybackCarrier()
+        : createSrcSwapCarrier({
+            // The prefetch depth IS the retention window: a unit is prepared
+            // BUFFER_AHEAD ahead of the playhead and released once the playhead
+            // is past it.
+            retainAhead: BUFFER_AHEAD,
+            onStarted: (index, started) => reportStartRef.current(index, started),
+          })
     }
     return carrierRef.current
   }, [])
@@ -172,6 +196,45 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     (index: number): boolean => getCarrier().timeline().startOf(index) !== null,
     [getCarrier]
   )
+
+  /**
+   * A view onto whichever timeline the carrier holds RIGHT NOW.
+   *
+   * Both carriers REPLACE their timeline object rather than mutating one — the
+   * src-swap carrier on every `seekToUnit` (its prune rebuilds it), the MSE one
+   * on every teardown — so anything that cached the object returned once would
+   * keep answering from a timeline nothing appends to any more. `carrierHasUnit`
+   * above is safe because it re-fetches per call; this is the same discipline
+   * for the one consumer that has to be handed a timeline instead of asking for
+   * one, the boundary tracker.
+   */
+  const liveTimelineRef = useRef<UnitTimeline | null>(null)
+  const getLiveTimeline = useCallback((): UnitTimeline => {
+    if (!liveTimelineRef.current) {
+      liveTimelineRef.current = {
+        push: (index, duration) => getCarrier().timeline().push(index, duration),
+        unitAt: (time) => getCarrier().timeline().unitAt(time),
+        startOf: (index) => getCarrier().timeline().startOf(index),
+        end: () => getCarrier().timeline().end(),
+        dropBefore: (time) => getCarrier().timeline().dropBefore(time),
+        oldest: () => getCarrier().timeline().oldest(),
+      }
+    }
+    return liveTimelineRef.current
+  }, [getCarrier])
+
+  /**
+   * Turns the element's clock into unit completions — the MSE path's
+   * replacement for the per-unit `ended` the src-swap carrier gets for free.
+   * Created once, over the live view above, so it survives every rebuild.
+   */
+  const boundaryTrackerRef = useRef<BoundaryTracker | null>(null)
+  const getBoundaryTracker = useCallback((): BoundaryTracker => {
+    if (!boundaryTrackerRef.current) {
+      boundaryTrackerRef.current = createBoundaryTracker(getLiveTimeline())
+    }
+    return boundaryTrackerRef.current
+  }, [getLiveTimeline])
 
   const invalidatePendingRequests = useCallback(() => {
     requestGenerationRef.current += 1
@@ -204,7 +267,13 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       // decision would be made from a minutes-stale elapsed value, and the bar
       // would jump on return. Attached once for the element's whole life — no
       // per-unit add/remove — so a src swap can never drop it mid-article.
-      element.addEventListener('timeupdate', () => emitProgressRef.current())
+      // Advance FIRST, emit second: on one continuous timeline this very tick
+      // may be the one that crossed a unit boundary, and the emitter has to
+      // measure against the unit the crossing moved to.
+      element.addEventListener('timeupdate', () => {
+        advanceUnitsRef.current()
+        emitProgressRef.current()
+      })
       document.body.appendChild(element)
       audioElementRef.current = element
       elementUnlockedRef.current = false
@@ -311,7 +380,13 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
    */
   const rebuildCarrier = useCallback(() => {
     getCarrier().rebuild()
-  }, [getCarrier])
+    // The timeline the tracker was seated on is gone with it. A seat carried
+    // across the rebuild would compare a dead span's index against a fresh
+    // one — same index, different timeline — and swallow the first unit's
+    // completion of the next session. The fresh timeline is empty, so this
+    // leaves the tracker unseated and the first tick re-seats it.
+    getBoundaryTracker().reseat(0)
+  }, [getBoundaryTracker, getCarrier])
 
   // Synthesize a single chunk. The bytes go to the carrier as-is: nothing here
   // decodes them, which is what keeps the synthesis cache's shared ArrayBuffer
@@ -405,14 +480,35 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     // Progress must never go backwards, so the gap emits nothing at all.
     if (loadedUnitIndexRef.current !== currentChunkIndexRef.current) return
 
-    // duration is NaN until the element has metadata, and the element rewinds to
-    // 0 on every src swap — so an unknown duration reads as "just started"
-    // rather than poisoning the percentage with NaN.
-    const duration = element.duration
-    const chunkProgress =
-      Number.isFinite(duration) && duration > 0
-        ? Math.min(element.currentTime / duration, 1)
-        : 0
+    let chunkProgress: number
+    if (getCarrier().kind === 'mse') {
+      // One continuous timeline: the element's clock is ABSOLUTE and its
+      // `duration` is the whole buffer, so a unit's own progress can only be
+      // measured against that unit's span.
+      const span = getLiveTimeline().unitAt(element.currentTime)
+      // Null is a gap, dropped media, or a playhead past the last append; a
+      // span belonging to a DIFFERENT unit means the playhead has crossed a
+      // boundary the tracker has not reported yet. Both are the same "do not
+      // measure" case as the loaded-unit guard above — progress read against a
+      // span this unit does not own is the spike-then-fall this emitter exists
+      // to prevent. (A zero-length span never wins a `unitAt` lookup at all, so
+      // the guarded division below cannot be reached with one; the fallback is
+      // there because the division must not depend on that being true.)
+      if (span === null || span.index !== currentChunkIndexRef.current) return
+      chunkProgress =
+        span.duration > 0
+          ? Math.min((element.currentTime - span.start) / span.duration, 1)
+          : 0
+    } else {
+      // duration is NaN until the element has metadata, and the element rewinds
+      // to 0 on every src swap — so an unknown duration reads as "just started"
+      // rather than poisoning the percentage with NaN.
+      const duration = element.duration
+      chunkProgress =
+        Number.isFinite(duration) && duration > 0
+          ? Math.min(element.currentTime / duration, 1)
+          : 0
+    }
 
     const completedChars = completedCharsRef.current
     const currentChunkChars = charCountsRef.current[currentChunkIndexRef.current] || 0
@@ -440,7 +536,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         currentChunkIndex: currentChunkIndexRef.current,
       }))
     }
-  }, [onProgress])
+  }, [getCarrier, getLiveTimeline, onProgress])
 
   emitProgressRef.current = emitProgress
 
@@ -592,10 +688,17 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
       // Resuming the unit the element already holds: keep its source (a src
       // assignment rewinds) and just seek back to where pause() left off.
+      //
+      // On the MSE carrier there is no offset to come back to — the element
+      // keeps its own `currentTime` across a pause on one continuous timeline —
+      // so what makes this a resume is ONLY that the element is already
+      // positioned inside this unit. A natural unit advance arrives here the
+      // same way, which is exactly what keeps it free of a seek: the playhead
+      // walked into the span on its own and re-pointing it could only rewind.
       const resuming =
-        offset > 0 &&
         loadedUnitIndexRef.current === index &&
-        carrierHasUnit(index)
+        carrierHasUnit(index) &&
+        (carrier.kind === 'mse' || offset > 0)
 
       if (!resuming) {
         // The previous unit is abandoned the moment this branch commits to a new
@@ -636,7 +739,27 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
             }
           }
 
-          await prepareUnit(index, data)
+          try {
+            await prepareUnit(index, data)
+          } catch (error) {
+            // The src-swap carrier cannot refuse a unit; the MSE one can — a
+            // SourceBuffer that rejects an append poisons its own queue, and
+            // `appendUnits` rejects to say so. Without this catch that refusal
+            // escapes as an unhandled rejection (nothing awaits `playChunk`)
+            // and the unit is never counted against the failure streak, so a
+            // buffer refusing everything would leave the reader silent with
+            // `isPlaying` still true — the exact failure this change exists to
+            // remove. It is a unit failure of the same kind as synthesis never
+            // producing bytes, and is treated as one.
+            if (
+              generation !== requestGenerationRef.current ||
+              signal.aborted ||
+              (error as Error).name === 'AbortError'
+            ) return
+            console.warn(`[TTS] Chunk ${index} could not be prepared:`, error)
+            failUnit(index, error as Error)
+            return
+          }
         }
 
         if (
@@ -653,7 +776,10 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         loadedUnitIndexRef.current = index
       } else {
         setState((prev) => ({ ...prev, isBuffering: false, currentChunkIndex: index }))
-        element.currentTime = offset
+        // Only the src-swap path has an offset to restore — see `resuming`. On
+        // the MSE carrier the element's position is already the right one, and
+        // writing 0 over it would rewind the whole timeline.
+        if (offset > 0) element.currentTime = offset
       }
 
       /**
@@ -728,7 +854,25 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       reportStartRef.current = reportStart
 
       logReaderEvent('play-called', detailFor(index))
-      if (resuming) {
+      if (carrier.kind === 'mse') {
+        // One continuous timeline, so a unit is a POSITION and this call has at
+        // most two things to do — and on a natural advance, neither.
+        //
+        // The element is re-pointed only when the playhead is not already
+        // inside this unit (a session start, or a "play from here" jump), and
+        // it is STARTED only when it is not already running. Every `src`
+        // assignment and every `play()` is a boundary at which a backgrounded
+        // phone can revoke the page's media status, and having none of them per
+        // unit is the whole reason this carrier exists.
+        if (!resuming) {
+          carrier.seekToUnit(index)
+          // The seek MOVED the playhead; nothing was read on the way. Re-seat
+          // so the next tick does not report every span between the old
+          // position and the new one as completed.
+          getBoundaryTracker().reseat(element.currentTime)
+        }
+        if (element.paused) reportStart(index, element.play?.())
+      } else if (resuming) {
         reportStart(index, element.play?.())
       } else {
         // THE unit swap: the carrier points the element at unit `index`,
@@ -748,6 +892,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       fetchUnitAudio,
       fillBuffer,
       getAudioElement,
+      getBoundaryTracker,
       getCarrier,
       invalidatePendingRequests,
       onComplete,
@@ -757,6 +902,53 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       runProgressFrame,
     ]
   )
+
+  /**
+   * THE unit advance on the MSE carrier.
+   *
+   * One continuous timeline has no `ended` at a seam, so "unit N has been read"
+   * can only be observed by the playhead crossing out of N's span. `timeupdate`
+   * is the clock to observe it on — it is driven by the media pipeline, which a
+   * backgrounded page keeps running long after rAF and timers are throttled —
+   * and the boundary tracker turns a tick into completions, several at once
+   * when a throttled page skipped ticks entirely.
+   *
+   * The bookkeeping is the same `onended` does on the src-swap path. What comes
+   * after it is not: `playChunk` is entered for the new unit with the element
+   * ALREADY carrying it, so that call neither seeks nor starts anything — it
+   * only re-points the handlers, refills the buffer and moves the state.
+   */
+  const advanceUnits = useCallback(() => {
+    if (getCarrier().kind !== 'mse') return
+
+    const element = audioElementRef.current
+    const session = sessionRef.current
+    // The same three-legged guard the element handlers apply, for the same
+    // reason: a tick delivered after a pause or a superseded session must not
+    // count a unit complete.
+    if (!isPlayingRef.current || !element || session === null) return
+    if (session.generation !== requestGenerationRef.current || session.signal.aborted) return
+
+    const completed = getBoundaryTracker().advance(element.currentTime)
+    if (completed.length === 0) return
+
+    for (const finished of completed) {
+      logReaderEvent('unit-ended', detailFor(finished))
+      // A unit read all the way through is the only real proof the pipeline is
+      // healthy — the same reason `onended` clears the streak on the other path.
+      consecutiveFailuresRef.current = 0
+      completedCharsRef.current += charCountsRef.current[finished] || 0
+    }
+
+    const next = completed[completed.length - 1] + 1
+    // The element is already carrying it: the playhead walked in on its own.
+    // Saying so here is what makes the `playChunk` below a resume rather than a
+    // jump, and therefore what keeps the advance free of a seek.
+    loadedUnitIndexRef.current = next
+    void playChunk(next, 0, session.generation, session.signal)
+  }, [getBoundaryTracker, getCarrier, playChunk])
+
+  advanceUnitsRef.current = advanceUnits
 
   // Initialize chunks on first play or after completion reset. Prefer pre-split
   // speech units (title → TLDR → body) when the caller supplies them; otherwise
@@ -803,6 +995,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     const abortController = new AbortController()
     abortControllerRef.current = abortController
     const signal = abortController.signal
+    // What the `timeupdate`-driven advance judges a crossing against; it has no
+    // call chain of its own to carry them.
+    sessionRef.current = { generation, signal }
 
     setState((prev) => ({ ...prev, isPlaying: true, isBuffering: true }))
 
@@ -870,35 +1065,61 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     voice,
   ])
 
+  /**
+   * End the current play session — with or without stopping the ELEMENT.
+   *
+   * `pause()` is this with the element paused, and that is the only form the
+   * src-swap path ever uses. An interrupting skip on the MSE carrier is the
+   * other form: one continuous timeline makes the jump a seek, and pausing
+   * first would only force a second `play()` at the far end of it — the exact
+   * boundary this carrier exists to remove.
+   */
+  const interrupt = useCallback(
+    (pauseElement: boolean) => {
+      isPlayingRef.current = false
+      invalidatePendingRequests()
+      sessionRef.current = null
+
+      const element = audioElementRef.current
+      if (element) {
+        if (getCarrier().kind === 'mse') {
+          // No offset, deliberately. On one continuous timeline the element
+          // keeps its own `currentTime` across a pause, so `play()` resumes
+          // exactly where it stopped; an offset could only be restored by a
+          // seek, and a seek is the one thing a resume here must not do.
+          pauseOffsetRef.current = 0
+        } else {
+          // The element keeps its currentTime across a pause; remember it anyway
+          // so play() can seek back explicitly even if something else moved the
+          // playhead in between. It has to: the next `src` assignment rewinds
+          // the element to 0.
+          const duration = element.duration
+          const elapsed = Number.isFinite(element.currentTime) ? element.currentTime : 0
+          pauseOffsetRef.current =
+            Number.isFinite(duration) && duration > 0 ? Math.min(elapsed, duration) : elapsed
+        }
+        // Detach BEFORE pausing: an `ended` already queued for this unit would
+        // otherwise still run and count the unit complete, inflating progress by
+        // a whole unit's characters for the rest of the session. play()
+        // re-attaches handlers for whichever unit it resumes.
+        detachUnitHandlers()
+        if (pauseElement) element.pause?.()
+      }
+
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+        animationFrameRef.current = null
+      }
+
+      setState((prev) => ({ ...prev, isPlaying: false }))
+    },
+    [detachUnitHandlers, getCarrier, invalidatePendingRequests]
+  )
+
   // Pause
   const pause = useCallback(() => {
-    isPlayingRef.current = false
-    invalidatePendingRequests()
-
-    const element = audioElementRef.current
-    if (element) {
-      // The element keeps its currentTime across a pause; remember it anyway so
-      // play() can seek back explicitly even if something else moved the
-      // playhead in between.
-      const duration = element.duration
-      const elapsed = Number.isFinite(element.currentTime) ? element.currentTime : 0
-      pauseOffsetRef.current =
-        Number.isFinite(duration) && duration > 0 ? Math.min(elapsed, duration) : elapsed
-      // Detach BEFORE pausing: an `ended` already queued for this unit would
-      // otherwise still run and count the unit complete, inflating progress by a
-      // whole unit's characters for the rest of the session. play() re-attaches
-      // handlers for whichever unit it resumes.
-      detachUnitHandlers()
-      element.pause?.()
-    }
-
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current)
-      animationFrameRef.current = null
-    }
-
-    setState((prev) => ({ ...prev, isPlaying: false }))
-  }, [detachUnitHandlers, invalidatePendingRequests])
+    interrupt(true)
+  }, [interrupt])
 
   /**
    * Interrupting skip ("play from here"): abort whatever is playing and start at
@@ -907,9 +1128,13 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
    */
   const playFromUnit = useCallback(
     async (unitIndex: number) => {
-      // Aborts in-flight synthesis and pauses the element. The mid-unit offset
-      // it records belongs to the OLD unit, so it is dropped below.
-      pause()
+      // Aborts in-flight synthesis and ends the session. The mid-unit offset it
+      // records belongs to the OLD unit, so it is dropped below.
+      //
+      // On the MSE carrier the element is deliberately left RUNNING: the jump
+      // is a seek on one continuous timeline, and a pause here could only be
+      // undone by a second `play()` at the other end of it.
+      interrupt(getCarrier().kind !== 'mse')
 
       ensureChunks()
       if (chunksRef.current.length === 0) return
@@ -931,7 +1156,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
       await play()
     },
-    [ensureChunks, pause, play]
+    [ensureChunks, getCarrier, interrupt, play]
   )
 
   // Stop
