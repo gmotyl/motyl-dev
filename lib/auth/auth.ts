@@ -43,6 +43,12 @@ const providers = [
   GitHub({
     clientId: process.env.GITHUB_CLIENT_ID!,
     clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+    // GitHub returns the RFC 9207 iss parameter on the callback. @auth/core
+    // below 0.41.2 ships no issuer for this provider and falls back to
+    // https://authjs.dev, so the comparison fails and every sign-in ends on
+    // the "problem with the server configuration" page. Drop this once
+    // next-auth (and with it @auth/core) is upgraded past that version.
+    issuer: "https://github.com/login/oauth",
     profile(profile) {
       return {
         id: profile.id.toString(),
