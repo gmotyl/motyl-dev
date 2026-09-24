@@ -39,7 +39,14 @@ export interface MseCarrier {
   append(index: number, data: ArrayBuffer, duration: number): Promise<void>
   /** Seam report over everything appended so far. */
   report(): SeamReport
-  /** Revokes the object URL and detaches. */
+  /**
+   * Revokes the object URL, rejects every queued append, and — if the source is
+   * open and idle — calls `endOfStream()`.
+   *
+   * It does NOT detach the carrier from the element: nothing here touches the
+   * element, which this module never sees. The caller must clear `element.src`
+   * itself once the URL is revoked (Task 5's `stop()` already does).
+   */
   dispose(): void
 }
 

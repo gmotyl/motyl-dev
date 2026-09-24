@@ -66,6 +66,21 @@ class FakeSourceBuffer extends EventTarget {
     this.updating = false
     this.dispatchEvent(new Event('updateend'))
   }
+
+  /**
+   * The MSE append-error algorithm, as the spec runs it: `updating` goes false,
+   * `error` is fired at the SourceBuffer and THEN `updateend`.
+   *
+   * This — not a synchronous throw — is how a real QuotaExceededError-class or
+   * decode failure arrives once `appendBuffer` has already returned. The
+   * synchronous throw path (`throwOnNextAppend`) only covers refusals the
+   * buffer makes before it accepts the bytes at all.
+   */
+  failAppend(): void {
+    this.updating = false
+    this.dispatchEvent(new Event('error'))
+    this.dispatchEvent(new Event('updateend'))
+  }
 }
 
 class FakeMediaSource extends EventTarget {
@@ -107,6 +122,20 @@ const originalRevokeObjectURL = URL.revokeObjectURL
 const settle = () => new Promise<void>((resolve) => setTimeout(resolve, 0))
 
 const bytes = (length: number) => new ArrayBuffer(length)
+
+/**
+ * Marks a promise as handled without consuming it.
+ *
+ * Several tests below assert on the queue's state BEFORE awaiting a rejection,
+ * so that a queue which kept draining fails on an assertion rather than at the
+ * 60 s suite timeout. That gap spans a macrotask — long enough for Node to
+ * report the still-unawaited rejection as unhandled. A no-op catch closes that
+ * without changing what the test actually awaits.
+ */
+const observed = <T>(promise: Promise<T>): Promise<T> => {
+  void promise.catch(() => {})
+  return promise
+}
 
 const entriesOfType = (type: ReaderLogEventType): ReaderLogEntry[] =>
   readReaderLog().filter((entry) => entry.type === type)
@@ -192,6 +221,96 @@ describe('createMseCarrier', () => {
     await expect(second).resolves.toBeUndefined()
   })
 
+  it('resolves append() only after updateend, not when the buffer starts ingesting', async () => {
+    const { carrier, sourceBuffer } = openCarrier()
+
+    const pending = carrier.append(0, bytes(4), 20)
+    // Observed synchronously the moment the promise settles, so an append that
+    // resolved early is caught even though nothing else awaits it.
+    let settledEarly = false
+    let updatingAtResolution: boolean | null = null
+    void pending.then(() => {
+      settledEarly = true
+      updatingAtResolution = sourceBuffer.updating
+    })
+
+    await settle()
+
+    expect(sourceBuffer.appendBuffer).toHaveBeenCalledTimes(1)
+    expect(sourceBuffer.updating).toBe(true)
+    // The bytes are with the buffer but not yet ingested. An implementation
+    // that cancels its `updateend` watch instead of awaiting it would have
+    // resolved by now, and a caller awaiting append() then reading report()
+    // would read `buffered` mid-update.
+    expect(settledEarly).toBe(false)
+
+    sourceBuffer.finishAppend()
+    await pending
+
+    // ...and when it does resolve, the buffer has finished.
+    expect(updatingAtResolution).toBe(false)
+  })
+
+  it('rejects, records and stops the queue when the buffer fails the append asynchronously', async () => {
+    const { carrier, sourceBuffer } = openCarrier()
+
+    const first = observed(carrier.append(0, bytes(4), 20))
+    const second = observed(carrier.append(1, bytes(8), 30))
+    await settle()
+
+    expect(sourceBuffer.appendBuffer).toHaveBeenCalledTimes(1)
+    expect(sourceBuffer.updating).toBe(true)
+
+    // The real-world shape: the buffer took the bytes and refused them
+    // afterwards, reporting it through `error` + `updateend`. Never a throw.
+    sourceBuffer.failAppend()
+
+    // A refused append is a REJECTION. Resolving here would report an append
+    // the buffer threw away as a success.
+    await expect(first).rejects.toMatchObject({ name: 'SourceBufferError' })
+    await settle()
+
+    // The queue stopped: the next fragment never reached a buffer whose
+    // contents are no longer known. Asserted before awaiting `second`, so a
+    // queue that kept going fails here rather than at the suite timeout.
+    expect(sourceBuffer.appendBuffer).toHaveBeenCalledTimes(1)
+    await expect(second).rejects.toBeTruthy()
+
+    // Nothing claims success.
+    expect(entriesOfType('append')).toHaveLength(0)
+    const failures = entriesOfType('append-failed')
+    expect(failures).toHaveLength(2)
+    expect(failures[0].detail).toMatch(/^0: /)
+    expect(failures[0].detail).toContain('SourceBufferError')
+    expect(failures[1].detail).toMatch(/^1: /)
+
+    // ...and the refused fragment's duration never entered the seam report, so
+    // `expectedDuration` still describes only what the buffer actually holds.
+    expect(carrier.report().expectedDuration).toBe(0)
+  })
+
+  it('leaves timestampOffset at 0 so the report measures the encoder, not our arithmetic', async () => {
+    const { carrier, sourceBuffer } = openCarrier()
+
+    expect(sourceBuffer.timestampOffset).toBe(0)
+
+    const first = carrier.append(0, bytes(4), 20)
+    await settle()
+    sourceBuffer.finishAppend()
+    await first
+    const second = carrier.append(1, bytes(4), 20)
+    await settle()
+    sourceBuffer.finishAppend()
+    await second
+
+    // This module's central design decision, and the one thing that makes the
+    // bench honest: consecutive MP3s drift, and compensating for it HERE would
+    // manufacture contiguity — `drift` would then report our own arithmetic
+    // instead of the encoder's behaviour. The correction, if the measurement
+    // says one is needed, belongs in the real carrier.
+    expect(sourceBuffer.timestampOffset).toBe(0)
+  })
+
   it('appends queued fragments in request order', async () => {
     const { carrier, sourceBuffer } = openCarrier()
 
@@ -252,17 +371,20 @@ describe('createMseCarrier', () => {
     const { carrier, sourceBuffer } = openCarrier()
     sourceBuffer.throwOnNextAppend = new DOMException('buffer full', 'QuotaExceededError')
 
-    const first = carrier.append(0, bytes(4), 20)
-    const second = carrier.append(1, bytes(8), 20)
+    const first = observed(carrier.append(0, bytes(4), 20))
+    const second = observed(carrier.append(1, bytes(8), 20))
 
     await expect(first).rejects.toBeInstanceOf(DOMException)
-    await expect(second).rejects.toBeTruthy()
     await settle()
 
     // The refused append is the only one that ever reached the buffer, and
-    // nothing was accepted into a buffer whose state is now unknown.
+    // nothing was accepted into a buffer whose state is now unknown. Asserted
+    // BEFORE awaiting `second`: a queue that kept draining fails on this line
+    // instead of hanging until the 60 s suite timeout.
     expect(sourceBuffer.appendBuffer).toHaveBeenCalledTimes(1)
     expect(sourceBuffer.accepted).toEqual([])
+
+    await expect(second).rejects.toBeTruthy()
     // Both fragments are named in the log: the one that failed, and the one
     // that was dropped because of it. Neither disappears silently.
     const failures = entriesOfType('append-failed')
@@ -335,15 +457,42 @@ describe('createMseCarrier', () => {
     carrier.dispose()
 
     expect(revokeObjectURL).toHaveBeenCalledWith(OBJECT_URL)
+    // The source never opened, so there is no stream to end.
+    expect(mediaSource.endOfStream).not.toHaveBeenCalled()
+  })
+
+  it('ends the stream on dispose once the source is open', () => {
+    const { carrier, mediaSource } = openCarrier()
+
+    carrier.dispose()
+
+    // Without this the element is never told that no more data is coming, and
+    // a hidden element sits in `waiting` indefinitely.
+    //
+    // NOTE, deliberately unasserted because it is a known limitation rather
+    // than a property: `endOfStream()` is SKIPPED when an append is in flight
+    // (`sourceBuffer.updating` true, where the call would throw) and it is
+    // never retried afterwards. Disposing mid-append therefore leaves the
+    // element waiting on a stream that never ends. Acceptable for the spike —
+    // the real carrier should defer the call to the pending `updateend`.
+    expect(mediaSource.endOfStream).toHaveBeenCalledTimes(1)
+    expect(revokeObjectURL).toHaveBeenCalledWith(OBJECT_URL)
   })
 
   it('rejects appends still queued when the carrier is disposed', async () => {
     // Never attached to an element, so `sourceopen` never fires. A queued
     // append must not hang forever once the carrier is gone.
     const carrier = createMseCarrier()
-    const pending = carrier.append(0, bytes(4), 20)
+    const pending = observed(carrier.append(0, bytes(4), 20))
 
     carrier.dispose()
+    await settle()
+
+    // The disposal reached the queue and the drop is on the record. Asserted
+    // before awaiting the promise, so a dispose that failed to flush the queue
+    // fails here rather than hanging until the 60 s suite timeout.
+    expect(entriesOfType('append-failed')).toHaveLength(1)
+    expect(entriesOfType('append')).toHaveLength(0)
 
     await expect(pending).rejects.toBeTruthy()
   })
