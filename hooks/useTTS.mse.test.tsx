@@ -705,6 +705,65 @@ describe('useTTS completing an article on the MSE carrier', () => {
     ).toEqual(['0', '1', '2'])
   })
 
+  it('completes when the tick that crosses a boundary is also the last one', async () => {
+    /**
+     * "Crossed a boundary" and "ran out of article" are NOT exclusive, and the
+     * advance used to treat them as if they were: it booked the crossings the
+     * tracker reported and returned, so a tick that both entered the final unit
+     * AND landed inside END_OF_CONTENT_TOLERANCE_SECONDS of the buffer's end
+     * never asked the end-of-content question at all. The article then hung at
+     * ~99.9% with `isPlaying` still true — byte for byte the signature this
+     * whole change exists to remove.
+     *
+     * It needs the tick that enters the last unit to be the last tick the
+     * element delivers, which is precisely the skipped-tick behaviour a
+     * throttled page produces, and is near-certain whenever the final unit is
+     * shorter than the gap between ticks.
+     *
+     * The unit list is asserted exactly, not merely for completion: booking the
+     * tail from index 0 rather than from the unit the crossing left the hook on
+     * would still complete the article while counting units 0 and 1 — and their
+     * characters — a second time.
+     */
+    enableLog()
+    const onComplete = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: UNITS, onComplete })
+    )
+    await startAllThree(result)
+
+    await emitTimeUpdate(5)
+    // ONE tick, and the last one: it leaves units 0 and 1 behind AND lands on
+    // the final decoded frame of unit 2, a hair short of the buffer's end.
+    await emitTimeUpdate(29.974)
+
+    expect(onComplete).toHaveBeenCalledTimes(1)
+    expect(result.current.isPlaying).toBe(false)
+    expect(result.current.progress).toBe(100)
+    // Each unit booked exactly once, in order — the crossing's two, then the
+    // tail's one, with nothing counted twice.
+    expect(
+      entriesOfType('unit-ended')
+        .filter((entry) => !entry.suppressed)
+        .map((entry) => entry.detail)
+    ).toEqual(['0', '1', '2'])
+    // The crossing resumed on unit 2 and the article then ended THROUGH the
+    // completion entry (`3/3`), rather than the tick stopping at the resume.
+    expect(entriesOfType('unit-start').map((entry) => entry.detail)).toEqual([
+      '0/3',
+      '2/3',
+      '3/3',
+    ])
+
+    // Exactly once, however many ticks the stalled element still delivers.
+    await emitTimeUpdate(30)
+    await emitTimeUpdate(30)
+    expect(onComplete).toHaveBeenCalledTimes(1)
+    expect(
+      entriesOfType('unit-ended').filter((entry) => !entry.suppressed)
+    ).toHaveLength(3)
+  })
+
   it('does not complete while a unit behind the last one is still missing', async () => {
     /**
      * Prefetch resolves in whatever order the bytes arrive, so the buffer can
@@ -911,6 +970,124 @@ describe('useTTS advancing units on the MSE carrier', () => {
     expect(crossings).toHaveLength(1)
     expect(crossings[0].suppressed).toBe(true)
     expect(crossings[0].detail).toBe('0')
+  })
+
+  it('records a suppressed tick that lands past the end of the article', async () => {
+    /**
+     * The instrument's symmetry. A suppressed tick MID-article leaves a trace,
+     * but the one the device log most wants to see is the suppressed tick at
+     * the END of an article — "the reader stopped there" — and past the last
+     * append `unitAt` answers null, so the crossing question alone wrote
+     * nothing at all. That is the same "indistinguishable from a page that
+     * never resumed executing" ambiguity the log exists to remove, in the one
+     * place it matters most. The end-of-content question is read-only, exactly
+     * like the timeline peek beside it, so asking it here consumes no crossing.
+     */
+    const onComplete = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: UNITS, onComplete })
+    )
+    await startAllThree(result)
+
+    await emitTimeUpdate(12)
+    await emitTimeUpdate(22)
+    expect(result.current.currentChunkIndex).toBe(2)
+
+    // Logging starts here so the entry under test is the only one on record.
+    enableLog()
+    act(() => {
+      result.current.pause()
+    })
+
+    // The playhead is past everything the buffer holds — the tick that WOULD
+    // have finished the article had the session still been live.
+    await emitTimeUpdate(30)
+
+    // The guard still did its job...
+    expect(onComplete).not.toHaveBeenCalled()
+    expect(result.current.isPlaying).toBe(false)
+    // ...and said so.
+    const crossings = entriesOfType('unit-ended')
+    expect(crossings).toHaveLength(1)
+    expect(crossings[0].suppressed).toBe(true)
+    expect(crossings[0].detail).toBe('2')
+  })
+
+  it('ignores a tick that lands while the NEXT session is still in synthesis', async () => {
+    /**
+     * The window the four session legs do not cover. `playFromUnit` ends the
+     * old session, seeds `completedChars` from every unit before its target and
+     * starts a new, perfectly valid one — which then sits in `playChunk`'s
+     * synthesis `await` with the element still RUNNING at the old position (on
+     * this carrier the jump is a seek, so nothing was paused) and the boundary
+     * tracker still seated on the old unit. Playback is on, the session is
+     * current, its generation matches and its signal is live: every session leg
+     * passes, and the crossing the old playhead makes in that window is booked
+     * against the NEW session. Its unit's characters land on top of the seed
+     * and are counted twice for the rest of the article, and `playChunk` is
+     * entered for a unit nobody asked for.
+     *
+     * What closes it is `emitProgress`'s own question — is the element actually
+     * where the hook is? — which `playChunk` answers in the same synchronous
+     * block as the seek and the tracker reseat.
+     */
+    enableLog()
+    const units = Array.from({ length: 5 }, (_, i) => String.fromCharCode(97 + i).repeat(10))
+    let releaseTarget!: (audio: ArrayBuffer) => void
+    const targetAudio = new Promise<ArrayBuffer>((resolve) => {
+      releaseTarget = resolve
+    })
+    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) =>
+      text === units[4] ? targetAudio : new ArrayBuffer(8)
+    )
+
+    const { result } = renderHook(() => useTTS('irrelevant content', { units }))
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2, 3]))
+    await settle()
+
+    // The tracker is seated on unit 0, where the element really is.
+    await emitTimeUpdate(5)
+    expect(result.current.currentChunkIndex).toBe(0)
+
+    // The jump is issued and parks in synthesis; the element keeps running.
+    await act(async () => {
+      void result.current.playFromUnit(4)
+    })
+    await settle()
+    // Parked mid-synthesis: the hook is pointed at unit 4 and the element is
+    // still back at unit 0's, so nothing has entered `playChunk` for the jump
+    // yet — which is why the LOG, not `currentChunkIndex`, is what pins this.
+    expect(result.current.isBuffering).toBe(true)
+    expect(entriesOfType('unit-start').map((entry) => entry.detail)).toEqual(['0/5'])
+
+    // The OLD playhead crosses out of unit 0 — a real crossing, belonging to a
+    // session that is over.
+    await emitTimeUpdate(12)
+
+    // It was not booked, and it did not hijack the jump.
+    expect(result.current.isBuffering).toBe(true)
+    expect(entriesOfType('unit-ended').filter((entry) => !entry.suppressed)).toEqual([])
+    expect(entriesOfType('unit-start').map((entry) => entry.detail)).toEqual(['0/5'])
+    // ...and it still left a trace, like every other suppressed tick here.
+    expect(entriesOfType('unit-ended').map((entry) => entry.suppressed)).toEqual([true])
+
+    // The jump lands, and progress is the four seeded units and nothing more:
+    // a double-booked unit 0 would put 50 of 50 characters behind the playhead
+    // before unit 4 had been read at all.
+    await act(async () => {
+      releaseTarget(new ArrayBuffer(8))
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2, 3, 4]))
+    await settle()
+    expect(entriesOfType('unit-start').map((entry) => entry.detail)).toEqual(['0/5', '4/5'])
+    expect(currentTimeWrites).toContain(40)
+
+    await emitTimeUpdate(45)
+    expect(result.current.currentChunkIndex).toBe(4)
+    expect(result.current.progress).toBeCloseTo(((40 + 10 * 0.5) / 50) * 100, 4)
   })
 })
 

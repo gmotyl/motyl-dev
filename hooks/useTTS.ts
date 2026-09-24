@@ -86,6 +86,14 @@ const MAX_CONSECUTIVE_CHUNK_FAILURES = 3
 // A tenth of a second is several frames longer than that shortfall and orders
 // of magnitude shorter than any real unit, so nothing but a playhead that has
 // actually consumed the last unit can be inside it.
+//
+// THE TRADE-OFF, accepted knowingly: a final unit shorter than the tolerance is
+// booked complete without having been heard. The loss is bounded at the
+// tolerance itself — 0.1 s of audio for the whole article, once, at its very
+// end — because the window only ever opens against the LAST unit on the
+// timeline. Tightening it would buy that tenth of a second back at the price of
+// hanging every article whose decodable media ends a frame short of the
+// buffer's own end, which is the failure this constant exists to remove.
 const END_OF_CONTENT_TOLERANCE_SECONDS = 0.1
 
 export function useTTS(content: string, options: UseTTSOptions = {}) {
@@ -1018,13 +1026,29 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     // `playFromUnit` calls `interrupt()` and deliberately leaves the element
     // RUNNING, so ticks keep arriving until the next session is seated.
     //
+    // The fifth leg is `emitProgress`'s, for the identical reason: only the
+    // unit the element is ACTUALLY loaded with may be measured, and only its
+    // boundaries may be counted. The four session legs do NOT cover that case.
+    // `playFromUnit` ends the session, seeds `completedChars` from the units
+    // before its target, clears `loadedUnitIndex` and then starts a NEW,
+    // perfectly valid session — which sits in `playChunk`'s synthesis `await`
+    // with the element still running at the OLD position and the boundary
+    // tracker still seated on the old unit. Every session leg passes there, so
+    // a crossing in that window is booked against the new session: its unit's
+    // characters are added on top of the seed and counted twice for the rest of
+    // the article, and `playChunk` is entered for a unit nobody asked for.
+    // `playChunk` closes the window itself — it sets `loadedUnitIndex` and
+    // reseats the tracker in the same synchronous block as the seek — so this
+    // leg is exactly "the element is not yet where the hook is".
+    //
     // Read into a boolean, like `playChunk`'s own entry guard, so the log can
     // be written before the guard is applied.
     const suppressed =
       !isPlayingRef.current ||
       session === null ||
       session.generation !== requestGenerationRef.current ||
-      session.signal.aborted
+      session.signal.aborted ||
+      loadedUnitIndexRef.current !== currentChunkIndexRef.current
 
     if (suppressed) {
       // Recorded ABOVE the guard's effect, matching every other entry in this
@@ -1037,8 +1061,19 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       // the session that resumes. The timeline is peeked at instead — a
       // read-only question — so the entry is written on the ticks that WOULD
       // have reported something and on no others.
+      //
+      // BOTH things this tick would have done, not just the crossing: past the
+      // last append `unitAt` answers null, which is the END of the article —
+      // the one moment the instrument most needs to see, because a reader that
+      // stops there is indistinguishable in the log from a page that never
+      // resumed executing unless the suppressed tick leaves a trace of its own.
+      // `reachedEndOfContent` is read-only too, so asking it here consumes
+      // nothing either.
       const span = getLiveTimeline().unitAt(element.currentTime)
-      if (span !== null && span.index !== currentChunkIndexRef.current) {
+      const wouldHaveReported =
+        (span !== null && span.index !== currentChunkIndexRef.current) ||
+        reachedEndOfContent(element.currentTime)
+      if (wouldHaveReported) {
         logReaderEvent('unit-ended', detailFor(currentChunkIndexRef.current), {
           suppressed: true,
         })
@@ -1070,14 +1105,22 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       // a jump, and therefore what keeps the advance free of a seek.
       loadedUnitIndexRef.current = next
       void playChunk(next, 0, session.generation, session.signal)
-      return
+      // NO return: a tick that crossed a boundary can ALSO be the tick that ran
+      // out of article. "Crossed" and "reached the end" are not exclusive — a
+      // crossing puts the playhead strictly before `end()`, but the question
+      // below is whether it is within END_OF_CONTENT_TOLERANCE_SECONDS of it,
+      // and a tick landing in the FINAL unit's last tenth of a second answers
+      // both yes. Returning here left that tick booking its crossings and
+      // nothing else, so the article hung with `isPlaying` true a fraction of a
+      // second from its end — and it needs the tick that enters the last unit
+      // to be the last tick the element delivers, which is exactly the skipped
+      // tick this whole path exists to survive, and is near-certain when the
+      // final unit is shorter than the gap between ticks.
     }
 
-    // Nothing crossed. Either the playhead is still inside the unit it was in,
-    // or it has run off the end of everything appended — and only the second of
-    // those can be the end of the article. The two cases are exclusive with the
-    // branch above: a reported crossing means `unitAt` found a span, which puts
-    // the playhead strictly before `end()`.
+    // Either the playhead is still inside the unit it was in, or it has run off
+    // the end of everything appended, or the crossing above landed it in the
+    // last unit's final moments.
     if (!reachedEndOfContent(element.currentTime)) return
 
     // The tail the tracker will never report: `unitAt` past the final append
@@ -1089,6 +1132,16 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     // makes a crossing several units wide can skip the whole tail of an article
     // in one tick, and `reachedEndOfContent` has already established that every
     // one of them had media.
+    //
+    // `currentChunkIndexRef` is the right lower bound on BOTH ways in, and on
+    // the fall-through it is already the unit after the last crossing: nothing
+    // in `playChunk` awaits before `currentChunkIndexRef.current = index`, so
+    // that assignment has run by the time the synchronous `void` call above
+    // returns. The units the crossing booked are therefore strictly below this
+    // bound and cannot be booked a second time here. (Were the crossing's
+    // `next` already past the last unit, `playChunk` completed the article on
+    // the spot — and its rebuild empties the timeline, so `reachedEndOfContent`
+    // answered false above and this loop was never reached at all.)
     for (
       let finished = currentChunkIndexRef.current;
       finished < chunksRef.current.length;
