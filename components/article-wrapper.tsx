@@ -126,6 +126,7 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
           onPlayPause={() => (reader.isPlaying ? reader.pause() : reader.play())}
           onNext={reader.next}
           onMarkRead={() => undefined}
+          error={reader.error}
         />
       )}
 

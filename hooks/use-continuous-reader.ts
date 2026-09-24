@@ -9,6 +9,7 @@ import {
   resolveNextTrackIndex,
   resolvePreviousTrackIndex,
 } from '@/lib/reader/media-session-tracks'
+import { logReaderEvent } from '@/lib/reader/diagnostic-log'
 import { useMediaSession } from './use-media-session'
 import { useTTS } from './useTTS'
 import { useWakeLock } from './useWakeLock'
@@ -308,10 +309,21 @@ export function useContinuousReader(
 
       const nextIndex = itemsRef.current.findIndex((section) => section.key === currentKey) + 1
       if (nextIndex > 0 && nextIndex < itemsRef.current.length) {
+        // Observation only. The detail is the STABLE key, never `nextIndex`: the
+        // queue mutates while the reader runs (mark-as-read, DOM eviction), so a
+        // numeric index would name a different section by the time the log is
+        // read off the device.
+        logReaderEvent('section-advance', itemsRef.current[nextIndex].key)
         selectAndStart(nextIndex, 0, true)
       }
     }, [currentKey, selectAndStart]),
     onError: useCallback((nextError: Error) => {
+      // `onError` is a public callback contract, so what actually arrives is
+      // whatever the caller passed — today always a real `Error` built by
+      // `useTTS`'s `stopWithError`, but nothing enforces that. `||`, not `??`:
+      // an Error with an EMPTY-STRING message must fall through to the name,
+      // which `??` would keep.
+      logReaderEvent('reader-error', nextError?.message || nextError?.name || String(nextError))
       playbackRef.current?.stop()
       // A start that failed is not a handoff in progress: without this the
       // reader would look eternally "about to play" and never drop the lock.
@@ -340,7 +352,7 @@ export function useContinuousReader(
     resume: playbackResume,
   } = playback
 
-  const { requestWakeLock, releaseWakeLock } = useWakeLock()
+  const { isActive: isWakeLockActive, requestWakeLock, releaseWakeLock } = useWakeLock()
 
   // The voice is running again, so the handoff that was bridging the gap is
   // over. Deliberately keyed on `isPlaying` turning true — NOT cleared where the
@@ -373,6 +385,10 @@ export function useContinuousReader(
   const holdsScreenAwake = isPlaying || isHandingOff
   useEffect(() => {
     if (!holdsScreenAwake) return
+    // No `.catch` here, deliberately. `useWakeLock.acquire()` swallows the
+    // rejection — a refused lock is non-fatal and the reader keeps reading — so
+    // this promise RESOLVES even on a refusal and a handler here could never
+    // run. `wakelock-failed` is logged at the rejection, inside `useWakeLock`.
     void requestWakeLock()
     // Runs on a real pause/stop (playback ended and nothing queued behind it)
     // and on unmount alike.
@@ -380,6 +396,15 @@ export function useContinuousReader(
       void releaseWakeLock()
     }
   }, [holdsScreenAwake, requestWakeLock, releaseWakeLock])
+
+  // A GRANT, not a request: `isActive` turns true only once a sentinel has been
+  // taken and kept, so this cannot report a swallowed failure as a success the
+  // way "the request promise settled" would. Observation only — it records the
+  // re-acquire after the browser's auto-release on hide as its own entry, which
+  // is exactly the sequence a screen-off log is read for.
+  useEffect(() => {
+    if (isWakeLockActive) logReaderEvent('wakelock-acquired')
+  }, [isWakeLockActive])
 
   // The position's section disappeared (mark-as-read, DOM eviction): the derived
   // index has already resolved to a survivor per the previous order, so adopt it

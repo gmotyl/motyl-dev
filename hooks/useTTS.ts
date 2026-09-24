@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { detectLanguageFromContent } from '@/lib/tts/voice-map'
 import { splitIntoChunks } from '@/lib/tts/chunks'
 import { synthesizeSpeech } from '@/lib/tts/client'
+import { logReaderEvent } from '@/lib/reader/diagnostic-log'
 
 export interface TTSState {
   isPlaying: boolean
@@ -70,6 +71,32 @@ const MAX_CONSECUTIVE_CHUNK_FAILURES = 3
 // bytes are handed to the media element as-is, correctly typed, and the browser
 // decodes them on its own audio thread.
 const AUDIO_MIME_TYPE = 'audio/mpeg'
+
+/**
+ * `name: message`, for a diagnostic-log detail.
+ *
+ * What reaches the instrumented paths is usually a DOMException whose NAME is
+ * the entire diagnosis — `NotAllowedError` is "the browser refused a hidden-page
+ * start", `AbortError` is "something interrupted it" — so the name has to
+ * survive into the log line, not just the message.
+ */
+const describeError = (error: unknown): string => {
+  const candidate = error as Error | null | undefined
+  const name = candidate?.name ?? typeof error
+  const message = candidate?.message ?? String(error)
+  return message ? `${name}: ${message}` : name
+}
+
+/**
+ * The one detail convention every indexed call site in this file follows:
+ * the unit index leads, and `: ` separates it from any free-form remainder.
+ * Sites with nothing to add (`play-called`, `unit-ended`, `element-error`) stay
+ * a bare index; `unit-start` carries `index/total` instead, which is a position
+ * rather than a remainder. Before this, `play-rejected` used a space and
+ * `synthesis-failed` a colon, so the same log mixed both.
+ */
+const detailFor = (index: number, rest?: string): string =>
+  rest ? `${index}: ${rest}` : String(index)
 
 export function useTTS(content: string, options: UseTTSOptions = {}) {
   const { voice, units, onProgress, onComplete, onError } = options
@@ -418,7 +445,28 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   // Play a single chunk
   const playChunk = useCallback(
     async (index: number, offset: number, generation: number, signal: AbortSignal) => {
-      if (generation !== requestGenerationRef.current || signal.aborted) return
+      // ABOVE the entry guard, like every other call in this file: the one
+      // thing the device log has to be able to say is "the chain reached here",
+      // and a call that recorded only after passing the guard could not say it.
+      // Read into a boolean first so the entry can be written before the guard
+      // is applied and can carry `suppressed` — `||` still short-circuits and
+      // both refs are read at the same moment, so playback is untouched.
+      //
+      // The detail is `index/total`, not a bare index, because the completion
+      // path below enters this function once more with `index ===
+      // chunksRef.current.length`. `unit-start 6/6` reads as "past the last
+      // unit" (the article finished); `unit-start 6/12` is a real next unit —
+      // and a real next unit with no `play-called` after it is precisely the
+      // screen-off death this instrument is hunting. A bare index made those
+      // two outcomes produce an identical log tail. `chunksRef.current` is the
+      // live list (`stop()` clears it, `ensureChunks()` fills it), so the count
+      // is this call's, not a stale capture.
+      const entryRejected = generation !== requestGenerationRef.current || signal.aborted
+      logReaderEvent('unit-start', `${index}/${chunksRef.current.length}`, {
+        suppressed: entryRejected,
+      })
+
+      if (entryRejected) return
 
       if (index >= chunksRef.current.length) {
         // All chunks played
@@ -457,8 +505,19 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
        * on, so progress would not die outright — but the smooth clock would be
        * gone for the rest of the session and the reader bar would lurch forward
        * ~4×/second instead of gliding.
+       *
+       * The detail goes through `describeError`, not `error.message`. The
+       * parameter is typed `Error`, but the only caller that originates a
+       * failure is the `play()` rejection handler, which casts (`error as
+       * Error`) whatever the promise rejected with — a promise may reject with
+       * anything, and a DOMException subclass or a plain object can carry no
+       * message at all. Reading `.message` there leaves the one line that says
+       * the reader gave up with no detail, on exactly the failure path the
+       * device test exists to capture; `describeError` keeps the NAME, which is
+       * the diagnostically useful half.
        */
       const stopWithError = (error: Error) => {
+        logReaderEvent('stop-with-error', describeError(error))
         isPlayingRef.current = false
         if (animationFrameRef.current) {
           cancelAnimationFrame(animationFrameRef.current)
@@ -480,6 +539,13 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
        * the rest of the article.
        */
       const failUnit = (failedIndex: number, error: Error) => {
+        // The index leads the detail, `: ` separates it from anything free-form
+        // (see `detailFor`): which unit was dropped is the first thing the log
+        // is read for. The remainder goes through `describeError` for the same
+        // reason as `stopWithError`: the `fetchAudioBlob` catch hands this the
+        // original rejection under an `error as Error` cast, so a rejection
+        // without a message would otherwise reduce the line to a bare index.
+        logReaderEvent('synthesis-failed', detailFor(failedIndex, describeError(error)))
         consecutiveFailuresRef.current += 1
 
         // The unit is abandoned, so nothing will ever read its object URL again.
@@ -585,12 +651,27 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         element.currentTime = offset
       }
 
+      /**
+       * The shared early-return guard of all three handlers below, evaluated
+       * ONCE so the log can be written before it is applied.
+       *
+       * Reading it into a boolean changes nothing about playback — `||` still
+       * short-circuits and every ref is read at the same moment — but it is what
+       * lets the entry go in ABOVE the guard and carry `suppressed`. Logged
+       * below the guard instead, a suppressed event would leave no trace at all,
+       * and on a device that is byte-for-byte identical to a page that never
+       * resumed executing — the exact ambiguity this instrument exists to
+       * remove.
+       */
+      const guardRejects = () =>
+        !isPlayingRef.current ||
+        generation !== requestGenerationRef.current ||
+        signal.aborted
+
       element.onended = () => {
-        if (
-          !isPlayingRef.current ||
-          generation !== requestGenerationRef.current ||
-          signal.aborted
-        ) return
+        const suppressed = guardRejects()
+        logReaderEvent('unit-ended', detailFor(index), { suppressed })
+        if (suppressed) return
         // A unit that played all the way through is the only real proof the
         // pipeline is healthy, so THAT is what clears the failure streak.
         // Synthesis merely resolving is not proof: an element `error` means the
@@ -606,11 +687,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       // carrier gone there is nothing to retry on, so this is a unit failure of
       // exactly the same kind as a synthesis failure.
       element.onerror = () => {
-        if (
-          !isPlayingRef.current ||
-          generation !== requestGenerationRef.current ||
-          signal.aborted
-        ) return
+        const suppressed = guardRejects()
+        logReaderEvent('element-error', detailFor(index), { suppressed })
+        if (suppressed) return
         detachUnitHandlers()
         const mediaError = element.error
         failUnit(
@@ -626,13 +705,14 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       // no second output path, so silence with `isPlaying` left true is the only
       // other outcome. (The gesture-unlock poke in play() is a separate call and
       // swallows its own, expected, rejection.)
+      logReaderEvent('play-called', detailFor(index))
       const started = element.play?.()
       void started?.catch?.((error: unknown) => {
-        if (
-          !isPlayingRef.current ||
-          generation !== requestGenerationRef.current ||
-          signal.aborted
-        ) return
+        const suppressed = guardRejects()
+        logReaderEvent('play-rejected', detailFor(index, describeError(error)), {
+          suppressed,
+        })
+        if (suppressed) return
         console.warn(`[TTS] Element refused to play unit ${index}:`, error)
         stopWithError(error as Error)
       })

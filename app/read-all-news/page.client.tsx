@@ -407,6 +407,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
           onMarkRead={() => { setPendingNavUrl(null); setDialogOpen(true) }}
           onPlayPause={handlePlayPause}
           onNext={reader.next}
+          error={reader.error}
         />
       )}
 
