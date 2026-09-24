@@ -48,6 +48,17 @@ import { usePlaybackDiagnostics } from './use-playback-diagnostics'
  *   new data, which is the honest limit of the mode: a ten-minute upfront run
  *   is the same 160 s of audio played back about four times.
  *
+ * ## Exactly one media element exists while a run is measured
+ *
+ * Fragment durations are read off a throwaway `Audio` probe, and `CONTEXT.md`
+ * warns that two media elements make media-session ownership flap between them
+ * — the media session being precisely what the OS is suspected of revoking in
+ * the failure under investigation. So every duration is probed UP FRONT, in
+ * every mode, before `play()`: while the page is still visible and before the
+ * measurement window opens. After playback starts no probe element is
+ * constructed, in any mode, and a test next door enforces the absence. The
+ * probes are cached, so this is one pass and not a per-fragment cost.
+ *
  * ## Buffer growth in `mse-progressive`
  *
  * Nothing is evicted. A ten-minute run appends roughly thirty ~20 s fragments;
@@ -184,11 +195,12 @@ export function useCarrierSpike(): CarrierSpike {
    * delay and padding, which is the whole point of the number. So a throwaway
    * element loads the same bytes and reports `duration` on `loadedmetadata`.
    *
-   * The probe element is never played and never given a media session, so it
-   * takes no part in the thing under test. It is a second element, though, and
-   * in `mse-progressive` one is constructed while the run is playing; if a
-   * device result ever looks like it turned on the probe, this is the line to
-   * suspect.
+   * The probe element is never played and never given a media session, but it
+   * is still a SECOND media element, and `CONTEXT.md` warns that two of them
+   * make media-session ownership flap — which is the very thing the experiment
+   * is watching the OS revoke. So this is only ever called from
+   * `primeDurations`, before `play()`; nothing constructs a probe once a run is
+   * under way.
    *
    * An unmeasurable fragment contributes 0 and says so, rather than inventing a
    * number: `expectedDuration` then under-counts and `drift` reads high, with a
@@ -235,6 +247,47 @@ export function useCarrierSpike(): CarrierSpike {
     return measured
   }, [])
 
+  /**
+   * Synthesizes and measures every fragment before a run starts.
+   *
+   * One pass over all eight, on the gesture, with the page visible: both maps
+   * are caches, so a second run pays nothing and the probe elements this
+   * creates are all gone before `play()` is called. False when the run was
+   * replaced mid-await, in which case the caller must not go on to play.
+   *
+   * This runs in EVERY mode, including `src-swap`, which does not itself need
+   * the durations: the three modes are compared against each other, so they
+   * must reach `play()` having done the same work.
+   */
+  const primeDurations = useCallback(
+    async (runId: number): Promise<boolean> => {
+      for (let index = 0; index < SPIKE_FRAGMENTS.length; index += 1) {
+        const data = await synthesize(index)
+        if (runIdRef.current !== runId) return false
+        await measureDuration(index, data)
+        if (runIdRef.current !== runId) return false
+      }
+      return true
+    },
+    [measureDuration, synthesize],
+  )
+
+  /**
+   * The primed duration of `index`, read from the cache and nowhere else.
+   *
+   * Deliberately NOT a fallback to `measureDuration`: a cache miss there would
+   * construct a probe element mid-run, which is exactly the confounder the
+   * priming pass exists to remove. `primeDurations` covers every fragment
+   * before playback, so a miss is a bug, and 0 is the same honest under-count
+   * an unmeasurable fragment already gets.
+   */
+  const primedDuration = useCallback((index: number): number => {
+    const cached = durationRef.current.get(index)
+    if (cached !== undefined) return cached
+    logReaderEvent('reader-error', `${index}: duration not primed, counted as 0`)
+    return 0
+  }, [])
+
   const stop = useCallback(() => {
     runIdRef.current += 1
     runningRef.current = false
@@ -273,8 +326,9 @@ export function useCarrierSpike(): CarrierSpike {
       const index = state.count % SPIKE_FRAGMENTS.length
       const data = await synthesize(index)
       if (runIdRef.current !== runId) return false
-      const duration = await measureDuration(index, data)
-      if (runIdRef.current !== runId) return false
+      // Read, not measured: measuring here would put a second media element on
+      // the page mid-run. See `primedDuration`.
+      const duration = primedDuration(index)
 
       await carrier.append(index, data, duration)
       if (runIdRef.current !== runId) return false
@@ -284,7 +338,7 @@ export function useCarrierSpike(): CarrierSpike {
       state.count += 1
       return true
     },
-    [measureDuration, synthesize],
+    [primedDuration, synthesize],
   )
 
   /**
@@ -439,13 +493,18 @@ export function useCarrierSpike(): CarrierSpike {
     swapIndexRef.current = 0
 
     try {
+      // Every probe element this run will ever build is built HERE, before
+      // anything plays: no second media element may appear once the
+      // measurement window is open.
+      if (!(await primeDurations(runId))) return
+
       if (mode === 'src-swap') await startSrcSwap(runId, element)
       else await startMse(runId, element, mode)
     } catch (error) {
       logReaderEvent('stop-with-error', `${mode}: ${describeError(error)}`)
       stop()
     }
-  }, [element, mode, startMse, startSrcSwap, stop])
+  }, [element, mode, primeDurations, startMse, startSrcSwap, stop])
 
   /**
    * Switching carriers mid-run would leave the log describing a run that no

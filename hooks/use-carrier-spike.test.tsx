@@ -150,6 +150,10 @@ class FakeAudioElement extends EventTarget {
 
   play = vi.fn(async () => {
     this.paused = false
+    // Every duration probe is a media element, and the claim under test is that
+    // none is built once a run is playing — so the population is frozen at the
+    // first play() and compared against it afterwards.
+    if (elementsAtPlay < 0) elementsAtPlay = elements.length
     timeline.push('play')
   })
 
@@ -161,6 +165,9 @@ class FakeAudioElement extends EventTarget {
 }
 
 let elements: FakeAudioElement[] = []
+
+/** How many `Audio` elements existed when `play()` was first called; -1 before that. */
+let elementsAtPlay = -1
 
 /**
  * The hook owns its element, so the first one constructed is the one it plays
@@ -213,6 +220,7 @@ beforeEach(() => {
   timeline = []
   appends = []
   elements = []
+  elementsAtPlay = -1
   disposeCalls = 0
   carrierCount = 0
   urlCounter = 0
@@ -427,6 +435,59 @@ describe('useCarrierSpike', () => {
     expect(appends.length).toBe(appendsAtPlay)
     expect(carrierCount).toBe(1)
     upfront.unmount()
+  })
+
+  it('constructs no duration probe after playback starts', async () => {
+    // `mse-progressive` is the mode that used to measure mid-run: only three
+    // fragments are appended before the gesture's play() and the other five
+    // arrive on `timeupdate`, possibly with the page hidden.
+    const view = await mount('mse-progressive')
+    await start(view)
+
+    // One playback element plus one probe per fragment: every duration was
+    // measured up front, while the page is still visible.
+    expect(elementsAtPlay).toBe(1 + fragmentCount)
+
+    // Two full passes, so the five late fragments and a whole repeat are
+    // appended with playback under way.
+    for (let n = 1; n <= fragmentCount * 2; n += 1) {
+      await playTo(startOfNthAppend(n))
+    }
+
+    // Guards against passing because the run stalled and appended nothing.
+    expect(appends.length).toBeGreaterThan(fragmentCount)
+    // CONTEXT.md: a second media element makes media-session ownership flap,
+    // and the media session is what the OS is revoking in the failure under
+    // investigation. The measurement window must never see one appear.
+    expect(elements.length).toBe(elementsAtPlay)
+
+    // And the durations still reached the carrier — the appends carry the real
+    // measured lengths, not zeros from a probe that never ran.
+    expect(appends.map((entry) => entry.duration).slice(0, fragmentCount)).toEqual(
+      SPIKE_FRAGMENTS.map((fragment) => secondsFor(fragment.index)),
+    )
+  })
+
+  it('measures every duration before playing in src-swap and mse-upfront too', async () => {
+    for (const mode of ['src-swap', 'mse-upfront'] as const) {
+      timeline = []
+      appends = []
+      elements = []
+      elementsAtPlay = -1
+
+      const view = await mount(mode)
+      await start(view)
+
+      // The three modes are compared against each other, so each must reach
+      // play() having done the same pre-play work.
+      expect(elementsAtPlay).toBe(1 + fragmentCount)
+
+      for (let n = 0; n < fragmentCount; n += 1) await endFragment()
+      await playTo(TOTAL_RUN_SECONDS)
+
+      expect(elements.length).toBe(elementsAtPlay)
+      view.unmount()
+    }
   })
 
   it('records the selected mode at start', async () => {
