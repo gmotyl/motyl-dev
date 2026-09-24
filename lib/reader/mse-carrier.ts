@@ -9,10 +9,16 @@
  *
  * Two properties this module exists to guarantee:
  *
- * 1. APPENDS ARE SERIALISED. `appendBuffer` throws `InvalidStateError` if it is
- *    called while `sourceBuffer.updating` is true. In progressive mode appends
- *    land while audio plays, so overlap is the normal case, not an edge case.
- *    Every append goes through one queue that waits for `updateend`.
+ * 1. BUFFER UPDATES ARE SERIALISED. `appendBuffer` throws `InvalidStateError`
+ *    if it is called while `sourceBuffer.updating` is true. In progressive mode
+ *    appends land while audio plays, so overlap is the normal case, not an edge
+ *    case. Every append goes through one queue that waits for `updateend`.
+ *
+ *    `remove()` sets `updating` exactly as `appendBuffer` does, so an eviction
+ *    issued BESIDE that queue is the same InvalidStateError from the other
+ *    side. `evictBefore` therefore shares the queue rather than getting a
+ *    second one: a SourceBuffer serves one update at a time, so there is one
+ *    place in this module that may touch it.
  *
  * 2. NOTHING FAILS SILENTLY. The bug this whole spike chases was silence with
  *    `isPlaying` still true — an error that reached a handler and vanished. A
@@ -37,6 +43,20 @@ export interface MseCarrier {
   readonly src: string
   /** Queues an append; resolves when the buffer has accepted it. */
   append(index: number, data: ArrayBuffer, duration: number): Promise<void>
+  /**
+   * Queues a FRONT eviction of `[0, time)`; resolves on the buffer's
+   * `updateend`, like an append.
+   *
+   * Front-only, and that is a contract rather than a convenience: the caller's
+   * timeline evicts a prefix (`dropBefore`) and nothing else, so a removal that
+   * bit a hole in the middle of the buffer would leave a map that cannot
+   * describe it. It also keeps the LAST buffered range's end untouched, which
+   * is the reading the caller measures its spans from.
+   *
+   * Unlike a refused append, a refused eviction does NOT stop the queue — see
+   * `failure`.
+   */
+  evictBefore(time: number): Promise<void>
   /** Seam report over everything appended so far. */
   report(): SeamReport
   /**
@@ -86,12 +106,28 @@ export function isMseAudioSupported(): boolean {
 }
 
 interface QueuedAppend {
+  kind: 'append'
   index: number
   data: ArrayBuffer
   duration: number
   resolve: () => void
   reject: (error: unknown) => void
 }
+
+interface QueuedEviction {
+  kind: 'evict'
+  /** Everything before this point goes; `[0, time)`. */
+  time: number
+  resolve: () => void
+  reject: (error: unknown) => void
+}
+
+/**
+ * One turn at the buffer. Appends and evictions differ only in what they ask
+ * the buffer to do — the waiting, the failure path and the ordering are the
+ * queue's, identically for both.
+ */
+type QueuedUpdate = QueuedAppend | QueuedEviction
 
 /** A pending `updateend`, with a way to stop listening if the append never began. */
 interface UpdateWatch {
@@ -111,17 +147,36 @@ export function createMseCarrier(): MseCarrier {
 
   /** Durations of the fragments that were actually ACCEPTED, for the seam report. */
   const durations: number[] = []
-  const queue: QueuedAppend[] = []
+  const queue: QueuedUpdate[] = []
 
   let sourceBuffer: SourceBuffer | null = null
   let draining = false
   let disposed = false
   /**
-   * Set once by the first failure, and never cleared. Its presence is what
-   * stops the queue: every later append is refused with the same cause rather
+   * Set once by the first failed APPEND, and never cleared. Its presence is
+   * what stops the queue: every later job is refused with the same cause rather
    * than landing in a buffer whose state is no longer known.
+   *
+   * A failed EVICTION deliberately does not set it. Nothing was written, so the
+   * buffer still holds exactly what it held — media that should have gone is
+   * merely still there — and stopping the queue would trade the rest of the
+   * reading session for a failed memory optimisation. It is rejected and logged
+   * like any other fault; it just is not fatal.
    */
   let failure: { error: unknown } | null = null
+
+  /**
+   * How a refused job reads in the log.
+   *
+   * An eviction is not a unit's failure and must not be recorded as one: no
+   * audio is missing, only memory that could not be reclaimed, and an
+   * `append-failed` line for it would send a later reader hunting for a
+   * fragment that arrived perfectly well.
+   */
+  const logJobFailure = (job: QueuedUpdate, reason: string): void => {
+    if (job.kind === 'append') logReaderEvent('append-failed', detailFor(job.index, reason))
+    else logReaderEvent('reader-error', `eviction before ${job.time} failed: ${reason}`)
+  }
 
   let resolveOpen!: (buffer: SourceBuffer) => void
   let rejectOpen!: (error: unknown) => void
@@ -229,10 +284,7 @@ export function createMseCarrier(): MseCarrier {
           queue.shift()
           // The fragment never reached the buffer — say so, naming the cause,
           // rather than letting it disappear between a rejection and a log.
-          logReaderEvent(
-            'append-failed',
-            detailFor(job.index, `skipped after ${describeError(failure.error)}`),
-          )
+          logJobFailure(job, `skipped after ${describeError(failure.error)}`)
           job.reject(failure.error)
           continue
         }
@@ -247,7 +299,11 @@ export function createMseCarrier(): MseCarrier {
 
           const watch = watchUpdate(buffer)
           try {
-            buffer.appendBuffer(job.data)
+            // The ONE place in this module that touches the buffer, for both
+            // kinds of job — which is what makes "never while `updating`" a
+            // property of the queue rather than of each caller.
+            if (job.kind === 'append') buffer.appendBuffer(job.data)
+            else buffer.remove(0, job.time)
           } catch (error) {
             watch.cancel()
             throw error
@@ -255,13 +311,16 @@ export function createMseCarrier(): MseCarrier {
           await watch.promise
 
           queue.shift()
-          durations.push(job.duration)
-          logReaderEvent('append', detailFor(job.index, `${job.data.byteLength} bytes`))
+          if (job.kind === 'append') {
+            durations.push(job.duration)
+            logReaderEvent('append', detailFor(job.index, `${job.data.byteLength} bytes`))
+          }
           job.resolve()
         } catch (error) {
           queue.shift()
-          failure ??= { error }
-          logReaderEvent('append-failed', detailFor(job.index, describeError(error)))
+          // Only a failed append poisons the queue; see `failure`.
+          if (job.kind === 'append') failure ??= { error }
+          logJobFailure(job, describeError(error))
           job.reject(error)
         }
       }
@@ -272,7 +331,13 @@ export function createMseCarrier(): MseCarrier {
 
   const append = (index: number, data: ArrayBuffer, duration: number): Promise<void> =>
     new Promise<void>((resolve, reject) => {
-      queue.push({ index, data, duration, resolve, reject })
+      queue.push({ kind: 'append', index, data, duration, resolve, reject })
+      void drain()
+    })
+
+  const evictBefore = (time: number): Promise<void> =>
+    new Promise<void>((resolve, reject) => {
+      queue.push({ kind: 'evict', time, resolve, reject })
       void drain()
     })
 
@@ -315,5 +380,5 @@ export function createMseCarrier(): MseCarrier {
     void drain()
   }
 
-  return { src, append, report, dispose }
+  return { src, append, evictBefore, report, dispose }
 }

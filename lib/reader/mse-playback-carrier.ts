@@ -40,11 +40,20 @@
  * That is the stronger half of the argument, and it is a property of the whole
  * module rather than of `spanFor` alone. Appends are STRICTLY SERIALISED — the
  * wrapped carrier serialises `appendBuffer`, `appendInOrder` awaits each append
- * before enqueuing the next, and `appendChain` serialises overlapping callers —
- * and nothing else in the reader touches the buffer. So the end read after unit
- * k IS the end read before unit k+1, every span is the difference between two
- * adjacent ABSOLUTE readings, and the spans telescope: their sum is the
- * buffer's absolute end. `timeline.end()` is the buffer's end at all times.
+ * before enqueuing the next, and `appendChain` serialises overlapping callers.
+ * So the end read after unit k IS the end read before unit k+1, every span is
+ * the difference between two adjacent ABSOLUTE readings, and the spans
+ * telescope: their sum is the buffer's absolute end. `timeline.end()` is the
+ * buffer's end at all times.
+ *
+ * The retention trim is the one other thing that touches the buffer, and it is
+ * built so as not to disturb this. It removes a PREFIX, `[0, boundary)`, and a
+ * front removal cannot move the last range's end — which is the only reading
+ * `spanFor` takes. It cannot empty the buffer either: the boundary is behind
+ * the playhead by `RETAIN_SECONDS`, so media after it always survives and
+ * `bufferedEnd` never falls back from a reading to a silence. A removal in
+ * flight while unit k+1 is measured therefore changes neither its `before` nor
+ * its `after`, and `timeline.end()` stays the buffer's end across a trim.
  *
  * That is what makes each measurement self-correcting. A unit measured wrong is
  * wrong about ITSELF; the next unit re-anchors on an absolute position that owes
@@ -84,6 +93,20 @@ import { createUnitTimeline, type UnitTimeline } from '@/lib/reader/unit-timelin
  */
 const isMeasurable = (seconds: number): boolean => Number.isFinite(seconds) && seconds > 0
 
+/**
+ * Seconds of played media kept behind the playhead, sized so previoustrack
+ * still resolves.
+ *
+ * Ten minutes is not a memory figure, it is a REACHABILITY figure. The lock
+ * screen's previoustrack goes back a section, so the window has to be longer
+ * than a section is: anything shorter and the button seeks into media the
+ * carrier evicted while the listener was still on the section after it. A
+ * reading session runs for hours, so the buffer must be bounded — but it is
+ * bounded at the first size that keeps the control working, not at the
+ * smallest size that plays.
+ */
+export const RETAIN_SECONDS = 600
+
 export function createMsePlaybackCarrier(): Carrier {
   let element: HTMLAudioElement | null = null
   /** The wrapped spike carrier: the live `MediaSource` and its append queue. */
@@ -118,6 +141,14 @@ export function createMsePlaybackCarrier(): Carrier {
    * and it is read AFTER an append resolves, which the spike carrier only does
    * on `updateend` — so the range already covers the media that just arrived.
    * The LAST range's end is the append point even on a gapped buffer.
+   *
+   * Eviction does not change that, though it did change the argument. It used
+   * to rest on this carrier removing nothing; what carries it now is that a
+   * front removal only ever takes media from BELOW the last range's end, and
+   * appended media still lands at or after that end — the source buffer places
+   * a fragment by its presentation time, and dropping older media does not
+   * rewind it. So no removal can make an append land before the last range, and
+   * the last range is still where the next one will go.
    */
   const bufferedEnd = (carrier: MseCarrier): number | null => {
     const { ranges } = carrier.report()
@@ -157,6 +188,71 @@ export function createMsePlaybackCarrier(): Carrier {
 
     logReaderEvent('reader-error', detailFor(unit.index, 'duration unmeasurable, counted as 0'))
     return 0
+  }
+
+  /**
+   * Trims the buffer back to the retention window, once per `appendUnits` call.
+   *
+   * ## Why the append path
+   *
+   * `useTTS` offers a unit the moment its audio lands, so an append is the one
+   * thing that happens regularly for as long as a reading session runs — and it
+   * is also the only thing that makes the buffer grow. Tying the trim to it
+   * means the buffer is measured exactly when it changed, with no timer of our
+   * own to leak and no `timeupdate` handler competing with the boundary
+   * tracker's.
+   *
+   * ## Why the cut lands on a unit boundary, not on the horizon
+   *
+   * `dropBefore` keeps a span that still holds media at the horizon, whole —
+   * it will not invent a start in the middle of a unit. `SourceBuffer.remove`
+   * has no such scruple: `remove(0, horizon)` takes the front off that same
+   * unit. Pairing them literally would leave `oldest()` naming a position with
+   * no media under it, and the seek-clamp in `seekToUnit` — whose whole job is
+   * to land the playhead on media that is still there — would put the element
+   * in a hole with `isPlaying` still true. So the cut is moved BACK to the
+   * start of the unit that owns the horizon: both sides evict the same whole
+   * units, `oldest().start` is the first buffered second, and the window kept
+   * is at least `RETAIN_SECONDS`, never less.
+   */
+  const trimToRetentionWindow = (active: MseCarrier, target: HTMLAudioElement): void => {
+    // `currentTime` is 0 before playback and NaN before metadata; `!(x > 0)`
+    // refuses both without a separate guard.
+    const horizon = target.currentTime - RETAIN_SECONDS
+    if (!(horizon > 0)) return
+
+    const oldestKept = timeline.unitAt(horizon)
+    // Null means the horizon points into media this carrier no longer maps —
+    // already evicted, or never appended. Either way there is nothing to line a
+    // cut up with, and a cut we cannot describe is one the timeline could not
+    // follow.
+    if (oldestKept === null) return
+    const boundary = oldestKept.start
+
+    const { ranges } = active.report()
+    const first = ranges[0]
+    // Nothing buffered before the cut: either the buffer is empty or an earlier
+    // trim already took it. Re-issuing the removal would be harmless but the
+    // check keeps the common append — every unit of a long session — free of a
+    // pointless turn through the buffer's queue.
+    if (first === undefined || first[0] >= boundary) return
+
+    // THE MAP GOES FIRST, and deliberately. Between the two the timeline is
+    // conservative: it says media is gone a moment before it is, so a seek in
+    // that window clamps to something still buffered. The other order is
+    // conservative the wrong way — the map would promise media the buffer has
+    // already dropped, and a seek there stalls the element silently, which is
+    // the failure this whole carrier exists to remove. It is also what survives
+    // a refused removal: forgetting media that is still there costs a clamp,
+    // remembering media that is gone costs the session.
+    timeline.dropBefore(boundary)
+
+    // NOT awaited. The eviction shares the wrapped carrier's queue, so it is
+    // already ordered against every append — and the next unit's audio should
+    // not wait behind a memory optimisation to reach the buffer. A rejection
+    // has been logged by the queue that owns it, exactly as a refused append
+    // is; catching here is only to keep it from surfacing as an unhandled one.
+    void active.evictBefore(boundary).catch(() => {})
   }
 
   /** Drops the live source and everything mapped onto it. */
@@ -225,6 +321,12 @@ export function createMsePlaybackCarrier(): Carrier {
       appended.add(unit.index)
       timeline.push(unit.index, spanFor(unit, before, bufferedEnd(active)))
     }
+
+    // After the units, never between them: a trim in the middle of a batch
+    // would sit between one unit's `after` reading and the next unit's
+    // `before`, and the whole span measurement rests on those being the same
+    // reading of the same buffer.
+    trimToRetentionWindow(active, target)
   }
 
   return {
