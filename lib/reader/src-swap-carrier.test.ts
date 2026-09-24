@@ -226,4 +226,59 @@ describe('src-swap carrier', () => {
     expect(started.mock.calls[0][0]).toBe(0)
     await expect(started.mock.calls[0][1]).rejects.toBe(refusal)
   })
+
+  it('revokes the dropped url only AFTER the element is pointed at the new unit', async () => {
+    const element = createRecordingElement()
+    /**
+     * Revokes and element touches share ONE ordered log.
+     *
+     * Kept in separate arrays, a revoke can only be checked for "it happened",
+     * never for "it happened after the assignment" — and jsdom is perfectly
+     * happy to keep a revoked URL sitting in `src`, so the ordering the carrier
+     * calls load-bearing is exactly the property a browser-shaped assertion
+     * cannot see. Pruning first would pull the media out from under an element
+     * that had not yet been re-pointed.
+     */
+    URL.revokeObjectURL = vi.fn((url: string) => {
+      revokedUrls.push(url)
+      element.touches.push(`revoke=${url}`)
+    }) as unknown as typeof URL.revokeObjectURL
+
+    const carrier = createSrcSwapCarrier({ retainAhead: 1 })
+    carrier.attach(element.node)
+
+    await carrier.appendUnits([unit(0), unit(1), unit(2)], { continueTimeline: false })
+    element.touches.length = 0
+
+    carrier.seekToUnit(1)
+
+    // Assign, then prune, then start — in that order and no other.
+    expect(element.touches).toEqual([
+      `src=${createdUrls[1]}`,
+      `revoke=${createdUrls[0]}`,
+      'play',
+    ])
+  })
+
+  it('retains exactly [index, index + retainAhead] and drops everything else', async () => {
+    const element = createRecordingElement()
+    const carrier = createSrcSwapCarrier({ retainAhead: 2 })
+    carrier.attach(element.node)
+
+    await carrier.appendUnits(
+      [unit(0), unit(1), unit(2), unit(3), unit(4), unit(5)],
+      { continueTimeline: false }
+    )
+    carrier.seekToUnit(2)
+
+    // The window is closed at BOTH ends. A window that is too short revokes a
+    // unit the prefetcher has just warmed (the next swap re-synthesises it); one
+    // that is too long retains audio nobody will play, which over a Read All
+    // News run is the whole article.
+    const held = [0, 1, 2, 3, 4, 5].filter((i) => carrier.timeline().startOf(i) !== null)
+    expect(held).toEqual([2, 3, 4])
+    expect([...revokedUrls].sort()).toEqual(
+      [createdUrls[0], createdUrls[1], createdUrls[5]].sort()
+    )
+  })
 })
