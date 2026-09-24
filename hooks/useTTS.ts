@@ -10,7 +10,7 @@ import { createSrcSwapCarrier } from '@/lib/reader/src-swap-carrier'
 import { isMseAudioSupported } from '@/lib/reader/mse-carrier'
 import { createMsePlaybackCarrier } from '@/lib/reader/mse-playback-carrier'
 import { createBoundaryTracker, type BoundaryTracker } from '@/lib/reader/boundary-tracker'
-import type { UnitTimeline } from '@/lib/reader/unit-timeline'
+import type { UnitSpan, UnitTimeline } from '@/lib/reader/unit-timeline'
 
 export interface TTSState {
   isPlaying: boolean
@@ -46,6 +46,31 @@ export interface UseTTSOptions {
    * runs ~60×/second while the screen is on.
    */
   onProgress?: (progress: number) => void
+  /**
+   * Whether the content this render carries CONTINUES the timeline the carrier
+   * already holds instead of starting a new one — i.e. whether the section that
+   * just finished is handing off to this one.
+   *
+   * Only the MSE carrier has a timeline to extend, and only a handoff may
+   * extend it. A new `MediaSource` is a `src` assignment, and a `src`
+   * assignment is the moment a backgrounded phone revokes the page's media
+   * exemption; per-unit boundaries are gone by construction on that carrier, so
+   * a timeline rebuilt per SECTION would simply move the failure from every
+   * ~18 s to every ~2 min — rarer and harder to reproduce, not safer.
+   *
+   * The reader therefore sets it ONLY where the section boundary is not a user
+   * action: its own auto-advance. Play-from-here, stop, a voice change and a
+   * queue re-seat after mark-as-read or DOM eviction all leave it false, and
+   * every one of those is a tap taken with the screen on, where a boundary
+   * costs nothing.
+   *
+   * It is read at ONE moment — the end of the commit in which the hook decided
+   * to release the carrier (see `flushCarrierRelease`). That is what makes a
+   * `setState` inside the caller's `onComplete` early enough to be seen: it
+   * lands in the same batch as the hook's own completion state, so the release
+   * reads this commit's answer rather than the previous render's.
+   */
+  continueTimeline?: boolean
   onComplete?: () => void
   onError?: (error: Error) => void
 }
@@ -97,12 +122,16 @@ const MAX_CONSECUTIVE_CHUNK_FAILURES = 3
 const END_OF_CONTENT_TOLERANCE_SECONDS = 0.1
 
 export function useTTS(content: string, options: UseTTSOptions = {}) {
-  const { voice, units, onProgress, onComplete, onError } = options
+  const { voice, units, continueTimeline, onProgress, onComplete, onError } = options
 
   // Latest units, read inside play() without adding array-identity churn to its
   // deps (the caller passes a fresh array per render).
   const unitsRef = useRef<string[] | undefined>(units)
   unitsRef.current = units
+  // The caller's handoff declaration, read from outside a render — see the
+  // option's own comment for why it is read at exactly one moment.
+  const continueTimelineRef = useRef(false)
+  continueTimelineRef.current = continueTimeline === true
 
   const [state, setState] = useState<TTSState>({
     isPlaying: false,
@@ -131,6 +160,41 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   // can be told apart from a fresh unit start.
   const loadedUnitIndexRef = useRef<number | null>(null)
   const chunksRef = useRef<string[]>([])
+  /**
+   * What this hook's unit 0 is called on the CARRIER's timeline.
+   *
+   * A timeline that survives a section handoff outlives the chunk list that
+   * started it, and both sections number their units from 0 — so the carrier
+   * would be handed unit 0 twice. It keys its appends by index and deduplicates
+   * them, and `UnitTimeline.startOf` answers with the FIRST span carrying an
+   * index, so the collision is not a near miss: the new section's audio would
+   * be dropped on the floor and every seek to it would land in the old
+   * section's media. Worse, `reachedEndOfContent` would find every unit of the
+   * new section "already on the timeline" with the playhead sitting at its end,
+   * and complete the article the instant the handoff began.
+   *
+   * So carrier indices are ABSOLUTE across a continued timeline and this is
+   * where the two numberings meet. It is 0 for every timeline that starts
+   * fresh, which is every timeline the src-swap carrier ever has and every one
+   * the MSE carrier has outside a handoff — so with no handoff in sight nothing
+   * in this file changes meaning.
+   */
+  const unitIndexBaseRef = useRef(0)
+  /** The first carrier index no section has claimed yet. */
+  const nextUnitIndexRef = useRef(0)
+  /**
+   * Whether the carrier currently holds a timeline this hook has appended to.
+   *
+   * It is the `continueTimeline` the CARRIER is told (see `prepareUnit`), which
+   * is a different question from the option of the same name: that one is the
+   * caller's declaration about the next section, this one is the hook's own
+   * record of what the carrier is holding right now.
+   */
+  const timelineLiveRef = useRef(false)
+  const toCarrierIndex = useCallback(
+    (index: number): number => index + unitIndexBaseRef.current,
+    []
+  )
   const charCountsRef = useRef<number[]>([])
   const totalCharsRef = useRef<number>(0)
   const completedCharsRef = useRef<number>(0)
@@ -217,8 +281,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
    * object URLs at all.
    */
   const carrierHasUnit = useCallback(
-    (index: number): boolean => getCarrier().timeline().startOf(index) !== null,
-    [getCarrier]
+    (index: number): boolean =>
+      getCarrier().timeline().startOf(toCarrierIndex(index)) !== null,
+    [getCarrier, toCarrierIndex]
   )
 
   /**
@@ -235,17 +300,27 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   const liveTimelineRef = useRef<UnitTimeline | null>(null)
   const getLiveTimeline = useCallback((): UnitTimeline => {
     if (!liveTimelineRef.current) {
+      // It also translates between the two numberings (see `unitIndexBaseRef`),
+      // which is what keeps the boundary tracker, the progress emitter and the
+      // end-of-content question written in the hook's OWN unit indices across a
+      // continued timeline. A span belonging to a previous section translates to
+      // a negative index — never the current unit, which is exactly what those
+      // three already treat as "not mine, do not measure".
+      const local = (span: UnitSpan | null): UnitSpan | null =>
+        span === null ? null : { ...span, index: span.index - unitIndexBaseRef.current }
+
       liveTimelineRef.current = {
-        push: (index, duration) => getCarrier().timeline().push(index, duration),
-        unitAt: (time) => getCarrier().timeline().unitAt(time),
-        startOf: (index) => getCarrier().timeline().startOf(index),
+        push: (index, duration) =>
+          local(getCarrier().timeline().push(toCarrierIndex(index), duration)) as UnitSpan,
+        unitAt: (time) => local(getCarrier().timeline().unitAt(time)),
+        startOf: (index) => getCarrier().timeline().startOf(toCarrierIndex(index)),
         end: () => getCarrier().timeline().end(),
         dropBefore: (time) => getCarrier().timeline().dropBefore(time),
-        oldest: () => getCarrier().timeline().oldest(),
+        oldest: () => local(getCarrier().timeline().oldest()),
       }
     }
     return liveTimelineRef.current
-  }, [getCarrier])
+  }, [getCarrier, toCarrierIndex])
 
   /**
    * Turns the element's clock into unit completions — the MSE path's
@@ -359,20 +434,27 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
    * need one: each unit starts its element over at 0 and the element's own
    * `duration` is what progress reads.
    *
-   * `continueTimeline` is always true: an append during a session extends what
-   * the carrier holds. Starting over is `rebuild()`, which the hook asks for
-   * explicitly.
+   * `continueTimeline` says whether a timeline is already LIVE. It used to be
+   * hardcoded true, which left the hook with no way to say "start one" at all —
+   * every restart leaned on `rebuild()` having already opened an empty source,
+   * so the flag described nothing. Now the first append after a release starts
+   * the timeline and every append after it extends the same one, which is the
+   * carrier's own gate on when a `MediaSource` may be created. An append that
+   * extends across a section boundary is not a special case here: it is simply
+   * an append onto a timeline nobody released.
    */
   const prepareUnit = useCallback(
     async (index: number, data: ArrayBuffer): Promise<void> => {
-      await getCarrier().appendUnits([{ index, data, duration: 0 }], {
-        continueTimeline: true,
-      })
+      await getCarrier().appendUnits(
+        [{ index: toCarrierIndex(index), data, duration: 0 }],
+        { continueTimeline: timelineLiveRef.current }
+      )
+      timelineLiveRef.current = true
       // The carrier owns the audio now; holding the bytes too would double the
       // retained audio for the whole buffered window.
       bufferCacheRef.current.delete(index)
     },
-    [getCarrier]
+    [getCarrier, toCarrierIndex]
   )
 
   /**
@@ -404,6 +486,10 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
    */
   const rebuildCarrier = useCallback(() => {
     getCarrier().rebuild()
+    // Nothing is on the timeline now, so the next append STARTS one rather than
+    // extending it — and a section that arrives afterwards numbers its units
+    // from the carrier's own 0 again.
+    timelineLiveRef.current = false
     // The timeline the tracker was seated on is gone with it. A seat carried
     // across the rebuild would compare a dead span's index against a fresh
     // one — same index, different timeline — and swallow the first unit's
@@ -411,6 +497,69 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     // leaves the tracker unseated and the first tick re-seats it.
     getBoundaryTracker().reseat(0)
   }, [getBoundaryTracker, getCarrier])
+
+  /**
+   * A release the hook has decided on but has not carried out yet.
+   *
+   * `clearSource` is `stop()`'s extra: it drops the element's source as well,
+   * which completion deliberately does not (the finished unit is still loaded
+   * there with handlers this hook has not detached).
+   */
+  const pendingReleaseRef = useRef<{ clearSource: boolean } | null>(null)
+
+  /**
+   * Decide to drop everything the carrier holds — at the END of this commit.
+   *
+   * The delay is the whole mechanism, and it is a ONE-COMMIT delay, not a
+   * timer. Completion and `stop()` both happen while the caller's `onComplete`
+   * is still on the stack, which is BEFORE the caller can tell us whether the
+   * section that just ended is handing off to another one: that answer is a
+   * `setState` in the caller, and it lands in the same batch as this hook's own
+   * completion state. So the decision is taken now and the ACT is taken once
+   * that batch has committed, when `continueTimeline` is this commit's answer
+   * rather than the previous render's.
+   *
+   * Nothing may append in between — `flushCarrierRelease` is called at the top
+   * of `ensureChunks`, so a start that follows a release synchronously (the
+   * queue re-seat does exactly that: `stop()` then `play()` in one block) still
+   * rebuilds before the first unit lands.
+   */
+  const releaseCarrier = useCallback((clearSource: boolean) => {
+    pendingReleaseRef.current = {
+      clearSource: clearSource || pendingReleaseRef.current?.clearSource === true,
+    }
+  }, [])
+
+  /**
+   * Carry out a pending release, unless the caller has claimed the timeline.
+   *
+   * The carrier kind is part of the question, not a shortcut. A unit on the
+   * src-swap carrier IS a file and there is no timeline to extend, so a handoff
+   * there is exactly what it always was and skipping the release would leave a
+   * Read All News run holding every section's object URLs for the life of the
+   * page. `continueTimeline` changes nothing on that carrier, which is a
+   * property of this function rather than of the flag.
+   */
+  const flushCarrierRelease = useCallback(() => {
+    const pending = pendingReleaseRef.current
+    if (pending === null) return
+    pendingReleaseRef.current = null
+
+    if (continueTimelineRef.current && getCarrier().kind === 'mse') return
+
+    // Ordered as `stop()` used to order it: the audio under the element is
+    // about to die, so the element must stop reading it first.
+    if (pending.clearSource) audioElementRef.current?.removeAttribute('src')
+    rebuildCarrier()
+  }, [getCarrier, rebuildCarrier])
+
+  // The backstop, and the only path a release has when nothing plays next: a
+  // finished article must not keep its audio alive waiting for a start that
+  // never comes. No dependency array on purpose — it is a ref check, and the
+  // commit that matters is whichever one carries the caller's answer.
+  useEffect(() => {
+    flushCarrierRelease()
+  })
 
   // Synthesize a single chunk. The bytes go to the carrier as-is: nothing here
   // decodes them, which is what keeps the synthesis cache's shared ArrayBuffer
@@ -617,8 +766,11 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         pauseOffsetRef.current = 0
         bufferCacheRef.current.clear()
         fetchingRef.current.clear()
-        // The last unit is consumed: nothing may outlive the article.
-        rebuildCarrier()
+        // The last unit is consumed: nothing may outlive the article — unless
+        // the caller's `onComplete`, which has just run, is handing this
+        // timeline to the next section. That answer arrives with this commit,
+        // so the release is decided here and taken there.
+        releaseCarrier(false)
         return
       }
 
@@ -903,7 +1055,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         // phone can revoke the page's media status, and having none of them per
         // unit is the whole reason this carrier exists.
         if (!resuming) {
-          carrier.seekToUnit(index)
+          carrier.seekToUnit(toCarrierIndex(index))
           // The seek MOVED the playhead; nothing was read on the way. Re-seat
           // so the next tick does not report every span between the old
           // position and the new one as completed.
@@ -915,7 +1067,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       } else {
         // THE unit swap: the carrier points the element at unit `index`,
         // releases what is behind the playhead, and starts it.
-        carrier.seekToUnit(index)
+        carrier.seekToUnit(toCarrierIndex(index))
       }
 
       // Only the smooth-bar clock needs starting here; `timeupdate` is already
@@ -937,7 +1089,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       onError,
       prepareUnit,
       rebuildCarrier,
+      releaseCarrier,
       runProgressFrame,
+      toCarrierIndex,
     ]
   )
 
@@ -1168,13 +1322,28 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   // fall back to length-based chunking of the raw content. No-op once
   // initialized — `stop()` clears the list.
   const ensureChunks = useCallback(() => {
+    // Before anything is appended, never after: the queue re-seat path calls
+    // `stop()` and `play()` in one synchronous block, so a release still owed
+    // has to be settled here or the first unit of the new section would land on
+    // the timeline the rebuild is about to throw away.
+    flushCarrierRelease()
+
     if (chunksRef.current.length > 0) return
+
+    // A section numbers its units from 0; the CARRIER numbers them from
+    // wherever the timeline it is continuing left off. Continuing needs both
+    // halves to be true: the caller has to have declared the handoff AND a
+    // timeline has to have survived it — after a release there is nothing to
+    // extend and the numbering starts over with the buffer.
+    const continuing = continueTimelineRef.current && timelineLiveRef.current
+    unitIndexBaseRef.current = continuing ? nextUnitIndexRef.current : 0
 
     const providedUnits = unitsRef.current
     chunksRef.current =
       providedUnits && providedUnits.length > 0
         ? providedUnits
         : splitIntoChunks(content)
+    nextUnitIndexRef.current = unitIndexBaseRef.current + chunksRef.current.length
     charCountsRef.current = chunksRef.current.map((c) => c.length)
     totalCharsRef.current = charCountsRef.current.reduce((a, b) => a + b, 0)
 
@@ -1184,7 +1353,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       totalChunks: chunksRef.current.length,
       totalEstimatedTime: estimatedSeconds,
     }))
-  }, [content])
+  }, [content, flushCarrierRelease])
 
   // Play / resume
   const play = useCallback(async () => {
@@ -1389,15 +1558,17 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     consecutiveFailuresRef.current = 0
 
     detachUnitHandlers()
-    const element = audioElementRef.current
-    if (element) {
-      // The audio below is about to die, so the element must not keep reading
-      // it. Dropping the source is this path's own business — the carrier
-      // leaves it alone, because completion rebuilds too and the finished unit
-      // is still loaded there.
-      element.removeAttribute('src')
-    }
-    rebuildCarrier()
+    // The audio is about to die and the element must not keep reading it, so
+    // this path drops the source as well — the carrier leaves it alone, because
+    // completion releases too and the finished unit is still loaded there.
+    //
+    // Both happen at the end of this commit rather than here, and for one
+    // reason: the reader reaches `stop()` from inside its own `onComplete`, on
+    // its way to the next section, and that single call is the one that may not
+    // tear the timeline down. Every other caller — the Stop button, a
+    // play-from-here jump, a queue re-seat — has its answer committed by then
+    // too, and gets the rebuild it always got.
+    releaseCarrier(true)
 
     setState({
       isPlaying: false,
@@ -1408,7 +1579,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       currentChunkIndex: 0,
       totalChunks: 0,
     })
-  }, [detachUnitHandlers, pause, rebuildCarrier])
+  }, [detachUnitHandlers, pause, releaseCarrier])
 
   // Exactly one <audio> element per hook instance, created on mount and torn
   // down (with every unit the carrier ever prepared) on unmount.
