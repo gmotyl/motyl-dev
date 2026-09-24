@@ -22,7 +22,7 @@
  *    reason about.
  */
 
-import { logReaderEvent } from '@/lib/reader/diagnostic-log'
+import { describeError, detailFor, logReaderEvent } from '@/lib/reader/diagnostic-log'
 import { buildSeamReport, type SeamReport } from '@/lib/reader/seam-report'
 
 /**
@@ -49,26 +49,6 @@ export interface MseCarrier {
    */
   dispose(): void
 }
-
-/**
- * `name: message`, for a diagnostic-log detail.
- *
- * Mirrors the convention in `hooks/useTTS.ts`: what reaches this path is
- * usually a DOMException whose NAME is the entire diagnosis —
- * `InvalidStateError` is "appended while the buffer was busy",
- * `QuotaExceededError` is "the buffer is full and needs eviction". A bare
- * `.message` is frequently empty and would log nothing at all.
- */
-const describeError = (error: unknown): string => {
-  const candidate = error as Error | null | undefined
-  const name = candidate?.name ?? typeof error
-  const message = candidate?.message ?? String(error)
-  return message ? `${name}: ${message}` : name
-}
-
-/** The detail convention the reader's indexed log sites already follow. */
-const detailFor = (index: number, rest?: string): string =>
-  rest ? `${index}: ${rest}` : String(index)
 
 /**
  * A stand-in for `sourceBuffer.buffered` before a source buffer exists.

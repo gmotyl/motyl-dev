@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { logReaderEvent } from '@/lib/reader/diagnostic-log'
+import { describeError, logReaderEvent } from '@/lib/reader/diagnostic-log'
 import { createMseCarrier, isMseAudioSupported, type MseCarrier } from '@/lib/reader/mse-carrier'
 import type { SeamReport } from '@/lib/reader/seam-report'
 import { SPIKE_FRAGMENTS } from '@/lib/reader/spike-fragments'
@@ -97,14 +97,6 @@ export interface CarrierSpike {
   /** Resolves once playback has been started; the run then continues on events. */
   start(): Promise<void>
   stop(): void
-}
-
-/** `name: message`, matching the carrier's convention — a DOMException's name is the diagnosis. */
-const describeError = (error: unknown): string => {
-  const candidate = error as Error | null | undefined
-  const name = candidate?.name ?? typeof error
-  const message = candidate?.message ?? String(error)
-  return message ? `${name}: ${message}` : name
 }
 
 /** What has been appended so far, and where each append starts on the buffer's timeline. */

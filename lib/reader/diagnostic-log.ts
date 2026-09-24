@@ -85,6 +85,39 @@ export function isReaderLogEnabled(): boolean {
   }
 }
 
+/**
+ * `name: message`, for a diagnostic-log detail.
+ *
+ * What reaches the instrumented paths is usually a DOMException whose NAME is
+ * the entire diagnosis — `NotAllowedError` is "the browser refused a
+ * hidden-page start", `AbortError` is "something interrupted it",
+ * `InvalidStateError` is "appended while the buffer was busy",
+ * `QuotaExceededError` is "the buffer is full and needs eviction". So the name
+ * has to survive into the log line, not just the message: a bare `.message` is
+ * frequently empty and would log nothing at all.
+ *
+ * It lives here, beside the store, because every writer of a log detail needs
+ * it and the log's detail format has to be ONE decision, not one per hook.
+ */
+export const describeError = (error: unknown): string => {
+  const candidate = error as Error | null | undefined
+  const name = candidate?.name ?? typeof error
+  const message = candidate?.message ?? String(error)
+  return message ? `${name}: ${message}` : name
+}
+
+/**
+ * The one detail convention every indexed call site follows: the index leads,
+ * and `: ` separates it from any free-form remainder.
+ *
+ * Sites with nothing to add (`play-called`, `unit-ended`, `element-error`) stay
+ * a bare index; `unit-start` carries `index/total` instead, which is a position
+ * rather than a remainder. Before this, `play-rejected` used a space and
+ * `synthesis-failed` a colon, so the same log mixed both.
+ */
+export const detailFor = (index: number, rest?: string): string =>
+  rest ? `${index}: ${rest}` : String(index)
+
 export function logReaderEvent(
   type: ReaderLogEventType,
   detail?: string,

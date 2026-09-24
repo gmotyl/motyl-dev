@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { detectLanguageFromContent } from '@/lib/tts/voice-map'
 import { splitIntoChunks } from '@/lib/tts/chunks'
 import { synthesizeSpeech } from '@/lib/tts/client'
-import { logReaderEvent } from '@/lib/reader/diagnostic-log'
+import { describeError, detailFor, logReaderEvent } from '@/lib/reader/diagnostic-log'
 
 export interface TTSState {
   isPlaying: boolean
@@ -71,32 +71,6 @@ const MAX_CONSECUTIVE_CHUNK_FAILURES = 3
 // bytes are handed to the media element as-is, correctly typed, and the browser
 // decodes them on its own audio thread.
 const AUDIO_MIME_TYPE = 'audio/mpeg'
-
-/**
- * `name: message`, for a diagnostic-log detail.
- *
- * What reaches the instrumented paths is usually a DOMException whose NAME is
- * the entire diagnosis — `NotAllowedError` is "the browser refused a hidden-page
- * start", `AbortError` is "something interrupted it" — so the name has to
- * survive into the log line, not just the message.
- */
-const describeError = (error: unknown): string => {
-  const candidate = error as Error | null | undefined
-  const name = candidate?.name ?? typeof error
-  const message = candidate?.message ?? String(error)
-  return message ? `${name}: ${message}` : name
-}
-
-/**
- * The one detail convention every indexed call site in this file follows:
- * the unit index leads, and `: ` separates it from any free-form remainder.
- * Sites with nothing to add (`play-called`, `unit-ended`, `element-error`) stay
- * a bare index; `unit-start` carries `index/total` instead, which is a position
- * rather than a remainder. Before this, `play-rejected` used a space and
- * `synthesis-failed` a colon, so the same log mixed both.
- */
-const detailFor = (index: number, rest?: string): string =>
-  rest ? `${index}: ${rest}` : String(index)
 
 export function useTTS(content: string, options: UseTTSOptions = {}) {
   const { voice, units, onProgress, onComplete, onError } = options
