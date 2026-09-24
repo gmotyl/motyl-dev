@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { detectLanguageFromContent } from '@/lib/tts/voice-map'
 import { splitIntoChunks } from '@/lib/tts/chunks'
 import { synthesizeSpeech } from '@/lib/tts/client'
+import { logReaderEvent } from '@/lib/reader/diagnostic-log'
 
 export interface TTSState {
   isPlaying: boolean
@@ -70,6 +71,21 @@ const MAX_CONSECUTIVE_CHUNK_FAILURES = 3
 // bytes are handed to the media element as-is, correctly typed, and the browser
 // decodes them on its own audio thread.
 const AUDIO_MIME_TYPE = 'audio/mpeg'
+
+/**
+ * `name: message`, for a diagnostic-log detail.
+ *
+ * What reaches the instrumented paths is usually a DOMException whose NAME is
+ * the entire diagnosis — `NotAllowedError` is "the browser refused a hidden-page
+ * start", `AbortError` is "something interrupted it" — so the name has to
+ * survive into the log line, not just the message.
+ */
+const describeError = (error: unknown): string => {
+  const candidate = error as Error | null | undefined
+  const name = candidate?.name ?? typeof error
+  const message = candidate?.message ?? String(error)
+  return message ? `${name}: ${message}` : name
+}
 
 export function useTTS(content: string, options: UseTTSOptions = {}) {
   const { voice, units, onProgress, onComplete, onError } = options
@@ -418,6 +434,11 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   // Play a single chunk
   const playChunk = useCallback(
     async (index: number, offset: number, generation: number, signal: AbortSignal) => {
+      // ABOVE the generation guard, like every other call in this file: the one
+      // thing the device log has to be able to say is "the chain reached here",
+      // and a call that recorded only after passing the guard could not say it.
+      logReaderEvent('unit-start', String(index))
+
       if (generation !== requestGenerationRef.current || signal.aborted) return
 
       if (index >= chunksRef.current.length) {
@@ -459,6 +480,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
        * ~4×/second instead of gliding.
        */
       const stopWithError = (error: Error) => {
+        logReaderEvent('stop-with-error', error?.message)
         isPlayingRef.current = false
         if (animationFrameRef.current) {
           cancelAnimationFrame(animationFrameRef.current)
@@ -480,6 +502,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
        * the rest of the article.
        */
       const failUnit = (failedIndex: number, error: Error) => {
+        // The index leads the detail: which unit was dropped is the first thing
+        // the log is read for.
+        logReaderEvent('synthesis-failed', `${failedIndex}: ${error?.message ?? ''}`)
         consecutiveFailuresRef.current += 1
 
         // The unit is abandoned, so nothing will ever read its object URL again.
@@ -585,12 +610,27 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         element.currentTime = offset
       }
 
+      /**
+       * The shared early-return guard of all three handlers below, evaluated
+       * ONCE so the log can be written before it is applied.
+       *
+       * Reading it into a boolean changes nothing about playback — `||` still
+       * short-circuits and every ref is read at the same moment — but it is what
+       * lets the entry go in ABOVE the guard and carry `suppressed`. Logged
+       * below the guard instead, a suppressed event would leave no trace at all,
+       * and on a device that is byte-for-byte identical to a page that never
+       * resumed executing — the exact ambiguity this instrument exists to
+       * remove.
+       */
+      const guardRejects = () =>
+        !isPlayingRef.current ||
+        generation !== requestGenerationRef.current ||
+        signal.aborted
+
       element.onended = () => {
-        if (
-          !isPlayingRef.current ||
-          generation !== requestGenerationRef.current ||
-          signal.aborted
-        ) return
+        const suppressed = guardRejects()
+        logReaderEvent('unit-ended', String(index), { suppressed })
+        if (suppressed) return
         // A unit that played all the way through is the only real proof the
         // pipeline is healthy, so THAT is what clears the failure streak.
         // Synthesis merely resolving is not proof: an element `error` means the
@@ -606,11 +646,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       // carrier gone there is nothing to retry on, so this is a unit failure of
       // exactly the same kind as a synthesis failure.
       element.onerror = () => {
-        if (
-          !isPlayingRef.current ||
-          generation !== requestGenerationRef.current ||
-          signal.aborted
-        ) return
+        const suppressed = guardRejects()
+        logReaderEvent('element-error', String(index), { suppressed })
+        if (suppressed) return
         detachUnitHandlers()
         const mediaError = element.error
         failUnit(
@@ -626,13 +664,12 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       // no second output path, so silence with `isPlaying` left true is the only
       // other outcome. (The gesture-unlock poke in play() is a separate call and
       // swallows its own, expected, rejection.)
+      logReaderEvent('play-called', String(index))
       const started = element.play?.()
       void started?.catch?.((error: unknown) => {
-        if (
-          !isPlayingRef.current ||
-          generation !== requestGenerationRef.current ||
-          signal.aborted
-        ) return
+        const suppressed = guardRejects()
+        logReaderEvent('play-rejected', `${index} ${describeError(error)}`, { suppressed })
+        if (suppressed) return
         console.warn(`[TTS] Element refused to play unit ${index}:`, error)
         stopWithError(error as Error)
       })
