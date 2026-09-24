@@ -86,6 +86,36 @@ describe('applyReaderLogParam', () => {
     expect(removeItem).not.toHaveBeenCalled()
   })
 
+  it('ignores a different parameter whose name merely ends in readerlog', () => {
+    // Pins the URLSearchParams parse: a substring test such as
+    // `search.includes('readerlog=1')` would match `?xreaderlog=1` and switch
+    // the instrument on from an unrelated parameter.
+    const { getItem, setItem, removeItem } = stubStorage({})
+
+    expect(applyReaderLogParam('?xreaderlog=1')).toBe(false)
+
+    expect(getItem).toHaveBeenCalledWith(READER_LOG_FLAG)
+    expect(setItem).not.toHaveBeenCalled()
+    expect(removeItem).not.toHaveBeenCalled()
+  })
+
+  it('reports disabled when a write is silently dropped', () => {
+    // Quota exceeded / Safari private mode can accept `setItem` and store
+    // nothing. The runbook treats a visible panel as PROOF the flag persisted,
+    // so a `true` here would send the operator into a screen-off device run
+    // whose PWA relaunch logs nothing. Reporting the re-read state instead
+    // fails loudly, at the one moment it can still be fixed.
+    const { getItem, setItem } = stubStorage({
+      setItem: vi.fn(),
+      getItem: vi.fn(() => null),
+    })
+
+    expect(applyReaderLogParam('?readerlog=1')).toBe(false)
+
+    expect(setItem).toHaveBeenCalledWith(READER_LOG_FLAG, expect.anything())
+    expect(getItem).toHaveBeenCalledWith(READER_LOG_FLAG)
+  })
+
   it('swallows a localStorage write failure', () => {
     // Private mode / storage denied: the switch must degrade to "off" rather
     // than throw out of whatever component applied the URL.

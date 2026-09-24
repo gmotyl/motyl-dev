@@ -27,20 +27,22 @@ const fireAllLifecycleEvents = () => {
   document.dispatchEvent(new Event('resume'))
   setVisibility('hidden')
   document.dispatchEvent(new Event('visibilitychange'))
-  window.dispatchEvent(new Event('pagehide'))
+  window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: false }))
 }
 
 beforeEach(() => {
+  // The buffer is module-level and survives between tests; the flag lives in
+  // localStorage and is read per event, so clearing both is what gives each
+  // test an empty log and a disabled instrument to start from.
   window.localStorage.clear()
-  // clearReaderLog also drops the store's cached flag read, so every test
-  // starts from an empty buffer AND a cold flag.
   clearReaderLog()
 })
 
 afterEach(() => {
   delete (document as unknown as Record<string, unknown>).visibilityState
   vi.restoreAllMocks()
-  vi.unstubAllGlobals()
+  // No vi.unstubAllGlobals() here: nothing in this file stubs a global, and it
+  // would wipe vitest.setup.ts's ResizeObserver stub for every later test.
 })
 
 describe('useReaderLifecycleLog', () => {
@@ -67,14 +69,33 @@ describe('useReaderLifecycleLog', () => {
     expect(recordedTypes()).toEqual(['visibility-hidden', 'visibility-visible'])
   })
 
-  it('records pagehide', () => {
+  it('records pagehide with the bfcache outcome', () => {
     enable()
     renderHook(() => useReaderLifecycleLog())
 
     // pagehide is fired at the Window, never at the document.
-    window.dispatchEvent(new Event('pagehide'))
+    // `persisted` separates "frozen into the bfcache" from a real unload, and
+    // those two read very differently when the reader dies with the screen off.
+    window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true }))
+    window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: false }))
 
-    expect(recordedTypes()).toEqual(['pagehide'])
+    expect(readReaderLog().map((entry) => [entry.type, entry.detail])).toEqual([
+      ['pagehide', 'persisted=true'],
+      ['pagehide', 'persisted=false'],
+    ])
+  })
+
+  it('attaches its listeners once, not per render', () => {
+    // Without the effect's empty dependency array every render re-attaches, and
+    // the churn lands in exactly the path whose timing is under investigation.
+    const documentAdd = vi.spyOn(document, 'addEventListener')
+
+    const { rerender } = renderHook(() => useReaderLifecycleLog())
+    rerender()
+    rerender()
+
+    const freezeRegistrations = documentAdd.mock.calls.filter(([type]) => type === 'freeze')
+    expect(freezeRegistrations).toHaveLength(1)
   })
 
   it('removes every listener on unmount', () => {

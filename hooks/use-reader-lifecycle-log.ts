@@ -29,7 +29,11 @@ export function useReaderLifecycleLog(): void {
         document.visibilityState === 'hidden' ? 'visibility-hidden' : 'visibility-visible',
       )
     }
-    const onPageHide = () => logReaderEvent('pagehide')
+    // `persisted` carries the diagnostic half of pagehide: true means the page
+    // was frozen into the bfcache, false means a real unload. A reader that
+    // went quiet reads very differently under each.
+    const onPageHide = (event: PageTransitionEvent) =>
+      logReaderEvent('pagehide', `persisted=${event.persisted === true}`)
 
     document.addEventListener('freeze', onFreeze)
     document.addEventListener('resume', onResume)

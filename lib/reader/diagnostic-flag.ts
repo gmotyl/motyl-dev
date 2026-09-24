@@ -22,7 +22,12 @@ export function applyReaderLogParam(search: string): boolean {
   try {
     if (value === '1') {
       window.localStorage.setItem(READER_LOG_FLAG, '1')
-      return true
+      // Re-read rather than return `true`: a storage can accept the write and
+      // store nothing (quota exceeded, Safari private mode) without throwing.
+      // The runbook reads a visible panel as proof the flag persisted, so the
+      // return value has to be a statement about STORAGE, not about intent —
+      // otherwise a dropped write costs a whole screen-off device run.
+      return isReaderLogEnabled()
     }
     if (value === '0') {
       window.localStorage.removeItem(READER_LOG_FLAG)
