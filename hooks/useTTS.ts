@@ -5,6 +5,8 @@ import { detectLanguageFromContent } from '@/lib/tts/voice-map'
 import { splitIntoChunks } from '@/lib/tts/chunks'
 import { synthesizeSpeech } from '@/lib/tts/client'
 import { describeError, detailFor, logReaderEvent } from '@/lib/reader/diagnostic-log'
+import type { Carrier } from '@/lib/reader/carrier'
+import { createSrcSwapCarrier } from '@/lib/reader/src-swap-carrier'
 
 export interface TTSState {
   isPlaying: boolean
@@ -66,12 +68,6 @@ const BUFFER_AHEAD = 3
 // no network) and surfaced as a real stop + onError.
 const MAX_CONSECUTIVE_CHUNK_FAILURES = 3
 
-// `lib/tts/client` returns MP3 bytes straight from edge-tts. Nothing in the
-// reader needs decoded samples (no runtime playback-rate or EQ feature), so the
-// bytes are handed to the media element as-is, correctly typed, and the browser
-// decodes them on its own audio thread.
-const AUDIO_MIME_TYPE = 'audio/mpeg'
-
 export function useTTS(content: string, options: UseTTSOptions = {}) {
   const { voice, units, onProgress, onComplete, onError } = options
 
@@ -132,16 +128,50 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   // so it has to reach the CURRENT progress emitter — whose identity changes
   // with `onProgress` — instead of closing over the one that existed at mount.
   const emitProgressRef = useRef<() => void>(() => {})
+  // Where a refused start is reported, for the same reason as the progress
+  // emitter above: the carrier is created once, at mount, so its callback has
+  // to reach the CURRENT unit's handler — the one that still holds this call's
+  // generation and abort signal — instead of the one that existed at mount.
+  const reportStartRef = useRef<(index: number, started: Promise<void> | undefined) => void>(
+    () => {}
+  )
 
-  // Buffer cache: pre-fetched MP3 blobs keyed by chunk index. An entry is
-  // dropped once its object URL exists — the URL then owns the bytes.
-  const bufferCacheRef = useRef<Map<number, Blob>>(new Map())
-  // Live `blob:` object URLs keyed by chunk index. Every URL in here MUST be
-  // revoked eventually (unit consumed, stop(), unmount) or a long Read All News
-  // session leaks the whole article's audio.
-  const objectUrlsRef = useRef<Map<number, string>>(new Map())
+  // Buffer cache: pre-fetched MP3 bytes keyed by chunk index. An entry is
+  // dropped once the carrier holds the unit — the carrier then owns the audio.
+  const bufferCacheRef = useRef<Map<number, ArrayBuffer>>(new Map())
   // Track in-flight fetches to avoid duplicate requests
   const fetchingRef = useRef<Set<number>>(new Set())
+
+  // THE carrier: what actually gets a unit's audio out of the element. Created
+  // once per hook instance and never swapped, so the element it holds — and the
+  // OS media session hanging off it — survive every content change.
+  const carrierRef = useRef<Carrier | null>(null)
+  const getCarrier = useCallback((): Carrier => {
+    if (!carrierRef.current) {
+      carrierRef.current = createSrcSwapCarrier({
+        // The prefetch depth IS the retention window: a unit is prepared
+        // BUFFER_AHEAD ahead of the playhead and released once the playhead is
+        // past it.
+        retainAhead: BUFFER_AHEAD,
+        onStarted: (index, started) => reportStartRef.current(index, started),
+      })
+    }
+    return carrierRef.current
+  }, [])
+
+  /**
+   * Whether the carrier already holds unit `index`, i.e. whether its audio is
+   * prepared and a seek to it would play something.
+   *
+   * `timeline()` is the interface's only view of what a carrier holds, so this
+   * is the carrier-agnostic form of the `objectUrls.has(index)` check this hook
+   * used to make directly — and it stays true across a strategy that has no
+   * object URLs at all.
+   */
+  const carrierHasUnit = useCallback(
+    (index: number): boolean => getCarrier().timeline().startOf(index) !== null,
+    [getCarrier]
+  )
 
   const invalidatePendingRequests = useCallback(() => {
     requestGenerationRef.current += 1
@@ -178,9 +208,11 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       document.body.appendChild(element)
       audioElementRef.current = element
       elementUnlockedRef.current = false
+      // The carrier plays through THIS element, and only ever this one.
+      getCarrier().attach(element)
     }
     return audioElementRef.current
-  }, [])
+  }, [getCarrier])
 
   /**
    * Spend the user gesture on the element, synchronously, before anything is
@@ -190,7 +222,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
    * `play()` on the *gesture task itself*: only a call made synchronously inside
    * the handler — or a later call on an element that call already unlocked —
    * is allowed. Our real per-unit `play()` happens after
-   * `await fetchAudioBlob(...)`, which is a different task, so without this poke
+   * `await fetchUnitAudio(...)`, which is a different task, so without this poke
    * the very first unit would reject with `NotAllowedError` and the spec's
    * "Apple browsers are no longer carved out" would be a lie.
    *
@@ -223,20 +255,32 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     }
   }, [])
 
-  // Expose a unit's MP3 as a blob: URL, reusing the one it already has. Called
-  // as soon as a unit's audio lands (prefetch) so the source swap at `ended` is
-  // a local assignment with no network round-trip.
-  const ensureObjectUrl = useCallback((index: number, blob: Blob): string => {
-    const existing = objectUrlsRef.current.get(index)
-    if (existing) return existing
-
-    const url = URL.createObjectURL(blob)
-    objectUrlsRef.current.set(index, url)
-    // The URL keeps the blob alive; holding the Blob too would double the
-    // retained audio for the whole buffered window.
-    bufferCacheRef.current.delete(index)
-    return url
-  }, [])
+  /**
+   * Hand a unit's MP3 to the carrier. Called as soon as the audio lands
+   * (prefetch) so the swap at `ended` costs no network round-trip and, on the
+   * src-swap carrier, is a local assignment.
+   *
+   * The duration is 0 — "unmeasurable". Nothing here decodes the media, and a
+   * duration derived from byte length and a nominal bitrate would make every
+   * later position report a bitrate assumption. The src-swap carrier does not
+   * need one: each unit starts its element over at 0 and the element's own
+   * `duration` is what progress reads.
+   *
+   * `continueTimeline` is always true: an append during a session extends what
+   * the carrier holds. Starting over is `rebuild()`, which the hook asks for
+   * explicitly.
+   */
+  const prepareUnit = useCallback(
+    async (index: number, data: ArrayBuffer): Promise<void> => {
+      await getCarrier().appendUnits([{ index, data, duration: 0 }], {
+        continueTimeline: true,
+      })
+      // The carrier owns the audio now; holding the bytes too would double the
+      // retained audio for the whole buffered window.
+      bufferCacheRef.current.delete(index)
+    },
+    [getCarrier]
+  )
 
   /**
    * Detach the current unit's `ended` / `error` handlers.
@@ -256,30 +300,24 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     element.onerror = null
   }, [])
 
-  const revokeAllObjectUrls = useCallback(() => {
-    objectUrlsRef.current.forEach((url) => URL.revokeObjectURL(url))
-    objectUrlsRef.current.clear()
-  }, [])
-
   /**
-   * Revoke every object URL outside the live window [current, current +
-   * BUFFER_AHEAD]. Called AFTER the element's src has been swapped, so the URL
-   * being dropped is never the one the element is currently reading. This is
-   * what releases a consumed unit, and also what cleans up behind a backwards
-   * or long-distance `playFromUnit` jump.
+   * Drop everything the carrier holds — every unit's audio with it.
+   *
+   * Called wherever the session ends (completion, the give-up path, `stop()`),
+   * because nothing a session prepared may outlive it: a Read All News run that
+   * kept one unit's audio per paragraph would retain the whole article's.
+   * Releasing a unit the playhead has merely passed is the carrier's own job,
+   * at the swap.
    */
-  const pruneObjectUrls = useCallback((currentIndex: number) => {
-    const keepUntil = currentIndex + BUFFER_AHEAD
-    objectUrlsRef.current.forEach((url, index) => {
-      if (index >= currentIndex && index <= keepUntil) return
-      URL.revokeObjectURL(url)
-      objectUrlsRef.current.delete(index)
-    })
-  }, [])
+  const rebuildCarrier = useCallback(() => {
+    getCarrier().rebuild()
+  }, [getCarrier])
 
-  // Synthesize a single chunk and wrap its MP3 for the element.
-  const fetchAudioBlob = useCallback(
-    async (text: string, signal: AbortSignal): Promise<Blob> => {
+  // Synthesize a single chunk. The bytes go to the carrier as-is: nothing here
+  // decodes them, which is what keeps the synthesis cache's shared ArrayBuffer
+  // usable for a replay (see the carrier's wrap).
+  const fetchUnitAudio = useCallback(
+    async (text: string, signal: AbortSignal): Promise<ArrayBuffer> => {
       const detectedVoice = voiceRef.current || detectLanguage(content)
 
       if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
@@ -289,11 +327,11 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
 
       // The synthesis cache (lib/tts/client) hands the SAME ArrayBuffer instance
-      // to every caller for a given voice+text. `new Blob([buffer])` COPIES it,
-      // so — unlike the old Web Audio decode step, which detached its input and
-      // forced a slice(0) dance — replay / play-from-here / prefetch-then-play can all
-      // wrap the cached buffer again without any chance of a detached buffer.
-      return new Blob([arrayBuffer], { type: AUDIO_MIME_TYPE })
+      // to every caller for a given voice+text, so this buffer is shared and
+      // must stay intact. The carrier wraps it in a Blob, which COPIES —
+      // unlike the old Web Audio decode step, which detached its input and
+      // forced a slice(0) dance before every replay.
+      return arrayBuffer
     },
     [content]
   )
@@ -306,21 +344,20 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       const end = Math.min(startIndex + BUFFER_AHEAD, chunksRef.current.length)
       for (let i = startIndex; i < end; i++) {
         if (
-          objectUrlsRef.current.has(i) ||
+          carrierHasUnit(i) ||
           bufferCacheRef.current.has(i) ||
           fetchingRef.current.has(i)
         ) continue
 
         fetchingRef.current.add(i)
 
-        fetchAudioBlob(chunksRef.current[i], signal)
-          .then((blob) => {
+        fetchUnitAudio(chunksRef.current[i], signal)
+          .then((data) => {
             fetchingRef.current.delete(i)
             if (generation !== requestGenerationRef.current || signal.aborted) return
-            bufferCacheRef.current.set(i, blob)
-            // Prepare the URL now, not at the swap: `ended` must only have to
-            // assign a string.
-            ensureObjectUrl(i, blob)
+            // Give the unit to the carrier now, not at the swap: `ended` must
+            // only have to ask for a seek.
+            return prepareUnit(i, data)
           })
           .catch((err) => {
             fetchingRef.current.delete(i)
@@ -330,7 +367,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
           })
       }
     },
-    [ensureObjectUrl, fetchAudioBlob]
+    [carrierHasUnit, fetchUnitAudio, prepareUnit]
   )
 
   /**
@@ -461,11 +498,12 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         bufferCacheRef.current.clear()
         fetchingRef.current.clear()
         // The last unit is consumed: nothing may outlive the article.
-        revokeAllObjectUrls()
+        rebuildCarrier()
         return
       }
 
       const element = getAudioElement()
+      const carrier = getCarrier()
 
       /**
        * End the session on an unrecoverable failure. There is exactly one output
@@ -516,30 +554,26 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         // The index leads the detail, `: ` separates it from anything free-form
         // (see `detailFor`): which unit was dropped is the first thing the log
         // is read for. The remainder goes through `describeError` for the same
-        // reason as `stopWithError`: the `fetchAudioBlob` catch hands this the
+        // reason as `stopWithError`: the `fetchUnitAudio` catch hands this the
         // original rejection under an `error as Error` cast, so a rejection
         // without a message would otherwise reduce the line to a bare index.
         logReaderEvent('synthesis-failed', detailFor(failedIndex, describeError(error)))
         consecutiveFailuresRef.current += 1
 
-        // The unit is abandoned, so nothing will ever read its object URL again.
-        // Revoke it here rather than leaving it to the next unit's prune: on the
-        // give-up path below there is no next unit to prune behind us.
-        const failedUrl = objectUrlsRef.current.get(failedIndex)
-        if (failedUrl) {
-          URL.revokeObjectURL(failedUrl)
-          objectUrlsRef.current.delete(failedIndex)
-          if (loadedUnitIndexRef.current === failedIndex) {
-            loadedUnitIndexRef.current = null
-          }
+        // The unit is abandoned, so the element is no longer carrying anything
+        // this hook counts as loaded. Its audio is released by the carrier the
+        // moment the next unit is sought — and on the give-up path below, where
+        // there is no next unit, by the rebuild.
+        if (loadedUnitIndexRef.current === failedIndex) {
+          loadedUnitIndexRef.current = null
         }
 
         if (consecutiveFailuresRef.current > MAX_CONSECUTIVE_CHUNK_FAILURES) {
           // Too many units in a row were unreadable: systemic (no network,
           // edge-tts down, a decoder that rejects everything) rather than one bad
           // paragraph. The session ends here, so the whole buffered window of
-          // object URLs goes with it.
-          revokeAllObjectUrls()
+          // prepared audio goes with it.
+          rebuildCarrier()
           loadedUnitIndexRef.current = null
           stopWithError(error)
           return
@@ -561,7 +595,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       const resuming =
         offset > 0 &&
         loadedUnitIndexRef.current === index &&
-        objectUrlsRef.current.has(index)
+        carrierHasUnit(index)
 
       if (!resuming) {
         // The previous unit is abandoned the moment this branch commits to a new
@@ -579,17 +613,15 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         // the same unit.
         detachUnitHandlers()
 
-        let url = objectUrlsRef.current.get(index)
+        if (!carrierHasUnit(index)) {
+          let data = bufferCacheRef.current.get(index)
 
-        if (!url) {
-          let blob = bufferCacheRef.current.get(index)
-
-          if (!blob) {
+          if (!data) {
             // Not buffered yet — fetch inline and show buffering state
             setState((prev) => ({ ...prev, isBuffering: true }))
 
             try {
-              blob = await fetchAudioBlob(chunksRef.current[index], signal)
+              data = await fetchUnitAudio(chunksRef.current[index], signal)
             } catch (error) {
               if (
                 generation !== requestGenerationRef.current ||
@@ -604,7 +636,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
             }
           }
 
-          url = ensureObjectUrl(index, blob)
+          await prepareUnit(index, data)
         }
 
         if (
@@ -615,11 +647,10 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
         setState((prev) => ({ ...prev, isBuffering: false, currentChunkIndex: index }))
 
-        element.src = url
+        // The unit the element will carry from here on. The carrier is asked
+        // for it below, once this unit's handlers are in place — it releases
+        // the units the playhead has left behind as part of the same swap.
         loadedUnitIndexRef.current = index
-        // Only now is the previous unit's URL safe to drop: the element has
-        // already been repointed away from it.
-        pruneObjectUrls(index)
       } else {
         setState((prev) => ({ ...prev, isBuffering: false, currentChunkIndex: index }))
         element.currentTime = offset
@@ -679,17 +710,31 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       // no second output path, so silence with `isPlaying` left true is the only
       // other outcome. (The gesture-unlock poke in play() is a separate call and
       // swallows its own, expected, rejection.)
-      logReaderEvent('play-called', detailFor(index))
-      const started = element.play?.()
-      void started?.catch?.((error: unknown) => {
-        const suppressed = guardRejects()
-        logReaderEvent('play-rejected', detailFor(index, describeError(error)), {
-          suppressed,
+      //
+      // It reads the same whether the carrier started the element (a new unit)
+      // or this call did (a mid-unit resume, where re-seeking would reassign the
+      // source and rewind), so both go through one reporter.
+      const reportStart = (startedIndex: number, started: Promise<void> | undefined) => {
+        void started?.catch?.((error: unknown) => {
+          const suppressed = guardRejects()
+          logReaderEvent('play-rejected', detailFor(startedIndex, describeError(error)), {
+            suppressed,
+          })
+          if (suppressed) return
+          console.warn(`[TTS] Element refused to play unit ${startedIndex}:`, error)
+          stopWithError(error as Error)
         })
-        if (suppressed) return
-        console.warn(`[TTS] Element refused to play unit ${index}:`, error)
-        stopWithError(error as Error)
-      })
+      }
+      reportStartRef.current = reportStart
+
+      logReaderEvent('play-called', detailFor(index))
+      if (resuming) {
+        reportStart(index, element.play?.())
+      } else {
+        // THE unit swap: the carrier points the element at unit `index`,
+        // releases what is behind the playhead, and starts it.
+        carrier.seekToUnit(index)
+      }
 
       // Only the smooth-bar clock needs starting here; `timeupdate` is already
       // wired to the element and starts emitting on its own once it plays.
@@ -698,16 +743,17 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       }
     },
     [
+      carrierHasUnit,
       detachUnitHandlers,
-      ensureObjectUrl,
-      fetchAudioBlob,
+      fetchUnitAudio,
       fillBuffer,
       getAudioElement,
+      getCarrier,
       invalidatePendingRequests,
       onComplete,
       onError,
-      pruneObjectUrls,
-      revokeAllObjectUrls,
+      prepareUnit,
+      rebuildCarrier,
       runProgressFrame,
     ]
   )
@@ -767,14 +813,13 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     // Fetch first chunk (must have it to start playing)
     if (
       pauseOffsetRef.current === 0 &&
-      !objectUrlsRef.current.has(startIdx) &&
+      !carrierHasUnit(startIdx) &&
       !bufferCacheRef.current.has(startIdx)
     ) {
       try {
-        const blob = await fetchAudioBlob(chunksRef.current[startIdx], signal)
+        const data = await fetchUnitAudio(chunksRef.current[startIdx], signal)
         if (generation !== requestGenerationRef.current || signal.aborted) return
-        bufferCacheRef.current.set(startIdx, blob)
-        ensureObjectUrl(startIdx, blob)
+        await prepareUnit(startIdx, data)
       } catch (error) {
         if (
           generation !== requestGenerationRef.current ||
@@ -792,17 +837,16 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     // Kick off prefetch for upcoming chunks (don't await)
     for (let i = startIdx + 1; i < preBufferEnd; i++) {
       if (
-        !objectUrlsRef.current.has(i) &&
+        !carrierHasUnit(i) &&
         !bufferCacheRef.current.has(i) &&
         !fetchingRef.current.has(i)
       ) {
         fetchingRef.current.add(i)
-        fetchAudioBlob(chunksRef.current[i], signal)
-          .then((blob) => {
+        fetchUnitAudio(chunksRef.current[i], signal)
+          .then((data) => {
             fetchingRef.current.delete(i)
             if (generation !== requestGenerationRef.current || signal.aborted) return
-            bufferCacheRef.current.set(i, blob)
-            ensureObjectUrl(i, blob)
+            return prepareUnit(i, data)
           })
           .catch(() => { fetchingRef.current.delete(i) })
       }
@@ -814,13 +858,14 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     pauseOffsetRef.current = 0
     void playChunk(startIdx, offset, generation, signal)
   }, [
+    carrierHasUnit,
     ensureChunks,
-    ensureObjectUrl,
-    fetchAudioBlob,
+    fetchUnitAudio,
     getAudioElement,
     invalidatePendingRequests,
     onError,
     playChunk,
+    prepareUnit,
     unlockElementForGesture,
     voice,
   ])
@@ -908,11 +953,13 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     detachUnitHandlers()
     const element = audioElementRef.current
     if (element) {
-      // The URLs below are about to die, so the element must not keep reading
-      // one of them.
+      // The audio below is about to die, so the element must not keep reading
+      // it. Dropping the source is this path's own business — the carrier
+      // leaves it alone, because completion rebuilds too and the finished unit
+      // is still loaded there.
       element.removeAttribute('src')
     }
-    revokeAllObjectUrls()
+    rebuildCarrier()
 
     setState({
       isPlaying: false,
@@ -923,12 +970,13 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       currentChunkIndex: 0,
       totalChunks: 0,
     })
-  }, [detachUnitHandlers, pause, revokeAllObjectUrls])
+  }, [detachUnitHandlers, pause, rebuildCarrier])
 
   // Exactly one <audio> element per hook instance, created on mount and torn
-  // down (with every object URL it ever handed out) on unmount.
+  // down (with every unit the carrier ever prepared) on unmount.
   useEffect(() => {
     const element = getAudioElement()
+    const carrier = getCarrier()
     return () => {
       stop()
       detachUnitHandlers()
@@ -936,9 +984,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       element.removeAttribute('src')
       element.remove()
       audioElementRef.current = null
-      revokeAllObjectUrls()
+      carrier.dispose()
     }
-  }, [detachUnitHandlers, getAudioElement, revokeAllObjectUrls, stop])
+  }, [detachUnitHandlers, getAudioElement, getCarrier, stop])
 
   const playback: TTSPlayback = {
     ...state,
