@@ -50,14 +50,17 @@ const entries: ReaderLogEntry[] = []
 let lastAt: number | null = null
 
 /**
- * Cached flag read. Re-reading `localStorage` on every event is itself I/O in
- * the measured path, so the answer is resolved once and kept. `clearReaderLog()`
- * drops the cache — that is the single reset the tests (and the URL switch in
- * the next task) need, so no extra export is required.
+ * The flag is read on EVERY call, never cached. A cache makes the instrument
+ * lie: turning the log on mid-session would record nothing (an earlier disabled
+ * read stuck at `false`), and `?readerlog=0` mid-session would keep recording.
+ * It also forces `clearReaderLog()` to secretly double as a flag reset, so the
+ * panel's Clear button could silently disable the instrument.
+ *
+ * The cost is one `getItem` of one short key per event — microseconds, a handful
+ * of events per speech unit. The property that actually matters for the measured
+ * path is that the disabled branch constructs nothing, and that still holds.
  */
-let enabledCache: boolean | null = null
-
-function readFlag(): boolean {
+export function isReaderLogEnabled(): boolean {
   // SSR: there is no localStorage on the server.
   if (typeof window === 'undefined') return false
   try {
@@ -66,11 +69,6 @@ function readFlag(): boolean {
     // Private mode / storage denied: report disabled rather than propagate.
     return false
   }
-}
-
-export function isReaderLogEnabled(): boolean {
-  if (enabledCache === null) enabledCache = readFlag()
-  return enabledCache
 }
 
 export function logReaderEvent(
@@ -100,10 +98,26 @@ export function readReaderLog(): readonly ReaderLogEntry[] {
 export function clearReaderLog(): void {
   entries.length = 0
   lastAt = null
-  enabledCache = null
 }
 
-const formatTime = (t: number): string => new Date(t).toISOString().slice(11, 23)
+const pad = (value: number, width = 2): string => String(value).padStart(width, '0')
+
+/**
+ * Local wall-clock time with an explicit UTC offset, e.g. `10:00:00.000+02:00`.
+ *
+ * The log is read on the device that produced it, against the clock the person
+ * is looking at; a bare UTC time would silently sit an hour or two off their
+ * wall clock in CET/CEST. The offset suffix keeps the line unambiguous once it
+ * is copied out of the device and read somewhere else.
+ */
+const formatTime = (t: number): string => {
+  const d = new Date(t)
+  const offsetMinutes = -d.getTimezoneOffset()
+  const sign = offsetMinutes < 0 ? '-' : '+'
+  const abs = Math.abs(offsetMinutes)
+  const clock = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(), 3)}`
+  return `${clock}${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`
+}
 
 export function formatReaderLog(list: readonly ReaderLogEntry[]): string {
   return list
