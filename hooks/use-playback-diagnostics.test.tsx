@@ -156,6 +156,37 @@ describe('usePlaybackDiagnostics', () => {
     ])
   })
 
+  it('samples the playback state right after an element event, with no timer advance', () => {
+    enable()
+    setMediaSession('playing')
+    const element = makeElement()
+    renderHook(() => usePlaybackDiagnostics(asAudio(element), { heartbeatMs: 100 }))
+
+    // The state changed and an element event followed, with no tick in between.
+    // The post-event sample is the only thing that can record the transition
+    // here — half the documented strategy, and previously unexercised.
+    setMediaSession('paused')
+    element.dispatchEvent(new Event('pause'))
+
+    expect(recorded()).toEqual([
+      ['media-pause', undefined],
+      ['mediasession-state', 'paused'],
+    ])
+  })
+
+  it('records nothing and does not throw when there is no element', () => {
+    enable()
+    setMediaSession('playing')
+    // A host that has not mounted its <audio> yet: the hook must no-op rather
+    // than attach an interval to nothing.
+    expect(() => renderHook(() => usePlaybackDiagnostics(null))).not.toThrow()
+
+    setMediaSession('paused')
+    vi.advanceTimersByTime(60_000)
+
+    expect(readReaderLog()).toEqual([])
+  })
+
   it('removes every listener and stops the heartbeat on unmount', () => {
     enable()
     const element = makeElement()

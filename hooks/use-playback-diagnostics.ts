@@ -48,11 +48,22 @@ function readPlaybackState(): string | null {
  * on every interval tick, and additionally right after each element event
  * handled above (the moments a state change is most likely to accompany).
  *
- * What that can see: any transition that is still in effect at the next sample,
- * whoever caused it — the app's own writes and, crucially, a browser-side
- * teardown of the media session, which a property descriptor could not observe
- * at all. The interval runs whether or not the element is playing, so a session
- * revoked while paused is caught too.
+ * What that can see: this page's OWN declared state, and nothing else. W3C
+ * Media Session §5 makes `playbackState` a declaration rather than an
+ * observation — "on getting, the user agent MUST return the last valid value
+ * that was set" — so the getter is a pure read-back of whatever the page last
+ * wrote. The user agent's own view lives in the guessed and actual playback
+ * states (§4.1), which are never exposed to the page, and no step in the spec
+ * lets the UA mutate `playbackState` behind our back. The interval runs whether
+ * or not the element is playing, so a write made while paused is recorded too.
+ *
+ * What it therefore does NOT catch is the one thing it would be most useful
+ * for: the OS revoking this page's media status. No API exposes that, so a
+ * property descriptor would be no better here — there is nothing to observe.
+ * A teardown's signature in the log is indirect: a `media-pause` entry followed
+ * by the heartbeat going silent, corroborated by the operator seeing the
+ * lock-screen widget gone. The poll stays because it is still the right cheap
+ * mechanism for the app-side writes it actually can see.
  *
  * What it cannot see: the moment of the change — the resolution equals the
  * heartbeat interval, so a recorded transition happened at some point in the
