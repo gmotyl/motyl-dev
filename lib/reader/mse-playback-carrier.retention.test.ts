@@ -62,6 +62,14 @@ let appendGains: number[] = []
  * number a reader can check by hand.
  */
 const DEFAULT_APPEND_GAIN = 100
+/**
+ * How many of the next `remove` calls are refused before one is let through.
+ *
+ * A real buffer refuses synchronously — `remove` throws and no update ever
+ * begins — so a refusal is indistinguishable from the InvalidStateError the
+ * fake already models, except that the test chooses when it happens.
+ */
+let removeFailures = 0
 
 class FakeSourceBuffer extends EventTarget {
   updating = false
@@ -114,6 +122,12 @@ class FakeSourceBuffer extends EventTarget {
     this.updatingAtRemove.push(this.updating)
     if (this.updating) {
       throw new DOMException('remove called while updating', 'InvalidStateError')
+    }
+    if (removeFailures > 0) {
+      removeFailures -= 1
+      // Nothing is set updating and nothing is scheduled: a synchronous refusal
+      // means no update began, so no `updateend` is ever coming for this call.
+      throw new DOMException('remove refused', 'InvalidStateError')
     }
     this.updating = true
 
@@ -256,6 +270,7 @@ beforeEach(() => {
   createdUrls = []
   sourceOfUrl = new Map()
   appendGains = []
+  removeFailures = 0
   FakeMediaSource.isTypeSupported.mockClear().mockReturnValue(true)
   URL.createObjectURL = vi.fn((object: MediaSource | Blob) => {
     const url = `blob:mse-retention/${createdUrls.length}`
@@ -435,5 +450,79 @@ describe('mse playback carrier retention', () => {
     expect(carrier.timeline().oldest()?.start).toBe(buffer().rangesNow()[0][0])
     expect(element.touches).toEqual(['currentTime=500'])
     expect(detailsOfType('reader-error')).toEqual(['0: seek clamped to unit 5'])
+  })
+
+  it('logs a refused eviction as a reader error and keeps the session running', async () => {
+    const { carrier, element, buffer } = attached()
+
+    await carrier.appendUnits(units(6), { continueTimeline: false })
+    await settle()
+    element.playTo(750)
+
+    removeFailures = 1
+    await carrier.appendUnits([unit(6)], { continueTimeline: true })
+    await settle()
+
+    // The removal really was attempted and really was refused, so the media
+    // that should have gone is simply still there.
+    expect(buffer().remove.mock.calls).toEqual([[0, 100]])
+    expect(buffer().rangesNow()).toEqual([[0, 700]])
+
+    // THE DISCRIMINATION. A refused eviction is not a unit's failure: no audio
+    // is missing, only memory that could not be reclaimed. Recording it as
+    // `append-failed` would send a later reader hunting for a fragment that
+    // arrived perfectly well — so it is a `reader-error`, and the unit's own
+    // channel stays empty.
+    expect(detailsOfType('reader-error')).toEqual([
+      'eviction before 100 failed: InvalidStateError: remove refused',
+    ])
+    expect(detailsOfType('append-failed')).toEqual([])
+
+    // …and the queue is still open. Unlike a refused append — which leaves the
+    // buffer's contents unknowable and therefore stops the queue for good — a
+    // failed memory reclaim must not cost the reading session: the next unit
+    // still reaches the buffer and the timeline keeps growing past it.
+    await carrier.appendUnits([unit(7)], { continueTimeline: true })
+    await settle()
+    expect(buffer().accepted).toEqual([3, 3, 3, 3, 3, 3, 3, 3])
+    expect(carrier.timeline().startOf(7)).toBe(700)
+    expect(detailsOfType('append-failed')).toEqual([])
+  })
+
+  it('re-issues a refused trim on the next append', async () => {
+    const { carrier, element, buffer } = attached()
+
+    await carrier.appendUnits(units(6), { continueTimeline: false })
+    await settle()
+    element.playTo(750)
+
+    removeFailures = 1
+    await carrier.appendUnits([unit(6)], { continueTimeline: true })
+    await settle()
+    expect(buffer().rangesNow()).toEqual([[0, 700]])
+
+    // The trim is tied to the append, and appends keep coming for as long as
+    // the session runs — so a transient refusal costs one append's worth of
+    // retention and nothing more. The next append measures the buffer again,
+    // finds the same media still in front of the boundary, and re-issues.
+    clearReaderLog()
+    await carrier.appendUnits([unit(7)], { continueTimeline: true })
+    await settle()
+
+    expect(buffer().remove.mock.calls).toEqual([
+      [0, 100],
+      [0, 100],
+    ])
+    // This time it landed: the buffer really is trimmed.
+    expect(buffer().rangesNow()).toEqual([[100, 800]])
+    expect(buffer().updatingAtRemove).toEqual([false, false])
+    expect(detailsOfType('reader-error')).toEqual([])
+    expect(detailsOfType('append-failed')).toEqual([])
+
+    // Map and buffer are back in step — the drop that ran ahead of the refused
+    // removal is exactly the one the successful removal caught up with.
+    expect(carrier.timeline().oldest()?.index).toBe(1)
+    expect(carrier.timeline().oldest()?.start).toBe(buffer().rangesNow()[0][0])
+    expect(carrier.timeline().startOf(7)).toBe(700)
   })
 })
