@@ -505,9 +505,19 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
        * on, so progress would not die outright — but the smooth clock would be
        * gone for the rest of the session and the reader bar would lurch forward
        * ~4×/second instead of gliding.
+       *
+       * The detail goes through `describeError`, not `error.message`. The
+       * parameter is typed `Error`, but the only caller that originates a
+       * failure is the `play()` rejection handler, which casts (`error as
+       * Error`) whatever the promise rejected with — a promise may reject with
+       * anything, and a DOMException subclass or a plain object can carry no
+       * message at all. Reading `.message` there leaves the one line that says
+       * the reader gave up with no detail, on exactly the failure path the
+       * device test exists to capture; `describeError` keeps the NAME, which is
+       * the diagnostically useful half.
        */
       const stopWithError = (error: Error) => {
-        logReaderEvent('stop-with-error', error?.message)
+        logReaderEvent('stop-with-error', describeError(error))
         isPlayingRef.current = false
         if (animationFrameRef.current) {
           cancelAnimationFrame(animationFrameRef.current)
@@ -531,8 +541,11 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       const failUnit = (failedIndex: number, error: Error) => {
         // The index leads the detail, `: ` separates it from anything free-form
         // (see `detailFor`): which unit was dropped is the first thing the log
-        // is read for.
-        logReaderEvent('synthesis-failed', detailFor(failedIndex, error?.message))
+        // is read for. The remainder goes through `describeError` for the same
+        // reason as `stopWithError`: the `fetchAudioBlob` catch hands this the
+        // original rejection under an `error as Error` cast, so a rejection
+        // without a message would otherwise reduce the line to a bare index.
+        logReaderEvent('synthesis-failed', detailFor(failedIndex, describeError(error)))
         consecutiveFailuresRef.current += 1
 
         // The unit is abandoned, so nothing will ever read its object URL again.

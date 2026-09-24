@@ -51,6 +51,22 @@ const subscribeToNothing = () => () => {}
 const flagOffOnServer = () => false
 
 /**
+ * Pre-selects the manual-copy fallback, ONCE, when it mounts.
+ *
+ * Module scope is load-bearing, not tidiness: an inline arrow here would get a
+ * fresh identity on every render, so React would detach it (call it with
+ * `null`) and re-attach it — re-running `select()` each time. This panel
+ * re-renders whenever `ReaderControlBar` does, i.e. on every reader state
+ * change, which during playback is constant. The operator dragging a selection
+ * on a phone would have it reset under their finger — on the one path that
+ * exists BECAUSE the clipboard already refused, so it is their only way to get
+ * the log off the device. A stable callback is attached once and never re-run.
+ */
+const selectOnMount = (node: HTMLTextAreaElement | null) => {
+  node?.select()
+}
+
+/**
  * Flag-gated diagnostic panel for the continuous reader.
  *
  * SNAPSHOT, NEVER A SUBSCRIPTION. The panel pulls `readReaderLog()` into local
@@ -207,9 +223,7 @@ export function ReaderDiagnosticPanel({ error = null }: ReaderDiagnosticPanelPro
             rows={10}
             value={fallbackText}
             aria-label="Reader log text to copy manually"
-            ref={(node) => {
-              node?.select()
-            }}
+            ref={selectOnMount}
             onFocus={(event) => event.currentTarget.select()}
             className="w-full min-w-0 resize-y rounded-md border border-border bg-background p-2 font-mono text-[11px] text-foreground"
           />

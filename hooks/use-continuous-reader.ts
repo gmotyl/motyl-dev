@@ -318,7 +318,12 @@ export function useContinuousReader(
       }
     }, [currentKey, selectAndStart]),
     onError: useCallback((nextError: Error) => {
-      logReaderEvent('reader-error', nextError.message)
+      // `onError` is a public callback contract, so what actually arrives is
+      // whatever the caller passed — today always a real `Error` built by
+      // `useTTS`'s `stopWithError`, but nothing enforces that. `||`, not `??`:
+      // an Error with an EMPTY-STRING message must fall through to the name,
+      // which `??` would keep.
+      logReaderEvent('reader-error', nextError?.message || nextError?.name || String(nextError))
       playbackRef.current?.stop()
       // A start that failed is not a handoff in progress: without this the
       // reader would look eternally "about to play" and never drop the lock.

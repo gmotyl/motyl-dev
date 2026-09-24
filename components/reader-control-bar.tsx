@@ -30,6 +30,15 @@ export type ReaderControlBarProps = ContinuousReaderControlsProps & {
  * slot, and it runs before this component's children render — which is exactly
  * the ordering the panel needs. The state value itself is unused; the flag's
  * single source of truth stays `localStorage`, read by the panel.
+ *
+ * What is relied upon here is the ORDERING, not an exactly-once guarantee — and
+ * React does not offer one: StrictMode deliberately double-invokes initialisers
+ * in development. That is a no-op here because `applyReaderLogParam` is
+ * idempotent: `?readerlog=1` written twice is the same single stored flag, and
+ * `?readerlog=0` removed twice is the same absence. There is no counter, no
+ * append, nothing that composes. So do not "harden" this with a module-level
+ * applied-once guard: it would add cross-mount global state every test then has
+ * to reset, to defend against a repeat that costs nothing.
  */
 function usePersistedReaderLogParam(): void {
   useState(() =>

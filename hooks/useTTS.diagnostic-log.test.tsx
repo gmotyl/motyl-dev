@@ -441,7 +441,9 @@ describe('useTTS diagnostic log — failure paths', () => {
 
     const stopped = firstOfType('stop-with-error')
     expect(stopped).toBeDefined()
-    expect(stopped?.detail).toBe('element refused the unit')
+    // `name: message` — the name is carried because on the instrumented paths
+    // it is often the whole diagnosis (`NotAllowedError`, `AbortError`).
+    expect(stopped?.detail).toBe('Error: element refused the unit')
     // Cause before effect: the refusal that triggered the stop is above it.
     const types = logged().map((entry) => entry.type)
     expect(types.indexOf('play-rejected')).toBeLessThan(types.indexOf('stop-with-error'))
@@ -476,6 +478,58 @@ describe('useTTS diagnostic log — failure paths', () => {
     // A skip is not a stop.
     expect(onError).not.toHaveBeenCalled()
     expect(firstOfType('stop-with-error')).toBeUndefined()
+  })
+
+  /**
+   * A promise may reject with ANYTHING. `stopWithError` and `failUnit` are typed
+   * `(error: Error)`, but both are reached through an `error as Error` cast over
+   * a rejection the hook never constructed — a DOMException subclass, a plain
+   * object, a bare string. Reading only `.message` there loses the reason
+   * entirely on exactly the failure paths this log exists to capture.
+   */
+  const NAMED_REJECTION = { name: 'WeirdFailure' }
+
+  it('records stop-with-error identifying a rejection that carries no message', async () => {
+    enableLog()
+    audioPlay.mockImplementation(() => Promise.reject(NAMED_REJECTION))
+    const onError = vi.fn()
+
+    const { result } = renderHook(() => useTTS('Hello world.', { onError }))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1))
+
+    const stopped = firstOfType('stop-with-error')
+    expect(stopped).toBeDefined()
+    // The one line that says the reader gave up must still name the failure.
+    expect(stopped?.detail).toContain('WeirdFailure')
+  })
+
+  it('records synthesis-failed identifying a rejection that carries no message', async () => {
+    enableLog()
+    const units = ['ok-1', 'fail-2', 'ok-3']
+    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) => {
+      if (text === 'fail-2') throw NAMED_REJECTION
+      return new ArrayBuffer(8)
+    })
+    const onError = vi.fn()
+    const { result } = renderHook(() => useTTS('irrelevant content', { units, onError }))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+
+    await endCurrentUnit()
+    await waitFor(() => expect(srcAssignments).toHaveLength(2))
+
+    const failed = firstOfType('synthesis-failed')
+    expect(failed).toBeDefined()
+    // The index still leads (`detailFor`), and the reason survives beside it.
+    expect(failed?.detail).toMatch(/^1\b/)
+    expect(failed?.detail).toContain('WeirdFailure')
   })
 })
 

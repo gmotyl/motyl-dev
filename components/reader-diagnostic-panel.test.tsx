@@ -50,6 +50,9 @@ beforeEach(() => {
 afterEach(() => {
   Reflect.deleteProperty(navigator, 'clipboard')
   Reflect.deleteProperty(navigator, 'userAgent')
+  // The re-render test spies on `HTMLTextAreaElement.prototype`; leaving that in
+  // place would silently disarm `select()` for every later test in the file.
+  vi.restoreAllMocks()
 })
 
 describe('ReaderDiagnosticPanel', () => {
@@ -177,6 +180,40 @@ describe('ReaderDiagnosticPanel', () => {
     // Selectable, and big enough to select from on a phone.
     expect(textarea).toHaveAttribute('readonly')
     expect(Number(textarea.getAttribute('rows'))).toBeGreaterThanOrEqual(6)
+  })
+
+  it('selects the fallback textarea once, not once per re-render', async () => {
+    const user = userEvent.setup()
+    const writeText = vi.fn().mockRejectedValue(new DOMException('denied', 'NotAllowedError'))
+    stubClipboard(writeText)
+    enableFlag()
+    logReaderEvent('unit-start', 'alpha')
+
+    // Spied out rather than observed: jsdom's real `select()` would move the
+    // selection, and the call COUNT is the whole assertion here.
+    const select = vi
+      .spyOn(HTMLTextAreaElement.prototype, 'select')
+      .mockImplementation(() => {})
+
+    const { rerender } = render(<ReaderDiagnosticPanel />)
+    await user.click(screen.getByRole('button', { name: 'Copy log' }))
+    await screen.findByRole('textbox', { name: 'Reader log text to copy manually' })
+
+    // Mounting the fallback selects it once, so the operator can copy straight
+    // away.
+    expect(select).toHaveBeenCalledTimes(1)
+
+    // `ReaderControlBar` re-renders this panel on every reader state change
+    // (isPlaying, isBuffering, canNext) — constantly, during playback. An
+    // inline ref arrow gets a fresh identity each render, so React detaches and
+    // re-attaches it and `select()` runs again: the operator's drag-selection
+    // is reset under their finger, on the one path that exists BECAUSE the
+    // clipboard already refused.
+    rerender(<ReaderDiagnosticPanel />)
+    rerender(<ReaderDiagnosticPanel />)
+    rerender(<ReaderDiagnosticPanel error={null} />)
+
+    expect(select).toHaveBeenCalledTimes(1)
   })
 
   it('shows the reader error message and drops it once the error clears', () => {
