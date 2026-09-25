@@ -5,6 +5,7 @@ import {
   MEDIA_SESSION_ARTWORK,
   useMediaSession,
   type MediaSessionHandlers,
+  type MediaSessionPosition,
   type UseMediaSessionOptions,
 } from './use-media-session'
 
@@ -14,12 +15,20 @@ interface MediaSessionStub {
   metadata: unknown
   playbackState: string
   setActionHandler: (action: string, handler: ActionHandler) => void
+  setPositionState?: unknown
 }
 
 let mediaSession: MediaSessionStub
 let actionHandlers: Map<string, ActionHandler>
 /** Every value written through the `metadata` setter, in order. */
 let metadataWrites: unknown[]
+/**
+ * Every argument `setPositionState` was called with, in order — `undefined`
+ * being the clear. The count is observable behaviour in both directions here:
+ * a state the API would reject must not be published AT ALL, and a stale one
+ * must not be left standing.
+ */
+let positionWrites: Array<MediaSessionPosition | undefined>
 
 class MediaMetadataStub {
   title: string
@@ -38,6 +47,7 @@ class MediaMetadataStub {
 const installMediaSession = () => {
   actionHandlers = new Map()
   metadataWrites = []
+  positionWrites = []
   let metadataValue: unknown = null
 
   mediaSession = {
@@ -53,6 +63,9 @@ const installMediaSession = () => {
     playbackState: 'none',
     setActionHandler: vi.fn((action: string, handler: ActionHandler) => {
       actionHandlers.set(action, handler)
+    }),
+    setPositionState: vi.fn((state?: MediaSessionPosition) => {
+      positionWrites.push(state)
     }),
   }
 
@@ -86,9 +99,25 @@ const baseOptions = (overrides: Partial<UseMediaSessionOptions> = {}): UseMediaS
   active: true,
   metadata: { title: 'Section 1', artist: 'Motyl.dev', album: 'Reader Article' },
   playbackState: 'playing',
+  readPosition: null,
   handlers: makeHandlers(),
   ...overrides,
 })
+
+/** A position state the API accepts, so a test can vary one field at a time. */
+const validPosition = (overrides: Partial<MediaSessionPosition> = {}): MediaSessionPosition => ({
+  position: 4,
+  duration: 30,
+  playbackRate: 1,
+  ...overrides,
+})
+
+/**
+ * The hook asks for the position once per commit, so a test supplies a reader
+ * rather than a value — `readingNothing` being the caller with no track at all.
+ */
+const reading = (overrides: Partial<MediaSessionPosition> = {}) => () => validPosition(overrides)
+const readingNothing = () => (): MediaSessionPosition | null => null
 
 const publishedMetadata = () => mediaSession.metadata as MediaMetadataStub
 
@@ -415,5 +444,226 @@ describe('useMediaSession', () => {
     expect(actionHandlers.get('play')).toBeTypeOf('function')
     expect(mediaSession.playbackState).toBe('playing')
     expect(() => unmount()).not.toThrow()
+  })
+
+  /**
+   * Position state — what a car head unit reads over AVRCP.
+   *
+   * Chrome derives one from the `<audio>` element when nothing publishes it,
+   * and on the MSE carrier that derivation is incoherent: the element's clock
+   * runs for the whole session while a TRACK is one section, and its duration
+   * is NaN. Publishing the section's own numbers is the fix — but
+   * `setPositionState` throws a `TypeError` on a duration that is negative or
+   * NaN, on a position outside `[0, duration]` and on a rate of 0, so every
+   * test here is about what must NOT reach it as much as what must.
+   */
+  describe('position state', () => {
+    const lastPosition = () => positionWrites.at(-1)
+
+    it('publishes the position, duration and rate it is given while active', () => {
+      renderHook(() => useMediaSession(baseOptions({ readPosition: reading() })))
+
+      expect(positionWrites).toEqual([{ position: 4, duration: 30, playbackRate: 1 }])
+    })
+
+    it('republishes when the playhead moves and stays quiet when it has not', () => {
+      const { rerender } = renderHook(
+        (options: UseMediaSessionOptions) => useMediaSession(options),
+        { initialProps: baseOptions({ readPosition: reading({ position: 4 }) }) },
+      )
+      expect(positionWrites).toHaveLength(1)
+
+      rerender(baseOptions({ readPosition: reading({ position: 9 }) }))
+      expect(lastPosition()).toEqual({ position: 9, duration: 30, playbackRate: 1 })
+
+      // Fresh object identity, identical values — every parent render. Chromium
+      // forwards each call to the browser process, so a re-publish per render
+      // is traffic, not a no-op.
+      rerender(baseOptions({ readPosition: reading({ position: 9 }) }))
+      expect(positionWrites).toHaveLength(2)
+    })
+
+    it('skips a state with a NaN duration and keeps the last good one standing', () => {
+      const { rerender } = renderHook(
+        (options: UseMediaSessionOptions) => useMediaSession(options),
+        { initialProps: baseOptions({ readPosition: reading({ position: 4 }) }) },
+      )
+
+      // The MSE path's natural failure: `element.duration` is NaN, so a
+      // duration derived from it is too.
+      rerender(baseOptions({ readPosition: reading({ duration: Number.NaN }) }))
+      rerender(baseOptions({ readPosition: reading({ position: 9 }) }))
+
+      // Three renders, two writes: the rejected one left no trace between them.
+      expect(positionWrites).toEqual([
+        { position: 4, duration: 30, playbackRate: 1 },
+        { position: 9, duration: 30, playbackRate: 1 },
+      ])
+    })
+
+    it('skips a position past the end of its own track', () => {
+      const { rerender } = renderHook(
+        (options: UseMediaSessionOptions) => useMediaSession(options),
+        { initialProps: baseOptions({ readPosition: reading({ position: 4 }) }) },
+      )
+
+      rerender(baseOptions({ readPosition: reading({ position: 31, duration: 30 }) }))
+      rerender(baseOptions({ readPosition: reading({ position: 9 }) }))
+
+      expect(positionWrites).toEqual([
+        { position: 4, duration: 30, playbackRate: 1 },
+        { position: 9, duration: 30, playbackRate: 1 },
+      ])
+    })
+
+    it('skips a negative position and a negative duration', () => {
+      const { rerender } = renderHook(
+        (options: UseMediaSessionOptions) => useMediaSession(options),
+        { initialProps: baseOptions({ readPosition: reading({ position: 4 }) }) },
+      )
+
+      rerender(baseOptions({ readPosition: reading({ position: -1 }) }))
+      rerender(baseOptions({ readPosition: reading({ duration: -30, position: 0 }) }))
+      rerender(baseOptions({ readPosition: reading({ position: 9 }) }))
+
+      expect(positionWrites).toEqual([
+        { position: 4, duration: 30, playbackRate: 1 },
+        { position: 9, duration: 30, playbackRate: 1 },
+      ])
+    })
+
+    it('skips a playback rate of zero', () => {
+      const { rerender } = renderHook(
+        (options: UseMediaSessionOptions) => useMediaSession(options),
+        { initialProps: baseOptions({ readPosition: reading({ position: 4 }) }) },
+      )
+
+      rerender(baseOptions({ readPosition: reading({ playbackRate: 0 }) }))
+      rerender(baseOptions({ readPosition: reading({ position: 9 }) }))
+
+      expect(positionWrites).toEqual([
+        { position: 4, duration: 30, playbackRate: 1 },
+        { position: 9, duration: 30, playbackRate: 1 },
+      ])
+    })
+
+    it('clears the position state when the reader has no track to be in', () => {
+      const { rerender } = renderHook(
+        (options: UseMediaSessionOptions) => useMediaSession(options),
+        { initialProps: baseOptions({ readPosition: reading() }) },
+      )
+      expect(positionWrites).toHaveLength(1)
+
+      // Stop: the timeline is gone, so there is no position — and a stale one
+      // left on the lock screen outlives the reader that put it there.
+      rerender(baseOptions({ readPosition: readingNothing() }))
+
+      expect(positionWrites).toHaveLength(2)
+      expect(lastPosition()).toBeUndefined()
+    })
+
+    it('clears the position state on unmount', () => {
+      const { unmount } = renderHook(() =>
+        useMediaSession(baseOptions({ readPosition: reading() })),
+      )
+      expect(positionWrites).toEqual([{ position: 4, duration: 30, playbackRate: 1 }])
+
+      unmount()
+
+      expect(positionWrites).toHaveLength(2)
+      expect(lastPosition()).toBeUndefined()
+    })
+
+    it('clears the position state when it goes inactive', () => {
+      const { rerender } = renderHook(
+        (options: UseMediaSessionOptions) => useMediaSession(options),
+        { initialProps: baseOptions({ active: true, readPosition: reading() }) },
+      )
+      expect(positionWrites).toHaveLength(1)
+
+      rerender(baseOptions({ active: false, readPosition: reading() }))
+
+      expect(positionWrites).toHaveLength(2)
+      expect(lastPosition()).toBeUndefined()
+    })
+
+    it('publishes nothing at all while inactive', () => {
+      // Both directions in one test: silence has to be caused by `active:
+      // false` and by nothing else, or an implementation that publishes no
+      // position ever would pass the first half on its own.
+      const { rerender } = renderHook(
+        (options: UseMediaSessionOptions) => useMediaSession(options),
+        { initialProps: baseOptions({ active: false, readPosition: reading() }) },
+      )
+      expect(positionWrites).toEqual([])
+
+      rerender(baseOptions({ active: true, readPosition: reading() }))
+      expect(positionWrites).toEqual([{ position: 4, duration: 30, playbackRate: 1 }])
+    })
+
+    it('does not let a former owner clear the position another instance published', () => {
+      // The same fight `aa9c831` and `7b1dbb0` settled for metadata and
+      // playbackState: two readers mounted at once, and the one going inactive
+      // must not undo the one that took the global over.
+      const { rerender } = renderHook(
+        ({ aActive, bActive }: { aActive: boolean; bActive: boolean }) => {
+          useMediaSession(
+            baseOptions({ active: aActive, readPosition: reading({ position: 4 }) }),
+          )
+          useMediaSession(
+            baseOptions({ active: bActive, readPosition: reading({ position: 20 }) }),
+          )
+        },
+        { initialProps: { aActive: true, bActive: false } },
+      )
+      expect(lastPosition()).toEqual({ position: 4, duration: 30, playbackRate: 1 })
+
+      rerender({ aActive: true, bActive: true })
+      expect(lastPosition()).toEqual({ position: 20, duration: 30, playbackRate: 1 })
+
+      // The former owner leaves. B's deps did not change, so B never re-runs:
+      // its published position has to survive A's teardown on its own.
+      rerender({ aActive: false, bActive: true })
+
+      expect(lastPosition()).toEqual({ position: 20, duration: 30, playbackRate: 1 })
+      expect(positionWrites).not.toContain(undefined)
+    })
+
+    it('keeps going when setPositionState throws', () => {
+      // A media-session failure must never break playback, and Chromium has
+      // shipped versions that reject states this hook considers valid.
+      const throwing = vi.fn(() => {
+        throw new TypeError('rejected')
+      })
+      mediaSession.setPositionState = throwing
+
+      expect(() =>
+        renderHook(() => useMediaSession(baseOptions({ readPosition: reading() }))),
+      ).not.toThrow()
+
+      expect(throwing).toHaveBeenCalledTimes(1)
+      // ...and the rest of the session was still published.
+      expect(publishedMetadata().title).toBe('Section 1')
+      expect(mediaSession.playbackState).toBe('playing')
+    })
+
+    it('feature-detects setPositionState and publishes once the browser has one', () => {
+      // Not every browser implements it; on those the property is simply
+      // absent, and calling it would throw inside a render.
+      delete mediaSession.setPositionState
+
+      const { rerender } = renderHook(
+        (options: UseMediaSessionOptions) => useMediaSession(options),
+        { initialProps: baseOptions({ readPosition: reading({ position: 4 }) }) },
+      )
+      expect(publishedMetadata().title).toBe('Section 1')
+
+      mediaSession.setPositionState = vi.fn((state?: MediaSessionPosition) => {
+        positionWrites.push(state)
+      })
+      rerender(baseOptions({ readPosition: reading({ position: 9 }) }))
+
+      expect(positionWrites).toEqual([{ position: 9, duration: 30, playbackRate: 1 }])
+    })
   })
 })

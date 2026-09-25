@@ -161,6 +161,10 @@ export default function CarrierSpikeClient() {
     active: isRunning,
     metadata: mediaMetadata,
     playbackState: isRunning ? 'playing' : 'none',
+    // No position: the bench loops eight fixed fragments and has no track to be
+    // at a position in, so it leaves the position state alone exactly as it did
+    // before the reader began publishing one.
+    readPosition: null,
     handlers: mediaHandlers,
   })
 

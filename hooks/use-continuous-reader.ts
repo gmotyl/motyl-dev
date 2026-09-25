@@ -811,10 +811,26 @@ export function useContinuousReader(
     [play, pause, nextTrack, previous]
   )
 
+  // Where the reader is inside the section the metadata names. Handed over as
+  // the QUESTION rather than an answer: `useMediaSession` asks it once per
+  // commit, which is the only moment at which the timeline behind it has
+  // settled — `useTTS` releases a finished timeline in an effect of its own,
+  // and a position read during the render that ordered that release describes a
+  // timeline that is already gone.
+  //
+  // It cannot come from `playback`'s state either: `currentTime` there is an
+  // ESTIMATE over the whole article, while the OS needs the element's own clock
+  // measured against the current SECTION, which is what a track is here.
+  //
+  // `?? null` because `useTTS` is mocked with a partial playback object in some
+  // suites: a reader with no clock publishes no position at all.
+  const readMediaPosition = playback.readMediaPosition ?? null
+
   useMediaSession({
     active: hasQueue,
     metadata: mediaMetadata,
     playbackState: isPlaying ? 'playing' : hasQueue ? 'paused' : 'none',
+    readPosition: readMediaPosition,
     handlers: mediaHandlers,
   })
 

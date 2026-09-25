@@ -75,6 +75,71 @@ export interface UseTTSOptions {
   onError?: (error: Error) => void
 }
 
+/**
+ * Where the reader is inside the CURRENT SECTION, in the shape
+ * `MediaSession.setPositionState` takes.
+ *
+ * Section-relative, because a track is a section: that is what the metadata
+ * names and what `nexttrack` steps between. The element's own clock is not an
+ * answer to this question on the MSE carrier — it runs for the whole reading
+ * session — and neither is its `duration`, which is NaN there for as long as
+ * nothing assigns `MediaSource.duration`.
+ */
+export interface MediaPositionSnapshot {
+  /** Seconds into the current section. */
+  position: number
+  /** The current section's length as far as it has been appended. */
+  duration: number
+  playbackRate: number
+}
+
+/**
+ * The position arithmetic, kept apart from the hook because a wrong answer here
+ * is not a wrong number on a screen — it is a `TypeError` out of
+ * `setPositionState`.
+ *
+ * That call throws on a duration that is negative or NaN, on a position outside
+ * `[0, duration]` and on a rate of 0, so the two clamps below are the contract
+ * rather than cosmetics:
+ *
+ *  - POSITION is clamped at 0. During a handoff the new section is current
+ *    before its first unit has been appended, so its start is the buffer's end
+ *    and the playhead is still a fraction behind it.
+ *  - DURATION is never shorter than the position. `timeline.end()` is the last
+ *    APPEND, while the playhead runs to the last decoded frame and on a stall
+ *    sits past it.
+ *
+ * And nothing non-finite is answered at all: `element.currentTime` is NaN
+ * before metadata, and an unmeasurable span would make the timeline's end
+ * infinite. There is no safe number to substitute for either, so the caller is
+ * told there is no answer.
+ */
+export function sectionRelativePosition(
+  elapsedSeconds: number,
+  sectionStart: number,
+  timelineEnd: number,
+  playbackRate: number
+): MediaPositionSnapshot | null {
+  if (
+    !Number.isFinite(elapsedSeconds) ||
+    !Number.isFinite(sectionStart) ||
+    !Number.isFinite(timelineEnd)
+  ) {
+    return null
+  }
+
+  const position = Math.max(elapsedSeconds - sectionStart, 0)
+
+  return {
+    position,
+    duration: Math.max(timelineEnd - sectionStart, position),
+    // A paused reader keeps its rate — `playbackState` is what says paused —
+    // so anything the API would reject falls back to the normal one rather
+    // than to 0.
+    playbackRate: Number.isFinite(playbackRate) && playbackRate > 0 ? playbackRate : 1,
+  }
+}
+
 export interface TTSPlayback extends TTSState {
   play: () => Promise<void>
   /** Abort current audio and start at `unitIndex` of the current content. */
@@ -82,6 +147,7 @@ export interface TTSPlayback extends TTSState {
   pause: () => void
   stop: () => void
   resume: () => Promise<void>
+  readMediaPosition: () => MediaPositionSnapshot | null
 }
 
 const detectLanguage = detectLanguageFromContent
@@ -1355,6 +1421,49 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     }))
   }, [content, flushCarrierRelease])
 
+  /**
+   * Where the OS should be told the reader is — section-relative, or nothing.
+   *
+   * Only the MSE carrier needs this. There, a section is a stretch of one
+   * continuous timeline that survives handoffs, so the element's clock says
+   * "41 minutes" on a track the OS was just told is new, against a duration of
+   * NaN; a car head unit forwards that over AVRCP and fragile implementations
+   * wedge on it. The src-swap carrier is left exactly as it was: one unit per
+   * `src`, so the element already describes the media it is playing and Chrome
+   * derives a coherent position from it on its own.
+   *
+   * `startOf(0)` is this section's first unit in the hook's own numbering,
+   * which `getLiveTimeline` translates to the carrier's absolute one — so this
+   * is the section start whatever the timeline was continued from. It is null
+   * for the moment between a handoff and the new section's first append, and
+   * `end()` is where that append will land, which is where the section starts.
+   * The playhead is still a hair behind it, so that window publishes a track
+   * at 0 s of 0 s rather than the previous section's minutes.
+   *
+   * Null means "no track to be in": the src-swap carrier, an element that does
+   * not exist yet, or a timeline the reader has released (stop, teardown) —
+   * the last of which is what clears a stale position off the lock screen.
+   */
+  const readMediaPosition = useCallback((): MediaPositionSnapshot | null => {
+    const element = audioElementRef.current
+    if (element === null) return null
+    if (getCarrier().kind !== 'mse') return null
+    // Nothing has been appended to this timeline, or it has been released: an
+    // empty timeline maps no media, and "0 s of 0 s" on a track nothing is
+    // playing is a scrubber that lies.
+    if (!timelineLiveRef.current) return null
+
+    const timeline = getLiveTimeline()
+    const sectionStart = timeline.startOf(0) ?? timeline.end()
+
+    return sectionRelativePosition(
+      element.currentTime,
+      sectionStart,
+      timeline.end(),
+      element.playbackRate
+    )
+  }, [getCarrier, getLiveTimeline])
+
   // Play / resume
   const play = useCallback(async () => {
     if (isPlayingRef.current) return
@@ -1604,6 +1713,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     pause,
     stop,
     resume: play,
+    readMediaPosition,
   }
 
   return playback
