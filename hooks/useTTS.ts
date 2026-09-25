@@ -1270,7 +1270,13 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       }
       reportStartRef.current = reportStart
 
-      logReaderEvent('play-called', detailFor(index))
+      // `play-called` is written on exactly the paths that call `play()`, and
+      // ABOVE the call on each of them, so the device log's "play-called with
+      // no start after it" reading stays honest. It used to sit here
+      // unconditionally, and on the MSE carrier's natural advance — where
+      // nothing below calls `play()` at all — the log claimed a start the
+      // element never made. The two Read All News device logs read like the
+      // phone had started every unit, when it had started one.
       if (carrier.kind === 'mse') {
         // One continuous timeline, so a unit is a POSITION and this call has at
         // most two things to do — and on a natural advance, neither.
@@ -1288,12 +1294,23 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
           // position and the new one as completed.
           getBoundaryTracker().reseat(element.currentTime)
         }
-        if (element.paused) reportStart(index, element.play?.())
+        if (element.paused) {
+          logReaderEvent('play-called', detailFor(index))
+          reportStart(index, element.play?.())
+        } else {
+          // The element is already running and simply carries on into this
+          // unit — the boundary the carrier makes free. Recorded under its own
+          // name so every unit still leaves a line, and so a log can tell a
+          // natural advance from the seek a running "play from here" makes.
+          logReaderEvent('unit-resume', resuming ? detailFor(index) : detailFor(index, 'seek'))
+        }
       } else if (resuming) {
+        logReaderEvent('play-called', detailFor(index))
         reportStart(index, element.play?.())
       } else {
         // THE unit swap: the carrier points the element at unit `index`,
         // releases what is behind the playhead, and starts it.
+        logReaderEvent('play-called', detailFor(index))
         carrier.seekToUnit(toCarrierIndex(index))
       }
 

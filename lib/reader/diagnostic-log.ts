@@ -15,6 +15,10 @@
 export type ReaderLogEventType =
   | 'unit-start'
   | 'play-called'
+  // MSE carrier: the element was already running and carried on into the
+  // unit — no `play()` was made. Detail `index`, or `index: seek` when a
+  // running "play from here" moved the playhead there.
+  | 'unit-resume'
   | 'play-rejected'
   | 'unit-ended'
   | 'element-error'

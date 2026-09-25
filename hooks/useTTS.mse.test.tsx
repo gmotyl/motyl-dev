@@ -1269,3 +1269,71 @@ describe('useTTS appends in index order on the MSE carrier', () => {
     expect(result.current.currentChunkIndex).toBe(5)
   })
 })
+
+describe('useTTS logging play-called on the MSE carrier', () => {
+  /**
+   * The device log is read for "a unit started with no `play-called` after
+   * it" — the signature of a backgrounded phone refusing a start. That reading
+   * is only worth anything if `play-called` means a `play()` was made. It used
+   * to be written unconditionally at the top of the start branch, so on this
+   * carrier's natural advance — which calls nothing — the log claimed a start
+   * per unit that the element never made, and the mock's play count (which the
+   * advance test above asserts) never saw the lie because it is not the log.
+   */
+  it('logs unit-resume and no play-called on a natural advance', async () => {
+    enableLog()
+    const { result } = renderHook(() => useTTS('irrelevant content', { units: UNITS }))
+    await startAllThree(result)
+
+    // The session start is the one real `play()`.
+    expect(entriesOfType('play-called').map((entry) => entry.detail)).toEqual(['0'])
+    const playsAtStart = audioPlay.mock.calls.length
+
+    await emitTimeUpdate(12)
+    expect(result.current.currentChunkIndex).toBe(1)
+
+    // The element was not started again, and the log says so: the boundary
+    // left its own line and no `play-called`.
+    expect(audioPlay.mock.calls).toHaveLength(playsAtStart)
+    expect(entriesOfType('play-called').map((entry) => entry.detail)).toEqual(['0'])
+    expect(entriesOfType('unit-resume').map((entry) => entry.detail)).toEqual(['1'])
+  })
+
+  it('logs a running seek as unit-resume with a seek detail', async () => {
+    enableLog()
+    const { result } = renderHook(() => useTTS('irrelevant content', { units: UNITS }))
+    await startAllThree(result)
+    const playsAtStart = audioPlay.mock.calls.length
+
+    await act(async () => {
+      await result.current.playFromUnit(2)
+    })
+    await settle()
+
+    expect(audioPlay.mock.calls).toHaveLength(playsAtStart)
+    expect(entriesOfType('play-called').map((entry) => entry.detail)).toEqual(['0'])
+    expect(entriesOfType('unit-resume').map((entry) => entry.detail)).toEqual(['2: seek'])
+  })
+
+  it('logs play-called above the start on a resume after pause', async () => {
+    enableLog()
+    const { result } = renderHook(() => useTTS('irrelevant content', { units: UNITS }))
+    await startAllThree(result)
+    await emitTimeUpdate(4.5)
+
+    act(() => {
+      result.current.pause()
+    })
+    const playsWhilePaused = audioPlay.mock.calls.length
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle()
+
+    // A resume after a pause IS a `play()`, so it is a `play-called` — and it
+    // precedes the call, which is the ordering the device log rests on.
+    expect(audioPlay.mock.calls).toHaveLength(playsWhilePaused + 1)
+    expect(entriesOfType('play-called').map((entry) => entry.detail)).toEqual(['0', '0'])
+    expect(entriesOfType('unit-resume')).toEqual([])
+  })
+})
