@@ -252,7 +252,13 @@ export function createMsePlaybackCarrier(): Carrier {
     // not wait behind a memory optimisation to reach the buffer. A rejection
     // has been logged by the queue that owns it, exactly as a refused append
     // is; catching here is only to keep it from surfacing as an unhandled one.
-    void active.evictBefore(boundary).catch(() => {})
+    // Success is logged HERE, on resolution, because the queue reports only
+    // what went wrong: a field log with no line for a trim that worked cannot
+    // tell retention from a buffer that never needed it.
+    void active
+      .evictBefore(boundary)
+      .then(() => logReaderEvent('evict', `before ${boundary}s`))
+      .catch(() => {})
   }
 
   /** Drops the live source and everything mapped onto it. */

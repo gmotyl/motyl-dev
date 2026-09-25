@@ -57,6 +57,12 @@ export type ReaderLogEventType =
   | 'mediasession-metadata'
   | 'mediasession-playbackstate'
   | 'mediasession-position'
+  // MSE playback carrier: the retention trim's removal RESOLVED. Detail
+  // `before <boundary>s`, the cut the timeline was told about. A refused
+  // removal is a `reader-error` instead; without this line a successful one
+  // was invisible, so a device log could show a position collapse right
+  // after an append and never show the trim that caused it.
+  | 'evict'
 
 export type ReaderLogEntry = {
   /** `Date.now()` when the event was recorded. */
