@@ -1337,3 +1337,79 @@ describe('useTTS logging play-called on the MSE carrier', () => {
     expect(entriesOfType('unit-resume')).toEqual([])
   })
 })
+
+describe('useTTS element diagnostics', () => {
+  /**
+   * The production reader mounts `usePlaybackDiagnostics` on its own element,
+   * so a device log carries the element's silent failures, the media-session
+   * state and the heartbeat — the two Read All News logs had none of them. It
+   * is mounted only when the flag is on: a reader nobody is instrumenting must
+   * attach no listener and start no timer for it.
+   */
+  const DIAGNOSED_EVENTS = ['pause', 'stalled', 'waiting', 'suspend']
+
+  /** Every event name a listener is attached to on a media element while the wrap stands. */
+  const watchMediaListeners = () => {
+    const original = EventTarget.prototype.addEventListener
+    const attached: string[] = []
+    EventTarget.prototype.addEventListener = function (
+      this: EventTarget,
+      type: string,
+      listener: EventListenerOrEventListenerObject | null,
+      options?: boolean | AddEventListenerOptions
+    ) {
+      if (this instanceof HTMLMediaElement) attached.push(type)
+      return original.call(this, type, listener, options)
+    }
+    return {
+      attached,
+      restore: () => {
+        EventTarget.prototype.addEventListener = original
+      },
+    }
+  }
+
+  it('logs the element events when the flag is on at mount', async () => {
+    enableLog()
+    const { result } = renderHook(() => useTTS('irrelevant content', { units: UNITS }))
+    await startAllThree(result)
+
+    await act(async () => {
+      currentAudio().dispatchEvent(new Event('pause'))
+    })
+    expect(entriesOfType('media-pause')).toHaveLength(1)
+  })
+
+  it('attaches nothing to the element while the flag is off', async () => {
+    const watch = watchMediaListeners()
+    try {
+      const { result } = renderHook(() => useTTS('irrelevant content', { units: UNITS }))
+      await startAllThree(result)
+
+      // The hook's own clock listener proves the wrap sees the element at all.
+      expect(watch.attached).toContain('timeupdate')
+      expect(watch.attached.filter((type) => DIAGNOSED_EVENTS.includes(type))).toEqual([])
+    } finally {
+      watch.restore()
+    }
+  })
+
+  it('arms on the first play() when the flag was set after mount', async () => {
+    const watch = watchMediaListeners()
+    try {
+      const { result } = renderHook(() => useTTS('irrelevant content', { units: UNITS }))
+      enableLog()
+      await startAllThree(result)
+
+      expect(watch.attached.filter((type) => DIAGNOSED_EVENTS.includes(type))).toEqual(
+        DIAGNOSED_EVENTS
+      )
+    } finally {
+      watch.restore()
+    }
+    await act(async () => {
+      currentAudio().dispatchEvent(new Event('stalled'))
+    })
+    expect(entriesOfType('media-stalled')).toHaveLength(1)
+  })
+})

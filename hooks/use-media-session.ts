@@ -2,6 +2,8 @@
 
 import { useEffect, useInsertionEffect, useRef } from 'react'
 
+import { logReaderEvent } from '@/lib/reader/diagnostic-log'
+
 export interface MediaSessionMetadataInput {
   title: string
   artist: string
@@ -53,6 +55,26 @@ export const MEDIA_SESSION_ARTWORK: ReadonlyArray<{ src: string; sizes: string; 
 const ACTIONS = ['play', 'pause', 'nexttrack', 'previoustrack'] as const
 
 type Action = (typeof ACTIONS)[number]
+
+/**
+ * How often a position write with an UNCHANGED duration leaves a log line.
+ *
+ * The log is a 200-entry ring and the position is published at ~4 Hz while
+ * playing, so one line per write would evict the session's start in under a
+ * minute and one per second inside three. Five seconds is the heartbeat's
+ * period, so the two read as one cadence. The clear, and any write whose
+ * duration changed, are logged whatever the clock says: those are the writes
+ * a fragile head unit can choke on, and the ones a car log has to show last.
+ */
+const POSITION_LOG_INTERVAL_MS = 5000
+
+/** Titles and artists are logged clipped: the line is read on a phone. */
+const DETAIL_CLIP = 60
+const clip = (value: string): string =>
+  value.length > DETAIL_CLIP ? `${value.slice(0, DETAIL_CLIP - 1)}…` : value
+
+const describePosition = (state: MediaSessionPosition): string =>
+  `position=${state.position.toFixed(3)} duration=${state.duration.toFixed(3)} rate=${state.playbackRate}`
 
 /**
  * Identity of the instance that wrote to the global last. Several instances of a
@@ -112,16 +134,31 @@ const writePositionState = (session: MediaSession, state?: MediaSessionPosition)
   }
 }
 
+/** Whether the browser took the registration — the log names only those it did. */
 const setActionHandler = (
   session: MediaSession,
   action: Action,
   handler: (() => void) | null,
-) => {
+): boolean => {
   try {
     session.setActionHandler(action, handler)
+    return true
   } catch {
     // Unsupported actions reject; the rest must still register.
+    return false
   }
+}
+
+/** Registers (or clears) every action and returns the ones the browser accepted. */
+const setActionHandlers = (
+  session: MediaSession,
+  handlerFor: (action: Action) => (() => void) | null,
+): Action[] => {
+  const accepted: Action[] = []
+  for (const action of ACTIONS) {
+    if (setActionHandler(session, action, handlerFor(action))) accepted.push(action)
+  }
+  return accepted
 }
 
 /**
@@ -171,6 +208,26 @@ export function useMediaSession({
    */
   const publishedRef = useRef<MediaSessionPosition | null | undefined>(undefined)
 
+  /** When, and at what duration, the last position line was logged (see the throttle). */
+  const lastPositionLogRef = useRef<{ at: number; duration: number } | null>(null)
+
+  // The instance's claim on the session, as the log sees it: one line when it
+  // takes the global and one when it lets go, so every write below can be
+  // read against the instance that made it. First, so the claim precedes the
+  // writes it explains. Through the same guard as the writes: a former owner
+  // letting go of a session it no longer holds is not an event.
+  useEffect(() => {
+    const session = getMediaSession()
+    if (!session || !active) return
+    owner = token
+    logReaderEvent('mediasession-active', 'on')
+
+    return () => {
+      if (owner !== token) return
+      logReaderEvent('mediasession-active', 'off')
+    }
+  }, [active, token])
+
   // Owns the action handlers and nothing else. Keyed on `active` alone so the
   // four registrations survive re-renders; new handler identities reach the
   // browser through the ref.
@@ -179,15 +236,13 @@ export function useMediaSession({
     if (!session || !active) return
     owner = token
 
-    for (const action of ACTIONS) {
-      setActionHandler(session, action, () => handlersRef.current[action]())
-    }
+    const registered = setActionHandlers(session, (action) => () => handlersRef.current[action]())
+    logReaderEvent('mediasession-handlers', `set ${registered.join(',')}`)
 
     return () => {
       if (owner !== token) return
-      for (const action of ACTIONS) {
-        setActionHandler(session, action, null)
-      }
+      const cleared = setActionHandlers(session, () => null)
+      logReaderEvent('mediasession-handlers', `clear ${cleared.join(',')}`)
     }
   }, [active, token])
 
@@ -202,6 +257,12 @@ export function useMediaSession({
     if (typeof MediaMetadata === 'undefined') return
     owner = token
 
+    // Logged ABOVE the write, like every write here: if the write is the one
+    // the head unit dies on, the line that names it has to be in the log.
+    logReaderEvent(
+      'mediasession-metadata',
+      title !== null ? `title="${clip(title)}" artist="${clip(artist ?? '')}"` : 'cleared'
+    )
     session.metadata =
       title !== null
         ? new MediaMetadata({
@@ -221,6 +282,7 @@ export function useMediaSession({
 
     return () => {
       if (owner !== token) return
+      logReaderEvent('mediasession-metadata', 'cleared (release)')
       session.metadata = null
     }
   }, [active, token])
@@ -231,10 +293,12 @@ export function useMediaSession({
     if (!session || !active) return
     owner = token
 
+    logReaderEvent('mediasession-playbackstate', playbackState)
     session.playbackState = playbackState
 
     return () => {
       if (owner !== token) return
+      logReaderEvent('mediasession-playbackstate', 'none (release)')
       session.playbackState = 'none'
     }
   }, [active, playbackState, token])
@@ -291,6 +355,8 @@ export function useMediaSession({
       // to the head unit this hook is trying to keep calm.
       if (published === undefined || published === null) return
       publishedRef.current = null
+      lastPositionLogRef.current = null
+      logReaderEvent('mediasession-position', 'clear')
       writePositionState(session)
       return
     }
@@ -310,6 +376,18 @@ export function useMediaSession({
     }
 
     publishedRef.current = next
+    // The throttle is a number compare, so a write that logs nothing costs
+    // nothing; the line is only built for the one that does.
+    const now = Date.now()
+    const last = lastPositionLogRef.current
+    if (
+      last === null ||
+      last.duration !== next.duration ||
+      now - last.at >= POSITION_LOG_INTERVAL_MS
+    ) {
+      lastPositionLogRef.current = { at: now, duration: next.duration }
+      logReaderEvent('mediasession-position', describePosition(next))
+    }
     writePositionState(session, next)
   })
 
@@ -322,7 +400,9 @@ export function useMediaSession({
 
     return () => {
       publishedRef.current = undefined
+      lastPositionLogRef.current = null
       if (owner !== token) return
+      logReaderEvent('mediasession-position', 'clear (release)')
       writePositionState(session)
     }
   }, [active, token])

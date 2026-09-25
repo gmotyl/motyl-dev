@@ -4,7 +4,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { detectLanguageFromContent } from '@/lib/tts/voice-map'
 import { splitIntoChunks } from '@/lib/tts/chunks'
 import { synthesizeSpeech } from '@/lib/tts/client'
-import { describeError, detailFor, logReaderEvent } from '@/lib/reader/diagnostic-log'
+import {
+  describeError,
+  detailFor,
+  isReaderLogEnabled,
+  logReaderEvent,
+} from '@/lib/reader/diagnostic-log'
+import { usePlaybackDiagnostics } from './use-playback-diagnostics'
 import type { Carrier } from '@/lib/reader/carrier'
 import { createSrcSwapCarrier } from '@/lib/reader/src-swap-carrier'
 import { isMseAudioSupported } from '@/lib/reader/mse-carrier'
@@ -238,6 +244,31 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   // that keeps the main thread alive with the screen off. A MediaStream-backed
   // element gets none of that, which is why the Web Audio carrier is gone.
   const audioElementRef = useRef<HTMLAudioElement | null>(null)
+  /**
+   * The element handed to `usePlaybackDiagnostics`, once someone is reading
+   * the log — so the production reader records what the carrier spike already
+   * did: the element's silent failures, the media-session state the OS shows,
+   * and the heartbeat without which a stalled reader and a dead page read the
+   * same. The two Read All News device logs had none of it.
+   *
+   * State rather than the ref above, because the diagnostics hook keys its
+   * effect on the element and the ref is filled in an effect of this hook's
+   * own. It is set ONLY when the log flag is on: with it off this stays null,
+   * nothing re-renders for it and the diagnostics hook returns before it
+   * attaches a listener or starts a timer — a reader nobody is instrumenting
+   * pays a `localStorage` read at mount and at `play()`, and nothing per
+   * render. Armed at mount, where `?readerlog=1` has already been applied by
+   * the control bar's render, and again on the first `play()` — a gesture
+   * that always comes after the flag could have been set some other way.
+   */
+  const [diagnosedElement, setDiagnosedElement] = useState<HTMLAudioElement | null>(null)
+  const diagnosticsArmedRef = useRef(false)
+  const armDiagnostics = useCallback((element: HTMLAudioElement) => {
+    if (diagnosticsArmedRef.current || !isReaderLogEnabled()) return
+    diagnosticsArmedRef.current = true
+    setDiagnosedElement(element)
+  }, [])
+  usePlaybackDiagnostics(diagnosedElement)
   // Whether this element has already been poked inside a user gesture (see
   // `unlockElementForGesture`). Once true it stays true for the element's whole
   // life — WebKit's per-element unlock does not expire.
@@ -1651,6 +1682,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     // FIRST, and before any await: this call may be running inside the user's
     // tap, and on WebKit that is the only moment the element can be unlocked.
     unlockElementForGesture(getAudioElement())
+    armDiagnostics(getAudioElement())
 
     ensureChunks()
 
@@ -1737,6 +1769,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     void playChunk(startIdx, offset, generation, signal)
   }, [
     abandonPendingAppend,
+    armDiagnostics,
     carrierHasUnit,
     ensureChunks,
     fetchUnitAudio,
@@ -1888,6 +1921,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   useEffect(() => {
     const element = getAudioElement()
     const carrier = getCarrier()
+    armDiagnostics(element)
     return () => {
       stop()
       detachUnitHandlers()
@@ -1897,7 +1931,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       audioElementRef.current = null
       carrier.dispose()
     }
-  }, [detachUnitHandlers, getAudioElement, getCarrier, stop])
+  }, [armDiagnostics, detachUnitHandlers, getAudioElement, getCarrier, stop])
 
   const playback: TTSPlayback = {
     ...state,

@@ -47,6 +47,16 @@ export type ReaderLogEventType =
   | 'mediasession-state'
   // Periodic proof-of-life while playing; carries currentTime.
   | 'heartbeat'
+  // Every write the app makes to navigator.mediaSession (hooks/use-media-session):
+  // what the OS, and the car behind it, was told. `mediasession-state` above
+  // is the value the diagnostics poll OBSERVED; these are the values WRITTEN,
+  // with a `(release)` suffix on the teardown writes. Position lines are
+  // throttled (see POSITION_LOG_INTERVAL_MS there); the rest are one per write.
+  | 'mediasession-active'
+  | 'mediasession-handlers'
+  | 'mediasession-metadata'
+  | 'mediasession-playbackstate'
+  | 'mediasession-position'
 
 export type ReaderLogEntry = {
   /** `Date.now()` when the event was recorded. */
