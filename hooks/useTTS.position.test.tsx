@@ -26,9 +26,13 @@ import type { SeamReport } from '@/lib/reader/seam-report'
  *   - `readMediaPosition` is the hook answering from the LIVE carrier, so the
  *     tests below pin which timeline it reads and when it refuses to answer.
  *
- * A section start other than 0 needs a handoff, which is a two-hook affair —
- * `use-continuous-reader.media-position.test.tsx` owns that, exactly as
- * `use-continuous-reader.handoff.test.tsx` owns the handoff itself.
+ * A section start other than 0 needs a handoff. The READER's handoff is a
+ * two-hook affair — `use-continuous-reader.media-position.test.tsx` owns that,
+ * exactly as `use-continuous-reader.handoff.test.tsx` owns the handoff itself.
+ * The `remembered section start` block below drives one from a single hook
+ * through `continueTimeline` instead, because what it pins is this hook's own
+ * state: the start it remembers once retention has evicted unit 0, and every
+ * moment it must forget it again.
  */
 
 vi.mock('@/lib/tts/client', () => ({
@@ -116,6 +120,15 @@ const setClock = (seconds: number) => {
 
 /** Three units of ten characters each. */
 const UNITS = ['a'.repeat(10), 'b'.repeat(10), 'c'.repeat(10)]
+/** The section after it: three more, distinguishable by their letters. */
+const NEXT_UNITS = ['d'.repeat(10), 'e'.repeat(10), 'f'.repeat(10)]
+
+/** Let the queued appends and the position read that follows them settle. */
+const settle = async () => {
+  await act(async () => {
+    for (let i = 0; i < 8; i += 1) await Promise.resolve()
+  })
+}
 
 /** Start a session and wait until all three units are on the timeline. */
 const startAllThree = async (result: { current: ReturnType<typeof useTTS> }) => {
@@ -366,5 +379,197 @@ describe('useTTS.readMediaPosition', () => {
     })
 
     expect(result.current.readMediaPosition()).toBeNull()
+  })
+})
+
+/**
+ * Props for a hook that is asked to hand its timeline on. `continueTimeline`
+ * is read at the end of the commit that decides a release, so it has to be
+ * true BEFORE `stop()` — the way the reader sets it inside `onComplete`.
+ */
+type HandoffProps = { units: string[]; continueTimeline: boolean }
+
+const renderHandoffHook = () =>
+  renderHook(
+    ({ units, continueTimeline }: HandoffProps) =>
+      useTTS('irrelevant content', { units, continueTimeline }),
+    { initialProps: { units: UNITS, continueTimeline: false } as HandoffProps }
+  )
+
+/**
+ * Section one ends and section two continues the same timeline: units 3..5
+ * land at 30..60 s, so section two STARTS at 30 on a timeline that began at 0.
+ */
+const handOffToNextSection = async (hook: ReturnType<typeof renderHandoffHook>) => {
+  hook.rerender({ units: UNITS, continueTimeline: true })
+  await act(async () => {
+    hook.result.current.stop()
+  })
+  // THE HANDOFF WINDOW: the section is over, the next one's first unit has not
+  // landed, and the timeline is alive. What is published here is 0 s of 0 s —
+  // the next section, at its start — never the previous section's minutes,
+  // which is what a start still remembered from it would report.
+  expect(hook.result.current.readMediaPosition()).toEqual({
+    position: 0,
+    duration: 0,
+    playbackRate: 1,
+  })
+  hook.rerender({ units: NEXT_UNITS, continueTimeline: true })
+  await act(async () => {
+    await hook.result.current.play()
+  })
+  await waitFor(() => expect(mse.appended).toEqual([0, 1, 2, 3, 4, 5]))
+  await settle()
+}
+
+describe('useTTS.readMediaPosition — remembered section start', () => {
+  it('keeps the section start after retention evicts unit 0', async () => {
+    /**
+     * THE DEVICE LOG. Eleven minutes in, `currentTime` crossed the retention
+     * window, the next append trimmed the buffer, and the lock screen went to
+     * 0:00 of 0:00 for the rest of the section: `dropBefore` had taken unit 0
+     * off the timeline, `startOf(0)` answered null, and the fallback meant for
+     * the handoff window — `end()` — became the section start.
+     *
+     * The setup makes the trim reachable with three units: each is 400 s, and
+     * the third is held back until the clock is past the window, so ITS append
+     * is the one that runs the trim. Horizon 1050 − 600 = 450 lies in unit 1,
+     * the cut goes to unit 1's start, and unit 0 is gone from the map.
+     */
+    mse.spanSeconds = 400
+    let releaseThird!: () => void
+    const thirdGate = new Promise<void>((resolve) => {
+      releaseThird = resolve
+    })
+    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) => {
+      if (text.startsWith('c')) await thirdGate
+      return new ArrayBuffer(8)
+    })
+
+    const { result } = renderHook(() => useTTS('irrelevant content', { units: UNITS }))
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0, 1]))
+
+    setClock(1050)
+    releaseThird()
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2]))
+    // The eviction really ran: the fake buffer now starts at unit 1.
+    await waitFor(() => expect(mse.start).toBe(400))
+    await settle()
+
+    // Section-relative and non-zero: still 1050 s into a section that began at
+    // 0 and has 1200 s of media so far. `end() − end()` is what the bug said.
+    expect(result.current.readMediaPosition()).toEqual({
+      position: 1050,
+      duration: 1200,
+      playbackRate: 1,
+    })
+  })
+
+  it('forgets the section start on a handoff', async () => {
+    /**
+     * The mirror bug. A start remembered for section one is a fact about
+     * section one; carried into section two it would report 34 s into a 60 s
+     * track for a section that is 4 s into 30. The base re-seats in
+     * `ensureChunks`, and the memory has to go with it.
+     */
+    const hook = renderHandoffHook()
+    await startAllThree(hook.result)
+    setClock(14)
+    // Remembered here: the answer that puts a start into memory.
+    expect(hook.result.current.readMediaPosition()).toEqual({
+      position: 14,
+      duration: 30,
+      playbackRate: 1,
+    })
+
+    await handOffToNextSection(hook)
+
+    setClock(34)
+    expect(hook.result.current.readMediaPosition()).toEqual({
+      position: 4,
+      duration: 30,
+      playbackRate: 1,
+    })
+  })
+
+  it('forgets the section start on stop / rebuild', async () => {
+    /**
+     * After a handoff the remembered start is 30 — a value that is WRONG for
+     * any fresh timeline, which is what a stop without a handoff leaves behind.
+     * The next session starts at 0 again, and 5 s in must read as 5 s in, not
+     * as a clock 25 s behind a start that no longer exists.
+     */
+    const hook = renderHandoffHook()
+    await startAllThree(hook.result)
+    await handOffToNextSection(hook)
+    setClock(34)
+    expect(hook.result.current.readMediaPosition()?.position).toBe(4)
+
+    hook.rerender({ units: NEXT_UNITS, continueTimeline: false })
+    await act(async () => {
+      hook.result.current.stop()
+    })
+    expect(hook.result.current.readMediaPosition()).toBeNull()
+
+    hook.rerender({ units: UNITS, continueTimeline: false })
+    await act(async () => {
+      await hook.result.current.play()
+    })
+    // A fresh carrier, a fresh timeline: the mock counts a second creation and
+    // numbers the appends from 0 again.
+    await waitFor(() => expect(mse.created).toBe(2))
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2]))
+    await settle()
+
+    setClock(5)
+    expect(hook.result.current.readMediaPosition()).toEqual({
+      position: 5,
+      duration: 30,
+      playbackRate: 1,
+    })
+  })
+
+  it('forgets the section start when a completed section releases the timeline', async () => {
+    /**
+     * The release that `stop()` does NOT precede. Completion leaves the unit
+     * list in place — a replay starts from it — so the next `play()` never
+     * re-bases, and the only thing between a start remembered at 30 and a
+     * fresh timeline that begins at 0 is the rebuild itself. This is the one
+     * test in the suite that drives the clock with `timeupdate`: completion is
+     * the boundary tracker's to declare, and it is the event under test.
+     */
+    const hook = renderHandoffHook()
+    await startAllThree(hook.result)
+    await handOffToNextSection(hook)
+    hook.rerender({ units: NEXT_UNITS, continueTimeline: false })
+
+    // Section two runs to its end: 30..60 on the shared timeline.
+    for (const time of [42, 52, 60]) {
+      mediaCurrentTime = time
+      await act(async () => {
+        document.querySelector('audio')!.dispatchEvent(new Event('timeupdate'))
+        for (let i = 0; i < 4; i += 1) await Promise.resolve()
+      })
+    }
+    await waitFor(() => expect(hook.result.current.isPlaying).toBe(false))
+    // Released: the timeline is gone, and a position on it with it.
+    expect(hook.result.current.readMediaPosition()).toBeNull()
+
+    await act(async () => {
+      await hook.result.current.play()
+    })
+    await waitFor(() => expect(mse.created).toBe(2))
+    await waitFor(() => expect(mse.appended).toHaveLength(3))
+    await settle()
+
+    setClock(5)
+    expect(hook.result.current.readMediaPosition()).toEqual({
+      position: 5,
+      duration: 30,
+      playbackRate: 1,
+    })
   })
 })

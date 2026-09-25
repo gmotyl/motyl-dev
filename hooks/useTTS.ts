@@ -297,6 +297,20 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
    * in this file changes meaning.
    */
   const unitIndexBaseRef = useRef(0)
+  /**
+   * Where the CURRENT section starts on the carrier's timeline, once known.
+   *
+   * A section start is a fact about the section, not about what is buffered:
+   * retention evicts the section's first unit long before the section ends,
+   * and `startOf(0)` stops answering the moment it does. Absolute starts never
+   * rewind — `end()` only accumulates and `dropBefore` keeps every remaining
+   * span's start — so the first answer stays the right one for as long as this
+   * is the section. Null until the first unit has landed, and again whenever
+   * the section changes or the timeline is rebuilt (see `ensureChunks`,
+   * `rebuildCarrier`, `stop`): a start remembered for the PREVIOUS section is
+   * the same bug the other way round.
+   */
+  const sectionStartRef = useRef<number | null>(null)
   /** The first carrier index no section has claimed yet. */
   const nextUnitIndexRef = useRef(0)
   /**
@@ -567,11 +581,18 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         { continueTimeline: timelineLiveRef.current }
       )
       timelineLiveRef.current = true
+      // The section's start is fixed the moment its first unit lands, and this
+      // is the only place that can know it before retention takes the unit
+      // back off the map. Asking the timeline later — at the first position
+      // read — would remember nothing on a session polled only after that.
+      if (sectionStartRef.current === null) {
+        sectionStartRef.current = getLiveTimeline().startOf(0)
+      }
       // The carrier owns the audio now; holding the bytes too would double the
       // retained audio for the whole buffered window.
       bufferCacheRef.current.delete(index)
     },
-    [getCarrier, toCarrierIndex]
+    [getCarrier, getLiveTimeline, toCarrierIndex]
   )
 
   /**
@@ -738,6 +759,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     // extending it — and a section that arrives afterwards numbers its units
     // from the carrier's own 0 again.
     timelineLiveRef.current = false
+    // The start remembered for it is a position on a timeline that no longer
+    // exists; the next one begins at 0 and answers for itself.
+    sectionStartRef.current = null
     // Nor is anything queued for it: a unit held back for the timeline that
     // just died belongs to the session that died with it.
     resetAppendQueue()
@@ -1614,6 +1638,13 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     // extend and the numbering starts over with the buffer.
     const continuing = continueTimelineRef.current && timelineLiveRef.current
     unitIndexBaseRef.current = continuing ? nextUnitIndexRef.current : 0
+    // A re-based unit 0 is a different unit at a different absolute position:
+    // whatever start was remembered belonged to the section that just ended.
+    // Today `stop()` has already forgotten it (it is what empties the list
+    // this branch fills), so this line is the invariant's anchor rather than
+    // its only guard: the memory belongs to the base, and a path that moved
+    // the base without a stop would still forget with it.
+    sectionStartRef.current = null
 
     const providedUnits = unitsRef.current
     chunksRef.current =
@@ -1643,13 +1674,20 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
    * `src`, so the element already describes the media it is playing and Chrome
    * derives a coherent position from it on its own.
    *
-   * `startOf(0)` is this section's first unit in the hook's own numbering,
-   * which `getLiveTimeline` translates to the carrier's absolute one — so this
-   * is the section start whatever the timeline was continued from. It is null
-   * for the moment between a handoff and the new section's first append, and
-   * `end()` is where that append will land, which is where the section starts.
-   * The playhead is still a hair behind it, so that window publishes a track
-   * at 0 s of 0 s rather than the previous section's minutes.
+   * `sectionStartRef` is this section's first unit in the hook's own
+   * numbering, translated to the carrier's absolute timeline and remembered at
+   * the append that put it there (`appendNow`) — so this is the section start
+   * whatever the timeline was continued from. It is NOT read off the timeline
+   * here: `startOf(0)` answers only while unit 0 is still mapped, and retention
+   * unmaps it once the playhead is a window past it. Reading it live fell
+   * through to the handoff fallback below, and the lock screen showed 0 s of
+   * 0 s for the rest of every section longer than the window.
+   *
+   * Nothing is remembered for the moment between a handoff and the new
+   * section's first append; `end()` is where that append will land, which is
+   * where the section starts. The playhead is still a hair behind it, so that
+   * window publishes a track at 0 s of 0 s rather than the previous section's
+   * minutes.
    *
    * Null means "no track to be in": the src-swap carrier, an element that does
    * not exist yet, or a timeline the reader has released (stop, teardown) —
@@ -1665,7 +1703,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     if (!timelineLiveRef.current) return null
 
     const timeline = getLiveTimeline()
-    const sectionStart = timeline.startOf(0) ?? timeline.end()
+    const sectionStart = sectionStartRef.current ?? timeline.end()
 
     return sectionRelativePosition(
       element.currentTime,
@@ -1887,6 +1925,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     currentChunkIndexRef.current = 0
     loadedUnitIndexRef.current = null
     pauseOffsetRef.current = 0
+    sectionStartRef.current = null
     resetAppendQueue()
     fetchingRef.current.clear()
     lastEmittedPctRef.current = -1

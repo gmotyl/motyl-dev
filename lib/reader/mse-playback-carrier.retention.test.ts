@@ -489,6 +489,41 @@ describe('mse playback carrier retention', () => {
     expect(detailsOfType('append-failed')).toEqual([])
   })
 
+  it('logs a successful eviction with its boundary, and a refused one not at all', async () => {
+    /**
+     * The field instrument's gap. A refused removal says so (`reader-error`,
+     * above); a removal that WORKED said nothing, so an eleven-minute device
+     * log could show the position collapse right after an append and never
+     * show the trim that caused it. The line lands when the removal has
+     * resolved — not when it was issued — so it is evidence the buffer really
+     * shrank, and its boundary is the cut the timeline was told about.
+     */
+    const { carrier, element, buffer } = attached()
+
+    await carrier.appendUnits(units(6), { continueTimeline: false })
+    await settle()
+    element.playTo(750)
+
+    // Refused first: nothing to report as done.
+    removeFailures = 1
+    await carrier.appendUnits([unit(6)], { continueTimeline: true })
+    await settle()
+    expect(detailsOfType('reader-error')).toEqual([
+      'eviction before 100 failed: InvalidStateError: remove refused',
+    ])
+    expect(detailsOfType('evict')).toEqual([])
+
+    // The re-issue lands, and the log now says so, with the same boundary the
+    // failure named.
+    await carrier.appendUnits([unit(7)], { continueTimeline: true })
+    await settle()
+    expect(buffer().rangesNow()).toEqual([[100, 800]])
+    expect(detailsOfType('evict')).toEqual(['before 100s'])
+    // Exactly one: the refusal did not log a success, and the success did not
+    // log twice.
+    expect(entriesOfType('evict')).toHaveLength(1)
+  })
+
   it('re-issues a refused trim on the next append', async () => {
     const { carrier, element, buffer } = attached()
 
