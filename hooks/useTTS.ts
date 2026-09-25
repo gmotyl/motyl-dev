@@ -361,7 +361,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   // The `timeupdate`-driven unit advance, reached through a ref for the same
   // reason as the progress emitter: the listener is attached once, at element
   // creation, and the handler it has to reach carries the CURRENT session.
-  const advanceUnitsRef = useRef<() => void>(() => {})
+  // `waiting` reaches the same advance with `starved` set — see
+  // `reachedEndOfContent` for why starvation is an end-of-content signal.
+  const advanceUnitsRef = useRef<(starved?: boolean) => void>(() => {})
   /**
    * The generation and abort signal of the play session now running, or null
    * between sessions.
@@ -371,6 +373,23 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
    * a live crossing from one arriving after the user pressed pause.
    */
   const sessionRef = useRef<{ generation: number; signal: AbortSignal } | null>(null)
+  /**
+   * Where the last `timeupdate` this session ACCEPTED left the playhead, or
+   * null until it has accepted one.
+   *
+   * This is the proof that the element has actually been playing in this
+   * session, and the starvation path's guard rests on it: a `waiting` is fired
+   * on EVERY start — right after `play()`, before the first frame is
+   * decodable — and a one-unit section has every unit on the timeline at that
+   * moment, so "all units appended AND the element starved" is true of a
+   * section nobody has heard a word of. A start, a resume after pause and a
+   * seek all arrive with no accepted tick behind them; only playback that has
+   * entered the last unit does. Nulled when a session is seated, NOT when it
+   * ends: the suppressed path reads it after a pause so the device log can
+   * still say "the element starved at the end" for a session the user gave
+   * up on.
+   */
+  const lastLiveTickRef = useRef<number | null>(null)
 
   // Buffer cache: pre-fetched MP3 bytes keyed by chunk index. An entry is
   // dropped once the carrier holds the unit — the carrier then owns the audio.
@@ -503,6 +522,20 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       element.addEventListener('timeupdate', () => {
         advanceUnitsRef.current()
         emitProgressRef.current()
+      })
+      // The end of the article is NOT always a `timeupdate` away. That clock
+      // fires while the playhead progresses and stops the moment the element
+      // runs out of data, so the last tick before starvation lands wherever it
+      // lands — on a device, 0.1–0.35 s short of the buffer's end, outside the
+      // tolerance — and the position the element finally settles at is never
+      // evaluated at all. `waiting` IS the element saying it settled there.
+      // The listener is the hook's own and unconditional, unlike the
+      // flag-gated diagnostics one on the same event: the decision hangs off
+      // it. `stalled` is deliberately not here — it reports a fetch stall and
+      // can fire while playback carries on from the buffer, so reading it as
+      // "consumed everything" would cut the last unit short.
+      element.addEventListener('waiting', () => {
+        advanceUnitsRef.current(true)
       })
       document.body.appendChild(element)
       audioElementRef.current = element
@@ -1439,16 +1472,36 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
    * current one or the very first lookup answers null.
    */
   const reachedEndOfContent = useCallback(
-    (currentTime: number): boolean => {
+    (currentTime: number, starved = false): boolean => {
       const lastIndex = chunksRef.current.length - 1
       if (lastIndex < 0) return false
 
       const timeline = getLiveTimeline()
+      // The loop is the ONE place presence is checked; the start it leaves
+      // behind is the last unit's, and the starvation branch below measures
+      // against it without asking a second time.
+      let lastStart: number | null = null
       for (let index = currentChunkIndexRef.current; index <= lastIndex; index += 1) {
-        if (timeline.startOf(index) === null) return false
+        lastStart = timeline.startOf(index)
+        if (lastStart === null) return false
       }
 
-      return currentTime >= timeline.end() - END_OF_CONTENT_TOLERANCE_SECONDS
+      if (currentTime >= timeline.end() - END_OF_CONTENT_TOLERANCE_SECONDS) return true
+
+      // STARVATION, the second way in, and the one that does not depend on the
+      // tolerance at all. An element that has run out of data with every
+      // remaining unit on the timeline has consumed everything there is; how
+      // far short of the buffer's end its final position reads is a property
+      // of the sink (~0.1 s on the device that produced the log, more over
+      // Bluetooth), which is exactly why widening the tolerance is not a fix.
+      //
+      // The guard is that a tick this session accepted has already put the
+      // playhead inside the last unit: the element has been HEARD reading it.
+      // Strictly inside — a seek to the last unit lands a tick exactly on its
+      // start, and the `waiting` every start produces must not finish it.
+      if (!starved) return false
+      const lastTick = lastLiveTickRef.current
+      return lastTick !== null && lastStart !== null && lastTick > lastStart
     },
     [getLiveTimeline]
   )
@@ -1468,7 +1521,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
    * ALREADY carrying it, so that call neither seeks nor starts anything — it
    * only re-points the handlers, refills the buffer and moves the state.
    */
-  const advanceUnits = useCallback(() => {
+  const advanceUnits = useCallback((starved = false) => {
     if (getCarrier().kind !== 'mse') return
 
     const element = audioElementRef.current
@@ -1527,14 +1580,22 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       const span = getLiveTimeline().unitAt(element.currentTime)
       const wouldHaveReported =
         (span !== null && span.index !== currentChunkIndexRef.current) ||
-        reachedEndOfContent(element.currentTime)
+        reachedEndOfContent(element.currentTime, starved)
       if (wouldHaveReported) {
-        logReaderEvent('unit-ended', detailFor(currentChunkIndexRef.current), {
-          suppressed: true,
-        })
+        logReaderEvent(
+          'unit-ended',
+          detailFor(currentChunkIndexRef.current, starved ? 'starved' : undefined),
+          { suppressed: true }
+        )
       }
       return
     }
+
+    // A tick that passed every leg of the guard is the element playing in this
+    // session; recorded BEFORE the questions below so the starvation guard can
+    // see the very tick that entered the last unit. A `waiting` is not a tick:
+    // it says where the element STOPPED, and must not count as having played.
+    if (!starved) lastLiveTickRef.current = element.currentTime
 
     const completed = getBoundaryTracker().advance(element.currentTime)
 
@@ -1576,7 +1637,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     // Either the playhead is still inside the unit it was in, or it has run off
     // the end of everything appended, or the crossing above landed it in the
     // last unit's final moments.
-    if (!reachedEndOfContent(element.currentTime)) return
+    if (!reachedEndOfContent(element.currentTime, starved)) return
 
     // The tail the tracker will never report: `unitAt` past the final append
     // returns null and the seat is KEPT, so the pipeline outrunning the
@@ -1602,7 +1663,13 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       finished < chunksRef.current.length;
       finished += 1
     ) {
-      logReaderEvent('unit-ended', detailFor(finished), { suppressed: false })
+      // `starved` is the WHY, and the field instrument needs it: a tail booked
+      // by starvation and one booked by the tolerance read identically without
+      // it, and it is the former that distinguishes the fixed reader from one
+      // that happened to stop inside the tolerance.
+      logReaderEvent('unit-ended', detailFor(finished, starved ? 'starved' : undefined), {
+        suppressed: false,
+      })
       completedCharsRef.current += charCountsRef.current[finished] || 0
     }
     consecutiveFailuresRef.current = 0
@@ -1739,6 +1806,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     // What the `timeupdate`-driven advance judges a crossing against; it has no
     // call chain of its own to carry them.
     sessionRef.current = { generation, signal }
+    // Nothing has played in THIS session yet, whatever the element's position
+    // says — a resume sits exactly where the last one stopped.
+    lastLiveTickRef.current = null
 
     setState((prev) => ({ ...prev, isPlaying: true, isBuffering: true }))
 

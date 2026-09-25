@@ -1,4 +1,5 @@
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
+import { useCallback, useRef, useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useTTS } from './useTTS'
@@ -159,6 +160,19 @@ const emitTimeUpdate = async (currentTime: number) => {
   await act(async () => {
     currentAudio().dispatchEvent(new Event('timeupdate'))
     for (let i = 0; i < 4; i += 1) await Promise.resolve()
+  })
+}
+
+/**
+ * Fire `waiting` with the playhead at `currentTime` — the element saying it ran
+ * out of decodable data THERE. No `timeupdate` accompanies it, and that is the
+ * point: a starved element's clock stops, and this is the last thing it says.
+ */
+const emitWaiting = async (currentTime: number) => {
+  mediaCurrentTime = currentTime
+  await act(async () => {
+    currentAudio().dispatchEvent(new Event('waiting'))
+    for (let i = 0; i < 6; i += 1) await Promise.resolve()
   })
 }
 
@@ -859,6 +873,385 @@ describe('useTTS completing an article on the MSE carrier', () => {
   })
 })
 
+describe('useTTS completing an article when the element starves', () => {
+  /**
+   * The end-of-content question used to be asked from `timeupdate` alone, and
+   * `timeupdate` is a clock that stops the moment the element runs out of
+   * data. A device log of a 44-unit section (screen off, last two units) has
+   * the last tick land 0.1–0.35 s short of the buffer's end — outside the
+   * tolerance — and then `media-waiting`, a playhead frozen at 43.180 for
+   * 37 s, and nothing else: the check was never evaluated against the final
+   * position, so `onComplete` never fired and Read All News died in silence at
+   * the end of the first article. The `unit-ended [suppressed]` written when
+   * the user finally paused is the same check answering YES at that position —
+   * the condition held; nothing ran it.
+   *
+   * Starvation is the signal. An element that reports `waiting` with every
+   * remaining unit on the timeline has consumed everything there is, whatever
+   * the tolerance says. Every other test here is a way an article that has
+   * NOT finished can also see a `waiting`, and each one pins its own guard.
+   */
+  it('completes the article when the element starves short of the tolerance', async () => {
+    enableLog()
+    const onComplete = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: UNITS, onComplete })
+    )
+    await startAllThree(result)
+    const sourcesAtStart = mse.created
+
+    await emitTimeUpdate(12)
+    await emitTimeUpdate(22)
+    // The last tick the element delivers lands OUTSIDE the tolerance...
+    await emitTimeUpdate(29.7)
+    expect(onComplete).not.toHaveBeenCalled()
+    // ...and the element then starves a quarter of a second short of the
+    // buffer's end. No tick follows, ever: this is the device log.
+    await emitWaiting(29.75)
+
+    expect(onComplete).toHaveBeenCalledTimes(1)
+    expect(result.current.isPlaying).toBe(false)
+    expect(result.current.progress).toBe(100)
+    // The article is over, so the carrier is rebuilt and the audio released.
+    expect(mse.created).toBe(sourcesAtStart + 1)
+    // The tail is booked by starvation and the log says so — the field
+    // instrument has to show WHY an article completed here.
+    expect(
+      entriesOfType('unit-ended')
+        .filter((entry) => !entry.suppressed)
+        .map((entry) => entry.detail)
+    ).toEqual(['0', '1', '2: starved'])
+  })
+
+  it('does not complete a one-unit section on the start-up waiting', async () => {
+    /**
+     * Every start begins with a `waiting`: the log shows it right after
+     * `play-called`, before the first frame is decodable, with the playhead
+     * still on the section's first sample. A one-unit section (a title alone)
+     * has every unit appended at that moment, so "all units on the timeline
+     * AND the element starved" is true of a section nobody has heard a word
+     * of. The guard is that a tick THIS session accepted has already put the
+     * playhead inside the last unit — a start, a resume and a seek all arrive
+     * with no such tick, so none of them can complete anything.
+     */
+    const onComplete = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: [UNITS[0]], onComplete })
+    )
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0]))
+    await settle()
+
+    await emitWaiting(0)
+    expect(onComplete).not.toHaveBeenCalled()
+    expect(result.current.isPlaying).toBe(true)
+
+    // The same unit actually read: the element ticks inside it, then starves
+    // at its end.
+    await emitTimeUpdate(5)
+    await emitWaiting(9.8)
+    expect(onComplete).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not complete on the start-up waiting of a resume inside the last unit', async () => {
+    /**
+     * The start-up `waiting` again, this time with the element's position
+     * already inside the last unit: the user paused there and pressed play.
+     * The previous session HAD seen the element playing in that unit, and a
+     * guard that remembered it across the resume would finish the article on
+     * the resume's first breath. What the guard rests on is a tick THIS
+     * session accepted, and a resume has none until the element moves.
+     */
+    const onComplete = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: UNITS, onComplete })
+    )
+    await startAllThree(result)
+
+    await emitTimeUpdate(12)
+    await emitTimeUpdate(22)
+    await emitTimeUpdate(25)
+    act(() => {
+      result.current.pause()
+    })
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle()
+
+    await emitWaiting(25)
+    expect(onComplete).not.toHaveBeenCalled()
+    expect(result.current.isPlaying).toBe(true)
+
+    // Then the element does move, and starves at the end for real.
+    await emitTimeUpdate(27)
+    await emitWaiting(29.8)
+    expect(onComplete).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not complete on a mid-article stall with a unit still missing', async () => {
+    /**
+     * The ordinary mid-article stall: the pipeline outran the appender and the
+     * element starved at the end of everything the buffer holds, with a unit
+     * still in synthesis. Same event, same frozen playhead — and a unit nobody
+     * has read. "Every remaining unit is on the timeline" is what tells the
+     * two apart.
+     */
+    let releaseLast!: (audio: ArrayBuffer) => void
+    const lastAudio = new Promise<ArrayBuffer>((resolve) => {
+      releaseLast = resolve
+    })
+    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) =>
+      text === UNITS[2] ? lastAudio : new ArrayBuffer(8)
+    )
+
+    const onComplete = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: UNITS, onComplete })
+    )
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0, 1]))
+    await settle()
+
+    await emitTimeUpdate(5)
+    await emitTimeUpdate(15)
+    expect(result.current.currentChunkIndex).toBe(1)
+
+    await emitWaiting(19.8)
+    expect(onComplete).not.toHaveBeenCalled()
+    expect(result.current.isPlaying).toBe(true)
+
+    await act(async () => {
+      releaseLast(new ArrayBuffer(8))
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2]))
+    await settle()
+
+    await emitTimeUpdate(25)
+    await emitWaiting(29.8)
+    expect(onComplete).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not complete on a starvation with a unit behind the last one still missing', async () => {
+    /**
+     * The starvation twin of the tolerance path's "unit behind the last one"
+     * test, and the one case a last-unit-only check cannot tell from the end
+     * of the article. A walked-over unit puts the FINAL unit on the timeline
+     * while the middle one is retried; the playhead then reads the last unit
+     * to its end and the element starves there. Every visible sign of
+     * completion is present — the last unit has media, the element has been
+     * heard inside it, the data ran out — and a unit nobody has read is being
+     * fetched. Only "every unit from the current one through the last" says
+     * so.
+     */
+    const releaseMiddle = failMiddleThenHoldRetry()
+
+    const onComplete = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: UNITS, onComplete })
+    )
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0, 2]))
+    await settle()
+
+    await emitTimeUpdate(5)
+    // The crossing puts the hook on unit 1, which is nowhere on the timeline;
+    // its retry is now in flight.
+    await emitTimeUpdate(15)
+    // The playhead reads on into the last unit's span, then starves at the end
+    // of everything the buffer holds.
+    await emitTimeUpdate(25)
+    await emitWaiting(29.8)
+
+    expect(onComplete).not.toHaveBeenCalled()
+    expect(result.current.isPlaying).toBe(true)
+
+    await act(async () => {
+      releaseMiddle(new ArrayBuffer(8))
+    })
+    await settle()
+    await emitTimeUpdate(30)
+    expect(onComplete).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not complete the new section on a waiting that lands during a handoff', async () => {
+    /**
+     * The reader's own sequence, at this hook's level: `onComplete` calls
+     * `stop()` and swaps in the next section with `continueTimeline`, and the
+     * next `play()` continues the SAME timeline. The starvation that ended the
+     * previous section arrives in bursts, so a late `waiting` can land in the
+     * new session — and a further one when the new section's first unit is
+     * read to its end while the rest of it is still in synthesis. Neither is
+     * the new section finishing; both look exactly like it did.
+     */
+    const NEXT_UNITS = ['d'.repeat(10), 'e'.repeat(10), 'f'.repeat(10)]
+    const held = new Map<string, (audio: ArrayBuffer) => void>()
+    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) => {
+      if (text !== NEXT_UNITS[1] && text !== NEXT_UNITS[2]) return new ArrayBuffer(8)
+      return new Promise<ArrayBuffer>((resolve) => {
+        held.set(text, resolve)
+      })
+    })
+
+    const completions: string[] = []
+    const { result } = renderHook(() => {
+      const [section, setSection] = useState({ key: 'a', units: UNITS, continues: false })
+      const playbackRef = useRef<ReturnType<typeof useTTS> | null>(null)
+      const playback = useTTS('irrelevant content', {
+        units: section.units,
+        continueTimeline: section.continues,
+        onComplete: useCallback(() => {
+          completions.push(section.key)
+          if (section.key !== 'a') return
+          playbackRef.current?.stop()
+          setSection({ key: 'b', units: NEXT_UNITS, continues: true })
+        }, [section.key]),
+      })
+      playbackRef.current = playback
+      return playback
+    })
+    await startAllThree(result)
+
+    await emitTimeUpdate(12)
+    await emitTimeUpdate(22)
+    await emitTimeUpdate(29.7)
+    await emitWaiting(29.75)
+    expect(completions).toEqual(['a'])
+
+    // The handoff: the reader starts the next section once its commit landed.
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2, 3]))
+    await settle()
+    // One timeline, continued — no rebuild across the handoff.
+    expect(mse.created).toBe(1)
+
+    // The burst: the previous section's starvation, delivered again.
+    await emitWaiting(29.75)
+    expect(completions).toEqual(['a'])
+    expect(result.current.isPlaying).toBe(true)
+
+    // The new section's first unit is read and the element starves at its end
+    // with two of its units still missing.
+    await emitTimeUpdate(35)
+    await emitWaiting(39.8)
+    expect(completions).toEqual(['a'])
+    expect(result.current.isPlaying).toBe(true)
+    expect(result.current.currentChunkIndex).toBe(0)
+
+    await act(async () => {
+      held.get(NEXT_UNITS[1])?.(new ArrayBuffer(8))
+      held.get(NEXT_UNITS[2])?.(new ArrayBuffer(8))
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2, 3, 4, 5]))
+    await settle()
+
+    await emitTimeUpdate(45)
+    await emitTimeUpdate(55)
+    await emitWaiting(59.8)
+    expect(completions).toEqual(['a', 'b'])
+  })
+
+  it('completes exactly once when waiting fires repeatedly', async () => {
+    /**
+     * A starved element does not say so once. Completion bumps the generation
+     * and empties the timeline in the same synchronous block, so every
+     * `waiting` after the first meets a session that is over and a timeline
+     * with nothing on it.
+     */
+    enableLog()
+    const onComplete = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: UNITS, onComplete })
+    )
+    await startAllThree(result)
+
+    await emitTimeUpdate(12)
+    await emitTimeUpdate(22)
+    await emitTimeUpdate(29.7)
+    await emitWaiting(29.75)
+    expect(onComplete).toHaveBeenCalledTimes(1)
+
+    await emitWaiting(29.75)
+    await emitWaiting(29.75)
+    await emitWaiting(29.75)
+    expect(onComplete).toHaveBeenCalledTimes(1)
+    expect(entriesOfType('unit-start').filter((entry) => entry.detail === '3/3')).toHaveLength(1)
+  })
+
+  it('ignores a waiting that arrives after stop', async () => {
+    /**
+     * `stop()` ends the session and empties the chunk list; a `waiting` the
+     * element delivers afterwards is a late tick like any other and goes the
+     * way every late tick goes — through the guard.
+     */
+    enableLog()
+    const onComplete = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: UNITS, onComplete })
+    )
+    await startAllThree(result)
+
+    await emitTimeUpdate(12)
+    await emitTimeUpdate(22)
+    await emitTimeUpdate(29.7)
+    act(() => {
+      result.current.stop()
+    })
+
+    await emitWaiting(29.75)
+
+    expect(onComplete).not.toHaveBeenCalled()
+    expect(result.current.isPlaying).toBe(false)
+    expect(
+      entriesOfType('unit-ended')
+        .filter((entry) => !entry.suppressed)
+        .map((entry) => entry.detail)
+    ).toEqual(['0', '1'])
+    expect(entriesOfType('unit-start').map((entry) => entry.detail)).not.toContain('3/3')
+  })
+
+  it('records a waiting that arrives after pause as a suppressed end', async () => {
+    /**
+     * The device log's own tail: the user gave up and paused, and the pause
+     * wrote `unit-ended [suppressed] 43`. A `waiting` after a pause goes
+     * through the same suppressed path, so the session guard holds for it
+     * exactly as for a tick — and the entry it leaves names starvation, so a
+     * device log can tell the two apart.
+     */
+    const onComplete = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: UNITS, onComplete })
+    )
+    await startAllThree(result)
+
+    await emitTimeUpdate(12)
+    await emitTimeUpdate(22)
+    await emitTimeUpdate(29.7)
+
+    // Logging starts here so the entry under test is the only one on record.
+    enableLog()
+    act(() => {
+      result.current.pause()
+    })
+    await emitWaiting(29.75)
+
+    expect(onComplete).not.toHaveBeenCalled()
+    expect(result.current.isPlaying).toBe(false)
+    const ends = entriesOfType('unit-ended')
+    expect(ends).toHaveLength(1)
+    expect(ends[0].suppressed).toBe(true)
+    expect(ends[0].detail).toBe('2: starved')
+  })
+})
+
 describe('useTTS advancing units on the MSE carrier', () => {
   it('counts every unit a single tick flew over', async () => {
     /**
@@ -1388,7 +1781,12 @@ describe('useTTS element diagnostics', () => {
 
       // The hook's own clock listener proves the wrap sees the element at all.
       expect(watch.attached).toContain('timeupdate')
-      expect(watch.attached.filter((type) => DIAGNOSED_EVENTS.includes(type))).toEqual([])
+      // Its starvation listener is the hook's own too — the end-of-content
+      // decision hangs off it, flag or no flag — so it is the ONE diagnosed
+      // event name that may be attached here.
+      expect(watch.attached.filter((type) => DIAGNOSED_EVENTS.includes(type))).toEqual([
+        'waiting',
+      ])
     } finally {
       watch.restore()
     }
@@ -1401,9 +1799,12 @@ describe('useTTS element diagnostics', () => {
       enableLog()
       await startAllThree(result)
 
-      expect(watch.attached.filter((type) => DIAGNOSED_EVENTS.includes(type))).toEqual(
-        DIAGNOSED_EVENTS
-      )
+      // The hook's own `waiting` first (attached with the element, at mount),
+      // then the diagnostics set, armed by the play().
+      expect(watch.attached.filter((type) => DIAGNOSED_EVENTS.includes(type))).toEqual([
+        'waiting',
+        ...DIAGNOSED_EVENTS,
+      ])
     } finally {
       watch.restore()
     }
