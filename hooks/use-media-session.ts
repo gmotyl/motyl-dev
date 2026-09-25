@@ -37,7 +37,8 @@ export interface UseMediaSessionOptions {
    * media element, and it has to be read after the rest of the commit has
    * settled rather than during the render that will cause it. Answering null
    * means "no track to be in", which clears the position state. Pass null for a
-   * caller that publishes no position at all.
+   * caller that publishes no position at all — it reads as the same state, and
+   * clears the same way.
    */
   readPosition: (() => MediaSessionPosition | null) | null
   handlers: MediaSessionHandlers
@@ -75,6 +76,12 @@ const getMediaSession = (): MediaSession | null => {
  * playback it was meant to describe. So every field is checked here and a state
  * that fails is simply not published; the previous one stays standing, which is
  * a moment stale rather than wrong.
+ *
+ * The rate is held to more than the API asks: the spec rejects only 0, and a
+ * negative rate is legal there (reverse playback). Every caller in this app
+ * already normalises its rate to a positive one, so a negative one arriving
+ * here means the reader is confused — and a confused rate handed to a car head
+ * unit over AVRCP is the class of input this hook exists not to send.
  */
 const isPublishablePosition = (
   position: number,
@@ -87,7 +94,7 @@ const isPublishablePosition = (
   position >= 0 &&
   position <= duration &&
   Number.isFinite(playbackRate) &&
-  playbackRate !== 0
+  playbackRate > 0
 
 /**
  * `setPositionState` exists only on newer browsers, so every call is
@@ -252,17 +259,37 @@ export function useMediaSession({
   useEffect(() => {
     const session = getMediaSession()
     if (!session || !active) return
-    const read = readPositionRef.current
-    if (read === null) return
     owner = token
 
-    const next = read()
+    // A caller with no reader at all and a reader answering null are the same
+    // state — nobody is maintaining a position any more — so they go down the
+    // same branch below. Keeping them apart would let a caller that drops its
+    // reader leave the position it last published standing.
+    const read = readPositionRef.current
+    let next: MediaSessionPosition | null = null
+    if (read !== null) {
+      try {
+        next = read()
+      } catch {
+        // The reader is asked once per commit off a live media element; one
+        // that throws costs a position report, never the reading session. The
+        // last good state stays standing, as a rejected one does.
+        return
+      }
+    }
 
     // No position: the caller holds no track to be in — stopped, released, or
     // on a carrier whose element already describes itself. Clear, so a finished
     // section does not leave its position standing.
     if (next === null) {
-      if (publishedRef.current === null) return
+      const published = publishedRef.current
+      // Nothing of ours is standing, so there is nothing to take back:
+      // `undefined` is "never published" — the first commit of a reader that
+      // starts with nothing, and every commit after a release resets it — and
+      // `null` is "already cleared". Only a position that actually reached the
+      // browser is worth the call, which is IPC that ends up as AVRCP traffic
+      // to the head unit this hook is trying to keep calm.
+      if (published === undefined || published === null) return
       publishedRef.current = null
       writePositionState(session)
       return

@@ -547,6 +547,114 @@ describe('useMediaSession', () => {
       ])
     })
 
+    it('skips a negative playback rate', () => {
+      // Not the API's rule: the spec rejects only 0, and a negative rate is
+      // legal there. It is this app's rule — every caller normalises its rate
+      // to a positive one before it gets here, so a negative one means the
+      // reader is confused, and a confused rate is what reboots the head unit.
+      const { rerender } = renderHook(
+        (options: UseMediaSessionOptions) => useMediaSession(options),
+        { initialProps: baseOptions({ readPosition: reading({ position: 4 }) }) },
+      )
+
+      rerender(baseOptions({ readPosition: reading({ playbackRate: -1 }) }))
+      rerender(baseOptions({ readPosition: reading({ position: 9 }) }))
+
+      expect(positionWrites).toEqual([
+        { position: 4, duration: 30, playbackRate: 1 },
+        { position: 9, duration: 30, playbackRate: 1 },
+      ])
+    })
+
+    it('clears the position state when the caller stops providing a reader at all', () => {
+      // No reader and a reader answering null are the same state, so they must
+      // clear the same way. Defensive rather than live — `useTTS` always hands
+      // one over — but a caller that dropped its reader mid-session would
+      // otherwise leave its last position sitting on the lock screen for good.
+      const { rerender } = renderHook(
+        (options: UseMediaSessionOptions) => useMediaSession(options),
+        { initialProps: baseOptions({ readPosition: reading() }) },
+      )
+      expect(positionWrites).toEqual([{ position: 4, duration: 30, playbackRate: 1 }])
+
+      rerender(baseOptions({ readPosition: null }))
+
+      expect(positionWrites).toHaveLength(2)
+      expect(lastPosition()).toBeUndefined()
+
+      // Cleared once, not once per commit — it has to be the same branch a
+      // null-answering reader takes, dedup included.
+      rerender(baseOptions({ readPosition: null }))
+      expect(positionWrites).toHaveLength(2)
+    })
+
+    it('does not clear a position it never published', () => {
+      // Every `setPositionState` call is IPC to the browser process, and AVRCP
+      // traffic beyond it, so a reader that starts with nothing to report must
+      // cost none of it.
+      const { rerender } = renderHook(
+        (options: UseMediaSessionOptions) => useMediaSession(options),
+        { initialProps: baseOptions({ readPosition: readingNothing() }) },
+      )
+      expect(positionWrites).toEqual([])
+
+      // ...and the silence is specific to "never published", not a hook that
+      // stopped clearing: once a position has actually reached the browser,
+      // losing it is still a genuine clear.
+      rerender(baseOptions({ readPosition: reading() }))
+      expect(positionWrites).toEqual([{ position: 4, duration: 30, playbackRate: 1 }])
+
+      rerender(baseOptions({ readPosition: readingNothing() }))
+      expect(positionWrites).toHaveLength(2)
+      expect(lastPosition()).toBeUndefined()
+    })
+
+    it('does not clear again after a release left nothing published', () => {
+      // Going inactive clears and forgets what was published, so coming back
+      // with nothing to report is the never-published case all over again.
+      const { rerender } = renderHook(
+        (options: UseMediaSessionOptions) => useMediaSession(options),
+        { initialProps: baseOptions({ active: true, readPosition: reading() }) },
+      )
+      expect(positionWrites).toHaveLength(1)
+
+      rerender(baseOptions({ active: false, readPosition: readingNothing() }))
+      expect(positionWrites).toHaveLength(2)
+      expect(lastPosition()).toBeUndefined()
+
+      rerender(baseOptions({ active: true, readPosition: readingNothing() }))
+      expect(positionWrites).toHaveLength(2)
+
+      // Still publishes once the reader has something again.
+      rerender(baseOptions({ active: true, readPosition: reading({ position: 9 }) }))
+      expect(lastPosition()).toEqual({ position: 9, duration: 30, playbackRate: 1 })
+    })
+
+    it('keeps going when the reader itself throws', () => {
+      // The same bargain as a throwing `setPositionState`: the reader is asked
+      // once per commit off a live media element, and one that throws must cost
+      // a position report, not the reading session.
+      const throwing = vi.fn((): MediaSessionPosition | null => {
+        throw new TypeError('timeline released')
+      })
+
+      const { rerender } = renderHook(
+        (options: UseMediaSessionOptions) => useMediaSession(options),
+        { initialProps: baseOptions({ readPosition: reading({ position: 4 }) }) },
+      )
+
+      expect(() => rerender(baseOptions({ readPosition: throwing }))).not.toThrow()
+      expect(throwing).toHaveBeenCalled()
+
+      // The last good state stays standing, as a rejected one does...
+      expect(positionWrites).toEqual([{ position: 4, duration: 30, playbackRate: 1 }])
+      expect(publishedMetadata().title).toBe('Section 1')
+
+      // ...and the next good read still publishes.
+      rerender(baseOptions({ readPosition: reading({ position: 9 }) }))
+      expect(lastPosition()).toEqual({ position: 9, duration: 30, playbackRate: 1 })
+    })
+
     it('clears the position state when the reader has no track to be in', () => {
       const { rerender } = renderHook(
         (options: UseMediaSessionOptions) => useMediaSession(options),
