@@ -8,6 +8,17 @@ export interface MediaSessionMetadataInput {
   album: string
 }
 
+/**
+ * A position state as the Media Session API takes it: seconds into the current
+ * TRACK, the track's length, and the rate it is being played at. What counts as
+ * a track is the caller's business, as with `metadata`.
+ */
+export interface MediaSessionPosition {
+  position: number
+  duration: number
+  playbackRate: number
+}
+
 export interface MediaSessionHandlers {
   play: () => void
   pause: () => void
@@ -20,6 +31,16 @@ export interface UseMediaSessionOptions {
   active: boolean
   metadata: MediaSessionMetadataInput | null
   playbackState: 'playing' | 'paused' | 'none'
+  /**
+   * Where the caller is inside the current track, ASKED FOR once per commit —
+   * a function rather than a value because the answer is read off a live
+   * media element, and it has to be read after the rest of the commit has
+   * settled rather than during the render that will cause it. Answering null
+   * means "no track to be in", which clears the position state. Pass null for a
+   * caller that publishes no position at all — it reads as the same state, and
+   * clears the same way.
+   */
+  readPosition: (() => MediaSessionPosition | null) | null
   handlers: MediaSessionHandlers
 }
 
@@ -46,6 +67,51 @@ const getMediaSession = (): MediaSession | null => {
   return navigator.mediaSession ?? null
 }
 
+/**
+ * Whether a state can be handed to `setPositionState` at all.
+ *
+ * It throws a `TypeError` on a negative or NaN duration, on a position outside
+ * `[0, duration]` and on a rate of 0 — and a throw out of the media session is
+ * worse than publishing nothing, because the only thing it can break is the
+ * playback it was meant to describe. So every field is checked here and a state
+ * that fails is simply not published; the previous one stays standing, which is
+ * a moment stale rather than wrong.
+ *
+ * The rate is held to more than the API asks: the spec rejects only 0, and a
+ * negative rate is legal there (reverse playback). Every caller in this app
+ * already normalises its rate to a positive one, so a negative one arriving
+ * here means the reader is confused — and a confused rate handed to a car head
+ * unit over AVRCP is the class of input this hook exists not to send.
+ */
+const isPublishablePosition = (
+  position: number,
+  duration: number,
+  playbackRate: number
+): boolean =>
+  Number.isFinite(duration) &&
+  duration >= 0 &&
+  Number.isFinite(position) &&
+  position >= 0 &&
+  position <= duration &&
+  Number.isFinite(playbackRate) &&
+  playbackRate > 0
+
+/**
+ * `setPositionState` exists only on newer browsers, so every call is
+ * feature-detected — and wrapped anyway: Chromium validates the state on its
+ * own side and a version that disagrees with the checks above must cost a
+ * position report, never the reading session.
+ */
+const writePositionState = (session: MediaSession, state?: MediaSessionPosition): void => {
+  if (typeof session.setPositionState !== 'function') return
+  try {
+    if (state === undefined) session.setPositionState()
+    else session.setPositionState(state)
+  } catch {
+    // A media-session failure must never break playback.
+  }
+}
+
 const setActionHandler = (
   session: MediaSession,
   action: Action,
@@ -68,6 +134,7 @@ export function useMediaSession({
   active,
   metadata,
   playbackState,
+  readPosition,
   handlers,
 }: UseMediaSessionOptions): void {
   // Registered callbacks read through the ref so the browser always calls the
@@ -85,6 +152,24 @@ export function useMediaSession({
   const title = metadata?.title ?? null
   const artist = metadata?.artist ?? null
   const album = metadata?.album ?? null
+
+  // Asked for through the ref, like the action handlers: the publisher below
+  // runs once per commit and must reach the latest reader without being
+  // re-keyed on a function identity that changes every render.
+  const readPositionRef = useRef(readPosition)
+  useInsertionEffect(() => {
+    readPositionRef.current = readPosition
+  })
+
+  /**
+   * The last state actually written, so an unchanged position costs nothing.
+   *
+   * `undefined` is "nothing written yet" and `null` is "written as cleared" —
+   * they are different, because the clear must happen once and only once.
+   * Chromium forwards every call to the browser process, and the publisher
+   * below is the most frequent writer this hook has.
+   */
+  const publishedRef = useRef<MediaSessionPosition | null | undefined>(undefined)
 
   // Owns the action handlers and nothing else. Keyed on `active` alone so the
   // four registrations survive re-renders; new handler identities reach the
@@ -153,4 +238,92 @@ export function useMediaSession({
       session.playbackState = 'none'
     }
   }, [active, playbackState, token])
+
+  /**
+   * Publishes the position state, through the same ownership guard as
+   * everything else here — `navigator.mediaSession` is a singleton and this
+   * hook is the only place in the app that writes to it.
+   *
+   * WITHOUT A DEPENDENCY ARRAY, deliberately. The position is read from a live
+   * media element, so there is no value to key on: this has to ask once per
+   * commit, and it has to ask AFTER the commit rather than during the render,
+   * because a reader that released its timeline in an effect of its own has
+   * only done so by the time effects run. (Reading it in the render that
+   * ordered the release published the position of a timeline that no longer
+   * existed — a stopped reader left its section sitting on the lock screen.)
+   *
+   * Also without a cleanup, for the reason the metadata effect has none:
+   * clearing between two updates would blink the scrubber that a car and a lock
+   * screen both render. Release is the next effect's job.
+   */
+  useEffect(() => {
+    const session = getMediaSession()
+    if (!session || !active) return
+    owner = token
+
+    // A caller with no reader at all and a reader answering null are the same
+    // state — nobody is maintaining a position any more — so they go down the
+    // same branch below. Keeping them apart would let a caller that drops its
+    // reader leave the position it last published standing.
+    const read = readPositionRef.current
+    let next: MediaSessionPosition | null = null
+    if (read !== null) {
+      try {
+        next = read()
+      } catch {
+        // The reader is asked once per commit off a live media element; one
+        // that throws costs a position report, never the reading session. The
+        // last good state stays standing, as a rejected one does.
+        return
+      }
+    }
+
+    // No position: the caller holds no track to be in — stopped, released, or
+    // on a carrier whose element already describes itself. Clear, so a finished
+    // section does not leave its position standing.
+    if (next === null) {
+      const published = publishedRef.current
+      // Nothing of ours is standing, so there is nothing to take back:
+      // `undefined` is "never published" — the first commit of a reader that
+      // starts with nothing, and every commit after a release resets it — and
+      // `null` is "already cleared". Only a position that actually reached the
+      // browser is worth the call, which is IPC that ends up as AVRCP traffic
+      // to the head unit this hook is trying to keep calm.
+      if (published === undefined || published === null) return
+      publishedRef.current = null
+      writePositionState(session)
+      return
+    }
+
+    // A state the API would reject leaves the last good one standing: a moment
+    // stale beats a `TypeError` thrown at the reader that published it.
+    if (!isPublishablePosition(next.position, next.duration, next.playbackRate)) return
+
+    const published = publishedRef.current
+    if (
+      published != null &&
+      published.position === next.position &&
+      published.duration === next.duration &&
+      published.playbackRate === next.playbackRate
+    ) {
+      return
+    }
+
+    publishedRef.current = next
+    writePositionState(session, next)
+  })
+
+  // Releases the position state on deactivate/unmount only, so publishing never
+  // churns a clear in between.
+  useEffect(() => {
+    const session = getMediaSession()
+    if (!session || !active) return
+    owner = token
+
+    return () => {
+      publishedRef.current = undefined
+      if (owner !== token) return
+      writePositionState(session)
+    }
+  }, [active, token])
 }
