@@ -184,6 +184,27 @@ const entriesOfType = (type: ReaderLogEntry['type']) =>
 /** Three units of ten characters each — so a unit is exactly a third of the article. */
 const UNITS = ['a'.repeat(10), 'b'.repeat(10), 'c'.repeat(10)]
 
+/**
+ * Unit 1's PREFETCH fails and the retry `playChunk` makes in its turn is held
+ * in flight. Appends are made in index order, so this is the one way the
+ * buffer can come to hold unit 2 while unit 1 is still missing: a unit given
+ * up on is walked over, and its retry lands wherever the timeline has got to.
+ */
+const failMiddleThenHoldRetry = () => {
+  let release!: (audio: ArrayBuffer) => void
+  const retryAudio = new Promise<ArrayBuffer>((resolve) => {
+    release = resolve
+  })
+  let calls = 0
+  vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) => {
+    if (text !== UNITS[1]) return new ArrayBuffer(8)
+    calls += 1
+    if (calls === 1) throw new Error('stalled')
+    return retryAudio
+  })
+  return release
+}
+
 /** Start a session and wait until all three units are on the timeline. */
 const startAllThree = async (result: { current: ReturnType<typeof useTTS> }) => {
   await act(async () => {
@@ -766,20 +787,14 @@ describe('useTTS completing an article on the MSE carrier', () => {
 
   it('does not complete while a unit behind the last one is still missing', async () => {
     /**
-     * Prefetch resolves in whatever order the bytes arrive, so the buffer can
-     * hold the FINAL unit while an earlier one is still in flight — and then
-     * "the last unit is on the timeline and the playhead is at the buffer's
-     * end" is true with a unit nobody has read. Asking about the last index
-     * alone would end the article there; asking about every index from the one
-     * being read through the last is what refuses to.
+     * A unit whose prefetch failed is walked over, so the buffer can hold the
+     * FINAL unit while that one is being retried — and then "the last unit is
+     * on the timeline and the playhead is at the buffer's end" is true with a
+     * unit nobody has read. Asking about the last index alone would end the
+     * article there; asking about every index from the one being read through
+     * the last is what refuses to.
      */
-    let releaseMiddle!: (audio: ArrayBuffer) => void
-    const middleAudio = new Promise<ArrayBuffer>((resolve) => {
-      releaseMiddle = resolve
-    })
-    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) =>
-      text === UNITS[1] ? middleAudio : new ArrayBuffer(8)
-    )
+    const releaseMiddle = failMiddleThenHoldRetry()
 
     const onComplete = vi.fn()
     const { result } = renderHook(() =>
@@ -792,7 +807,8 @@ describe('useTTS completing an article on the MSE carrier', () => {
     await settle()
 
     await emitTimeUpdate(5)
-    // The crossing puts the hook on unit 1, which is nowhere on the timeline.
+    // The crossing puts the hook on unit 1, which is nowhere on the timeline;
+    // its retry is now in flight.
     await emitTimeUpdate(15)
     // The playhead then runs off the end of everything the buffer holds.
     await emitTimeUpdate(20)
@@ -880,12 +896,11 @@ describe('useTTS advancing units on the MSE carrier', () => {
 
   it('does not measure progress against a span the current unit does not own', async () => {
     /**
-     * Prefetch is parallel and resolves in whatever order the network hands the
-     * bytes back, so the buffer can hold unit 2 while unit 1 is still in
-     * flight — and on one continuous timeline the unit at a given second is
-     * then NOT the unit whose index the hook is on. Measuring the current
-     * unit's fraction against somebody else's span is the spike-then-fall the
-     * emitter's guard exists to prevent.
+     * A unit whose prefetch failed is walked over, so the buffer can hold unit
+     * 2 while unit 1 is still being retried — and on one continuous timeline
+     * the unit at a given second is then NOT the unit whose index the hook is
+     * on. Measuring the current unit's fraction against somebody else's span
+     * is the spike-then-fall the emitter's guard exists to prevent.
      *
      * The same moment pins `resuming`: the hook is pointed at unit 1, the
      * element is carrying unit 2's media, and the carrier does not hold unit 1
@@ -894,13 +909,7 @@ describe('useTTS advancing units on the MSE carrier', () => {
      * unit 1, never seek, and leave the reader reading unit 2 under unit 1's
      * name.
      */
-    let releaseMiddle!: (audio: ArrayBuffer) => void
-    const middleAudio = new Promise<ArrayBuffer>((resolve) => {
-      releaseMiddle = resolve
-    })
-    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) =>
-      text === UNITS[1] ? middleAudio : new ArrayBuffer(8)
-    )
+    const releaseMiddle = failMiddleThenHoldRetry()
 
     const progress: number[] = []
     const { result } = renderHook(() =>
@@ -909,7 +918,7 @@ describe('useTTS advancing units on the MSE carrier', () => {
     await act(async () => {
       await result.current.play()
     })
-    // Unit 2's bytes overtook unit 1's, so the buffer is 0 then 2.
+    // Unit 1 was given up on and unit 2 let through, so the buffer is 0 then 2.
     await waitFor(() => expect(mse.appended).toEqual([0, 2]))
     await settle()
 
@@ -1135,5 +1144,128 @@ describe('useTTS when the MSE buffer refuses an append', () => {
     )
     // ...and the streak they built is what ended the session loudly.
     expect(firstOfType('stop-with-error')).toBeDefined()
+  })
+})
+
+describe('useTTS appends in index order on the MSE carrier', () => {
+  /**
+   * On one continuous timeline APPEND ORDER IS AUDIO ORDER: the MPEG byte
+   * stream's timestamps continue from wherever the previous append ended, so
+   * whatever the buffer receives second is heard second — whichever unit it
+   * is. Synthesis resolves in whatever order the bytes come back, and the
+   * Read All News device log showed exactly that: paragraph 3 appended before
+   * paragraph 2, and read before it. The src-swap carrier never had this
+   * problem (a unit there is a file keyed by its index), which is why nothing
+   * in the unedited suites could see it.
+   */
+  const FOUR = ['a'.repeat(10), 'b'.repeat(10), 'c'.repeat(10), 'd'.repeat(10)]
+
+  it('appends units in index order even when a later unit resolves first', async () => {
+    // Unit 1 is held in synthesis; units 2 and 3 resolve at once.
+    let releaseSecond!: (audio: ArrayBuffer) => void
+    const secondAudio = new Promise<ArrayBuffer>((resolve) => {
+      releaseSecond = resolve
+    })
+    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) =>
+      text === FOUR[1] ? secondAudio : new ArrayBuffer(8)
+    )
+
+    const { result } = renderHook(() => useTTS('irrelevant content', { units: FOUR }))
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0]))
+    await settle(16)
+
+    // The prefetch window reached every unit — 2 and 3 have their bytes — and
+    // the buffer still holds only unit 0. Without this the assertion below
+    // would pass against a hook that never fetched them at all.
+    expect(vi.mocked(synthesizeSpeech)).toHaveBeenCalledTimes(4)
+    expect(mse.appended).toEqual([0])
+
+    await act(async () => {
+      releaseSecond(new ArrayBuffer(8))
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2, 3]))
+  })
+
+  it('lets later units through when an earlier one fails in synthesis', async () => {
+    /**
+     * The cursor waits only for a unit that is still on its way. A unit whose
+     * synthesis failed is not, and holding 2 and 3 behind it would park the
+     * playhead at the end of unit 0 with no crossing ever reaching the retry.
+     */
+    enableLog()
+    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) => {
+      if (text === FOUR[1]) throw new Error('edge-tts down')
+      return new ArrayBuffer(8)
+    })
+
+    const { result } = renderHook(() => useTTS('irrelevant content', { units: FOUR }))
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0, 2, 3]))
+    await settle()
+
+    // The playhead leaves unit 0 and runs into what follows it on the timeline.
+    // The hook reaches unit 1 in its turn, retries it, and counts the failure.
+    await emitTimeUpdate(12)
+    await waitFor(() => expect(result.current.currentChunkIndex).toBe(2))
+
+    expect(entriesOfType('synthesis-failed').map((entry) => entry.detail)).toEqual([
+      expect.stringMatching(/^1: /),
+    ])
+    expect(result.current.isPlaying).toBe(true)
+  })
+
+  it('lets later units through when the buffer refuses an earlier one', async () => {
+    // The other failure a queued unit can have: its bytes arrived and the
+    // SourceBuffer rejected them.
+    enableLog()
+    mse.refuse = [1]
+
+    const { result } = renderHook(() => useTTS('irrelevant content', { units: FOUR }))
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0, 2, 3]))
+    await settle()
+
+    await emitTimeUpdate(12)
+    await waitFor(() => expect(result.current.currentChunkIndex).toBe(2))
+
+    expect(entriesOfType('synthesis-failed').map((entry) => entry.detail)).toEqual([
+      expect.stringMatching(/^1: /),
+    ])
+    expect(result.current.isPlaying).toBe(true)
+  })
+
+  it('resets the append cursor on a seek', async () => {
+    /**
+     * "Play from here" starts the timeline over from the target: the units
+     * between the old position and the new one are not going to be read, so
+     * the target must not wait for them.
+     */
+    const SIX = Array.from({ length: 6 }, (_, i) => String.fromCharCode(97 + i).repeat(10))
+    // Unit 1 never resolves, so with a stale cursor unit 5 would wait forever.
+    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) =>
+      text === SIX[1] ? new Promise<ArrayBuffer>(() => {}) : new ArrayBuffer(8)
+    )
+
+    const { result } = renderHook(() => useTTS('irrelevant content', { units: SIX }))
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0]))
+    await settle()
+
+    // Not awaited: a jump that waits for units 1–4 never settles, and this
+    // test's bound is `waitFor`'s, not the runner's.
+    act(() => {
+      void result.current.playFromUnit(5)
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0, 5]))
+    expect(result.current.currentChunkIndex).toBe(5)
   })
 })
