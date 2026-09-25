@@ -150,6 +150,23 @@ export function useContinuousReader(
   // to tell where a removed section used to sit when resolving the fallback.
   const previousKeysRef = useRef<readonly string[]>([])
   const [voice, setVoice] = useState<TtsVoice>(DEFAULT_TTS_VOICE)
+  /**
+   * Whether the section about to be handed to `useTTS` continues the timeline
+   * the carrier is already playing, rather than starting a new one.
+   *
+   * True on exactly one path — the auto-advance in `onComplete` below — because
+   * that is the only section boundary the user did not ask for. Every other way
+   * into a section (play-from-here, a queue re-seat after mark-as-read or DOM
+   * eviction, the Stop button) is a tap taken with the screen on, where
+   * rebuilding costs nothing. An auto-advance happens with the phone in a
+   * pocket, and a `MediaSource` created there is exactly where the OS revokes
+   * the page's media exemption.
+   *
+   * Cleared again as soon as the handed-off section is audible, so the next
+   * boundary has to claim it for itself. `useTTS`'s own option documents the
+   * one moment it is read.
+   */
+  const [continuesTimeline, setContinuesTimeline] = useState(false)
 
   const updatePosition = useCallback((sectionKey: string, unitIndex: number) => {
     positionRef.current = { sectionKey, unitIndex }
@@ -263,13 +280,29 @@ export function useContinuousReader(
   }, [])
 
   const selectAndStart = useCallback(
-    (index: number, unitIndex: number, reportChange: boolean, scroll?: ScrollHint) => {
+    (
+      index: number,
+      unitIndex: number,
+      reportChange: boolean,
+      scroll?: ScrollHint,
+      /**
+       * Whether this start continues the timeline the carrier is playing. The
+       * default is what every caller but one wants — a user asked for this
+       * section, so the boundary is free and the timeline starts over. The
+       * auto-advance in `onComplete` is the exception and says so.
+       */
+      continuesTheTimeline = false
+    ) => {
       const selectedItem = itemsRef.current[index]
       if (!selectedItem) return
 
       previewKeyRef.current = selectedItem.key
       setPreviewKey(selectedItem.key)
 
+      // Declared BEFORE the stop, though the order does not matter: `stop()`
+      // only decides on the release, and the release reads this value once the
+      // commit carrying it has landed.
+      setContinuesTimeline(continuesTheTimeline)
       playbackRef.current?.stop()
       setError(null)
 
@@ -302,6 +335,7 @@ export function useContinuousReader(
 
   const playback = useTTS(currentItem?.speechText ?? '', {
     voice,
+    continueTimeline: continuesTimeline,
     units: unitTextsBySection[currentIndex],
     onComplete: useCallback(() => {
       // Stale completion: the position moved on since this section started.
@@ -314,7 +348,12 @@ export function useContinuousReader(
         // numeric index would name a different section by the time the log is
         // read off the device.
         logReaderEvent('section-advance', itemsRef.current[nextIndex].key)
-        selectAndStart(nextIndex, 0, true)
+        // THE handoff, and the only place the timeline is continued. The
+        // section ended on its own with the phone most likely in a pocket, so
+        // the next one has to reach the same buffer: a rebuild here is a `src`
+        // assignment, and that is where a backgrounded page loses the media
+        // exemption this carrier exists to keep.
+        selectAndStart(nextIndex, 0, true, undefined, true)
       }
     }, [currentKey, selectAndStart]),
     onError: useCallback((nextError: Error) => {
@@ -324,6 +363,9 @@ export function useContinuousReader(
       // an Error with an EMPTY-STRING message must fall through to the name,
       // which `??` would keep.
       logReaderEvent('reader-error', nextError?.message || nextError?.name || String(nextError))
+      // A failed start is not a handoff either, so the timeline it was going to
+      // continue is released with everything else.
+      setContinuesTimeline(false)
       playbackRef.current?.stop()
       // A start that failed is not a handoff in progress: without this the
       // reader would look eternally "about to play" and never drop the lock.
@@ -360,7 +402,13 @@ export function useContinuousReader(
   // part of that same commit's batch; clearing on the call site would reopen the
   // very gap this flag exists to close.
   useEffect(() => {
-    if (isPlaying) setIsHandingOff(false)
+    if (!isPlaying) return
+    setIsHandingOff(false)
+    // The handoff has been honoured: the next section is audible on the
+    // timeline the last one was on. Claiming a continuation is per-boundary, so
+    // whatever ends this section — the Stop button, a jump, a queue mutation —
+    // finds the flag back down and gets the rebuild it is entitled to.
+    setContinuesTimeline(false)
   }, [isPlaying])
 
   // The lock is scoped to PLAYBACK, not to the page: held while the voice runs,
@@ -419,6 +467,11 @@ export function useContinuousReader(
     // in which case the start below never fires and the flag would stick.
     // Whether audio continues on the survivor is decided by `wasActive` below.
     setIsHandingOff(false)
+    // A queue mutation is not a handoff. The section the timeline was built for
+    // is gone, so its audio goes with it — and the re-seat below calls `stop()`
+    // and `play()` in one block, which is exactly the case `useTTS` settles a
+    // pending release for before it appends anything.
+    setContinuesTimeline(false)
 
     if (!currentItem) {
       playbackRef.current?.stop()
