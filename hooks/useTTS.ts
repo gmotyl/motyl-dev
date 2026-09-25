@@ -4,7 +4,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { detectLanguageFromContent } from '@/lib/tts/voice-map'
 import { splitIntoChunks } from '@/lib/tts/chunks'
 import { synthesizeSpeech } from '@/lib/tts/client'
-import { describeError, detailFor, logReaderEvent } from '@/lib/reader/diagnostic-log'
+import {
+  describeError,
+  detailFor,
+  isReaderLogEnabled,
+  logReaderEvent,
+} from '@/lib/reader/diagnostic-log'
+import { usePlaybackDiagnostics } from './use-playback-diagnostics'
 import type { Carrier } from '@/lib/reader/carrier'
 import { createSrcSwapCarrier } from '@/lib/reader/src-swap-carrier'
 import { isMseAudioSupported } from '@/lib/reader/mse-carrier'
@@ -163,6 +169,26 @@ const BUFFER_AHEAD = 3
 // no network) and surfaced as a real stop + onError.
 const MAX_CONSECUTIVE_CHUNK_FAILURES = 3
 
+/**
+ * A promise settled from outside — what a caller holds while its unit waits
+ * its turn in the MSE carrier's append queue (see `appendCursorRef`). Settled
+ * by the drain that appends the unit, or by the reset that gives it up.
+ */
+type Deferred = {
+  promise: Promise<void>
+  resolve: () => void
+  reject: (error: unknown) => void
+}
+const createDeferred = (): Deferred => {
+  let resolve!: () => void
+  let reject!: (error: unknown) => void
+  const promise = new Promise<void>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
+}
+
 // How close to the end of the appended media counts as the playhead having
 // reached it — the MSE path's replacement for the exactness of `ended`.
 //
@@ -218,6 +244,31 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   // that keeps the main thread alive with the screen off. A MediaStream-backed
   // element gets none of that, which is why the Web Audio carrier is gone.
   const audioElementRef = useRef<HTMLAudioElement | null>(null)
+  /**
+   * The element handed to `usePlaybackDiagnostics`, once someone is reading
+   * the log — so the production reader records what the carrier spike already
+   * did: the element's silent failures, the media-session state the OS shows,
+   * and the heartbeat without which a stalled reader and a dead page read the
+   * same. The two Read All News device logs had none of it.
+   *
+   * State rather than the ref above, because the diagnostics hook keys its
+   * effect on the element and the ref is filled in an effect of this hook's
+   * own. It is set ONLY when the log flag is on: with it off this stays null,
+   * nothing re-renders for it and the diagnostics hook returns before it
+   * attaches a listener or starts a timer — a reader nobody is instrumenting
+   * pays a `localStorage` read at mount and at `play()`, and nothing per
+   * render. Armed at mount, where `?readerlog=1` has already been applied by
+   * the control bar's render, and again on the first `play()` — a gesture
+   * that always comes after the flag could have been set some other way.
+   */
+  const [diagnosedElement, setDiagnosedElement] = useState<HTMLAudioElement | null>(null)
+  const diagnosticsArmedRef = useRef(false)
+  const armDiagnostics = useCallback((element: HTMLAudioElement) => {
+    if (diagnosticsArmedRef.current || !isReaderLogEnabled()) return
+    diagnosticsArmedRef.current = true
+    setDiagnosedElement(element)
+  }, [])
+  usePlaybackDiagnostics(diagnosedElement)
   // Whether this element has already been poked inside a user gesture (see
   // `unlockElementForGesture`). Once true it stays true for the element's whole
   // life — WebKit's per-element unlock does not expire.
@@ -509,7 +560,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
    * extends across a section boundary is not a special case here: it is simply
    * an append onto a timeline nobody released.
    */
-  const prepareUnit = useCallback(
+  const appendNow = useCallback(
     async (index: number, data: ArrayBuffer): Promise<void> => {
       await getCarrier().appendUnits(
         [{ index: toCarrierIndex(index), data, duration: 0 }],
@@ -521,6 +572,137 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       bufferCacheRef.current.delete(index)
     },
     [getCarrier, toCarrierIndex]
+  )
+
+  /**
+   * The next index the MSE carrier is waiting to be handed.
+   *
+   * On that carrier APPEND ORDER IS AUDIO ORDER: the MPEG byte stream's
+   * timestamps continue from wherever the previous append ended and
+   * `timestampOffset` stays 0, so whatever the buffer receives second is heard
+   * second — whichever unit it is. Synthesis resolves in whatever order the
+   * bytes come back, and the Read All News device log showed exactly that:
+   * paragraph 3 appended before paragraph 2, and read before it. So a resolved
+   * unit waits in `bufferCacheRef` until every index below it has been dealt
+   * with, and this cursor is where the wait is measured from. The src-swap
+   * carrier keys units by index and never reads it.
+   *
+   * The cursor waits only for a unit that is still ON ITS WAY. A unit whose
+   * synthesis or append failed is not, and it is skipped (see
+   * `abandonPendingAppend`) rather than waited for: with the playhead parked
+   * at the end of the buffer no crossing could ever reach `playChunk`, which
+   * is the only thing that retries a unit — so waiting would have parked the
+   * whole rest of the article behind a unit nothing was fetching. The retry
+   * lands where it lands; a unit heard out of place is the price of a unit
+   * that failed once, not of every unit that follows it.
+   */
+  const appendCursorRef = useRef(0)
+  /** Indices the cursor walks over without waiting: their unit is not coming. */
+  const skippedAppendsRef = useRef<Set<number>>(new Set())
+  /** Whoever is waiting for a queued unit's own append to settle, by index. */
+  const appendWaitersRef = useRef<Map<number, Deferred>>(new Map())
+  const drainingRef = useRef(false)
+
+  /**
+   * Append, in index order, every queued unit the cursor has reached.
+   *
+   * One drain at a time: a loop that is mid-append picks up whatever lands in
+   * the cache meanwhile on its next pass, and a second loop would race it for
+   * the same index. The cursor is re-read on every pass because a seek moves it
+   * underneath a running append; an append that finishes after the move must
+   * not advance it from where the seek put it.
+   */
+  const drainAppendQueue = useCallback(async (): Promise<void> => {
+    if (drainingRef.current) return
+    drainingRef.current = true
+    try {
+      for (;;) {
+        const index = appendCursorRef.current
+        // Nothing to wait for: the carrier holds it already (a resume walks
+        // the cursor back over the units the session appended before the
+        // pause), or its unit is not coming.
+        if (carrierHasUnit(index) || skippedAppendsRef.current.delete(index)) {
+          appendCursorRef.current = index + 1
+          continue
+        }
+
+        const data = bufferCacheRef.current.get(index)
+        if (data === undefined) return
+
+        const waiter = appendWaitersRef.current.get(index)
+        try {
+          await appendNow(index, data)
+        } catch (error) {
+          // The buffer refused it. Whoever queued it is told — a `playChunk`
+          // counts the failure, a prefetch only warns — and every one of them
+          // gives the unit up through `abandonPendingAppend`, which is what
+          // moves the cursor on and drains again. Not here: the cursor has one
+          // rule for a unit that is not coming, not one per way of failing.
+          bufferCacheRef.current.delete(index)
+          appendWaitersRef.current.delete(index)
+          waiter?.reject(error)
+          return
+        }
+        appendWaitersRef.current.delete(index)
+        if (appendCursorRef.current === index) appendCursorRef.current = index + 1
+        waiter?.resolve()
+      }
+    } finally {
+      drainingRef.current = false
+    }
+  }, [appendNow, carrierHasUnit])
+
+  /**
+   * Stop waiting for `index`: its synthesis or append failed, so nothing is
+   * bringing it. The units queued behind it are drained at once.
+   */
+  const abandonPendingAppend = useCallback(
+    (index: number) => {
+      if (getCarrier().kind !== 'mse') return
+      skippedAppendsRef.current.add(index)
+      void drainAppendQueue()
+    },
+    [drainAppendQueue, getCarrier]
+  )
+
+  /**
+   * Forget every queued unit and start the cursor over at 0 — the session is
+   * over and nothing it fetched may outlive it. Whoever was waiting for an
+   * append is told it was abandoned, with the same `AbortError` an interrupted
+   * synthesis produces, so every catch in this file treats it the same way.
+   */
+  const resetAppendQueue = useCallback(() => {
+    appendCursorRef.current = 0
+    skippedAppendsRef.current.clear()
+    bufferCacheRef.current.clear()
+    const waiters = Array.from(appendWaitersRef.current.values())
+    appendWaitersRef.current.clear()
+    for (const waiter of waiters) waiter.reject(new DOMException('Aborted', 'AbortError'))
+  }, [])
+
+  const prepareUnit = useCallback(
+    (index: number, data: ArrayBuffer): Promise<void> => {
+      // The src-swap carrier keys its units by index: order is irrelevant there
+      // and a unit goes straight in, as it always has.
+      if (getCarrier().kind !== 'mse') return appendNow(index, data)
+
+      // Below the cursor every index has been dealt with, so this is a retry of
+      // a unit the session already walked over (or one the carrier evicted).
+      // Nothing is queued behind it and it goes in where it lands.
+      if (index < appendCursorRef.current) return appendNow(index, data)
+
+      // A retry of a unit that was given up on: it IS coming after all.
+      skippedAppendsRef.current.delete(index)
+      bufferCacheRef.current.set(index, data)
+      let waiter = appendWaitersRef.current.get(index)
+      if (waiter === undefined) {
+        waiter = createDeferred()
+        appendWaitersRef.current.set(index, waiter)
+      }
+      void drainAppendQueue()
+      return waiter.promise
+    },
+    [appendNow, drainAppendQueue, getCarrier]
   )
 
   /**
@@ -556,13 +738,16 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     // extending it — and a section that arrives afterwards numbers its units
     // from the carrier's own 0 again.
     timelineLiveRef.current = false
+    // Nor is anything queued for it: a unit held back for the timeline that
+    // just died belongs to the session that died with it.
+    resetAppendQueue()
     // The timeline the tracker was seated on is gone with it. A seat carried
     // across the rebuild would compare a dead span's index against a fresh
     // one — same index, different timeline — and swallow the first unit's
     // completion of the next session. The fresh timeline is empty, so this
     // leaves the tracker unseated and the first tick re-seats it.
     getBoundaryTracker().reseat(0)
-  }, [getBoundaryTracker, getCarrier])
+  }, [getBoundaryTracker, getCarrier, resetAppendQueue])
 
   /**
    * A release the hook has decided on but has not carried out yet.
@@ -677,11 +862,15 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
             fetchingRef.current.delete(i)
             if ((err as Error).name !== 'AbortError') {
               console.warn(`[TTS] Buffer fetch failed for chunk ${i}:`, err)
+              // The unit is not coming; the ones queued behind it must not
+              // wait for it. `playChunk` retries it in its turn and counts a
+              // second failure there.
+              abandonPendingAppend(i)
             }
           })
       }
     },
-    [carrierHasUnit, fetchUnitAudio, prepareUnit]
+    [abandonPendingAppend, carrierHasUnit, fetchUnitAudio, prepareUnit]
   )
 
   /**
@@ -830,7 +1019,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         completedCharsRef.current = 0
         loadedUnitIndexRef.current = null
         pauseOffsetRef.current = 0
-        bufferCacheRef.current.clear()
+        resetAppendQueue()
         fetchingRef.current.clear()
         // The last unit is consumed: nothing may outlive the article — unless
         // the caller's `onComplete`, which has just run, is handing this
@@ -920,6 +1109,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         // A single unreadable unit must not strand playback waiting for the user
         // to press Play again.
         completedCharsRef.current += charCountsRef.current[failedIndex] || 0
+        // Nor may it strand the units queued behind it on the MSE carrier: the
+        // next unit's append is what the cursor was waiting on this one for.
+        abandonPendingAppend(failedIndex)
         void playChunk(failedIndex + 1, 0, generation, signal)
       }
 
@@ -1109,7 +1301,13 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       }
       reportStartRef.current = reportStart
 
-      logReaderEvent('play-called', detailFor(index))
+      // `play-called` is written on exactly the paths that call `play()`, and
+      // ABOVE the call on each of them, so the device log's "play-called with
+      // no start after it" reading stays honest. It used to sit here
+      // unconditionally, and on the MSE carrier's natural advance — where
+      // nothing below calls `play()` at all — the log claimed a start the
+      // element never made. The two Read All News device logs read like the
+      // phone had started every unit, when it had started one.
       if (carrier.kind === 'mse') {
         // One continuous timeline, so a unit is a POSITION and this call has at
         // most two things to do — and on a natural advance, neither.
@@ -1127,12 +1325,23 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
           // position and the new one as completed.
           getBoundaryTracker().reseat(element.currentTime)
         }
-        if (element.paused) reportStart(index, element.play?.())
+        if (element.paused) {
+          logReaderEvent('play-called', detailFor(index))
+          reportStart(index, element.play?.())
+        } else {
+          // The element is already running and simply carries on into this
+          // unit — the boundary the carrier makes free. Recorded under its own
+          // name so every unit still leaves a line, and so a log can tell a
+          // natural advance from the seek a running "play from here" makes.
+          logReaderEvent('unit-resume', resuming ? detailFor(index) : detailFor(index, 'seek'))
+        }
       } else if (resuming) {
+        logReaderEvent('play-called', detailFor(index))
         reportStart(index, element.play?.())
       } else {
         // THE unit swap: the carrier points the element at unit `index`,
         // releases what is behind the playhead, and starts it.
+        logReaderEvent('play-called', detailFor(index))
         carrier.seekToUnit(toCarrierIndex(index))
       }
 
@@ -1143,6 +1352,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       }
     },
     [
+      abandonPendingAppend,
       carrierHasUnit,
       detachUnitHandlers,
       fetchUnitAudio,
@@ -1156,6 +1366,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       prepareUnit,
       rebuildCarrier,
       releaseCarrier,
+      resetAppendQueue,
       runProgressFrame,
       toCarrierIndex,
     ]
@@ -1471,6 +1682,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     // FIRST, and before any await: this call may be running inside the user's
     // tap, and on WebKit that is the only moment the element can be unlocked.
     unlockElementForGesture(getAudioElement())
+    armDiagnostics(getAudioElement())
 
     ensureChunks()
 
@@ -1495,6 +1707,13 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     // Pre-buffer: fetch the first few chunks before starting playback
     const startIdx = currentChunkIndexRef.current
     const preBufferEnd = Math.min(startIdx + BUFFER_AHEAD, chunksRef.current.length)
+    // The timeline is read on from here, so this is where the MSE carrier's
+    // append cursor waits from: a seek must not wait for the units it skipped,
+    // a fresh section must not wait for the previous one's count, and a resume
+    // simply walks back over what the carrier already holds. Every unit gets
+    // its retry with the new session, so nothing stays given up on either.
+    appendCursorRef.current = startIdx
+    skippedAppendsRef.current.clear()
 
     // Fetch first chunk (must have it to start playing)
     if (
@@ -1534,7 +1753,12 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
             if (generation !== requestGenerationRef.current || signal.aborted) return
             return prepareUnit(i, data)
           })
-          .catch(() => { fetchingRef.current.delete(i) })
+          .catch((err) => {
+            fetchingRef.current.delete(i)
+            // As in `fillBuffer`: the unit is not coming, so the ones queued
+            // behind it are not to wait for it.
+            if ((err as Error).name !== 'AbortError') abandonPendingAppend(i)
+          })
       }
     }
 
@@ -1544,6 +1768,8 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     pauseOffsetRef.current = 0
     void playChunk(startIdx, offset, generation, signal)
   }, [
+    abandonPendingAppend,
+    armDiagnostics,
     carrierHasUnit,
     ensureChunks,
     fetchUnitAudio,
@@ -1661,7 +1887,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     currentChunkIndexRef.current = 0
     loadedUnitIndexRef.current = null
     pauseOffsetRef.current = 0
-    bufferCacheRef.current.clear()
+    resetAppendQueue()
     fetchingRef.current.clear()
     lastEmittedPctRef.current = -1
     consecutiveFailuresRef.current = 0
@@ -1688,13 +1914,14 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       currentChunkIndex: 0,
       totalChunks: 0,
     })
-  }, [detachUnitHandlers, pause, releaseCarrier])
+  }, [detachUnitHandlers, pause, releaseCarrier, resetAppendQueue])
 
   // Exactly one <audio> element per hook instance, created on mount and torn
   // down (with every unit the carrier ever prepared) on unmount.
   useEffect(() => {
     const element = getAudioElement()
     const carrier = getCarrier()
+    armDiagnostics(element)
     return () => {
       stop()
       detachUnitHandlers()
@@ -1704,7 +1931,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       audioElementRef.current = null
       carrier.dispose()
     }
-  }, [detachUnitHandlers, getAudioElement, getCarrier, stop])
+  }, [armDiagnostics, detachUnitHandlers, getAudioElement, getCarrier, stop])
 
   const playback: TTSPlayback = {
     ...state,

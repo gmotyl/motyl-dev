@@ -1,6 +1,8 @@
 import { renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { READER_LOG_FLAG, clearReaderLog, readReaderLog } from '@/lib/reader/diagnostic-log'
+
 import {
   MEDIA_SESSION_ARTWORK,
   useMediaSession,
@@ -773,5 +775,179 @@ describe('useMediaSession', () => {
 
       expect(positionWrites).toEqual([{ position: 9, duration: 30, playbackRate: 1 }])
     })
+  })
+})
+
+describe('useMediaSession diagnostic log', () => {
+  /**
+   * Everything this hook writes is what the OS — and the car head unit behind
+   * it, over AVRCP — is told. A car log that cannot show the last such write
+   * before a reboot cannot say what the reboot followed, so every write leaves
+   * a line: which instance holds the session, the handlers, the metadata, the
+   * playback state and the position. The position is the one firehose (4 Hz
+   * while playing) and is throttled; the rest are one line per write.
+   */
+  const enable = () => window.localStorage.setItem(READER_LOG_FLAG, '1')
+  const lines = (type: string) =>
+    readReaderLog()
+      .filter((entry) => entry.type === type)
+      .map((entry) => entry.detail)
+
+  beforeEach(() => {
+    installMediaSession()
+    enable()
+    clearReaderLog()
+  })
+
+  afterEach(() => {
+    removeMediaSession()
+    vi.restoreAllMocks()
+    window.localStorage.removeItem(READER_LOG_FLAG)
+    clearReaderLog()
+  })
+
+  it('logs the claim, the handlers, the metadata and the playback state, and their release', () => {
+    const { unmount } = renderHook(() => useMediaSession(baseOptions()))
+
+    expect(lines('mediasession-active')).toEqual(['on'])
+    expect(lines('mediasession-handlers')).toEqual(['set play,pause,nexttrack,previoustrack'])
+    expect(lines('mediasession-metadata')).toEqual(['title="Section 1" artist="Motyl.dev"'])
+    expect(lines('mediasession-playbackstate')).toEqual(['playing'])
+    // The claim precedes the writes it explains.
+    expect(readReaderLog()[0].type).toBe('mediasession-active')
+
+    unmount()
+
+    expect(lines('mediasession-active')).toEqual(['on', 'off'])
+    expect(lines('mediasession-handlers')).toEqual([
+      'set play,pause,nexttrack,previoustrack',
+      'clear play,pause,nexttrack,previoustrack',
+    ])
+    expect(lines('mediasession-metadata')).toEqual([
+      'title="Section 1" artist="Motyl.dev"',
+      'cleared (release)',
+    ])
+    expect(lines('mediasession-playbackstate')).toEqual(['playing', 'none (release)'])
+  })
+
+  it('names only the actions the browser accepted', () => {
+    const original = mediaSession.setActionHandler
+    mediaSession.setActionHandler = vi.fn((action: string, handler: ActionHandler) => {
+      if (action === 'nexttrack') throw new TypeError('unsupported')
+      original(action, handler)
+    })
+
+    renderHook(() => useMediaSession(baseOptions()))
+
+    expect(lines('mediasession-handlers')).toEqual(['set play,pause,previoustrack'])
+  })
+
+  it('clips a long title and artist to sixty characters', () => {
+    renderHook(() =>
+      useMediaSession(
+        baseOptions({ metadata: { title: 'x'.repeat(100), artist: 'y'.repeat(61), album: 'A' } })
+      )
+    )
+
+    expect(lines('mediasession-metadata')).toEqual([
+      `title="${'x'.repeat(59)}…" artist="${'y'.repeat(59)}…"`,
+    ])
+  })
+
+  it('logs a position write, its clear, and its release', () => {
+    const { rerender, unmount } = renderHook((options: UseMediaSessionOptions) => useMediaSession(options), {
+      initialProps: baseOptions({ readPosition: reading() }),
+    })
+    expect(lines('mediasession-position')).toEqual(['position=4.000 duration=30.000 rate=1'])
+
+    // The reader lets go of its track: the clear is always logged.
+    rerender(baseOptions({ readPosition: readingNothing() }))
+    expect(lines('mediasession-position')).toEqual([
+      'position=4.000 duration=30.000 rate=1',
+      'clear',
+    ])
+
+    // A fresh track after a clear starts the throttle over.
+    rerender(baseOptions({ readPosition: reading({ position: 0.5 }) }))
+    expect(lines('mediasession-position')).toEqual([
+      'position=4.000 duration=30.000 rate=1',
+      'clear',
+      'position=0.500 duration=30.000 rate=1',
+    ])
+
+    unmount()
+    expect(lines('mediasession-position').at(-1)).toBe('clear (release)')
+  })
+
+  it('logs a same-duration position at most once per five seconds, a changed duration at once', () => {
+    let clock = 1_000_000
+    vi.spyOn(Date, 'now').mockImplementation(() => clock)
+
+    const { rerender } = renderHook((options: UseMediaSessionOptions) => useMediaSession(options), {
+      initialProps: baseOptions({ readPosition: reading({ position: 4 }) }),
+    })
+    expect(lines('mediasession-position')).toHaveLength(1)
+
+    // Two more ticks inside the window: written, not logged.
+    clock += 250
+    rerender(baseOptions({ readPosition: reading({ position: 4.25 }) }))
+    clock += 250
+    rerender(baseOptions({ readPosition: reading({ position: 4.5 }) }))
+    expect(positionWrites).toHaveLength(3)
+    expect(lines('mediasession-position')).toHaveLength(1)
+
+    // The window elapses.
+    clock += 4500
+    rerender(baseOptions({ readPosition: reading({ position: 9 }) }))
+    expect(lines('mediasession-position')).toEqual([
+      'position=4.000 duration=30.000 rate=1',
+      'position=9.000 duration=30.000 rate=1',
+    ])
+
+    // A changed duration — the buffer grew — is logged whatever the clock says.
+    clock += 250
+    rerender(baseOptions({ readPosition: reading({ position: 9.25, duration: 40 }) }))
+    expect(lines('mediasession-position').at(-1)).toBe('position=9.250 duration=40.000 rate=1')
+    expect(positionWrites).toHaveLength(5)
+  })
+
+  it("logs nothing for a former owner's release", () => {
+    const { rerender } = renderHook(
+      ({ aActive, bActive }: { aActive: boolean; bActive: boolean }) => {
+        useMediaSession(
+          baseOptions({
+            active: aActive,
+            metadata: { title: 'Reader A', artist: 'Motyl.dev', album: 'Article A' },
+            playbackState: 'paused',
+            readPosition: reading({ position: 1 }),
+          })
+        )
+        useMediaSession(
+          baseOptions({
+            active: bActive,
+            metadata: { title: 'Reader B', artist: 'Motyl.dev', album: 'Article B' },
+            playbackState: 'playing',
+            readPosition: reading({ position: 2 }),
+          })
+        )
+      },
+      { initialProps: { aActive: true, bActive: false } }
+    )
+    rerender({ aActive: true, bActive: true })
+    expect(lines('mediasession-metadata').at(-1)).toBe('title="Reader B" artist="Motyl.dev"')
+
+    // A lets go of a session B now holds: not one line of it.
+    clearReaderLog()
+    rerender({ aActive: false, bActive: true })
+    expect(readReaderLog()).toEqual([])
+  })
+
+  it('logs nothing while the flag is off', () => {
+    window.localStorage.removeItem(READER_LOG_FLAG)
+    const { unmount } = renderHook(() =>
+      useMediaSession(baseOptions({ readPosition: reading() }))
+    )
+    unmount()
+    expect(readReaderLog()).toEqual([])
   })
 })
