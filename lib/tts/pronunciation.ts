@@ -141,13 +141,13 @@ export const ACRONYM_MAP: Readonly<Record<string, string>> = Object.freeze({
   llm: 'el-el-em',
   jwt: 'dżej-dabl-ju-ti',
   npm: 'en-pi-em',
-  ide: 'aj-di-i',
   ssh: 'es-es-ejcz',
   dns: 'di-en-es',
   tts: 'ti-ti-es',
-  pr: 'pi-ar',
   mr: 'em-ar',
-  qa: 'kju-ej',
+  // Stays here, and the word pass stays BEFORE the exact pass: the slash makes
+  // this key unambiguous, and it must consume "CI/CD" whole before the bare
+  // `CI`/`CD` exact keys could split it into "si-aj/si-di".
   'ci/cd': 'si-aj-si-di',
 
   // Demoted from PRONUNCIATION_MAP: each is shorter than MIN_STEM_KEY_LENGTH, so
@@ -206,4 +206,15 @@ export const MIN_STEM_KEY_LENGTH = 5
  * Keys MUST be uppercase (a lowercase key could never match). Values are
  * lowercase Polish phonetic spellings, same as the other maps.
  */
-export const EXACT_ACRONYMS: Readonly<Record<string, string>> = Object.freeze({})
+export const EXACT_ACRONYMS: Readonly<Record<string, string>> = Object.freeze({
+  // Each lowercase form is an ordinary Polish word: "mówię ci to", "cd. nastąpi",
+  // "ide do domu", "pr" (rare), "qa". Uppercase dominates the corpus anyway
+  // (CI 630/99, CD 157/15, IDE 245/16, PR 538/7, QA 83/9) and the error is
+  // asymmetric: a missed lowercase "ci failed" merely reads as Polish, while a
+  // case-insensitive `ci` would mispronounce every Polish "ci".
+  CI: 'si-aj',
+  CD: 'si-di',
+  IDE: 'aj-di-i',
+  PR: 'pi-ar',
+  QA: 'kju-ej',
+})

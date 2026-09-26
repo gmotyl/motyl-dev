@@ -33,11 +33,20 @@ export interface SpeechSection extends ReviewedSection {
 
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
+/**
+ * Case-SENSITIVE whole-word replacement of every key at once: one alternation
+ * regex, longest key first, so a longer key always beats one of its own
+ * prefixes and each match is rewritten exactly once (a replacement's output can
+ * never be re-matched by a later key). This is the engine of the `exact` pass.
+ */
 export const replaceWholeWordMappings = (
   text: string,
   mappings: Readonly<Record<string, string>>
 ): string => {
   const names = Object.keys(mappings).sort((a, b) => b.length - a.length)
+  // An empty alternation would match the empty string everywhere.
+  if (names.length === 0) return text
+
   const pattern = new RegExp(
     `(?<![\\p{L}\\p{N}_])(${names.map(escapeRegExp).join('|')})(?![\\p{L}\\p{N}_])`,
     'gu'
@@ -81,16 +90,15 @@ export const PRONUNCIATION_PASSES: readonly PronunciationPass[] = Object.freeze(
 const WORD_START = '(?<![\\p{L}\\p{N}_])'
 const WORD_END = '(?![\\p{L}\\p{N}_])'
 
-const patternFor = (mode: PronunciationMatchMode, key: string): RegExp => {
+// `exact` is absent on purpose: it needs no per-key regex — the whole map runs
+// as one alternation through `replaceWholeWordMappings`.
+const patternFor = (mode: Exclude<PronunciationMatchMode, 'exact'>, key: string): RegExp => {
   const head = `${WORD_START}${escapeRegExp(key)}`
   switch (mode) {
     case 'word':
       return new RegExp(`${head}(s?)${WORD_END}`, 'giu')
     case 'stem':
       return new RegExp(`${head}(\\p{L}*)`, 'giu')
-    case 'exact':
-      // No `i` flag — that is the whole point of this mode.
-      return new RegExp(`${head}${WORD_END}`, 'gu')
   }
 }
 
@@ -98,15 +106,18 @@ export const applyPronunciation = (text: string): string => {
   let out = text
 
   for (const { mode, map } of PRONUNCIATION_PASSES) {
+    // `exact` is case-sensitive, whole-word, longest-key-first — precisely
+    // `replaceWholeWordMappings`, which does the whole map in one regex.
+    if (mode === 'exact') {
+      out = replaceWholeWordMappings(out, map)
+      continue
+    }
+
     // Longest key first, so a longer key always beats one of its own prefixes
     // (`cloudflare` over `cloud`, a phrase over its component words).
     const keys = Object.keys(map).sort((a, b) => b.length - a.length)
     for (const key of keys) {
-      const re = patternFor(mode, key)
-      out =
-        mode === 'exact'
-          ? out.replace(re, () => map[key])
-          : out.replace(re, (_m, suffix: string) => map[key] + suffix)
+      out = out.replace(patternFor(mode, key), (_m, suffix: string) => map[key] + suffix)
     }
   }
 

@@ -62,6 +62,41 @@ describe('applyPronunciation — whole-word acronyms (ACRONYM_MAP)', () => {
   })
 })
 
+// Polish "ci" ("mówię ci to") and "cd." ("ciąg dalszy") are ordinary words that
+// spell the acronyms CI and CD; "ide" is a verb form ("ide do domu"). Measured
+// over the corpus the uppercase spelling dominates (CI 630/99, CD 157/15,
+// IDE 245/16, PR 538/7, QA 83/9) AND the error is asymmetric: a missed
+// lowercase "ci failed" merely reads as Polish, while a case-insensitive `ci`
+// would demolish every Polish "ci". Hence a case-SENSITIVE pass.
+// Expected values are written out literally: interpolating the map would make
+// these tests pass against a map that lost the entry.
+describe('applyPronunciation — case-sensitive acronyms (EXACT_ACRONYMS)', () => {
+  it('an exact acronym is pronounced in uppercase', () => {
+    expect(applyPronunciation('CI failed again')).toBe('si-aj failed again')
+    expect(applyPronunciation('nowe IDE')).toBe('nowe aj-di-i')
+    expect(applyPronunciation('otwórz PR')).toBe('otwórz pi-ar')
+    expect(applyPronunciation('zespół QA')).toBe('zespół kju-ej')
+  })
+
+  it('an exact acronym leaves its lowercase Polish homograph alone', () => {
+    expect(applyPronunciation('mówię ci to teraz')).toBe('mówię ci to teraz')
+    expect(applyPronunciation('cd. nastąpi w kolejnym wpisie')).toBe(
+      'cd. nastąpi w kolejnym wpisie'
+    )
+    expect(applyPronunciation('ide do domu')).toBe('ide do domu')
+  })
+
+  it('an exact acronym leaves the Polish polite capitalised form alone', () => {
+    // Polite Polish capitalises only the first letter: "Ci", never "CI".
+    expect(applyPronunciation('Mówię Ci to')).toBe('Mówię Ci to')
+  })
+
+  it('the compound ci/cd key still wins over the bare CI acronym', () => {
+    expect(applyPronunciation('nasz CI/CD działa')).toBe('nasz si-aj-si-di działa')
+    expect(applyPronunciation('CI/CD i CI razem')).toBe('si-aj-si-di i si-aj razem')
+  })
+})
+
 // A stem key replaces a word PREFIX and re-appends whatever letters follow, with
 // no idea where the word ends. Short keys therefore swallow ordinary words that
 // merely start with them — `mac` turned "machine" into "makhine". Those keys
@@ -792,8 +827,12 @@ describe('pronunciation map invariants', () => {
       PRONUNCIATION_MAP,
       EXACT_ACRONYMS,
     ])
-    // Why exact runs last: the `ci/cd` word key must consume "CI/CD" whole
-    // before a bare `CI` exact key could ever split it into "si-aj/CD".
-    expect(applyPronunciation('nasz CI/CD tutaj')).toBe(`nasz ${ACRONYM_MAP['ci/cd']} tutaj`)
+    // Behavioural, not just declarative: the assertion above only describes the
+    // list, so the one below pins the order the list is actually CONSUMED in.
+    // The `ci/cd` word key must consume "CI/CD" whole before a bare `CI` exact
+    // key could split it — consume the passes in reverse and this reads
+    // "si-aj/si-di" instead.
+    expect(applyPronunciation('nasz CI/CD działa')).toBe('nasz si-aj-si-di działa')
+    expect(applyPronunciation('CI/CD i CI razem')).toBe('si-aj-si-di i si-aj razem')
   })
 })
