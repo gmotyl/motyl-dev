@@ -18,6 +18,10 @@ export const PRONUNCIATION_MAP: Readonly<Record<string, string>> = Object.freeze
   // to be a stem — it lives in ACRONYM_MAP — but `codex` still beats it because
   // the word pass cannot match a prefix.)
   claude: 'klod',
+  // The `claude` stem alone left the "code" tail as raw English letters
+  // ("klodcode"); the compound spells both halves. Stem mode, so Polish
+  // endings still attach ("claudecodem" → "klod koudm").
+  claudecode: 'klod koud',
   cursor: 'kersor',
   cache: 'kesz',
   cloud: 'klałd',
@@ -46,6 +50,10 @@ export const PRONUNCIATION_MAP: Readonly<Record<string, string>> = Object.freeze
   vercel: 'wersel',
   deepseek: 'dipsik',
   tailwind: 'tejlłind',
+  // Same shape as `claudecode`: the `tailwind` stem left "css" unspoken.
+  // The tail is the ACRONYM_MAP `css` value — word mode can never reach it
+  // inside a compound, so it has to be spelled out here.
+  tailwindcss: 'tejlłind si-es-es',
   typescript: 'tajpskrypt',
   usememo: 'juz memo',
   usecallback: 'juz kolbek',

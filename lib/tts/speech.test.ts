@@ -149,6 +149,49 @@ describe('applyPronunciation — short keys match whole words, not prefixes', ()
   })
 })
 
+// A stem replaces the prefix it matched and keeps the rest of the word, so a
+// shorter stem inside a compound leaves the tail unspoken: `tailwind` turned
+// "tailwindcss" into "tejlłindcss" and `claude` turned "claudecode" into
+// "klodcode". The fix is an explicit longer key — longest-key-first makes it win
+// — and stem mode keeps Polish endings attaching to it.
+describe('applyPronunciation — compounds whose tail a shorter stem swallowed', () => {
+  it('pronounces the css tail of tailwindcss', () => {
+    expect(applyPronunciation('tailwindcss')).toBe(
+      `${PRONUNCIATION_MAP.tailwind} ${ACRONYM_MAP.css}`
+    )
+    expect(applyPronunciation('Piszemy w TailwindCSS dzisiaj')).toBe(
+      `Piszemy w ${PRONUNCIATION_MAP.tailwind} ${ACRONYM_MAP.css} dzisiaj`
+    )
+  })
+
+  it('pronounces the code tail of claudecode', () => {
+    expect(applyPronunciation('claudecode')).toBe(
+      `${PRONUNCIATION_MAP.claude} ${ACRONYM_MAP.code}`
+    )
+    expect(applyPronunciation('ClaudeCode robi to sam')).toBe(
+      `${PRONUNCIATION_MAP.claude} ${ACRONYM_MAP.code} robi to sam`
+    )
+  })
+
+  it('keeps a Polish ending on the new compound keys', () => {
+    expect(applyPronunciation('claudecodem')).toBe(
+      `${PRONUNCIATION_MAP.claude} ${ACRONYM_MAP.code}m`
+    )
+  })
+
+  // The guard on the fix: a new longer key must not shadow any shorter word it
+  // contains. These outputs are pinned to what they were before the two entries
+  // were added.
+  it('does not shadow the shorter words the new keys contain', () => {
+    expect(applyPronunciation('cloud')).toBe('klałd')
+    expect(applyPronunciation('cloudflare')).toBe('klałdfler')
+    expect(applyPronunciation('commit')).toBe('komit')
+    expect(applyPronunciation('commitment')).toBe('komitment')
+    expect(applyPronunciation('tailwind')).toBe('tejlłind')
+    expect(applyPronunciation('claude')).toBe('klod')
+  })
+})
+
 const section = (over: Partial<SpeechSection>): SpeechSection => ({
   sourceSlug: 'news',
   sourceTitle: undefined,
