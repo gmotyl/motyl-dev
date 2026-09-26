@@ -11,9 +11,15 @@ import {
   stripMarkdown,
   UNIT_MAX_CHARS,
   UNIT_MIN_CHARS,
+  PRONUNCIATION_PASSES,
   type SpeechSection,
 } from '@/lib/tts/speech'
-import { ACRONYM_MAP } from '@/lib/tts/pronunciation'
+import {
+  ACRONYM_MAP,
+  EXACT_ACRONYMS,
+  MIN_STEM_KEY_LENGTH,
+  PRONUNCIATION_MAP,
+} from '@/lib/tts/pronunciation'
 import { headingToId } from '@/lib/content/heading-slug'
 
 // Assert against the map's own values so ear-tuning the spellings never breaks
@@ -678,5 +684,64 @@ React działa.`,
       'Dzisiejsze wiadomości ej aj w praktyce ej aj pomaga.',
       'reakt rośnie reakt działa.',
     ])
+  })
+})
+
+// The maps carry the looseness of their own match mode, so these invariants are
+// the net: a key in the wrong map silently changes how loosely it matches.
+describe('pronunciation map invariants', () => {
+  it('every stem key is at least MIN_STEM_KEY_LENGTH characters', () => {
+    const tooShort = Object.keys(PRONUNCIATION_MAP).filter(
+      (key) => key.length < MIN_STEM_KEY_LENGTH
+    )
+
+    expect(
+      tooShort,
+      `PRONUNCIATION_MAP keys shorter than MIN_STEM_KEY_LENGTH (${MIN_STEM_KEY_LENGTH}) match as a stem and swallow longer words: ${tooShort.join(', ')}. Move them to ACRONYM_MAP (word) or EXACT_ACRONYMS (exact).`
+    ).toEqual([])
+  })
+
+  it('every exact-acronym key is uppercase', () => {
+    const notUppercase = Object.keys(EXACT_ACRONYMS).filter((key) => key !== key.toUpperCase())
+
+    expect(
+      notUppercase,
+      `EXACT_ACRONYMS is matched case-sensitively, so a lowercase key can never match: ${notUppercase.join(', ')}`
+    ).toEqual([])
+  })
+
+  it('no key appears in more than one pronunciation map', () => {
+    const named: ReadonlyArray<readonly [string, Readonly<Record<string, string>>]> = [
+      ['ACRONYM_MAP', ACRONYM_MAP],
+      ['PRONUNCIATION_MAP', PRONUNCIATION_MAP],
+      ['EXACT_ACRONYMS', EXACT_ACRONYMS],
+    ]
+    const owners = new Map<string, string[]>()
+    for (const [mapName, map] of named) {
+      for (const key of Object.keys(map)) {
+        const lower = key.toLowerCase()
+        owners.set(lower, [...(owners.get(lower) ?? []), mapName])
+      }
+    }
+    const duplicated = [...owners.entries()]
+      .filter(([, maps]) => maps.length > 1)
+      .map(([key, maps]) => `${key} (${maps.join(' + ')})`)
+
+    expect(
+      duplicated,
+      `a key may only live in one map — its map decides how loosely it matches: ${duplicated.join('; ')}`
+    ).toEqual([])
+  })
+
+  it('applyPronunciation applies word, stem and exact modes in that order', () => {
+    expect(PRONUNCIATION_PASSES.map((pass) => pass.mode)).toEqual(['word', 'stem', 'exact'])
+    expect(PRONUNCIATION_PASSES.map((pass) => pass.map)).toEqual([
+      ACRONYM_MAP,
+      PRONUNCIATION_MAP,
+      EXACT_ACRONYMS,
+    ])
+    // Why exact runs last: the `ci/cd` word key must consume "CI/CD" whole
+    // before a bare `CI` exact key could ever split it into "si-aj/CD".
+    expect(applyPronunciation('nasz CI/CD tutaj')).toBe(`nasz ${ACRONYM_MAP['ci/cd']} tutaj`)
   })
 })

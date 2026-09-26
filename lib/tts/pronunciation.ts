@@ -161,3 +161,22 @@ export const ACRONYM_MAP: Readonly<Record<string, string>> = Object.freeze({
   qa: 'kju-ej',
   'ci/cd': 'si-aj-si-di',
 })
+
+/**
+ * A key shorter than this may not match as a stem — it would swallow longer
+ * words. Stem matching re-appends any trailing letters, so a 3-letter key like
+ * `ai` turns every word starting with "ai" into "ej aj" + the rest. Short keys
+ * belong in ACRONYM_MAP (whole word) or EXACT_ACRONYMS (whole word, uppercase).
+ */
+export const MIN_STEM_KEY_LENGTH = 5
+
+/**
+ * Acronyms whose lowercase form is an ordinary Polish word — matched
+ * case-SENSITIVELY as a whole word, so only the uppercase spelling is replaced.
+ * `ACRONYM_MAP` cannot hold these: it is case-insensitive, so it would also
+ * rewrite the ordinary Polish word.
+ *
+ * Keys MUST be uppercase (a lowercase key could never match). Values are
+ * lowercase Polish phonetic spellings, same as the other maps.
+ */
+export const EXACT_ACRONYMS: Readonly<Record<string, string>> = Object.freeze({})
