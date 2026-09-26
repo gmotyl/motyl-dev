@@ -30,8 +30,8 @@ export const PROSE_WITHOUT_ACRONYMS: readonly string[] = Object.freeze([
   'cisza przed burzą trwała długo',
 
   // Polish and English words that merely START with a short ACRONYM_MAP key
-  // (`mac`, `code`, `ai`, `ui`, `url`, `hook`, `cli`, `api`, `edge`, `mr`).
-  // Word mode is what keeps these intact — a stem would eat every one of them.
+  // (`mac`, `code`, `ai`, `ui`, `url`, `cli`, `mr`). Word mode is what keeps
+  // these intact — a stem would eat every one of them.
   'macierz kowariancji rośnie',
   'mając to na uwadze',
   'macie rację',
@@ -45,27 +45,39 @@ export const PROSE_WITHOUT_ACRONYMS: readonly string[] = Object.freeze([
   'codziennie rano piję kawę',
   'musimy uiścić opłatę do piątku',
   'urlop zaczyna się w lipcu',
-  'hokej to nie mój sport',
-  'apteka jest zamknięta w niedzielę',
-  'edukacja jest ważna dla każdego',
   'mrówki maszerują po trawie',
   'mrok zapadł nad miastem',
   'click the button twice',
   'the client waits for a reply',
 
   // Near misses on the stem keys, where one letter is all that separates
-  // ordinary Polish from a rewrite: `trace`, `react`, `build`, `codex`.
+  // ordinary Polish from a rewrite: `trace`, `react`.
   'nie tracę na to czasu',
   'tracimy godzinę na dojazd',
   'reakcja była natychmiastowa',
-  'budujemy dom od podstaw',
+  // Not a `codex` near miss — "kodeks" starts with k, the key with c, so no
+  // pass can reach it. It is here for `pr`: lowercase "pracy" is what the
+  // case-sensitive `PR` key must never touch.
+  //
+  // The REAL `codex` collision is the other way round and is a known gap, not
+  // something this fixture covers: the corpus spells the inflected product
+  // phonetically — "Codeksa" (11) and "Codeksie" (8) — which no key matches
+  // (`codex` needs the x, `code` is word mode), so a Polish voice reads the
+  // leading c as "ts". Fixing it needs new entries, not a fixture sentence.
   'kodeks pracy znowu się zmienia',
   // A measured collision, not a hypothetical: the `macos` stem used to make
   // this idiom "po makoszemu". It occurs in the published corpus.
   'traktować kogoś po macoszemu',
 
   // Plain Polish with nothing special about it — the baseline that catches a
-  // careless new key before anything else does.
+  // careless new key before anything else does. The first four were once filed
+  // under `hook`, `api`, `edge` and `build`; they share only two letters with
+  // those keys, and with MIN_STEM_KEY_LENGTH no stem can reach two letters, so
+  // they never tested anything more than this baseline does.
+  'hokej to nie mój sport',
+  'apteka jest zamknięta w niedzielę',
+  'edukacja jest ważna dla każdego',
+  'budujemy dom od podstaw',
   'aktualnie pracuję nad czymś innym',
   'gdzie idziemy dziś wieczorem',
   'nowy rower stoi w garażu',
