@@ -96,6 +96,26 @@ describe('applyPronunciation — case-sensitive acronyms (EXACT_ACRONYMS)', () =
     expect(applyPronunciation('nasz CI/CD działa')).toBe('nasz si-aj-si-di działa')
     expect(applyPronunciation('CI/CD i CI razem')).toBe('si-aj-si-di i si-aj razem')
   })
+
+  // The plural is the same acronym. Word mode has always carried an optional
+  // trailing "s", so moving a key into the exact pass must not drop it: "PRs"
+  // occurs 201 times in the corpus and "IDEs" 33, and both were pronounced
+  // before these keys became case-sensitive.
+  it('a plural of a case-sensitive acronym is still pronounced', () => {
+    expect(applyPronunciation('dwa PRs czekają')).toBe('dwa pi-ars czekają')
+    expect(applyPronunciation('zamknąłem PRs.')).toBe('zamknąłem pi-ars.')
+    expect(applyPronunciation('nowe IDEs')).toBe('nowe aj-di-is')
+    expect(applyPronunciation('dwa QAs i CIs')).toBe('dwa kju-ejs i si-ajs')
+  })
+
+  // The counter-case: the plural group must not smuggle in case-insensitivity.
+  it('a lowercase plural of a case-sensitive acronym stays an ordinary word', () => {
+    expect(applyPronunciation('prs')).toBe('prs')
+    expect(applyPronunciation('ides')).toBe('ides')
+    expect(applyPronunciation('cis jest przed d')).toBe('cis jest przed d')
+    // Uppercase is the whole key, so "PRS" is not "PR" + a plural either.
+    expect(applyPronunciation('PRS')).toBe('PRS')
+  })
 })
 
 // A stem key replaces a word PREFIX and re-appends whatever letters follow, with
@@ -660,6 +680,12 @@ hashtags: "#pl #ai"
         'React Native': 'React',
       })
     ).toBe('React oraz R.')
+  })
+
+  it('re-attaches a trailing plural s to a whole-word replacement', () => {
+    expect(replaceWholeWordMappings('PR i PRs', { PR: 'pi-ar' })).toBe('pi-ar i pi-ars')
+    // Case-sensitive still: only the exact spelling of the key is a match.
+    expect(replaceWholeWordMappings('pr i prs', { PR: 'pi-ar' })).toBe('pr i prs')
   })
 
   it('applies inflection-aware pronunciation for English stems', () => {

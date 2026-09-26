@@ -38,6 +38,12 @@ const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\
  * regex, longest key first, so a longer key always beats one of its own
  * prefixes and each match is rewritten exactly once (a replacement's output can
  * never be re-matched by a later key). This is the engine of the `exact` pass.
+ *
+ * A trailing plural "s" is part of the match and is re-attached to the
+ * replacement, exactly as word mode does it ("PRs" → "pi-ars"): the plural is
+ * the same acronym, and an exact key must not lose it just by being
+ * case-sensitive. The `s` is literal and the flags stay `gu` — never `i` — so
+ * "prs" and "PRS" remain ordinary words.
  */
 export const replaceWholeWordMappings = (
   text: string,
@@ -48,11 +54,11 @@ export const replaceWholeWordMappings = (
   if (names.length === 0) return text
 
   const pattern = new RegExp(
-    `(?<![\\p{L}\\p{N}_])(${names.map(escapeRegExp).join('|')})(?![\\p{L}\\p{N}_])`,
+    `(?<![\\p{L}\\p{N}_])(${names.map(escapeRegExp).join('|')})(s?)(?![\\p{L}\\p{N}_])`,
     'gu'
   )
 
-  return text.replace(pattern, (name) => mappings[name])
+  return text.replace(pattern, (_match, name: string, plural: string) => mappings[name] + plural)
 }
 
 /**
@@ -64,9 +70,9 @@ export const replaceWholeWordMappings = (
  * - `stem` — word start, with any trailing Polish inflection preserved
  *   ("benchmarki" → "benczmarki"), case-insensitive. The loosest mode: only
  *   keys of at least `MIN_STEM_KEY_LENGTH` may use it.
- * - `exact` — standalone word, case-SENSITIVE. For acronyms whose lowercase
- *   form is an ordinary Polish word, where a case-insensitive match would
- *   rewrite the ordinary word too.
+ * - `exact` — standalone word plus the same optional plural "s" as `word`, but
+ *   case-SENSITIVE. For acronyms whose lowercase form is an ordinary Polish
+ *   word, where a case-insensitive match would rewrite the ordinary word too.
  */
 export type PronunciationMatchMode = 'word' | 'stem' | 'exact'
 
