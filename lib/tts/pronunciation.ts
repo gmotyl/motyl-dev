@@ -41,7 +41,6 @@ export const PRONUNCIATION_MAP: Readonly<Record<string, string>> = Object.freeze
   openai: 'oupen ej aj',
   chatgpt: 'czat dżi pi ti',
   macbook: 'makbuk',
-  macos: 'makos',
   android: 'endroid',
   windows: 'łindous',
   linux: 'linuks',
@@ -169,6 +168,13 @@ export const ACRONYM_MAP: Readonly<Record<string, string>> = Object.freeze({
   mac: 'mak',
   macu: 'maku',
   code: 'koud',
+  // Demoted later, for the same reason: as a stem, `macos` also matched the
+  // Polish idiom "po macoszemu" (6 occurrences in the corpus) and turned it
+  // into "po makoszemu". An identity entry cannot shield it — every key is
+  // applied to the whole text independently, so `macos` matches again even
+  // after a longer key rewrote the word to itself. Word mode is the fix, and
+  // it costs nothing: all 170 corpus occurrences are the bare word.
+  macos: 'makos',
   bug: 'bag',
   hook: 'huk',
   edge: 'edż',

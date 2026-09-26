@@ -21,6 +21,7 @@ import {
   PRONUNCIATION_MAP,
 } from '@/lib/tts/pronunciation'
 import { headingToId } from '@/lib/content/heading-slug'
+import { PROSE_WITHOUT_ACRONYMS } from '@/lib/tts/__fixtures__/prose-without-acronyms'
 
 // Assert against the map's own values so ear-tuning the spellings never breaks
 // these behavioral tests.
@@ -106,9 +107,9 @@ describe('applyPronunciation — short keys match whole words, not prefixes', ()
     expect(applyPronunciation('macierz kowariancji rośnie')).toBe('macierz kowariancji rośnie')
     expect(applyPronunciation('Nasz codebase rośnie')).toBe('Nasz codebase rośnie')
     expect(applyPronunciation('ainews dzisiaj')).toBe('ainews dzisiaj')
-    // "machine" is left alone; "macOS" keeps its own (long enough) stem entry.
+    // "machine" is left alone; "macOS" is pronounced from its own word entry.
     expect(applyPronunciation('machine learning i macOS')).toBe(
-      `machine learning i ${PRONUNCIATION_MAP.macos}`
+      `machine learning i ${ACRONYM_MAP.macos}`
     )
   })
 
@@ -189,6 +190,28 @@ describe('applyPronunciation — compounds whose tail a shorter stem swallowed',
     expect(applyPronunciation('commitment')).toBe('komitment')
     expect(applyPronunciation('tailwind')).toBe('tejlłind')
     expect(applyPronunciation('claude')).toBe('klod')
+  })
+})
+
+// The guard against the NEXT collision, not the ones already fixed. Every map
+// key is a prefix rule, so any new entry can quietly start rewriting ordinary
+// prose; this pins that it does not.
+describe('applyPronunciation — ordinary prose survives the maps', () => {
+  it('ordinary prose with no acronyms passes through applyPronunciation unchanged', () => {
+    const rewritten = PROSE_WITHOUT_ACRONYMS.map((sentence) => ({
+      sentence,
+      spoken: applyPronunciation(sentence),
+    })).filter(({ sentence, spoken }) => spoken !== sentence)
+
+    // Asserted as a joined report rather than per-sentence, so ONE failure
+    // lists every offending sentence with what it became — enough to act on
+    // without a debugger.
+    expect(
+      rewritten.map(({ sentence, spoken }) => `${sentence}\n  became: ${spoken}`).join('\n'),
+      'applyPronunciation rewrote prose that contains nothing to pronounce. ' +
+        'Fix this by adding an explicit pronunciation entry for the offending ' +
+        'word — never by editing the fixture sentence.'
+    ).toBe('')
   })
 })
 
