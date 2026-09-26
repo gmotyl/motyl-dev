@@ -7,15 +7,16 @@
  * "benchmarki" into "benczmarki". Values should be lowercase Polish phonetic spelling.
  */
 export const PRONUNCIATION_MAP: Readonly<Record<string, string>> = Object.freeze({
-  tldr: '..',
   summary: ',,',
   benchmark: 'benczmark',
   react: 'reakt',
   microsoft: 'mikrosoft',
 
   // Leading "c": a Polish voice reads it as "ts", so English c-words are the
-  // most mangled. Note: matching is longest-key-first, so `codex` and
-  // `cloudflare` win over `code` / `cloud`, and phrase keys win over their words.
+  // most mangled. Note: matching is longest-key-first, so `cloudflare` wins over
+  // `cloud`, and phrase keys win over their component words. (`code` is too short
+  // to be a stem — it lives in ACRONYM_MAP — but `codex` still beats it because
+  // the word pass cannot match a prefix.)
   claude: 'klod',
   cursor: 'kersor',
   cache: 'kesz',
@@ -23,7 +24,6 @@ export const PRONUNCIATION_MAP: Readonly<Record<string, string>> = Object.freeze
   cloudflare: 'klałdfler',
   commit: 'komit',
   codex: 'kodeks',
-  code: 'koud',
   copilot: 'kopajlot',
   checkout: 'czekałt',
   checkpoint: 'czekpojnt',
@@ -33,17 +33,11 @@ export const PRONUNCIATION_MAP: Readonly<Record<string, string>> = Object.freeze
   chunk: 'czank',
 
   // Product / library names
-  ai: 'ej aj',
-  aws: 'ej dablju es',
   spacexai: 'spejs eks ej aj',
   openai: 'oupen ej aj',
-  gpt: 'dżi pi ti',
   chatgpt: 'czat dżi pi ti',
-  mac: 'mak',
-  macu: 'maku',
   macbook: 'makbuk',
   macos: 'makos',
-  ios: 'aj os',
   android: 'endroid',
   windows: 'łindous',
   linux: 'linuks',
@@ -61,7 +55,6 @@ export const PRONUNCIATION_MAP: Readonly<Record<string, string>> = Object.freeze
   compiler: 'kompajler',
   nvidia: 'en widia',
   'node.js': 'noud dżej es',
-  npm: 'en-pi-em',
   nodejs: 'noud dżej es',
   turbopack: 'turbo pak',
   turbopacku: 'turbo paku',
@@ -91,7 +84,6 @@ export const PRONUNCIATION_MAP: Readonly<Record<string, string>> = Object.freeze
   dashboard: 'daszbord',
   endpoint: 'endpojnt',
   merge: 'merdż',
-  hook: 'huk',
   source: 'sors',
   gateway: 'gejtłej',
   provider: 'prowajder',
@@ -101,10 +93,7 @@ export const PRONUNCIATION_MAP: Readonly<Record<string, string>> = Object.freeze
   design: 'dizajn',
   sandbox: 'sendboks',
   exploit: 'eksplojt',
-  edge: 'edż',
-  bug: 'bag',
   reasoning: 'rizoning',
-  vram: 'fał ram',
   'type-aware': 'tajp ełer',
   'js/ts': 'dżej es / ti es',
   'key takeaways': 'kluczowe wnioski:',
@@ -160,6 +149,23 @@ export const ACRONYM_MAP: Readonly<Record<string, string>> = Object.freeze({
   mr: 'em-ar',
   qa: 'kju-ej',
   'ci/cd': 'si-aj-si-di',
+
+  // Demoted from PRONUNCIATION_MAP: each is shorter than MIN_STEM_KEY_LENGTH, so
+  // as a stem it swallowed every longer word it merely prefixed — `mac` turned
+  // "machine" into "makhine", `code` turned "codebase" into "koudbase".
+  // (`npm` was already here; its duplicate stem entry was deleted, not moved.)
+  ai: 'ej aj',
+  aws: 'ej dablju es',
+  gpt: 'dżi pi ti',
+  ios: 'aj os',
+  mac: 'mak',
+  macu: 'maku',
+  code: 'koud',
+  bug: 'bag',
+  hook: 'huk',
+  edge: 'edż',
+  tldr: '..',
+  vram: 'fał ram',
 })
 
 /**

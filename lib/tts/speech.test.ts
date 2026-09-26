@@ -62,6 +62,31 @@ describe('applyPronunciation — whole-word acronyms (ACRONYM_MAP)', () => {
   })
 })
 
+// A stem key replaces a word PREFIX and re-appends whatever letters follow, with
+// no idea where the word ends. Short keys therefore swallow ordinary words that
+// merely start with them — `mac` turned "machine" into "makhine". Those keys
+// belong in ACRONYM_MAP, which matches the whole word only.
+describe('applyPronunciation — short keys match whole words, not prefixes', () => {
+  it('a short key no longer rewrites a longer word that starts with it', () => {
+    expect(applyPronunciation('macierz kowariancji rośnie')).toBe('macierz kowariancji rośnie')
+    expect(applyPronunciation('Nasz codebase rośnie')).toBe('Nasz codebase rośnie')
+    expect(applyPronunciation('ainews dzisiaj')).toBe('ainews dzisiaj')
+    // "machine" is left alone; "macOS" keeps its own (long enough) stem entry.
+    expect(applyPronunciation('machine learning i macOS')).toBe(
+      `machine learning i ${PRONUNCIATION_MAP.macos}`
+    )
+  })
+
+  it('a short key still rewrites the bare word', () => {
+    expect(applyPronunciation('nowy Mac i AI')).toBe(
+      `nowy ${ACRONYM_MAP.mac} i ${ACRONYM_MAP.ai}`
+    )
+    expect(applyPronunciation('GPT pisze code')).toBe(
+      `${ACRONYM_MAP.gpt} pisze ${ACRONYM_MAP.code}`
+    )
+  })
+})
+
 const section = (over: Partial<SpeechSection>): SpeechSection => ({
   sourceSlug: 'news',
   sourceTitle: undefined,
