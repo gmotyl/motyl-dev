@@ -160,6 +160,20 @@ describe('applyPronunciation — short keys match whole words, not prefixes', ()
     expect(applyPronunciation('Naprawiamy bugi i hooki')).toBe('Naprawiamy bagi i huki')
   })
 
+  // The first sweep for these forms asked whether a guessed word list occurred
+  // instead of asking the corpus which forms it contains, so these measured
+  // ones stayed silent: hookiem 4, hooku 3, bugami 3, Maca 8, Maców 3.
+  it('pronounces the inflections the first measurement missed', () => {
+    expect(applyPronunciation('hookiem')).toBe('hukiem')
+    expect(applyPronunciation('hooku')).toBe('huku')
+    expect(applyPronunciation('bugami')).toBe('bagami')
+    // Capitalised in the corpus; the map is case-insensitive, so both spellings
+    // land on the same lowercase value.
+    expect(applyPronunciation('bez Maca')).toBe('bez maka')
+    expect(applyPronunciation('kilka Maców')).toBe('kilka maków')
+    expect(applyPronunciation('maca')).toBe('maka')
+  })
+
   it("English plurals of a demoted short key still come from the base key's plural group", () => {
     expect(applyPronunciation('bugs')).toBe('bags')
     expect(applyPronunciation('hooks')).toBe('huks')

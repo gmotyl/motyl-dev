@@ -181,22 +181,37 @@ export const ACRONYM_MAP: Readonly<Record<string, string>> = Object.freeze({
   tldr: '..',
   vram: 'fał ram',
 
-  // Inflections the demotion above lost. As a stem, `bug`/`hook` also caught
-  // every Polish ending; word mode matches the bare word only, so each form
-  // that actually occurs in the corpus needs its own entry (base value + the
-  // written ending). Only measured forms are listed — a speculative entry is a
-  // future collision. English plurals ("bugs", "hooks") need nothing: the
-  // `(s?)` group of the base key already covers them.
+  // Inflections the demotion above lost. As a stem, `bug`/`hook`/`mac` also
+  // caught every Polish ending; word mode matches the bare word only, so each
+  // form that actually occurs in the corpus needs its own entry (base value +
+  // the written ending). Only measured forms are listed — a speculative entry
+  // is a future collision. The measurement is "which forms does the corpus
+  // contain", not "do these guessed words occur": the first pass asked the
+  // second question and so missed `hookiem`(4), `hooku`(3), `bugami`(3),
+  // `Maca`(8) and `Maców`(3). English plurals ("bugs", "hooks") need nothing:
+  // the `(s?)` group of the base key already covers them.
   bugi: 'bagi',
   bugów: 'bagów',
   buga: 'baga',
   bugiem: 'bagiem',
+  bugami: 'bagami',
+  // English adjective far more often than a Polish plural in this corpus, but
+  // "bagi" is the right phonetic rendering of both readings.
   buggy: 'bagi',
   hooki: 'huki',
   hooków: 'huków',
   hooka: 'huka',
+  hookiem: 'hukiem',
+  hooku: 'huku',
   hookami: 'hukami',
   hookach: 'hukach',
+  // Genitive/plural-genitive of `mac`. Written capitalised in the corpus, but
+  // this map is case-insensitive, so the keys are lowercase like every other.
+  // Checked for a homograph before adding: Polish "maca" (matzo, or "he
+  // gropes") has zero occurrences here — all 8 "Maca" and 3 "Maców" are the
+  // machine. Should a real "maca" ever appear, this entry is the collision.
+  maca: 'maka',
+  maców: 'maków',
   // Not a missing match — `edge` + the `(s?)` group already yields "edżs" — but
   // a phonetic fix: a Polish voice has no vowel to land on in "edżs", so the
   // explicit spelling gives it one.
