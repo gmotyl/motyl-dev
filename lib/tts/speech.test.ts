@@ -85,6 +85,33 @@ describe('applyPronunciation — short keys match whole words, not prefixes', ()
       `${ACRONYM_MAP.gpt} pisze ${ACRONYM_MAP.code}`
     )
   })
+
+  // Word mode only matches the bare word, so demoting a short key also dropped
+  // the Polish inflections it used to catch as a stem. Those come back as
+  // explicit word-mode entries — one per form that actually occurs in the corpus.
+  it('Polish inflections of a demoted short key are pronounced from explicit entries', () => {
+    expect(applyPronunciation('bugi')).toBe('bagi')
+    expect(applyPronunciation('bugów')).toBe('bagów')
+    expect(applyPronunciation('buga')).toBe('baga')
+    expect(applyPronunciation('bugiem')).toBe('bagiem')
+    expect(applyPronunciation('buggy')).toBe('bagi')
+    expect(applyPronunciation('hooki')).toBe('huki')
+    expect(applyPronunciation('hooków')).toBe('huków')
+    expect(applyPronunciation('hooka')).toBe('huka')
+    expect(applyPronunciation('hookami')).toBe('hukami')
+    expect(applyPronunciation('hookach')).toBe('hukach')
+    expect(applyPronunciation('edges')).toBe('edżes')
+    expect(applyPronunciation('Naprawiamy bugi i hooki')).toBe('Naprawiamy bagi i huki')
+  })
+
+  it("English plurals of a demoted short key still come from the base key's plural group", () => {
+    expect(applyPronunciation('bugs')).toBe('bags')
+    expect(applyPronunciation('hooks')).toBe('huks')
+    // The bare words keep working too — the explicit forms do not shadow them.
+    expect(applyPronunciation('bug')).toBe('bag')
+    expect(applyPronunciation('hook')).toBe('huk')
+    expect(applyPronunciation('edge')).toBe('edż')
+  })
 })
 
 const section = (over: Partial<SpeechSection>): SpeechSection => ({
