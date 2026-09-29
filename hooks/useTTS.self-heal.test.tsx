@@ -499,6 +499,71 @@ describe('useTTS starved state — refill on entry', () => {
     expect(synthStartLines().filter((line) => line?.endsWith('(retry)'))).toHaveLength(0)
   })
 
+  it('a session that ended in an error does not hand its starvation to the next one', async () => {
+    enableLog()
+    // Synthesis fails for every text in `failing`, on every request, until the
+    // test takes it out.
+    const failing = new Set([UNITS[1], UNITS[2], UNITS[3], UNITS[4]])
+    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) => {
+      if (failing.has(text)) throw new Error(`[test] synthesis failed for ${text}`)
+      return new ArrayBuffer(8)
+    })
+    const { result } = renderHook(() => useTTS('irrelevant content', { units: UNITS }))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle()
+    expect(mse.appended).toEqual([0])
+
+    // Session 1 starves at 10 s, and its refill fails too.
+    await emitTimeUpdate(5)
+    await emitWaiting(10)
+    expect(entriesOfType('starved').map((entry) => entry.detail)).toEqual(['0'])
+    await settle()
+
+    // The element gives up on unit 0 and every unit behind it is unreadable:
+    // the failure streak hits its cap and the session ends in an error.
+    await failCurrentUnitInElement()
+    await settle(20)
+    expect(entriesOfType('stop-with-error')).toHaveLength(1)
+    expect(result.current.isPlaying).toBe(false)
+
+    // The outage is over — except for one prefetch of the new session.
+    failing.clear()
+    let unit4Failures = 1
+    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) => {
+      if (text === UNITS[4] && unit4Failures > 0) {
+        unit4Failures -= 1
+        throw new Error(`[test] synthesis failed for ${text}`)
+      }
+      return new ArrayBuffer(8)
+    })
+    const retriesBefore = synthStartLines().filter((line) => line?.endsWith('(retry)')).length
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle()
+    const resumedAt = result.current.currentChunkIndex
+    expect(mse.appended).toEqual([resumedAt])
+
+    // Session 2 plays, but never past where session 1 starved — and then it
+    // starves on its own account. That is a starvation, and the unit nobody
+    // will ask for again is asked for.
+    await emitTimeUpdate(5)
+    await emitWaiting(10)
+
+    expect(entriesOfType('starved').map((entry) => entry.detail)).toEqual([
+      '0',
+      String(resumedAt),
+    ])
+    expect(synthStartLines().filter((line) => line?.endsWith('(retry)')).length).toBe(
+      retriesBefore + 1
+    )
+    expect(synthStartLines().at(-1)).toBe(`${resumedAt + 1}: visible (retry)`)
+  })
+
   it('waiting at the end of the article still completes it without a retry', async () => {
     enableLog()
     const units = UNITS.slice(0, 3)
@@ -519,7 +584,94 @@ describe('useTTS starved state — refill on entry', () => {
     expect(onComplete).toHaveBeenCalledTimes(1)
     expect(result.current.isPlaying).toBe(false)
     expect(entriesOfType('unit-ended').map((entry) => entry.detail)).toContain('2: starved')
+    // THIS is the assertion that does the work. A retry assertion would be
+    // vacuous here: a misread starvation at the end refills from the unit past
+    // the last one, and `fillBuffer` has nothing to request there, so no
+    // `(retry)` line could appear whatever the hook did.
     expect(entriesOfType('starved')).toHaveLength(0)
-    expect(synthStartLines().filter((line) => line?.endsWith('(retry)'))).toHaveLength(0)
+  })
+
+  it('pausing ends the starved state', async () => {
+    enableLog()
+    starveSetup({ failFirst: [UNITS[1]], held: [UNITS[1], UNITS[2], UNITS[3]] })
+    const { result } = renderHook(() => useTTS('irrelevant content', { units: UNITS }))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle()
+    await emitTimeUpdate(5)
+    await emitWaiting(10)
+    expect(entriesOfType('starved').map((entry) => entry.detail)).toEqual(['0'])
+
+    act(() => {
+      result.current.pause()
+    })
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle()
+
+    // The resumed session plays, never past where the paused one starved, and
+    // runs dry again: that is its own starvation, not the old one continuing.
+    await emitTimeUpdate(9.5)
+    await emitWaiting(10)
+
+    expect(entriesOfType('starved').map((entry) => entry.detail)).toEqual(['0', '0'])
+  })
+
+  it('a completed section does not carry its starvation into the next', async () => {
+    /**
+     * The next session here is a replay of the same section: the hand-off to a
+     * NEW section goes through `stop()`, which clears the state on its own, so
+     * only a replay leaves completion (and the session seat in `play()`) as
+     * the one thing between the old starvation and the new session.
+     */
+    enableLog()
+    const units = UNITS.slice(0, 3)
+    const synth = starveSetup({ failFirst: [units[2]], held: [units[2]] })
+    const { result } = renderHook(() => useTTS('irrelevant content', { units }))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle()
+    expect(mse.appended).toEqual([0, 1])
+
+    // Starves at 20 s on the last unit; the refill lands, and the element runs
+    // straight through to the end of the section without a tick past 20 — the
+    // hidden page that skips ticks is exactly this.
+    await emitTimeUpdate(5)
+    await emitTimeUpdate(15)
+    await emitWaiting(20)
+    expect(entriesOfType('starved').map((entry) => entry.detail)).toEqual(['1'])
+    await synth.release(units[2], 0)
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2]))
+    await emitWaiting(30)
+    expect(result.current.isPlaying).toBe(false)
+    expect(result.current.progress).toBe(100)
+
+    // The replay loses unit 1's prefetch once (unit 2 stays in flight, so the
+    // timeline ends with unit 0), and starves short of 20 s: a starvation of
+    // its own.
+    let unit1Failures = 1
+    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) => {
+      if (text === units[1] && unit1Failures > 0) {
+        unit1Failures -= 1
+        throw new Error(`[test] synthesis failed for ${text}`)
+      }
+      if (text === units[2]) return new Promise<ArrayBuffer>(() => {})
+      return new ArrayBuffer(8)
+    })
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle()
+    expect(mse.appended).toEqual([0])
+    await emitTimeUpdate(5)
+    await emitWaiting(10)
+
+    expect(entriesOfType('starved').map((entry) => entry.detail)).toEqual(['1', '0'])
+    expect(synthStartLines().at(-1)).toBe('1: visible (retry)')
   })
 })

@@ -1897,6 +1897,12 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     // Nothing has played in THIS session yet, whatever the element's position
     // says — a resume sits exactly where the last one stopped.
     lastLiveTickRef.current = null
+    // Nor has it starved yet. The starved state belongs to the session that
+    // entered it, and not every session ends through a path that clears it —
+    // one that stops with an error does not — so the guarantee is taken here,
+    // where a session is seated. A stale `at` would otherwise swallow this
+    // session's first starvation whenever it starves short of that position.
+    starvedRef.current = null
 
     setState((prev) => ({ ...prev, isPlaying: true, isBuffering: true }))
 
