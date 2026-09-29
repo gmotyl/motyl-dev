@@ -28,6 +28,12 @@ export type ReaderLogEventType =
   // end detail `index: <ms>ms[, failed | dropped (aborted)], visibility`.
   | 'synth-start'
   | 'synth-end'
+  // MSE carrier: the element ran out of appended media MID-article, after this
+  // session had played — the state the reader self-heals from by re-requesting
+  // its read-ahead. Detail is the hook-local unit index (like `unit-start`).
+  // Self-heal requests carry a ` (retry)` suffix on their `synth-start`, so the
+  // log separates them from the ordinary read-ahead.
+  | 'starved'
   | 'stop-with-error'
   | 'section-advance'
   | 'reader-error'

@@ -878,7 +878,11 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   // decodes them, which is what keeps the synthesis cache's shared ArrayBuffer
   // usable for a replay (see the carrier's wrap).
   const fetchUnitAudio = useCallback(
-    async (index: number, signal: AbortSignal): Promise<ArrayBuffer> => {
+    async (
+      index: number,
+      signal: AbortSignal,
+      options?: { retry?: boolean }
+    ): Promise<ArrayBuffer> => {
       const text = chunksRef.current[index]
       const detectedVoice = voiceRef.current || detectLanguage(content)
 
@@ -892,7 +896,12 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       // happened with the screen off.
       const unit = toCarrierIndex(index)
       const startedAt = Date.now()
-      logReaderEvent('synth-start', detailFor(unit, document.visibilityState))
+      // A self-heal request is marked so a device log can tell the reader
+      // recovering from a starve apart from its ordinary read-ahead.
+      logReaderEvent(
+        'synth-start',
+        detailFor(unit, `${document.visibilityState}${options?.retry ? ' (retry)' : ''}`)
+      )
 
       let arrayBuffer: ArrayBuffer
       try {
