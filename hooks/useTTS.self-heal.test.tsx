@@ -163,19 +163,6 @@ const emitWaiting = async (currentTime: number) => {
   })
 }
 
-/**
- * Fire the element's `error` event — the browser saying "these bytes are
- * unusable". It is the one way into the hook's unit-failure chain that does not
- * need a boundary crossing, and therefore the only way to reach `playChunk` for
- * a unit the MSE buffer does not hold.
- */
-const failCurrentUnitInElement = async (turns = 8) => {
-  await act(async () => {
-    currentAudio().dispatchEvent(new Event('error'))
-    for (let i = 0; i < turns; i += 1) await Promise.resolve()
-  })
-}
-
 const enableLog = () => window.localStorage.setItem(READER_LOG_FLAG, '1')
 const firstOfType = (type: ReaderLogEntry['type']) =>
   readReaderLog().find((entry) => entry.type === type)
@@ -530,27 +517,26 @@ describe('useTTS starved state — refill on entry', () => {
     await settle()
     expect(mse.appended).toEqual([0])
 
-    // Session 1 starves at 10 s, and its refill fails too.
+    // Session 1 starves at 10 s, and its refill fails too — and every retry
+    // of it: the failure streak passes its cap and the session ends in an
+    // error, still starved.
     await emitTimeUpdate(5)
     await emitWaiting(10)
     expect(entriesOfType('starved').map((entry) => entry.detail)).toEqual(['0'])
-    await settle()
-
-    // The element gives up on unit 0 and every unit behind it is unreadable:
-    // the failure streak hits its cap and the session ends in an error.
-    await failCurrentUnitInElement()
     await settle(20)
     expect(entriesOfType('stop-with-error')).toHaveLength(1)
     expect(result.current.isPlaying).toBe(false)
 
-    // The outage is over — except for one prefetch of the new session.
+    // The outage is over — except for one prefetch of the new session. Units
+    // 2 and 3 stay in flight, so the timeline ends with the resumed unit.
     failing.clear()
-    let unit4Failures = 1
+    let unit1Failures = 1
     vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) => {
-      if (text === UNITS[4] && unit4Failures > 0) {
-        unit4Failures -= 1
+      if (text === UNITS[1] && unit1Failures > 0) {
+        unit1Failures -= 1
         throw new Error(`[test] synthesis failed for ${text}`)
       }
+      if (text === UNITS[2] || text === UNITS[3]) return new Promise<ArrayBuffer>(() => {})
       return new ArrayBuffer(8)
     })
     const retriesBefore = synthStartLines().filter((line) => line?.endsWith('(retry)')).length
@@ -687,6 +673,136 @@ describe('useTTS starved state — refill on entry', () => {
 
     expect(entriesOfType('starved').map((entry) => entry.detail)).toEqual(['1', '0'])
     expect(synthStartLines().at(-1)).toBe('1: visible (retry)')
+  })
+})
+
+describe('useTTS starved state — retry within the failure cap', () => {
+  it('a background synthesis that fails while starved is retried and playback continues', async () => {
+    enableLog()
+    // Units 1-3 are all in flight when the element runs dry at the end of 0.
+    const synth = holdSynthesis([UNITS[1], UNITS[2], UNITS[3]])
+    const onError = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: UNITS, onError })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle()
+    expect(mse.appended).toEqual([0])
+
+    await emitTimeUpdate(5)
+    await emitWaiting(10)
+    expect(entriesOfType('starved').map((entry) => entry.detail)).toEqual(['0'])
+    // Everything it waits for is already coming: the refill asks for nothing.
+    expect(synth.calls(UNITS[1])).toBe(1)
+
+    // The unit it waits for fails. Nothing else would ever ask for it again.
+    await synth.fail(UNITS[1], 0)
+    expect(synth.calls(UNITS[1])).toBe(2)
+    expect(synthStartLines().at(-1)).toBe('1: visible (retry)')
+    expect(result.current.isPlaying).toBe(true)
+
+    await synth.release(UNITS[1], 1)
+    await waitFor(() => expect(mse.appended).toEqual([0, 1]))
+
+    // The element moves again, past where it waited: the state is over, so a
+    // later failure only warns.
+    await emitTimeUpdate(12)
+    expect(result.current.currentChunkIndex).toBe(1)
+    await synth.fail(UNITS[2], 0)
+    expect(synth.calls(UNITS[2])).toBe(1)
+    expect(result.current.isPlaying).toBe(true)
+    expect(onError).not.toHaveBeenCalled()
+  })
+
+  it('failures while starved end in an error after the cap, not silence', async () => {
+    enableLog()
+    const synth = holdSynthesis([UNITS[2], UNITS[3]])
+    const heldImpl = vi.mocked(synthesizeSpeech).getMockImplementation()!
+    // The voice service is down for unit 1, on every request.
+    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string, opts) => {
+      if (text === UNITS[1]) throw new Error(`[test] synthesis failed for ${text}`)
+      return heldImpl(text, opts)
+    })
+    const onError = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: UNITS, onError })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle()
+    expect(mse.appended).toEqual([0])
+    // Not starved yet: the prefetch failure only warned.
+    expect(synth.calls(UNITS[1])).toBe(1)
+
+    await emitTimeUpdate(5)
+    await emitWaiting(10)
+    await settle(20)
+
+    // The refill's request and three retries, each counted: the fourth
+    // failure in a row is past MAX_CONSECUTIVE_CHUNK_FAILURES.
+    expect(synth.calls(UNITS[1])).toBe(5)
+    expect(entriesOfType('stop-with-error')).toHaveLength(1)
+    expect(onError).toHaveBeenCalledTimes(1)
+    expect(result.current.isPlaying).toBe(false)
+
+    // The session is over: nothing asks again.
+    await settle(20)
+    expect(synth.calls(UNITS[1])).toBe(5)
+    expect(onError).toHaveBeenCalledTimes(1)
+  })
+
+  it('a prefetch failure while playing buffered media is not retried or counted', async () => {
+    enableLog()
+    // Every read-ahead request fails once; unit 1 fails a second time too.
+    const failures = new Map([
+      [UNITS[1], 2],
+      [UNITS[2], 1],
+      [UNITS[3], 1],
+    ])
+    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) => {
+      const left = failures.get(text) ?? 0
+      if (left > 0) {
+        failures.set(text, left - 1)
+        throw new Error(`[test] synthesis failed for ${text}`)
+      }
+      return new ArrayBuffer(8)
+    })
+    const callsFor = (text: string) =>
+      vi.mocked(synthesizeSpeech).mock.calls.filter(([t]) => t === text).length
+    const onError = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: UNITS, onError })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle()
+    await emitTimeUpdate(5)
+
+    // Three prefetch failures while unit 0 still plays: warned, not retried.
+    expect(callsFor(UNITS[1])).toBe(1)
+    expect(callsFor(UNITS[2])).toBe(1)
+    expect(callsFor(UNITS[3])).toBe(1)
+    expect(synthStartLines().filter((line) => line?.endsWith('(retry)'))).toHaveLength(0)
+
+    // Nor counted: one more failure, while starved, is the first of a streak —
+    // had those three counted, it would be the fourth and end the session.
+    await emitWaiting(10)
+    await settle(20)
+    expect(callsFor(UNITS[1])).toBe(3)
+    expect(entriesOfType('stop-with-error')).toHaveLength(0)
+    expect(onError).not.toHaveBeenCalled()
+    expect(result.current.isPlaying).toBe(true)
+    // All of it lands. Unit 1 lands last: 2 and 3 arrived while it was still
+    // failing, and the cursor does not wait for a unit that is not coming —
+    // the known gap of a retried unit, unchanged here.
+    await waitFor(() => expect([...mse.appended].sort()).toEqual([0, 1, 2, 3]))
   })
 })
 

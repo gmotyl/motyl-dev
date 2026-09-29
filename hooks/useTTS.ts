@@ -957,6 +957,86 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     [content, toCarrierIndex]
   )
 
+  /**
+   * End the session on an unrecoverable failure. There is exactly one output
+   * path now, so anything that reaches here would otherwise be silence with
+   * `isPlaying` still true — the failure mode this change exists to prevent.
+   *
+   * The animation-frame handle is cancelled AND nulled: `runProgressFrame`
+   * early-returns without clearing it, so a stale handle left here would make
+   * the next `play()` skip re-arming the loop
+   * (`if (!animationFrameRef.current)`). The `timeupdate` clock would carry
+   * on, so progress would not die outright — but the smooth clock would be
+   * gone for the rest of the session and the reader bar would lurch forward
+   * ~4×/second instead of gliding.
+   *
+   * The detail goes through `describeError`, not `error.message`. The
+   * parameter is typed `Error`, but the only caller that originates a
+   * failure is the `play()` rejection handler, which casts (`error as
+   * Error`) whatever the promise rejected with — a promise may reject with
+   * anything, and a DOMException subclass or a plain object can carry no
+   * message at all. Reading `.message` there leaves the one line that says
+   * the reader gave up with no detail, on exactly the failure path the
+   * device test exists to capture; `describeError` keeps the NAME, which is
+   * the diagnostically useful half.
+   */
+  const stopWithError = useCallback(
+    (error: Error) => {
+      logReaderEvent('stop-with-error', describeError(error))
+      isPlayingRef.current = false
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+        animationFrameRef.current = null
+      }
+      detachUnitHandlers()
+      invalidatePendingRequests()
+      setState((prev) => ({ ...prev, isPlaying: false, isBuffering: false }))
+      onError?.(error)
+    },
+    [detachUnitHandlers, invalidatePendingRequests, onError]
+  )
+
+  /**
+   * THE give-up: too many units in a row were unreadable — systemic (no
+   * network, edge-tts down, a decoder that rejects everything) rather than one
+   * bad paragraph. The session ends here, so the whole buffered window of
+   * prepared audio goes with it, and the element carries nothing this hook
+   * counts as loaded. One helper for both ways past the cap — `playChunk`'s
+   * `failUnit` and a failure while starved — so they cannot drift apart.
+   */
+  const giveUp = useCallback(
+    (error: Error) => {
+      rebuildCarrier()
+      loadedUnitIndexRef.current = null
+      stopWithError(error)
+    },
+    [rebuildCarrier, stopWithError]
+  )
+
+  /**
+   * Trigger (b) of the starved state: a background synthesis of the CURRENT
+   * session failed (the caller has already dropped a superseded session's
+   * failure and given the unit up in the append queue). Outside the starved
+   * state that only warns — `playChunk` retries the unit when the playhead
+   * reaches it. While starved the playhead never will, so the failure counts
+   * against the same streak `failUnit` uses and the unit is asked for again;
+   * past the cap the session ends loudly instead of retrying forever.
+   *
+   * Answers whether the caller is to request the unit again.
+   */
+  const retryWhileStarved = useCallback(
+    (error: Error): boolean => {
+      if (starvedRef.current === null) return false
+      consecutiveFailuresRef.current += 1
+      if (consecutiveFailuresRef.current > MAX_CONSECUTIVE_CHUNK_FAILURES) {
+        giveUp(error)
+        return false
+      }
+      return true
+    },
+    [giveUp]
+  )
+
   // Fill the buffer cache for chunks [startIndex .. startIndex + BUFFER_AHEAD)
   const fillBuffer = useCallback(
     (
@@ -999,12 +1079,16 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
             if (generation !== requestGenerationRef.current || signal.aborted) return
             // The unit is not coming; the ones queued behind it must not
             // wait for it. `playChunk` retries it in its turn and counts a
-            // second failure there.
+            // second failure there — unless the element is starved, and its
+            // turn never comes.
             abandonPendingAppend(i)
+            if (retryWhileStarved(err as Error)) {
+              fillBuffer(i, generation, signal, { retry: true })
+            }
           })
       }
     },
-    [abandonPendingAppend, carrierHasUnit, fetchUnitAudio, prepareUnit]
+    [abandonPendingAppend, carrierHasUnit, fetchUnitAudio, prepareUnit, retryWhileStarved]
   )
 
   /**
@@ -1167,42 +1251,6 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       const carrier = getCarrier()
 
       /**
-       * End the session on an unrecoverable failure. There is exactly one output
-       * path now, so anything that reaches here would otherwise be silence with
-       * `isPlaying` still true — the failure mode this change exists to prevent.
-       *
-       * The animation-frame handle is cancelled AND nulled: `runProgressFrame`
-       * early-returns without clearing it, so a stale handle left here would make
-       * the next `play()` skip re-arming the loop
-       * (`if (!animationFrameRef.current)`). The `timeupdate` clock would carry
-       * on, so progress would not die outright — but the smooth clock would be
-       * gone for the rest of the session and the reader bar would lurch forward
-       * ~4×/second instead of gliding.
-       *
-       * The detail goes through `describeError`, not `error.message`. The
-       * parameter is typed `Error`, but the only caller that originates a
-       * failure is the `play()` rejection handler, which casts (`error as
-       * Error`) whatever the promise rejected with — a promise may reject with
-       * anything, and a DOMException subclass or a plain object can carry no
-       * message at all. Reading `.message` there leaves the one line that says
-       * the reader gave up with no detail, on exactly the failure path the
-       * device test exists to capture; `describeError` keeps the NAME, which is
-       * the diagnostically useful half.
-       */
-      const stopWithError = (error: Error) => {
-        logReaderEvent('stop-with-error', describeError(error))
-        isPlayingRef.current = false
-        if (animationFrameRef.current) {
-          cancelAnimationFrame(animationFrameRef.current)
-          animationFrameRef.current = null
-        }
-        detachUnitHandlers()
-        invalidatePendingRequests()
-        setState((prev) => ({ ...prev, isPlaying: false, isBuffering: false }))
-        onError?.(error)
-      }
-
-      /**
        * A unit can fail two ways — synthesis never produced bytes, or the element
        * refused the bytes it was handed (`error`: undecodable MP3, dead object
        * URL). Both mean "this unit is unreadable", so both get the same
@@ -1230,13 +1278,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         }
 
         if (consecutiveFailuresRef.current > MAX_CONSECUTIVE_CHUNK_FAILURES) {
-          // Too many units in a row were unreadable: systemic (no network,
-          // edge-tts down, a decoder that rejects everything) rather than one bad
-          // paragraph. The session ends here, so the whole buffered window of
-          // prepared audio goes with it.
-          rebuildCarrier()
-          loadedUnitIndexRef.current = null
-          stopWithError(error)
+          giveUp(error)
           return
         }
 
@@ -1494,14 +1536,14 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       getAudioElement,
       getBoundaryTracker,
       getCarrier,
+      giveUp,
       invalidatePendingRequests,
       onComplete,
-      onError,
       prepareUnit,
-      rebuildCarrier,
       releaseCarrier,
       resetAppendQueue,
       runProgressFrame,
+      stopWithError,
       toCarrierIndex,
     ]
   )
@@ -1975,6 +2017,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
             // queued behind it are not to wait for it.
             if (generation !== requestGenerationRef.current || signal.aborted) return
             abandonPendingAppend(i)
+            if (retryWhileStarved(err as Error)) {
+              fillBuffer(i, generation, signal, { retry: true })
+            }
           })
       }
     }
@@ -1990,11 +2035,13 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     carrierHasUnit,
     ensureChunks,
     fetchUnitAudio,
+    fillBuffer,
     getAudioElement,
     invalidatePendingRequests,
     onError,
     playChunk,
     prepareUnit,
+    retryWhileStarved,
     unlockElementForGesture,
     voice,
   ])
