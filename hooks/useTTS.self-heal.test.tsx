@@ -193,12 +193,15 @@ const UNITS = ['a', 'b', 'c', 'd', 'e'].map((ch) => ch.repeat(10))
  * call gets its own deferred. Texts not in `held` resolve at once.
  */
 const holdSynthesis = (held: string[]) => {
-  const pending = new Map<string, Array<{ resolve: (audio: ArrayBuffer) => void }>>()
+  const pending = new Map<
+    string,
+    Array<{ resolve: (audio: ArrayBuffer) => void; reject: (error: Error) => void }>
+  >()
   vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) => {
     if (!held.includes(text)) return new ArrayBuffer(8)
-    return new Promise<ArrayBuffer>((resolve) => {
+    return new Promise<ArrayBuffer>((resolve, reject) => {
       const list = pending.get(text) ?? []
-      list.push({ resolve })
+      list.push({ resolve, reject })
       pending.set(text, list)
     })
   })
@@ -211,6 +214,17 @@ const holdSynthesis = (held: string[]) => {
       const entry = pending.get(text)?.[nth]
       if (!entry) throw new Error(`[test] no request #${nth} for ${text}`)
       entry.resolve(new ArrayBuffer(8))
+      await settle()
+    },
+    /**
+     * Reject the `nth` (0-based) request for `text` with a real synthesis
+     * error — not an abort. `synthesizeSpeech` is never handed the session's
+     * signal, so a request outliving its session can still end this way.
+     */
+    fail: async (text: string, nth: number) => {
+      const entry = pending.get(text)?.[nth]
+      if (!entry) throw new Error(`[test] no request #${nth} for ${text}`)
+      entry.reject(new Error(`[test] synthesis failed for ${text}`))
       await settle()
     },
   }
@@ -673,5 +687,109 @@ describe('useTTS starved state — refill on entry', () => {
 
     expect(entriesOfType('starved').map((entry) => entry.detail)).toEqual(['1', '0'])
     expect(synthStartLines().at(-1)).toBe('1: visible (retry)')
+  })
+})
+
+describe('useTTS session end — in-flight bookkeeping', () => {
+  it('a session that ended in an error does not leave its in-flight units marked for the next one', async () => {
+    /**
+     * An error stop ends the session exactly like a pause does, so what it had
+     * in flight is no longer coming for anyone. Left marked, the next session
+     * would take those units for "already coming" and never append them.
+     */
+    enableLog()
+    const synth = holdSynthesis([UNITS[2], UNITS[3]])
+    // The element refuses its first start — the call after the gesture-unlock
+    // poke: the session ends through `stopWithError` with units 2 and 3 still
+    // in flight.
+    const unlock = audioPlay.getMockImplementation()!
+    audioPlay
+      .mockImplementationOnce(unlock)
+      .mockImplementationOnce(() => Promise.reject(new Error('[test] refused')))
+    const onError = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: UNITS, onError })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle()
+    expect(entriesOfType('stop-with-error')).toHaveLength(1)
+    expect(onError).toHaveBeenCalledTimes(1)
+    expect(result.current.isPlaying).toBe(false)
+    expect(synth.calls(UNITS[2])).toBe(1)
+    expect(synth.calls(UNITS[3])).toBe(1)
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle()
+
+    expect(result.current.isPlaying).toBe(true)
+    expect(synth.calls(UNITS[2])).toBe(2)
+    expect(synth.calls(UNITS[3])).toBe(2)
+    await synth.release(UNITS[2], 1)
+    await synth.release(UNITS[3], 1)
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2, 3]))
+  })
+
+  it('a failure from a superseded session is not retried', async () => {
+    /**
+     * A request of the paused session can still reject with a real error
+     * after the resume. It belongs to that session: it may not give a unit
+     * up in the NEW session's append queue — the new session's own request
+     * for that unit is still coming — nor count against its failure streak.
+     */
+    enableLog()
+    const synth = holdSynthesis([UNITS[2], UNITS[3]])
+    const onError = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: UNITS, onError })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0, 1]))
+    await settle()
+
+    act(() => {
+      result.current.pause()
+    })
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle()
+    expect(synth.calls(UNITS[2])).toBe(2)
+    expect(synth.calls(UNITS[3])).toBe(2)
+
+    // The resumed session plays and starves at the end of unit 1; its refill
+    // brings unit 4, which queues behind the in-flight 2 and 3.
+    await emitTimeUpdate(15)
+    await emitWaiting(20)
+    expect(entriesOfType('starved')).toHaveLength(1)
+    await settle()
+    expect(mse.appended).toEqual([0, 1])
+
+    // The paused session's request for unit 2 (its `play()` prefetch) fails.
+    // Unit 3 arriving for THIS session still waits for 2: the new session's
+    // own request for 2 is still coming, so 2 was never given up.
+    await synth.fail(UNITS[2], 0)
+    await synth.release(UNITS[3], 1)
+    expect(mse.appended).toEqual([0, 1])
+
+    // Then the one for unit 3 (its `fillBuffer` read-ahead) fails, after the
+    // new session's 3 is already queued. Giving 3 up now would make the
+    // cursor walk past the queued unit and read 4 in its place.
+    await synth.fail(UNITS[3], 0)
+    expect(synth.calls(UNITS[2])).toBe(2)
+    expect(synth.calls(UNITS[3])).toBe(2)
+    expect(entriesOfType('stop-with-error')).toHaveLength(0)
+
+    await synth.release(UNITS[2], 1)
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2, 3, 4]))
+    expect(result.current.isPlaying).toBe(true)
+    expect(onError).not.toHaveBeenCalled()
   })
 })

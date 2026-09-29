@@ -409,7 +409,8 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   const bufferCacheRef = useRef<Map<number, ArrayBuffer>>(new Map())
   // Units whose synthesis THIS session has in flight, to avoid duplicate
   // requests. The set belongs to a session: it is replaced (never cleared) when
-  // one ends, and every request deletes itself only from the set it registered
+  // one ends — by `invalidatePendingRequests`, which every end goes through —
+  // and every request deletes itself only from the set it registered
   // in. A resumed session must not take its predecessor's requests — dropped by
   // their aborted signal — for units "already coming", and an old request
   // settling must not remove a marker the new session added.
@@ -503,10 +504,17 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     return boundaryTrackerRef.current
   }, [getLiveTimeline])
 
+  // Every caller ends a session (pause/seek, stop, completion, an error stop),
+  // so this is the one place the in-flight set is replaced: the aborted
+  // requests are no longer coming for anyone, and the next session starts with
+  // nothing in flight and asks again (see `fetchingRef`). An ending path that
+  // replaced it on its own could be forgotten by the next one — both error
+  // stops once were.
   const invalidatePendingRequests = useCallback(() => {
     requestGenerationRef.current += 1
     abortControllerRef.current?.abort()
     abortControllerRef.current = null
+    fetchingRef.current = new Set()
   }, [])
 
   // Create (once) the single element every unit plays through. Created
@@ -982,13 +990,17 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
           })
           .catch((err) => {
             inFlight.delete(i)
-            if ((err as Error).name !== 'AbortError') {
-              console.warn(`[TTS] Buffer fetch failed for chunk ${i}:`, err)
-              // The unit is not coming; the ones queued behind it must not
-              // wait for it. `playChunk` retries it in its turn and counts a
-              // second failure there.
-              abandonPendingAppend(i)
-            }
+            if ((err as Error).name === 'AbortError') return
+            console.warn(`[TTS] Buffer fetch failed for chunk ${i}:`, err)
+            // A request can outlive its session and still fail for real —
+            // synthesis is never handed the signal. It is that session's
+            // failure: giving the unit up here would do it in the NEXT
+            // session's append queue, whose own request for it is still coming.
+            if (generation !== requestGenerationRef.current || signal.aborted) return
+            // The unit is not coming; the ones queued behind it must not
+            // wait for it. `playChunk` retries it in its turn and counts a
+            // second failure there.
+            abandonPendingAppend(i)
           })
       }
     },
@@ -1142,7 +1154,6 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         loadedUnitIndexRef.current = null
         pauseOffsetRef.current = 0
         resetAppendQueue()
-        fetchingRef.current = new Set()
         starvedRef.current = null
         // The last unit is consumed: nothing may outlive the article — unless
         // the caller's `onComplete`, which has just run, is handing this
@@ -1958,9 +1969,12 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
           })
           .catch((err) => {
             inFlight.delete(i)
-            // As in `fillBuffer`: the unit is not coming, so the ones queued
-            // behind it are not to wait for it.
-            if ((err as Error).name !== 'AbortError') abandonPendingAppend(i)
+            if ((err as Error).name === 'AbortError') return
+            // As in `fillBuffer`: a failure of a session already over is that
+            // session's, and otherwise the unit is not coming, so the ones
+            // queued behind it are not to wait for it.
+            if (generation !== requestGenerationRef.current || signal.aborted) return
+            abandonPendingAppend(i)
           })
       }
     }
@@ -1999,11 +2013,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       isPlayingRef.current = false
       invalidatePendingRequests()
       sessionRef.current = null
-      // The aborted requests are no longer coming for anyone: the next session
-      // starts with nothing in flight and asks again (see `fetchingRef`).
-      fetchingRef.current = new Set()
-      // So is a starvation: it is this session's, and the next one judges its
-      // own from its own ticks.
+      // A starvation is this session's (as is what it had in flight — see
+      // `invalidatePendingRequests`), and the next one judges its own from its
+      // own ticks.
       starvedRef.current = null
 
       const element = audioElementRef.current
@@ -2098,7 +2110,6 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     pauseOffsetRef.current = 0
     sectionStartRef.current = null
     resetAppendQueue()
-    fetchingRef.current = new Set()
     starvedRef.current = null
     lastEmittedPctRef.current = -1
     consecutiveFailuresRef.current = 0
