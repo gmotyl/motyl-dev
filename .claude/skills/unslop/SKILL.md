@@ -24,6 +24,7 @@ Removing patterns is half the job. Sterile, voiceless writing is just as obvious
 - **Use "I" when it fits.** First person isn't unprofessional.
 - **Let some mess in.** Perfect structure looks machine-made.
 - **Be specific.** Not "this is concerning" but "there's something unsettling about agents churning away at 3am."
+- **Say it the way you would say it out loud.** Literary staging metaphors are a tell wearing a voice costume: "two more pieces make that shape in different rooms", "the week turns and asks", "these ideas sit in conversation with each other", "the essay ended up a few paragraphs from". Nobody talks like that. Write the plain first-person version instead: "I found the same argument in two other articles". Test every sentence by reading it aloud. If you would not say it to a colleague in a hallway, cut it and say the ordinary thing.
 
 ## Patterns to detect and fix
 
