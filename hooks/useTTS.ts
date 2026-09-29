@@ -394,7 +394,12 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   // Buffer cache: pre-fetched MP3 bytes keyed by chunk index. An entry is
   // dropped once the carrier holds the unit — the carrier then owns the audio.
   const bufferCacheRef = useRef<Map<number, ArrayBuffer>>(new Map())
-  // Track in-flight fetches to avoid duplicate requests
+  // Units whose synthesis THIS session has in flight, to avoid duplicate
+  // requests. The set belongs to a session: it is replaced (never cleared) when
+  // one ends, and every request deletes itself only from the set it registered
+  // in. A resumed session must not take its predecessor's requests — dropped by
+  // their aborted signal — for units "already coming", and an old request
+  // settling must not remove a marker the new session added.
   const fetchingRef = useRef<Set<number>>(new Set())
 
   // THE carrier: what actually gets a unit's audio out of the element. Created
@@ -935,18 +940,19 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
           fetchingRef.current.has(i)
         ) continue
 
-        fetchingRef.current.add(i)
+        const inFlight = fetchingRef.current
+        inFlight.add(i)
 
         fetchUnitAudio(i, signal)
           .then((data) => {
-            fetchingRef.current.delete(i)
+            inFlight.delete(i)
             if (generation !== requestGenerationRef.current || signal.aborted) return
             // Give the unit to the carrier now, not at the swap: `ended` must
             // only have to ask for a seek.
             return prepareUnit(i, data)
           })
           .catch((err) => {
-            fetchingRef.current.delete(i)
+            inFlight.delete(i)
             if ((err as Error).name !== 'AbortError') {
               console.warn(`[TTS] Buffer fetch failed for chunk ${i}:`, err)
               // The unit is not coming; the ones queued behind it must not
@@ -1107,7 +1113,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         loadedUnitIndexRef.current = null
         pauseOffsetRef.current = 0
         resetAppendQueue()
-        fetchingRef.current.clear()
+        fetchingRef.current = new Set()
         // The last unit is consumed: nothing may outlive the article — unless
         // the caller's `onComplete`, which has just run, is handing this
         // timeline to the next section. That answer arrives with this commit,
@@ -1884,15 +1890,16 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         !bufferCacheRef.current.has(i) &&
         !fetchingRef.current.has(i)
       ) {
-        fetchingRef.current.add(i)
+        const inFlight = fetchingRef.current
+        inFlight.add(i)
         fetchUnitAudio(i, signal)
           .then((data) => {
-            fetchingRef.current.delete(i)
+            inFlight.delete(i)
             if (generation !== requestGenerationRef.current || signal.aborted) return
             return prepareUnit(i, data)
           })
           .catch((err) => {
-            fetchingRef.current.delete(i)
+            inFlight.delete(i)
             // As in `fillBuffer`: the unit is not coming, so the ones queued
             // behind it are not to wait for it.
             if ((err as Error).name !== 'AbortError') abandonPendingAppend(i)
@@ -1934,6 +1941,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       isPlayingRef.current = false
       invalidatePendingRequests()
       sessionRef.current = null
+      // The aborted requests are no longer coming for anyone: the next session
+      // starts with nothing in flight and asks again (see `fetchingRef`).
+      fetchingRef.current = new Set()
 
       const element = audioElementRef.current
       if (element) {
@@ -2027,7 +2037,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     pauseOffsetRef.current = 0
     sectionStartRef.current = null
     resetAppendQueue()
-    fetchingRef.current.clear()
+    fetchingRef.current = new Set()
     lastEmittedPctRef.current = -1
     consecutiveFailuresRef.current = 0
 
