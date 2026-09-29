@@ -873,14 +873,44 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   // decodes them, which is what keeps the synthesis cache's shared ArrayBuffer
   // usable for a replay (see the carrier's wrap).
   const fetchUnitAudio = useCallback(
-    async (text: string, signal: AbortSignal): Promise<ArrayBuffer> => {
+    async (index: number, signal: AbortSignal): Promise<ArrayBuffer> => {
+      const text = chunksRef.current[index]
       const detectedVoice = voiceRef.current || detectLanguage(content)
 
       if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
 
-      const arrayBuffer = await synthesizeSpeech(text, { voice: detectedVoice })
+      // Observation only. A handoff on a hidden page once landed the next
+      // section's title and nothing after it, and the log could not tell a
+      // synthesis that never started from one that hung or one whose result
+      // was thrown away. The index is the CARRIER's, so it matches `append N`;
+      // visibility is recorded at both ends because the stall only ever
+      // happened with the screen off.
+      const unit = toCarrierIndex(index)
+      const startedAt = Date.now()
+      logReaderEvent('synth-start', detailFor(unit, document.visibilityState))
 
-      if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
+      let arrayBuffer: ArrayBuffer
+      try {
+        arrayBuffer = await synthesizeSpeech(text, { voice: detectedVoice })
+      } catch (error) {
+        logReaderEvent(
+          'synth-end',
+          detailFor(unit, `failed after ${Date.now() - startedAt}ms, ${document.visibilityState}`)
+        )
+        throw error
+      }
+
+      if (signal.aborted) {
+        logReaderEvent(
+          'synth-end',
+          detailFor(unit, `${Date.now() - startedAt}ms, dropped (aborted), ${document.visibilityState}`)
+        )
+        throw new DOMException('Aborted', 'AbortError')
+      }
+      logReaderEvent(
+        'synth-end',
+        detailFor(unit, `${Date.now() - startedAt}ms, ${document.visibilityState}`)
+      )
 
       // The synthesis cache (lib/tts/client) hands the SAME ArrayBuffer instance
       // to every caller for a given voice+text, so this buffer is shared and
@@ -889,7 +919,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       // forced a slice(0) dance before every replay.
       return arrayBuffer
     },
-    [content]
+    [content, toCarrierIndex]
   )
 
   // Fill the buffer cache for chunks [startIndex .. startIndex + BUFFER_AHEAD)
@@ -907,7 +937,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
         fetchingRef.current.add(i)
 
-        fetchUnitAudio(chunksRef.current[i], signal)
+        fetchUnitAudio(i, signal)
           .then((data) => {
             fetchingRef.current.delete(i)
             if (generation !== requestGenerationRef.current || signal.aborted) return
@@ -1215,7 +1245,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
             setState((prev) => ({ ...prev, isBuffering: true }))
 
             try {
-              data = await fetchUnitAudio(chunksRef.current[index], signal)
+              data = await fetchUnitAudio(index, signal)
             } catch (error) {
               if (
                 generation !== requestGenerationRef.current ||
@@ -1830,7 +1860,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       !bufferCacheRef.current.has(startIdx)
     ) {
       try {
-        const data = await fetchUnitAudio(chunksRef.current[startIdx], signal)
+        const data = await fetchUnitAudio(startIdx, signal)
         if (generation !== requestGenerationRef.current || signal.aborted) return
         await prepareUnit(startIdx, data)
       } catch (error) {
@@ -1855,7 +1885,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         !fetchingRef.current.has(i)
       ) {
         fetchingRef.current.add(i)
-        fetchUnitAudio(chunksRef.current[i], signal)
+        fetchUnitAudio(i, signal)
           .then((data) => {
             fetchingRef.current.delete(i)
             if (generation !== requestGenerationRef.current || signal.aborted) return

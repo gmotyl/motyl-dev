@@ -89,6 +89,8 @@ const loggedLines = () =>
       .filter((part) => part !== undefined && part !== null)
       .join(' ')
   )
+/** The playback chain alone — synthesis lines interleave with it by timing. */
+const playbackLines = () => loggedLines().filter((line) => !line.startsWith('synth-'))
 const firstOfType = (type: ReaderLogEntry['type']) =>
   logged().find((entry) => entry.type === type)
 
@@ -172,14 +174,14 @@ describe('useTTS diagnostic log — playback path', () => {
     })
     await waitFor(() => expect(srcAssignments).toHaveLength(1))
 
-    expect(loggedLines()).toEqual(['unit-start 0/2', 'play-called 0'])
+    expect(playbackLines()).toEqual(['unit-start 0/2', 'play-called 0'])
 
     await endCurrentUnit()
     await waitFor(() => expect(srcAssignments).toHaveLength(2))
 
     // The whole chain is visible: the unit that finished, the unit that was
     // entered next, and the start it asked the element for.
-    expect(loggedLines()).toEqual([
+    expect(playbackLines()).toEqual([
       'unit-start 0/2',
       'play-called 0',
       'unit-ended 0',
@@ -565,5 +567,111 @@ describe('useTTS diagnostic log — disabled', () => {
     // …and the playback the instrument observes is untouched: both units started.
     expect(srcAssignments).toHaveLength(2)
     expect(onError).not.toHaveBeenCalled()
+  })
+})
+
+describe('useTTS diagnostic log — synthesis', () => {
+  /**
+   * The device logs of 2026-09-29 show a handoff on a hidden page where the
+   * next section's title lands and nothing after it ever does — and nothing
+   * says why: a synthesis that never started, one that hangs, and one whose
+   * result was thrown away all leave the same silence. These lines are what
+   * tells them apart, with the page's visibility at both ends because the
+   * stall only ever happened with the screen off.
+   */
+  let visibility: DocumentVisibilityState = 'visible'
+  beforeEach(() => {
+    visibility = 'visible'
+    vi.spyOn(document, 'visibilityState', 'get').mockImplementation(() => visibility)
+  })
+
+  const synthLines = () => loggedLines().filter((line) => line.startsWith('synth-'))
+
+  it('records a start and an end for every unit it synthesizes', async () => {
+    enableLog()
+    const units = ['unit one', 'unit two']
+    const { result } = renderHook(() => useTTS('irrelevant content', { units }))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(synthLines()).toHaveLength(4))
+
+    const lines = synthLines()
+    expect(lines.filter((line) => line.startsWith('synth-start'))).toEqual([
+      'synth-start 0: visible',
+      'synth-start 1: visible',
+    ])
+    for (const unit of [0, 1]) {
+      expect(lines).toContainEqual(expect.stringMatching(new RegExp(`^synth-end ${unit}: \\d+ms, visible$`)))
+    }
+  })
+
+  it('records the visibility at the start and at the end separately', async () => {
+    enableLog()
+    let release: () => void = () => {}
+    vi.mocked(synthesizeSpeech).mockImplementation(
+      () => new Promise<ArrayBuffer>((resolve) => { release = () => resolve(new ArrayBuffer(8)) })
+    )
+    visibility = 'hidden'
+    const { result } = renderHook(() => useTTS('irrelevant content', { units: ['only unit'] }))
+
+    let playing: Promise<void> = Promise.resolve()
+    act(() => {
+      playing = result.current.play()
+    })
+    await waitFor(() => expect(synthLines()).toEqual(['synth-start 0: hidden']))
+
+    visibility = 'visible'
+    await act(async () => {
+      release()
+      await playing
+    })
+
+    expect(synthLines()[1]).toMatch(/^synth-end 0: \d+ms, visible$/)
+  })
+
+  it('records a synthesis that failed', async () => {
+    enableLog()
+    vi.mocked(synthesizeSpeech).mockRejectedValue(new Error('socket closed'))
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: ['only unit'], onError: vi.fn() })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+
+    expect(synthLines()[1]).toMatch(/^synth-end 0: failed after \d+ms, visible$/)
+  })
+
+  it('records a result that arrived after its session was stopped as dropped', async () => {
+    enableLog()
+    const releases: Array<() => void> = []
+    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) => {
+      if (text === 'unit one') return new ArrayBuffer(8)
+      return new Promise<ArrayBuffer>((resolve) => releases.push(() => resolve(new ArrayBuffer(8))))
+    })
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: ['unit one', 'unit two'] })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(releases).toHaveLength(1))
+
+    act(() => {
+      result.current.stop()
+    })
+    await act(async () => {
+      releases[0]()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(synthLines()).toContainEqual(
+      expect.stringMatching(/^synth-end 1: \d+ms, dropped \(aborted\), visible$/)
+    )
   })
 })

@@ -23,6 +23,11 @@ export type ReaderLogEventType =
   | 'unit-ended'
   | 'element-error'
   | 'synthesis-failed'
+  // One unit's synthesis request and its settlement, in the CARRIER's
+  // numbering (the same index as `append`). Start detail `index: visibility`;
+  // end detail `index: <ms>ms[, failed | dropped (aborted)], visibility`.
+  | 'synth-start'
+  | 'synth-end'
   | 'stop-with-error'
   | 'section-advance'
   | 'reader-error'
@@ -76,7 +81,7 @@ export type ReaderLogEntry = {
 }
 
 export const READER_LOG_FLAG = 'motyl:readerlog'
-export const READER_LOG_CAPACITY = 200
+export const READER_LOG_CAPACITY = 500
 
 const entries: ReaderLogEntry[] = []
 
