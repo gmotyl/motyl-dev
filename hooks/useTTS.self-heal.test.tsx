@@ -374,3 +374,152 @@ describe('useTTS in-flight synthesis across sessions', () => {
     expect(synth.calls(UNITS[3])).toBe(2)
   })
 })
+
+/**
+ * The production shape of a starve: a unit's prefetch failed while the element
+ * was still playing buffered media, so it only warned and was abandoned —
+ * nothing asks for it again until the playhead reaches it, and on one
+ * continuous timeline the playhead never does: the element runs out of data at
+ * the end of what was appended and says `waiting`, once.
+ *
+ * `failFirst` texts reject on their FIRST request only; every later request
+ * follows `held` (deferred) or resolves at once.
+ */
+const starveSetup = (options: { failFirst: string[]; held: string[] }) => {
+  const synth = holdSynthesis(options.held)
+  const heldImpl = vi.mocked(synthesizeSpeech).getMockImplementation()!
+  const failed = new Set<string>()
+  vi.mocked(synthesizeSpeech).mockImplementation(async (text: string, opts) => {
+    if (options.failFirst.includes(text) && !failed.has(text)) {
+      failed.add(text)
+      throw new Error(`[test] synthesis failed for ${text}`)
+    }
+    return heldImpl(text, opts)
+  })
+  return synth
+}
+
+const synthStartLines = () =>
+  entriesOfType('synth-start').map((entry) => entry.detail)
+
+describe('useTTS starved state — refill on entry', () => {
+  it('a mid-article waiting after a live tick refills the read-ahead window', async () => {
+    enableLog()
+    // Unit 1's prefetch fails; 2 and 3 stay in flight. Only unit 0 is appended.
+    const synth = starveSetup({ failFirst: [UNITS[1]], held: [UNITS[1], UNITS[2], UNITS[3]] })
+    const { result } = renderHook(() => useTTS('irrelevant content', { units: UNITS }))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle()
+    expect(mse.appended).toEqual([0])
+    expect(synth.calls(UNITS[1])).toBe(1)
+
+    await emitTimeUpdate(5)
+    await emitWaiting(10)
+
+    expect(entriesOfType('starved').map((entry) => entry.detail)).toEqual(['0'])
+    // The unit nobody was going to ask for again is asked for; the ones still
+    // in flight are not asked for twice.
+    expect(synth.calls(UNITS[1])).toBe(2)
+    expect(synth.calls(UNITS[2])).toBe(1)
+    expect(synth.calls(UNITS[3])).toBe(1)
+    expect(result.current.isPlaying).toBe(true)
+
+    await synth.release(UNITS[1], 0)
+    await waitFor(() => expect(mse.appended).toEqual([0, 1]))
+  })
+
+  it('marks a self-heal synthesis request as a retry', async () => {
+    enableLog()
+    starveSetup({ failFirst: [UNITS[1]], held: [UNITS[1], UNITS[2], UNITS[3]] })
+    const { result } = renderHook(() => useTTS('irrelevant content', { units: UNITS }))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle()
+    // The ordinary read-ahead is unmarked.
+    expect(synthStartLines()).toEqual([
+      '0: visible',
+      '1: visible',
+      '2: visible',
+      '3: visible',
+    ])
+
+    await emitTimeUpdate(5)
+    await emitWaiting(10)
+
+    expect(synthStartLines().slice(4)).toEqual(['1: visible (retry)'])
+  })
+
+  it('a second waiting while starved requests nothing twice', async () => {
+    enableLog()
+    const synth = starveSetup({ failFirst: [UNITS[1]], held: [UNITS[1], UNITS[2], UNITS[3]] })
+    const { result } = renderHook(() => useTTS('irrelevant content', { units: UNITS }))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle()
+    await emitTimeUpdate(5)
+    await emitWaiting(10)
+    await emitWaiting(10)
+
+    expect(entriesOfType('starved')).toHaveLength(1)
+    expect(synth.calls(UNITS[1])).toBe(2)
+    expect(synthStartLines().filter((line) => line?.endsWith('(retry)'))).toHaveLength(1)
+
+    // The refill lands and the playhead moves on past where it starved: the
+    // state is over, so the next dry buffer is a starvation of its own.
+    await synth.release(UNITS[1], 0)
+    await waitFor(() => expect(mse.appended).toEqual([0, 1]))
+    await emitTimeUpdate(12)
+    expect(result.current.currentChunkIndex).toBe(1)
+    await emitWaiting(20)
+
+    expect(entriesOfType('starved').map((entry) => entry.detail)).toEqual(['0', '1'])
+  })
+
+  it('the start-up waiting is not a starvation', async () => {
+    enableLog()
+    const synth = starveSetup({ failFirst: [UNITS[1]], held: [UNITS[1], UNITS[2], UNITS[3]] })
+    const { result } = renderHook(() => useTTS('irrelevant content', { units: UNITS }))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle()
+    // Every start produces one, before the element has played a frame.
+    await emitWaiting(0)
+
+    expect(entriesOfType('starved')).toHaveLength(0)
+    expect(synth.calls(UNITS[1])).toBe(1)
+    expect(synthStartLines().filter((line) => line?.endsWith('(retry)'))).toHaveLength(0)
+  })
+
+  it('waiting at the end of the article still completes it without a retry', async () => {
+    enableLog()
+    const units = UNITS.slice(0, 3)
+    const onComplete = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units, onComplete })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2]))
+    await emitTimeUpdate(5)
+    await emitTimeUpdate(15)
+    await emitTimeUpdate(25)
+    await emitWaiting(30)
+
+    expect(onComplete).toHaveBeenCalledTimes(1)
+    expect(result.current.isPlaying).toBe(false)
+    expect(entriesOfType('unit-ended').map((entry) => entry.detail)).toContain('2: starved')
+    expect(entriesOfType('starved')).toHaveLength(0)
+    expect(synthStartLines().filter((line) => line?.endsWith('(retry)'))).toHaveLength(0)
+  })
+})

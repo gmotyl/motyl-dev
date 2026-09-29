@@ -390,6 +390,19 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
    * up on.
    */
   const lastLiveTickRef = useRef<number | null>(null)
+  /**
+   * Where the element STARVED mid-article in this session, or null while it is
+   * not starved.
+   *
+   * MSE carrier only. A starved element has played everything appended and
+   * sits in `waiting` with units still to come, and nothing else will ever
+   * wake it: there is no crossing left to reach `playChunk`, which is the only
+   * other place a missing unit is asked for again. So the reader asks itself,
+   * once, on entering the state. Cleared by the first live tick past `at` (the
+   * element is moving again) and whenever the session ends — the state belongs
+   * to the session, like everything it would retry.
+   */
+  const starvedRef = useRef<{ at: number } | null>(null)
 
   // Buffer cache: pre-fetched MP3 bytes keyed by chunk index. An entry is
   // dropped once the carrier holds the unit — the carrier then owns the audio.
@@ -938,7 +951,14 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
   // Fill the buffer cache for chunks [startIndex .. startIndex + BUFFER_AHEAD)
   const fillBuffer = useCallback(
-    (startIndex: number, generation: number, signal: AbortSignal) => {
+    (
+      startIndex: number,
+      generation: number,
+      signal: AbortSignal,
+      // Passed through to `fetchUnitAudio`: a self-heal refill marks its
+      // requests so the log tells them apart from the ordinary read-ahead.
+      options?: { retry?: boolean }
+    ) => {
       if (generation !== requestGenerationRef.current || signal.aborted) return
 
       const end = Math.min(startIndex + BUFFER_AHEAD, chunksRef.current.length)
@@ -952,7 +972,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         const inFlight = fetchingRef.current
         inFlight.add(i)
 
-        fetchUnitAudio(i, signal)
+        fetchUnitAudio(i, signal, options)
           .then((data) => {
             inFlight.delete(i)
             if (generation !== requestGenerationRef.current || signal.aborted) return
@@ -1123,6 +1143,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         pauseOffsetRef.current = 0
         resetAppendQueue()
         fetchingRef.current = new Set()
+        starvedRef.current = null
         // The last unit is consumed: nothing may outlive the article — unless
         // the caller's `onComplete`, which has just run, is handing this
         // timeline to the next section. That answer arrives with this commit,
@@ -1641,6 +1662,10 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     // see the very tick that entered the last unit. A `waiting` is not a tick:
     // it says where the element STOPPED, and must not count as having played.
     if (!starved) lastLiveTickRef.current = element.currentTime
+    // The element is moving again: whatever it starved on has arrived.
+    if (!starved && starvedRef.current !== null && element.currentTime > starvedRef.current.at) {
+      starvedRef.current = null
+    }
 
     const completed = getBoundaryTracker().advance(element.currentTime)
 
@@ -1682,7 +1707,25 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     // Either the playhead is still inside the unit it was in, or it has run off
     // the end of everything appended, or the crossing above landed it in the
     // last unit's final moments.
-    if (!reachedEndOfContent(element.currentTime, starved)) return
+    if (!reachedEndOfContent(element.currentTime, starved)) {
+      // STARVED mid-article: the element has run out of appended media with
+      // units still to come. Nothing else will ever ask for the one it waits
+      // on — a prefetch that failed while media was still playing only warned,
+      // and the crossing that would reach `playChunk` cannot happen on a
+      // stopped clock — so the reader refills the window itself, once per
+      // starvation. `fillBuffer` skips units the carrier holds, units buffered
+      // and units in flight, so a `waiting` from a mere decoder hiccup costs
+      // nothing. The start-up `waiting` every start produces is excluded by the
+      // live-tick leg: nothing has played in this session yet.
+      if (starved && starvedRef.current === null && lastLiveTickRef.current !== null) {
+        starvedRef.current = { at: element.currentTime }
+        logReaderEvent('starved', detailFor(currentChunkIndexRef.current))
+        fillBuffer(currentChunkIndexRef.current + 1, session.generation, session.signal, {
+          retry: true,
+        })
+      }
+      return
+    }
 
     // The tail the tracker will never report: `unitAt` past the final append
     // returns null and the seat is KEPT, so the pipeline outrunning the
@@ -1726,7 +1769,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     // timeline too, so `reachedEndOfContent` cannot answer true a second time
     // either.
     void playChunk(chunksRef.current.length, 0, session.generation, session.signal)
-  }, [getBoundaryTracker, getCarrier, getLiveTimeline, playChunk, reachedEndOfContent])
+  }, [fillBuffer, getBoundaryTracker, getCarrier, getLiveTimeline, playChunk, reachedEndOfContent])
 
   advanceUnitsRef.current = advanceUnits
 
@@ -1953,6 +1996,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       // The aborted requests are no longer coming for anyone: the next session
       // starts with nothing in flight and asks again (see `fetchingRef`).
       fetchingRef.current = new Set()
+      // So is a starvation: it is this session's, and the next one judges its
+      // own from its own ticks.
+      starvedRef.current = null
 
       const element = audioElementRef.current
       if (element) {
@@ -2047,6 +2093,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     sectionStartRef.current = null
     resetAppendQueue()
     fetchingRef.current = new Set()
+    starvedRef.current = null
     lastEmittedPctRef.current = -1
     consecutiveFailuresRef.current = 0
 
