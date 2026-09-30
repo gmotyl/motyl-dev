@@ -227,4 +227,47 @@ describe('synthesis queue', () => {
       expect(spy).toHaveBeenCalledTimes(1)
     }
   })
+
+  it('a throwing onStart does not stall the queue', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const boom = () => {
+      throw new Error('onStart boom')
+    }
+    const onLaterStart = vi.fn()
+
+    // The enqueuing caller's onStart throws as its job starts at once: the
+    // caller still gets its promise, never a synchronous throw.
+    let first!: Promise<ArrayBuffer>
+    expect(() => {
+      first = synthesizeSpeech('first', { voice, onStart: boom })
+    }).not.toThrow()
+    // A queued caller's onStart and a deduped caller's onStart both throw.
+    const queued = synthesizeSpeech('queued', { voice, onStart: boom })
+    let deduped!: Promise<ArrayBuffer>
+    expect(() => {
+      deduped = synthesizeSpeech('queued', { voice, onStart: boom })
+    }).not.toThrow()
+    // A cache hit on the running job is told at once; its throw is contained too.
+    let runningHit!: Promise<ArrayBuffer>
+    expect(() => {
+      runningHit = synthesizeSpeech('first', { voice, onStart: boom })
+    }).not.toThrow()
+    const later = synthesizeSpeech('later', { voice, onStart: onLaterStart })
+    await expectStarted(['first'])
+
+    edgeMock.settle('first')
+    await expect(first).resolves.toBeInstanceOf(ArrayBuffer)
+    await expect(runningHit).resolves.toBeInstanceOf(ArrayBuffer)
+    await expectStarted(['first', 'queued'])
+
+    edgeMock.settle('queued')
+    await expect(queued).resolves.toBeInstanceOf(ArrayBuffer)
+    await expect(deduped).resolves.toBe(await queued)
+    await expectStarted(['first', 'queued', 'later'])
+    expect(onLaterStart).toHaveBeenCalledTimes(1)
+
+    edgeMock.settle('later')
+    await expect(later).resolves.toBeInstanceOf(ArrayBuffer)
+    expect(warn).toHaveBeenCalled()
+  })
 })

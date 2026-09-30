@@ -774,5 +774,33 @@ describe('useTTS diagnostic log — synthesis', () => {
 
       expect(synthLines()[1]).toBe('synth-end 0: failed after 500ms, visible')
     })
+
+    it('records the queue wait on a dropped result', async () => {
+      enableLog()
+      const pending = deferSynthesis()
+      const { result } = renderHook(() =>
+        useTTS('irrelevant content', { units: ['only unit'] })
+      )
+      act(() => {
+        void result.current.play()
+      })
+      await waitFor(() => expect(synthLines()).toEqual(['synth-start 0: visible']))
+
+      now += 400
+      pending[0].onStart?.()
+      act(() => {
+        result.current.stop()
+      })
+      now += 600
+      await act(async () => {
+        pending[0].resolve()
+        await Promise.resolve()
+        await Promise.resolve()
+      })
+
+      expect(synthLines()).toContainEqual(
+        'synth-end 0: 1000ms (queued 400ms), dropped (aborted), visible'
+      )
+    })
   })
 })

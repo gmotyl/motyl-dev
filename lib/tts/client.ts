@@ -214,13 +214,23 @@ function insertByAge(lane: SynthesisJob[], job: SynthesisJob): void {
   lane.splice(index, 0, job)
 }
 
+// A caller's onStart is its own business: a throw is logged and swallowed so
+// it can never stall the queue, skip other callers or leave a job unsettled.
+function callOnStart(onStart: () => void): void {
+  try {
+    onStart()
+  } catch (error) {
+    console.warn('[TTS] onStart callback threw', error)
+  }
+}
+
 function runNextJob(): void {
   if (running) return
   const job = playLane.shift() ?? warmLane.shift()
   if (!job) return
   running = true
   waitingJobs.delete(job.promise)
-  for (const onStart of job.onStarts) onStart()
+  for (const onStart of job.onStarts) callOnStart(onStart)
   job.onStarts = []
   synthesizeToBuffer(job.text, job.options, job.voice)
     .then(job.resolve, job.reject)
@@ -269,7 +279,7 @@ function joinCachedJob(
 ): void {
   const job = waitingJobs.get(promise)
   if (!job) {
-    onStart?.()
+    if (onStart) callOnStart(onStart)
     return
   }
   if (onStart) job.onStarts.push(onStart)
