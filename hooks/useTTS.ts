@@ -224,6 +224,24 @@ const createDeferred = (): Deferred => {
 // buffer's own end, which is the failure this constant exists to remove.
 const END_OF_CONTENT_TOLERANCE_SECONDS = 0.1
 
+/**
+ * How close to the end of the appended timeline a stopped playhead has to be
+ * for a `waiting` there to count as the element having played everything it
+ * was given (see `waitingAtAppendedEnd`).
+ *
+ * Wider than END_OF_CONTENT_TOLERANCE_SECONDS on purpose. That one books the
+ * article COMPLETE, and a wrong yes loses audio; this one only enters the
+ * starved state, whose cost is a refill that skips every unit held, cached or
+ * in flight, and a retry that counts against the failure cap. And the reading
+ * it measures is the one the end-of-content comment warns about: where a
+ * starved element's clock stops is a property of the sink, ~0.1 s short on the
+ * device that produced the log and more over Bluetooth — exactly the margin
+ * 0.1 s would miss. Half a second covers the sink and is still far shorter
+ * than any real unit, so a playhead at a unit's first sample cannot be inside
+ * it.
+ */
+const STARVED_AT_END_TOLERANCE_SECONDS = 0.5
+
 export function useTTS(content: string, options: UseTTSOptions = {}) {
   const { voice, units, continueTimeline, onProgress, onComplete, onError } = options
 
@@ -443,7 +461,11 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
    * sits in `waiting` with units still to come, and nothing else will ever
    * wake it: there is no crossing left to reach `playChunk`, which is the only
    * other place a missing unit is asked for again. So the reader asks itself,
-   * once, on entering the state. Cleared by the first live tick past `at` (the
+   * once, on entering the state. Entered on a `waiting` that finds either a
+   * live tick behind it or the playhead at the end of the appended timeline
+   * with the append cursor waiting on a unit not on the carrier — the second
+   * is how a session resumed AT the gap, which never ticks, gets in (see
+   * `waitingAtAppendedEnd`). Cleared by the first live tick past `at` (the
    * element is moving again) and whenever the session ends — the state belongs
    * to the session, like everything it would retry.
    */
@@ -1711,6 +1733,26 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   )
 
   /**
+   * Whether the element stands at the end of everything appended while the
+   * append cursor waits on a unit the carrier does not hold — the starved
+   * state by its definition, read from position rather than from a tick.
+   *
+   * The cursor is walked read-only, the way `drainAppendQueue` would walk it:
+   * a resume puts it back at the start unit and it only moves on the next
+   * drain, so its stored value may still point at a unit the carrier holds.
+   */
+  const waitingAtAppendedEnd = useCallback(
+    (currentTime: number): boolean => {
+      const timeline = getLiveTimeline()
+      if (timeline.end() - currentTime > STARVED_AT_END_TOLERANCE_SECONDS) return false
+      let index = appendCursorRef.current
+      while (carrierHasUnit(index) || skippedAppendsRef.current.has(index)) index += 1
+      return index < chunksRef.current.length
+    },
+    [carrierHasUnit, getLiveTimeline]
+  )
+
+  /**
    * THE unit advance on the MSE carrier.
    *
    * One continuous timeline has no `ended` at a seam, so "unit N has been read"
@@ -1853,9 +1895,23 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       // stopped clock — so the reader refills the window itself, once per
       // starvation. `fillBuffer` skips units the carrier holds, units buffered
       // and units in flight, so a `waiting` from a mere decoder hiccup costs
-      // nothing. The start-up `waiting` every start produces is excluded by the
-      // live-tick leg: nothing has played in this session yet.
-      if (starved && starvedRef.current === null && lastLiveTickRef.current !== null) {
+      // nothing.
+      //
+      // Two ways to know the element has played everything appended. A tick
+      // this session accepted is one — and it is also what keeps out the
+      // start-up `waiting` every start produces, before a frame has played.
+      // The other is where the element stands: at the end of the appended
+      // timeline, with the append cursor waiting on a unit the carrier does
+      // not hold. A session seated AT the gap — a resume after a pause there —
+      // has no tick behind it and never gets one (its clock is stopped), so
+      // without this leg nothing would ever ask for the unit again. A start
+      // cannot pass it: the playhead is then at the new unit's first sample,
+      // a whole unit short of the timeline's end.
+      if (
+        starved &&
+        starvedRef.current === null &&
+        (lastLiveTickRef.current !== null || waitingAtAppendedEnd(element.currentTime))
+      ) {
         starvedRef.current = { at: element.currentTime }
         logReaderEvent('starved', detailFor(currentChunkIndexRef.current))
         fillBuffer(currentChunkIndexRef.current + 1, session.generation, session.signal, {
@@ -1907,7 +1963,15 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     // timeline too, so `reachedEndOfContent` cannot answer true a second time
     // either.
     void playChunk(chunksRef.current.length, 0, session.generation, session.signal)
-  }, [fillBuffer, getBoundaryTracker, getCarrier, getLiveTimeline, playChunk, reachedEndOfContent])
+  }, [
+    fillBuffer,
+    getBoundaryTracker,
+    getCarrier,
+    getLiveTimeline,
+    playChunk,
+    reachedEndOfContent,
+    waitingAtAppendedEnd,
+  ])
 
   advanceUnitsRef.current = advanceUnits
 

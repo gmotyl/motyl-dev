@@ -1076,3 +1076,142 @@ describe('useTTS session end — in-flight bookkeeping', () => {
     expect(onError).not.toHaveBeenCalled()
   })
 })
+
+/**
+ * Reviewer probe A. A resume clears the live tick along with the starved
+ * state, so a session seated AT the gap has nothing played behind it — and the
+ * element, already at the end of what was appended, never ticks again. The
+ * starved state has to be entered from where the element stands, or the unit
+ * it waits on is asked for by nobody.
+ */
+describe('useTTS starved state — a resume at the gap', () => {
+  it('pausing and playing at a gap still recovers the held unit', async () => {
+    enableLog()
+    // Unit 1's requests are held so each can be settled on its own; 2 and 3
+    // resolve at once and wait behind it.
+    const synth = holdSynthesis([UNITS[1]])
+    const onError = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: UNITS, onError })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle(16)
+    // The prefetch of 1 fails while 0 still plays: warned, held in place.
+    await synth.fail(UNITS[1], 0)
+    expect(mse.appended).toEqual([0])
+
+    // The element starves at the gap; the refill asks for 1 again.
+    await emitTimeUpdate(5)
+    await emitWaiting(10)
+    expect(synth.calls(UNITS[1])).toBe(2)
+
+    // Pause and play, with the element sitting at the end of unit 0.
+    act(() => {
+      result.current.pause()
+    })
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle()
+    // The resumed session's own prefetch of 1.
+    expect(synth.calls(UNITS[1])).toBe(3)
+
+    // The resumed element has nothing to play and says so — with no tick, and
+    // with its clock stopped a little short of the buffer's end, as a real
+    // sink's does.
+    await emitWaiting(9.8)
+    expect(entriesOfType('starved').map((entry) => entry.detail)).toEqual(['0', '0'])
+
+    // Starved again, so waking the screen restarts a dead attempt.
+    vi.mocked(restartStalledSynthesis).mockReturnValueOnce(true)
+    await emitVisible()
+    expect(entriesOfType('restart-on-wake').map((entry) => entry.detail)).toEqual(['0'])
+
+    // The resumed prefetch dies (dead connection). Starved: it is retried.
+    await synth.fail(UNITS[1], 2)
+    expect(synth.calls(UNITS[1])).toBe(4)
+    expect(synthStartLines().at(-1)).toBe('1: visible (retry)')
+
+    await synth.release(UNITS[1], 3)
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2, 3]))
+    expect(result.current.isPlaying).toBe(true)
+    expect(onError).not.toHaveBeenCalled()
+  })
+
+  it('pausing and playing at a gap still ends in an error when the unit never comes', async () => {
+    enableLog()
+    // Unit 1: the first request fails, the starved refill hangs, and from the
+    // resume on every request fails.
+    let unit1Requests = 0
+    let unit1Down = false
+    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) => {
+      if (text !== UNITS[1]) return new ArrayBuffer(8)
+      unit1Requests += 1
+      if (unit1Requests === 1 || unit1Down) {
+        throw new Error(`[test] synthesis failed for ${text}`)
+      }
+      return new Promise<ArrayBuffer>(() => {})
+    })
+    const onError = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: UNITS, onError })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle(16)
+    expect(mse.appended).toEqual([0])
+    await emitTimeUpdate(5)
+    await emitWaiting(10)
+    expect(unit1Requests).toBe(2)
+
+    act(() => {
+      result.current.pause()
+    })
+    unit1Down = true
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle()
+    // The resumed prefetch failed before the element said anything.
+    expect(unit1Requests).toBe(3)
+    expect(entriesOfType('stop-with-error')).toHaveLength(0)
+
+    await emitWaiting(10)
+    await settle(20)
+
+    expect(entriesOfType('stop-with-error')).toHaveLength(1)
+    expect(onError).toHaveBeenCalledTimes(1)
+    expect(result.current.isPlaying).toBe(false)
+  })
+  it('a waiting at the end of the appended timeline with nothing still to come is not a starvation', async () => {
+    enableLog()
+    const units = UNITS.slice(0, 3)
+    const { result } = renderHook(() => useTTS('irrelevant content', { units }))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2]))
+    await emitTimeUpdate(5)
+    await emitTimeUpdate(15)
+    await emitTimeUpdate(25)
+    await emitTimeUpdate(29.7)
+
+    act(() => {
+      result.current.pause()
+    })
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle()
+    // Near the end of the timeline, but every unit is on it: nothing to wait for.
+    await emitWaiting(29.7)
+
+    expect(entriesOfType('starved')).toHaveLength(0)
+  })
+})
