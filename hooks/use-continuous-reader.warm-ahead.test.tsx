@@ -5,6 +5,7 @@ import { sectionKey, splitIntoSpeechUnits, type SpeechSection } from '@/lib/tts/
 import { synthesizeSpeech } from '@/lib/tts/client'
 import { createMseCarrier } from '@/lib/reader/mse-carrier'
 import type { SeamReport } from '@/lib/reader/seam-report'
+import { READER_LOG_FLAG, clearReaderLog, readReaderLog } from '@/lib/reader/diagnostic-log'
 import { useContinuousReader } from './use-continuous-reader'
 
 /**
@@ -396,5 +397,51 @@ describe('warm-ahead on the MSE carrier', () => {
     await waitFor(() => expect(mse.appended.length).toBe(12))
     expect(result.current.currentIndex).toBe(1)
     await waitFor(() => expect(warmedTexts()).toEqual([...section1.slice(0, 3), ...section2]))
+  })
+})
+
+describe('warm-ahead diagnostic log', () => {
+  /**
+   * The 2026-09-30 device log showed a handoff whose next title was NOT warm,
+   * with 80 s of runway, and nothing in the log to say whether warm-ahead was
+   * scheduled, ran late, found no next section, or ran and missed. These lines
+   * are what tell those apart; the per-unit ones carry how long each took.
+   */
+  beforeEach(() => {
+    window.localStorage.setItem(READER_LOG_FLAG, '1')
+    clearReaderLog()
+  })
+  afterEach(() => clearReaderLog())
+
+  const warmLines = () =>
+    readReaderLog()
+      .filter((entry) => entry.type === 'warm-ahead')
+      .map((entry) => entry.detail ?? '')
+
+  it('records warm-ahead being scheduled, started and each unit it warmed', async () => {
+    const items = [makeItem(0), makeLongItem(1, 5)]
+    const nextKey = items[1].key
+    const { result } = renderReader(items)
+    await startFirstSection(result, items)
+    await waitFor(() => expect(warmedTexts()).toHaveLength(3))
+    await settle()
+
+    const lines = warmLines()
+    expect(lines[0]).toBe(`scheduled ${nextKey}`)
+    expect(lines[1]).toMatch(new RegExp(`^start ${nextKey}: 3 units, \\d+ms after scheduled$`))
+    expect(lines.slice(2)).toEqual([
+      expect.stringMatching(/^unit 0: \d+ms$/),
+      expect.stringMatching(/^unit 1: \d+ms$/),
+      expect.stringMatching(/^unit 2: \d+ms$/),
+    ])
+  })
+
+  it('records that there was no next section to warm', async () => {
+    const items = [makeItem(0)]
+    const { result } = renderReader(items)
+    await startFirstSection(result, items)
+    await waitFor(() => expect(warmLines()).toContain('scheduled none'))
+    await settle()
+    expect(warmLines()).toEqual(['scheduled none'])
   })
 })

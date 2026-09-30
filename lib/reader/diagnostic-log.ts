@@ -34,6 +34,14 @@ export type ReaderLogEventType =
   // Self-heal requests carry a ` (retry)` suffix on their `synth-start`, so the
   // log separates them from the ordinary read-ahead.
   | 'starved'
+  // Warm-ahead (the reader's prebuffer ladder while playing). `scheduled <nextKey>`
+  // or `scheduled none` when the current section becomes fully buffered;
+  // `start <nextKey>: <n> units, <ms>ms after scheduled` when the deferred run
+  // actually begins (idle callbacks can be held back on a hidden page), or
+  // `start <nextKey>: no units loaded`;
+  // `unit <i>: <ms>ms` / `unit <i>: failed after <ms>ms` per warmed unit;
+  // `aborted` when the walk is cancelled before it finishes.
+  | 'warm-ahead'
   | 'stop-with-error'
   | 'section-advance'
   | 'reader-error'

@@ -100,18 +100,23 @@ async function warmTier(
   texts: readonly string[],
   voice: string,
   concurrency: number,
-  signal: AbortSignal
+  signal: AbortSignal,
+  // Observation only: told how each text settled, in the order given.
+  onSettled?: (position: number, ms: number, failed: boolean) => void
 ): Promise<void> {
-  const queue = [...texts]
+  const queue = texts.map((text, position) => ({ text, position }))
   const worker = async (): Promise<void> => {
     while (queue.length > 0) {
       if (signal.aborted) return
-      const text = queue.shift()
-      if (!text) continue
+      const next = queue.shift()
+      if (!next?.text) continue
+      const startedAt = Date.now()
       try {
-        await synthesizeSpeech(text, { voice, priority: 'warm' })
+        await synthesizeSpeech(next.text, { voice, priority: 'warm' })
+        onSettled?.(next.position, Date.now() - startedAt, false)
       } catch {
         /* best-effort warm; the real request will retry */
+        onSettled?.(next.position, Date.now() - startedAt, true)
       }
     }
   }
@@ -529,12 +534,39 @@ export function useContinuousReader(
     const { signal } = controller
     const audioActive = isPlaying || isBuffering
 
+    // Warm-ahead is the one tier that is logged: the 2026-09-30 device log had a
+    // handoff whose next title was cold after 80 s of runway, and nothing said
+    // whether warm-ahead was scheduled, held back, found no next section, or
+    // missed. The idle tiers stay silent — dozens of lines per pause.
+    const warmingAhead = audioActive && isFullyBuffered
+    const scheduledAt = Date.now()
+    if (warmingAhead) {
+      const nextKey = itemsRef.current[currentIndexRef.current + 1]?.key
+      logReaderEvent('warm-ahead', nextKey ? `scheduled ${nextKey}` : 'scheduled none')
+    }
+
     const run = async (): Promise<void> => {
       const all = unitTextsBySectionRef.current
       if (audioActive) {
-        if (!isFullyBuffered) return
+        if (!warmingAhead) return
+        const nextKey = itemsRef.current[currentIndexRef.current + 1]?.key
         const next = all[currentIndexRef.current + 1]
-        if (next) await warmTier(next.slice(0, BUFFER_AHEAD), voice, 1, signal)
+        if (!nextKey) return
+        if (!next || next.length === 0) {
+          // The next section is in the queue but its units are not: exactly the
+          // case where the log would otherwise go quiet.
+          logReaderEvent('warm-ahead', `start ${nextKey}: no units loaded`)
+          return
+        }
+        const texts = next.slice(0, BUFFER_AHEAD)
+        logReaderEvent(
+          'warm-ahead',
+          `start ${nextKey}: ${texts.length} units, ${Date.now() - scheduledAt}ms after scheduled`
+        )
+        await warmTier(texts, voice, 1, signal, (position, ms, failed) => {
+          logReaderEvent('warm-ahead', `unit ${position}: ${failed ? `failed after ${ms}ms` : `${ms}ms`}`)
+        })
+        if (signal.aborted) logReaderEvent('warm-ahead', 'aborted')
         return
       }
       // T1: current section's title + TLDR.
