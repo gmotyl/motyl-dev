@@ -436,6 +436,27 @@ describe('warm-ahead diagnostic log', () => {
     ])
   })
 
+  it('warm-ahead starts even when idle callbacks never fire', async () => {
+    /**
+     * The 2026-09-30 19:41 device log (Edge Android, screen off) logged
+     * `warm-ahead scheduled` and then nothing for 50 s until the handoff: a
+     * hidden page never fires `requestIdleCallback`. This stub is that page —
+     * it accepts the callback and never calls it back.
+     */
+    vi.stubGlobal('requestIdleCallback', vi.fn(() => 1))
+    vi.stubGlobal('cancelIdleCallback', vi.fn())
+
+    const items = [makeItem(0), makeLongItem(1, 5)]
+    const nextKey = items[1].key
+    const { result } = renderReader(items)
+    await startFirstSection(result, items)
+
+    await waitFor(() =>
+      expect(warmLines()).toContainEqual(expect.stringMatching(new RegExp(`^start ${nextKey}: 3 units`)))
+    )
+    await waitFor(() => expect(warmedTexts()).toEqual(unitTexts(items[1]).slice(0, 3)))
+  })
+
   it('records that there was no next section to warm', async () => {
     const items = [makeItem(0)]
     const { result } = renderReader(items)

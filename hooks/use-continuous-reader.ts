@@ -584,7 +584,13 @@ export function useContinuousReader(
       await warmTier(tldrs, voice, PREBUFFER_CONCURRENCY, signal)
     }
 
-    const useIdle = typeof requestIdleCallback === 'function'
+    // Warm-ahead runs on a timer, never an idle callback: the 2026-09-30 19:41
+    // device log (Edge Android, screen off) logged `warm-ahead scheduled` and
+    // then no `start` in the 50 s before the handoff — a hidden page does not
+    // fire `requestIdleCallback`, and a reader playing with the screen off is
+    // exactly when warm-ahead matters. The idle tiers keep the idle callback:
+    // they are speculative and belong in idle time.
+    const useIdle = !warmingAhead && typeof requestIdleCallback === 'function'
     const handle = useIdle
       ? requestIdleCallback(() => void run())
       : setTimeout(() => void run(), 0)

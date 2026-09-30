@@ -782,6 +782,38 @@ describe('useContinuousReader', () => {
     expect(priorities.every((priority) => priority === 'warm')).toBe(true)
   })
 
+  it('idle tiers still wait for an idle callback', async () => {
+    /**
+     * Warm-ahead moved to a timer because a hidden page never fires idle
+     * callbacks (2026-09-30 device log). The wide tiers must NOT follow it:
+     * they are speculative, and a stopped reader's warms belong in idle time.
+     */
+    let idleCallback: (() => void) | undefined
+    vi.stubGlobal(
+      'requestIdleCallback',
+      vi.fn((callback: () => void) => {
+        idleCallback = callback
+        return 1
+      })
+    )
+    vi.stubGlobal('cancelIdleCallback', vi.fn())
+    try {
+      ttsClientMock.synthesizeSpeech.mockResolvedValue(new ArrayBuffer(0))
+      renderReader([makeItem(0), makeItem(1), makeItem(2)])
+
+      await new Promise((resolve) => setTimeout(resolve, 20))
+      expect(ttsClientMock.synthesizeSpeech).not.toHaveBeenCalled()
+      expect(idleCallback).toBeDefined()
+
+      act(() => idleCallback!())
+      await waitFor(() =>
+        expect(ttsClientMock.synthesizeSpeech.mock.calls.map(([text]) => text)).toContain('News')
+      )
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it('aborts in-flight warms when the player starts buffering', async () => {
     const { events } = setupPendingSynthesis()
     const items = [makeItem(0), makeItem(1), makeItem(2)]
