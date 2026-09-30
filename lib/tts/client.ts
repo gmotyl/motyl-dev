@@ -111,6 +111,14 @@ class TTSStreamStallError extends Error {
   }
 }
 
+// The attempt currently running (the queue runs one synthesis at a time, so
+// there is at most one), for restartStalledSynthesis. Null between attempts.
+interface RunningAttempt {
+  streaming: boolean
+  expire: () => void
+}
+let runningAttempt: RunningAttempt | null = null
+
 async function collectAudio(
   text: string,
   options: TTSOptions,
@@ -127,7 +135,8 @@ async function collectAudio(
   // Handled here as well, in case it fires before the stream's first race.
   firstByteDeadline.catch(() => {})
   const deadlineHandle = setTimeout(expire, FIRST_BYTE_TIMEOUT_MS)
-  let streaming = false
+  const attempt: RunningAttempt = { streaming: false, expire }
+  runningAttempt = attempt
 
   try {
     const { Communicate } = await Promise.race([
@@ -146,7 +155,7 @@ async function collectAudio(
 
     while (true) {
       let next: Awaited<ReturnType<typeof iterator.next>>
-      if (!streaming) {
+      if (!attempt.streaming) {
         next = await Promise.race([iterator.next(), firstByteDeadline])
       } else {
         let timeoutHandle: ReturnType<typeof setTimeout>
@@ -166,8 +175,8 @@ async function collectAudio(
 
       if (next.done) break
       if (next.value.type === 'audio' && next.value.data) {
-        if (!streaming) {
-          streaming = true
+        if (!attempt.streaming) {
+          attempt.streaming = true
           clearTimeout(deadlineHandle)
         }
         audioChunks.push(next.value.data)
@@ -187,7 +196,28 @@ async function collectAudio(
     return result.buffer
   } finally {
     clearTimeout(deadlineHandle)
+    if (runningAttempt === attempt) runningAttempt = null
   }
+}
+
+/**
+ * Declare the running synthesis attempt dead now, if it has not delivered its
+ * first audio byte yet. It goes through the first-byte deadline's own expiry,
+ * so the attempt fails as a stall and the synthesis either starts its one
+ * fresh-connection retry at once or, if this already was the retry, fails.
+ * The abandoned WebSocket is not closed (the library has no close); it is
+ * ignored. Used when the screen turns on while the reader is starved: the
+ * listener is back, and waiting out the deadline would only add silence.
+ * @returns true when an attempt was expired; false when nothing is running or
+ * the running attempt already streams audio.
+ */
+export function restartStalledSynthesis(): boolean {
+  const attempt = runningAttempt
+  if (!attempt || attempt.streaming) return false
+  // Cleared at once so a second call before the retry registers is a no-op.
+  runningAttempt = null
+  attempt.expire()
+  return true
 }
 
 async function synthesizeToBuffer(

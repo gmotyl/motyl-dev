@@ -2,7 +2,7 @@ import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useTTS } from './useTTS'
-import { synthesizeSpeech } from '@/lib/tts/client'
+import { restartStalledSynthesis, synthesizeSpeech } from '@/lib/tts/client'
 import { createSrcSwapCarrier } from '@/lib/reader/src-swap-carrier'
 import { createMseCarrier } from '@/lib/reader/mse-carrier'
 import {
@@ -26,6 +26,7 @@ import type { SeamReport } from '@/lib/reader/seam-report'
 vi.mock('@/lib/tts/client', () => ({
   synthesizeSpeech: vi.fn(async () => new ArrayBuffer(8)),
   prefetchSpeech: vi.fn(),
+  restartStalledSynthesis: vi.fn(() => false),
 }))
 
 /**
@@ -673,6 +674,67 @@ describe('useTTS starved state — refill on entry', () => {
 
     expect(entriesOfType('starved').map((entry) => entry.detail)).toEqual(['1', '0'])
     expect(synthStartLines().at(-1)).toBe('1: visible (retry)')
+  })
+})
+
+/** The page turning visible (screen on): the state flips, then the event fires. */
+const emitVisible = async () => {
+  vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible')
+  await act(async () => {
+    document.dispatchEvent(new Event('visibilitychange'))
+    for (let i = 0; i < 4; i += 1) await Promise.resolve()
+  })
+}
+
+describe('useTTS starved state — restart on wake', () => {
+  it('waking the screen while starved restarts a dead synthesis', async () => {
+    enableLog()
+    starveSetup({ failFirst: [UNITS[1]], held: [UNITS[1], UNITS[2], UNITS[3]] })
+    const { result } = renderHook(() => useTTS('irrelevant content', { units: UNITS }))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle()
+    await emitTimeUpdate(5)
+    await emitWaiting(10)
+    expect(entriesOfType('starved').map((entry) => entry.detail)).toEqual(['0'])
+
+    // The running attempt had no first byte: the client expired it.
+    vi.mocked(restartStalledSynthesis).mockReturnValueOnce(true)
+    await emitVisible()
+    expect(restartStalledSynthesis).toHaveBeenCalledTimes(1)
+    expect(entriesOfType('restart-on-wake').map((entry) => entry.detail)).toEqual(['0'])
+
+    // Still starved, but the running attempt already streams: nothing to restart.
+    vi.mocked(restartStalledSynthesis).mockReturnValueOnce(false)
+    await emitVisible()
+    expect(restartStalledSynthesis).toHaveBeenCalledTimes(2)
+    expect(entriesOfType('restart-on-wake').map((entry) => entry.detail)).toEqual([
+      '0',
+      'none',
+    ])
+  })
+
+  it('waking the screen while playing buffered audio restarts nothing', async () => {
+    enableLog()
+    starveSetup({ failFirst: [], held: [UNITS[2], UNITS[3]] })
+    const { result, unmount } = renderHook(() => useTTS('irrelevant content', { units: UNITS }))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle()
+    await emitTimeUpdate(5)
+
+    await emitVisible()
+    expect(restartStalledSynthesis).not.toHaveBeenCalled()
+    expect(entriesOfType('restart-on-wake')).toEqual([])
+
+    // Unmounted, the hook listens to nothing.
+    unmount()
+    await emitVisible()
+    expect(restartStalledSynthesis).not.toHaveBeenCalled()
   })
 })
 

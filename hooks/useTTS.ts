@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { detectLanguageFromContent } from '@/lib/tts/voice-map'
 import { splitIntoChunks } from '@/lib/tts/chunks'
-import { synthesizeSpeech } from '@/lib/tts/client'
+import { restartStalledSynthesis, synthesizeSpeech } from '@/lib/tts/client'
 import {
   describeError,
   detailFor,
@@ -2289,6 +2289,28 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       carrier.dispose()
     }
   }, [armDiagnostics, detachUnitHandlers, getAudioElement, getCarrier, stop])
+
+  // Restart on wake. Device logs show a starved reader sitting out a dead
+  // synthesis attempt with the screen on and the listener waiting: waking the
+  // page changed nothing until the next natural attempt. So turning the screen
+  // on while starved (MSE carrier; only it starves) asks the client to abandon
+  // an attempt that has not delivered its first byte and start a fresh one at
+  // once. A restart that ends the synthesis in a failure goes through the
+  // ordinary starved-retry path, counted against the same cap. Not starved:
+  // buffered audio is playing, so nothing is asked and nothing is logged.
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return
+      if (starvedRef.current === null || getCarrier().kind !== 'mse') return
+      const restarted = restartStalledSynthesis()
+      logReaderEvent(
+        'restart-on-wake',
+        restarted ? detailFor(currentChunkIndexRef.current) : 'none'
+      )
+    }
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', onVisibilityChange)
+  }, [getCarrier])
 
   const playback: TTSPlayback = {
     ...state,

@@ -53,6 +53,7 @@ vi.mock('edge-tts-universal/browser', () => ({
 
 type Client = typeof import('@/lib/tts/client')
 let synthesizeSpeech: Client['synthesizeSpeech']
+let restartStalledSynthesis: Client['restartStalledSynthesis']
 
 const voice = 'en-GB-RyanNeural'
 const dead = { steps: [], hang: true }
@@ -76,6 +77,7 @@ beforeEach(async () => {
   vi.spyOn(console, 'error').mockImplementation(() => {})
   const mod = await import('@/lib/tts/client')
   synthesizeSpeech = mod.synthesizeSpeech
+  restartStalledSynthesis = mod.restartStalledSynthesis
   // Load the mocked library on real timers, so the client's dynamic import of
   // it resolves from the module cache (microtasks only) under fake timers.
   await import('edge-tts-universal/browser')
@@ -154,6 +156,58 @@ describe('first-byte deadline', () => {
     await vi.advanceTimersByTimeAsync(11000)
     expect(result.done).toBe(true)
     expect(result.value?.byteLength).toBe(6)
+    expect(edgeMock.starts).toHaveLength(1)
+  })
+})
+
+describe('restartStalledSynthesis', () => {
+  it('restartStalledSynthesis starts a fresh attempt for a silent one', async () => {
+    edgeMock.script('a', dead, dead)
+    const result = outcome(synthesizeSpeech('a', { voice }))
+
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(restartStalledSynthesis()).toBe(true)
+    // The retry starts now, not when the 8 s deadline would have fired.
+    await vi.advanceTimersByTimeAsync(0)
+    expect(edgeMock.starts.map((s) => s.at)).toEqual([0, 2000])
+    expect(result.done).toBe(false)
+
+    // Restarting the retry attempt fails the job as a stall.
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(restartStalledSynthesis()).toBe(true)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(result.error?.name).toBe('TTSStreamStallError')
+    expect(edgeMock.starts).toHaveLength(2)
+  })
+
+  it('restartStalledSynthesis leaves a streaming attempt alone', async () => {
+    edgeMock.script('a', {
+      steps: [
+        { at: 1000, type: 'audio' },
+        { at: 5000, type: 'audio' },
+      ],
+      hang: false,
+    })
+    const result = outcome(synthesizeSpeech('a', { voice }))
+
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(restartStalledSynthesis()).toBe(false)
+    await vi.advanceTimersByTimeAsync(3000)
+    expect(result.value?.byteLength).toBe(6)
+    expect(edgeMock.starts).toHaveLength(1)
+  })
+
+  it('restartStalledSynthesis does nothing when nothing runs', async () => {
+    expect(restartStalledSynthesis()).toBe(false)
+
+    edgeMock.script('a', { steps: [{ at: 1000, type: 'audio' }], hang: false })
+    const result = outcome(synthesizeSpeech('a', { voice }))
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(result.done).toBe(true)
+
+    // A settled job leaves nothing behind to restart.
+    expect(restartStalledSynthesis()).toBe(false)
+    await vi.advanceTimersByTimeAsync(20000)
     expect(edgeMock.starts).toHaveLength(1)
   })
 })

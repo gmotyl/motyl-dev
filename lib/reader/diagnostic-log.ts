@@ -34,6 +34,10 @@ export type ReaderLogEventType =
   // Self-heal requests carry a ` (retry)` suffix on their `synth-start`, so the
   // log separates them from the ordinary read-ahead.
   | 'starved'
+  // MSE carrier: the page turned visible while starved. Detail is the
+  // hook-local unit index when the running synthesis attempt had no first
+  // byte and was restarted, or `none` when there was nothing to restart.
+  | 'restart-on-wake'
   // Warm-ahead (the reader's prebuffer ladder while playing). `scheduled <nextKey>`
   // or `scheduled none` when the current section becomes fully buffered;
   // `start <nextKey>: <n> units, <ms>ms after scheduled` when the deferred run
