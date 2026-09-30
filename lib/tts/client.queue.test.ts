@@ -7,6 +7,9 @@ const edgeMock = vi.hoisted(() => {
   type Deferred = { resolve: () => void; reject: (error: Error) => void }
   let started: string[] = []
   let pending = new Map<string, Deferred>()
+  // Texts whose stream pauses again after its first audio chunk, until a
+  // second settle(): the window between first byte and completion.
+  let holdAfterFirstChunk = new Set<string>()
 
   class FakeCommunicate {
     text: string
@@ -21,6 +24,12 @@ const edgeMock = vi.hoisted(() => {
         pending.set(this.text, { resolve, reject })
       })
       yield { type: 'audio', data: new Uint8Array([1, 2, 3]) }
+      if (holdAfterFirstChunk.has(this.text)) {
+        await new Promise<void>((resolve, reject) => {
+          pending.set(this.text, { resolve, reject })
+        })
+        yield { type: 'audio', data: new Uint8Array([4, 5]) }
+      }
     }
   }
 
@@ -36,9 +45,13 @@ const edgeMock = vi.hoisted(() => {
       if (error) deferred.reject(error)
       else deferred.resolve()
     },
+    holdAfterFirstChunk(text: string) {
+      holdAfterFirstChunk.add(text)
+    },
     reset() {
       started = []
       pending = new Map()
+      holdAfterFirstChunk = new Set()
     },
   }
 })
@@ -226,6 +239,52 @@ describe('synthesis queue', () => {
     for (const spy of [onRunningStart, onQueuedStart, onRunningHit, onQueuedHit, onResolvedHit]) {
       expect(spy).toHaveBeenCalledTimes(1)
     }
+  })
+
+  it('calls onFirstByte when the first audio chunk arrives', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const onEnqueuer = vi.fn()
+    const onEarlyHit = vi.fn()
+    const onMidStreamHit = vi.fn()
+    const onResolvedHit = vi.fn()
+    edgeMock.holdAfterFirstChunk('a')
+
+    const a = synthesizeSpeech('a', { voice, onFirstByte: onEnqueuer })
+    // A deduper joining while the job runs but before any audio has arrived.
+    void synthesizeSpeech('a', { voice, onFirstByte: onEarlyHit })
+    // A throwing callback is contained like a throwing onStart.
+    expect(() => {
+      void synthesizeSpeech('a', {
+        voice,
+        onFirstByte: () => {
+          throw new Error('onFirstByte boom')
+        },
+      })
+    }).not.toThrow()
+    await expectStarted(['a'])
+    expect(onEnqueuer).not.toHaveBeenCalled()
+    expect(onEarlyHit).not.toHaveBeenCalled()
+
+    // First chunk: everyone attached so far is told, the stream is not over.
+    edgeMock.settle('a')
+    await vi.waitFor(() => expect(onEnqueuer).toHaveBeenCalledTimes(1))
+    expect(onEarlyHit).toHaveBeenCalledTimes(1)
+
+    // A deduper joining after the first byte is told at once.
+    void synthesizeSpeech('a', { voice, onFirstByte: onMidStreamHit })
+    expect(onMidStreamHit).toHaveBeenCalledTimes(1)
+
+    // The second chunk does not call anyone again.
+    edgeMock.settle('a')
+    await expect(a).resolves.toBeInstanceOf(ArrayBuffer)
+    void synthesizeSpeech('a', { voice, onFirstByte: onResolvedHit })
+    expect(onResolvedHit).toHaveBeenCalledTimes(1)
+
+    await flush()
+    for (const spy of [onEnqueuer, onEarlyHit, onMidStreamHit, onResolvedHit]) {
+      expect(spy).toHaveBeenCalledTimes(1)
+    }
+    expect(warn).toHaveBeenCalledWith('[TTS] onFirstByte callback threw', expect.any(Error))
   })
 
   it('a throwing onStart does not stall the queue', async () => {

@@ -642,7 +642,7 @@ describe('useTTS diagnostic log — synthesis', () => {
       await result.current.play()
     })
 
-    expect(synthLines()[1]).toMatch(/^synth-end 0: failed after \d+ms, visible$/)
+    expect(synthLines()[1]).toMatch(/^synth-end 0: failed after \d+ms, Error, visible$/)
   })
 
   it('records a result that arrived after its session was stopped as dropped', async () => {
@@ -688,14 +688,20 @@ describe('useTTS diagnostic log — synthesis', () => {
       vi.spyOn(Date, 'now').mockImplementation(() => now)
     })
 
-    type Pending = { onStart?: () => void; resolve: () => void; reject: (error: Error) => void }
+    type Pending = {
+      onStart?: () => void
+      onFirstByte?: () => void
+      resolve: () => void
+      reject: (error: Error) => void
+    }
     const deferSynthesis = () => {
       const pending: Pending[] = []
       vi.mocked(synthesizeSpeech).mockImplementation(
-        (_text: string, options?: { onStart?: () => void }) =>
+        (_text: string, options?: { onStart?: () => void; onFirstByte?: () => void }) =>
           new Promise<ArrayBuffer>((resolve, reject) => {
             pending.push({
               onStart: options?.onStart,
+              onFirstByte: options?.onFirstByte,
               resolve: () => resolve(new ArrayBuffer(8)),
               reject,
             })
@@ -744,7 +750,72 @@ describe('useTTS diagnostic log — synthesis', () => {
         await failedPlay()
       })
 
-      expect(synthLines()[1]).toBe('synth-end 0: failed after 800ms (queued 300ms), visible')
+      expect(synthLines()[1]).toBe('synth-end 0: failed after 800ms (queued 300ms), Error, visible')
+    })
+
+    it('records the time to the first byte', async () => {
+      /**
+       * 2026-09-30 19:4x: a lone synthesis stalled 30 s before failing. The
+       * stall timeout can only be sized from how long a healthy synthesis
+       * takes to its FIRST audio chunk, so that is recorded next to the wait.
+       */
+      enableLog()
+      const pending = deferSynthesis()
+      const playing = await startPlaying()
+
+      now += 200
+      pending[0].onStart?.()
+      now += 700
+      pending[0].onFirstByte?.()
+      now += 400
+      await act(async () => {
+        pending[0].resolve()
+        await playing()
+      })
+
+      expect(synthLines()[1]).toBe('synth-end 0: 1300ms (queued 200ms, first byte 900ms), visible')
+
+      // A failure after audio started flowing keeps its first byte.
+      cleanup()
+      clearReaderLog()
+      const failing = deferSynthesis()
+      const failedPlay = await startPlaying(vi.fn())
+      now += 100
+      failing[0].onStart?.()
+      now += 300
+      failing[0].onFirstByte?.()
+      now += 15_000
+      await act(async () => {
+        failing[0].reject(new Error('socket closed'))
+        await failedPlay()
+      })
+
+      expect(synthLines()[1]).toBe(
+        'synth-end 0: failed after 15400ms (queued 100ms, first byte 400ms), Error, visible'
+      )
+    })
+
+    it('records the error name of a failed synthesis', async () => {
+      /**
+       * 2026-09-30: a retry failed in 1447 ms with nothing to say what kind of
+       * failure it was — a stall and a closed socket read the same.
+       */
+      enableLog()
+      const failing = deferSynthesis()
+      const failedPlay = await startPlaying(vi.fn())
+      now += 100
+      failing[0].onStart?.()
+      now += 30_000
+      const stall = new Error('TTS stream stalled')
+      stall.name = 'TTSStreamStallError'
+      await act(async () => {
+        failing[0].reject(stall)
+        await failedPlay()
+      })
+
+      expect(synthLines()[1]).toBe(
+        'synth-end 0: failed after 30100ms (queued 100ms), TTSStreamStallError, visible'
+      )
     })
 
     it('records a missing queue start consistently', async () => {
@@ -772,7 +843,7 @@ describe('useTTS diagnostic log — synthesis', () => {
         await failedPlay()
       })
 
-      expect(synthLines()[1]).toBe('synth-end 0: failed after 500ms, visible')
+      expect(synthLines()[1]).toBe('synth-end 0: failed after 500ms, Error, visible')
     })
 
     it('records the queue wait on a dropped result', async () => {

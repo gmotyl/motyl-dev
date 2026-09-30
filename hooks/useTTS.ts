@@ -982,11 +982,18 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
       // The client runs one synthesis at a time, so the total splits into
       // waiting for the slot and synthesizing; `onStart` marks the boundary.
-      // A client that never reports a start gets no wait claimed for it.
+      // `onFirstByte` marks the first audio chunk: after a 30 s stall on
+      // 2026-09-30 the stall timeout can only be sized from how long a healthy
+      // synthesis takes to its first byte. Only what the client reported is
+      // claimed — a client that reports neither gets no parentheses at all.
       let queueStartedAt: number | undefined
-      const elapsed = () =>
-        `${Date.now() - startedAt}ms` +
-        (queueStartedAt === undefined ? '' : ` (queued ${queueStartedAt - startedAt}ms)`)
+      let firstByteAt: number | undefined
+      const elapsed = () => {
+        const parts: string[] = []
+        if (queueStartedAt !== undefined) parts.push(`queued ${queueStartedAt - startedAt}ms`)
+        if (firstByteAt !== undefined) parts.push(`first byte ${firstByteAt - startedAt}ms`)
+        return `${Date.now() - startedAt}ms` + (parts.length === 0 ? '' : ` (${parts.join(', ')})`)
+      }
 
       let arrayBuffer: ArrayBuffer
       try {
@@ -995,11 +1002,18 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
           onStart: () => {
             queueStartedAt = Date.now()
           },
+          onFirstByte: () => {
+            firstByteAt = Date.now()
+          },
         })
       } catch (error) {
+        // The error's name tells a stall from a closed socket; the same day's
+        // log had a retry fail in 1447 ms with nothing to say which it was.
+        const name = (error as { name?: unknown } | null)?.name
+        const errorName = typeof name === 'string' && name !== '' ? name : 'Error'
         logReaderEvent(
           'synth-end',
-          detailFor(unit, `failed after ${elapsed()}, ${document.visibilityState}`)
+          detailFor(unit, `failed after ${elapsed()}, ${errorName}, ${document.visibilityState}`)
         )
         throw error
       }

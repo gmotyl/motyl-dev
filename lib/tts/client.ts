@@ -25,6 +25,13 @@ interface TTSOptions {
    * any log.
    */
   onStart?: () => void
+  /**
+   * Called once, when the first audio chunk of the synthesis serving this call
+   * arrives (on any attempt, the first time only) — or at once when it already
+   * arrived. Lets a caller tell time-to-first-byte from total synthesis time,
+   * which is what sizes a stall timeout.
+   */
+  onFirstByte?: () => void
 }
 
 const DEFAULT_VOICE = 'en-GB-RyanNeural'
@@ -99,7 +106,8 @@ class TTSStreamStallError extends Error {
 async function collectAudio(
   text: string,
   options: TTSOptions,
-  voice: string
+  voice: string,
+  onAudioChunk: () => void
 ): Promise<ArrayBuffer> {
   const { Communicate } = await import('edge-tts-universal/browser')
 
@@ -127,6 +135,7 @@ async function collectAudio(
     if (next.done) break
     if (next.value.type === 'audio' && next.value.data) {
       audioChunks.push(next.value.data)
+      onAudioChunk()
     }
   }
 
@@ -145,12 +154,13 @@ async function collectAudio(
 async function synthesizeToBuffer(
   text: string,
   options: TTSOptions,
-  voice: string
+  voice: string,
+  onAudioChunk: () => void
 ): Promise<ArrayBuffer> {
   console.log('[TTS Client] Synthesizing speech for voice:', voice, 'text length:', text.length)
 
   try {
-    const result = await collectAudio(text, options, voice)
+    const result = await collectAudio(text, options, voice, onAudioChunk)
     console.log('[TTS Client] Got audio data, size:', result.byteLength)
     return result
   } catch (error) {
@@ -160,7 +170,7 @@ async function synthesizeToBuffer(
       // (previously) or a hard failure (without this retry).
       console.warn('[TTS Client] Stream stalled, retrying with a fresh connection:', error.message)
       try {
-        const result = await collectAudio(text, options, voice)
+        const result = await collectAudio(text, options, voice, onAudioChunk)
         console.log('[TTS Client] Got audio data on retry, size:', result.byteLength)
         return result
       } catch (retryError) {
@@ -195,6 +205,10 @@ interface SynthesisJob {
   seq: number
   // Every caller's onStart, the enqueuing one and later cache hits alike.
   onStarts: Array<() => void>
+  // Every caller's onFirstByte still waiting for the job's first audio chunk.
+  onFirstBytes: Array<() => void>
+  firstByteSeen: boolean
+  settled: boolean
   promise: Promise<ArrayBuffer>
   resolve: (buffer: ArrayBuffer) => void
   reject: (error: unknown) => void
@@ -205,6 +219,9 @@ const warmLane: SynthesisJob[] = []
 // Jobs still waiting in a lane, by their cached promise, so a cache hit can
 // attach its onStart or promote the job. A job leaves this map when it starts.
 const waitingJobs = new Map<Promise<ArrayBuffer>, SynthesisJob>()
+// Every job by its cached promise, for as long as the promise lives, so a cache
+// hit on a running or settled job can still ask whether its first byte came.
+const jobsByPromise = new WeakMap<Promise<ArrayBuffer>, SynthesisJob>()
 let running = false
 let nextSeq = 0
 
@@ -214,14 +231,26 @@ function insertByAge(lane: SynthesisJob[], job: SynthesisJob): void {
   lane.splice(index, 0, job)
 }
 
-// A caller's onStart is its own business: a throw is logged and swallowed so
-// it can never stall the queue, skip other callers or leave a job unsettled.
-function callOnStart(onStart: () => void): void {
+// A caller's onStart / onFirstByte is its own business: a throw is logged and
+// swallowed so it can never stall the queue, skip other callers or leave a job
+// unsettled.
+function callGuarded(name: 'onStart' | 'onFirstByte', callback: () => void): void {
   try {
-    onStart()
+    callback()
   } catch (error) {
-    console.warn('[TTS] onStart callback threw', error)
+    console.warn(`[TTS] ${name} callback threw`, error)
   }
+}
+
+function callOnStart(onStart: () => void): void {
+  callGuarded('onStart', onStart)
+}
+
+function markFirstByte(job: SynthesisJob): void {
+  if (job.firstByteSeen) return
+  job.firstByteSeen = true
+  for (const onFirstByte of job.onFirstBytes) callGuarded('onFirstByte', onFirstByte)
+  job.onFirstBytes = []
 }
 
 function runNextJob(): void {
@@ -232,9 +261,12 @@ function runNextJob(): void {
   waitingJobs.delete(job.promise)
   for (const onStart of job.onStarts) callOnStart(onStart)
   job.onStarts = []
-  synthesizeToBuffer(job.text, job.options, job.voice)
+  synthesizeToBuffer(job.text, job.options, job.voice, () => markFirstByte(job))
     .then(job.resolve, job.reject)
     .finally(() => {
+      // A job that settled without audio never calls its onFirstBytes.
+      job.settled = true
+      job.onFirstBytes = []
       // Resolve or reject alike frees the slot for the next job.
       running = false
       runNextJob()
@@ -260,23 +292,34 @@ function enqueue(
     priority,
     seq: nextSeq++,
     onStarts: options.onStart ? [options.onStart] : [],
+    onFirstBytes: options.onFirstByte ? [options.onFirstByte] : [],
+    firstByteSeen: false,
+    settled: false,
     promise,
     resolve,
     reject,
   }
   ;(priority === 'play' ? playLane : warmLane).push(job)
   waitingJobs.set(promise, job)
+  jobsByPromise.set(promise, job)
   return promise
 }
 
 // A cache hit joins the existing job: its onStart fires with that job's start
-// (or now, if it already started), and a play request lifts a waiting warm job
-// into the play lane.
+// (or now, if it already started), its onFirstByte with the job's first audio
+// chunk (or now, if it already came), and a play request lifts a waiting warm
+// job into the play lane.
 function joinCachedJob(
   promise: Promise<ArrayBuffer>,
   priority: SynthesisPriority,
-  onStart: (() => void) | undefined
+  onStart: (() => void) | undefined,
+  onFirstByte: (() => void) | undefined
 ): void {
+  if (onFirstByte) {
+    const known = jobsByPromise.get(promise)
+    if (!known || known.firstByteSeen) callGuarded('onFirstByte', onFirstByte)
+    else if (!known.settled) known.onFirstBytes.push(onFirstByte)
+  }
   const job = waitingJobs.get(promise)
   if (!job) {
     if (onStart) callOnStart(onStart)
@@ -296,7 +339,7 @@ function joinCachedJob(
  * A synthesis that is not cached waits in the synthesis queue (one at a time,
  * `play` before `warm`).
  * @param text - The text to synthesize
- * @param options - TTS options (voice, rate, pitch, priority, onStart)
+ * @param options - TTS options (voice, rate, pitch, priority, onStart, onFirstByte)
  * @returns ArrayBuffer containing the audio data (MP3 format)
  */
 export function synthesizeSpeech(
@@ -316,7 +359,7 @@ export function synthesizeSpeech(
   const cached = synthesisCache.get(key)
   if (cached) {
     touchCache(key) // LRU: reading an entry marks it most-recently-used.
-    joinCachedJob(cached, priority, options.onStart)
+    joinCachedJob(cached, priority, options.onStart, options.onFirstByte)
     return cached
   }
 
