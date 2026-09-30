@@ -96,9 +96,17 @@ function storeInCache(key: string, promise: Promise<ArrayBuffer>): void {
 // an inactivity timeout so a stall surfaces as a rejection instead of a hang.
 const STREAM_STALL_TIMEOUT_MS = 15000
 
+// A dead connection never delivers a first audio byte at all: device logs show
+// successful attempts (hidden page included) deliver it within 5.3 s, while a
+// dead one only waits out the inactivity timer, twice (~30 s per synthesis).
+// So each attempt gets one deadline from its start, cleared only by the first
+// audio chunk with data. Metadata does not count: it is a deadline, not an
+// inactivity timer. After the first byte the 15 s rule above takes over.
+const FIRST_BYTE_TIMEOUT_MS = 8000
+
 class TTSStreamStallError extends Error {
-  constructor(timeoutMs: number) {
-    super(`TTS stream stalled: no data received for ${timeoutMs}ms`)
+  constructor(detail: string) {
+    super(`TTS stream stalled: ${detail}`)
     this.name = 'TTSStreamStallError'
   }
 }
@@ -109,46 +117,77 @@ async function collectAudio(
   voice: string,
   onAudioChunk: () => void
 ): Promise<ArrayBuffer> {
-  const { Communicate } = await import('edge-tts-universal/browser')
-
-  const communicate = new Communicate(text, {
-    voice,
-    rate: options.rate,
-    pitch: options.pitch,
+  // The first-byte deadline, armed before anything else of the attempt runs.
+  // `expire` is its only way to fire, so a timer and any other trigger share
+  // one path.
+  let expire!: () => void
+  const firstByteDeadline = new Promise<never>((_, reject) => {
+    expire = () => reject(new TTSStreamStallError(`no audio within ${FIRST_BYTE_TIMEOUT_MS}ms`))
   })
+  // Handled here as well, in case it fires before the stream's first race.
+  firstByteDeadline.catch(() => {})
+  const deadlineHandle = setTimeout(expire, FIRST_BYTE_TIMEOUT_MS)
+  let streaming = false
 
-  const iterator = communicate.stream()[Symbol.asyncIterator]()
-  const audioChunks: Uint8Array[] = []
+  try {
+    const { Communicate } = await Promise.race([
+      import('edge-tts-universal/browser'),
+      firstByteDeadline,
+    ])
 
-  while (true) {
-    let timeoutHandle: ReturnType<typeof setTimeout>
-    const next = await Promise.race([
-      iterator.next(),
-      new Promise<never>((_, reject) => {
-        timeoutHandle = setTimeout(
-          () => reject(new TTSStreamStallError(STREAM_STALL_TIMEOUT_MS)),
-          STREAM_STALL_TIMEOUT_MS
-        )
-      }),
-    ]).finally(() => clearTimeout(timeoutHandle))
+    const communicate = new Communicate(text, {
+      voice,
+      rate: options.rate,
+      pitch: options.pitch,
+    })
 
-    if (next.done) break
-    if (next.value.type === 'audio' && next.value.data) {
-      audioChunks.push(next.value.data)
-      onAudioChunk()
+    const iterator = communicate.stream()[Symbol.asyncIterator]()
+    const audioChunks: Uint8Array[] = []
+
+    while (true) {
+      let next: Awaited<ReturnType<typeof iterator.next>>
+      if (!streaming) {
+        next = await Promise.race([iterator.next(), firstByteDeadline])
+      } else {
+        let timeoutHandle: ReturnType<typeof setTimeout>
+        next = await Promise.race([
+          iterator.next(),
+          new Promise<never>((_, reject) => {
+            timeoutHandle = setTimeout(
+              () =>
+                reject(
+                  new TTSStreamStallError(`no data received for ${STREAM_STALL_TIMEOUT_MS}ms`)
+                ),
+              STREAM_STALL_TIMEOUT_MS
+            )
+          }),
+        ]).finally(() => clearTimeout(timeoutHandle))
+      }
+
+      if (next.done) break
+      if (next.value.type === 'audio' && next.value.data) {
+        if (!streaming) {
+          streaming = true
+          clearTimeout(deadlineHandle)
+        }
+        audioChunks.push(next.value.data)
+        onAudioChunk()
+      }
     }
-  }
 
-  // Concatenate all audio chunks into a single ArrayBuffer
-  const totalLength = audioChunks.reduce((acc, chunk) => acc + chunk.length, 0)
-  const result = new Uint8Array(totalLength)
-  let offset = 0
-  for (const chunk of audioChunks) {
-    result.set(chunk, offset)
-    offset += chunk.length
-  }
+    // Concatenate all audio chunks into a single ArrayBuffer
+    const totalLength = audioChunks.reduce((acc, chunk) => acc + chunk.length, 0)
+    const result = new Uint8Array(totalLength)
+    let offset = 0
+    for (const chunk of audioChunks) {
+      result.set(chunk, offset)
+      offset += chunk.length
+    }
 
-  return result.buffer
+    return result.buffer
+  } finally {
+    clearTimeout(deadlineHandle)
+  }
 }
 
 async function synthesizeToBuffer(
