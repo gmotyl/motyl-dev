@@ -548,6 +548,26 @@ describe('useTTS units option', () => {
   })
 })
 
+describe('useTTS isFullyBuffered', () => {
+  it('reports fully buffered on the src-swap carrier', async () => {
+    // Unit 0 plus BUFFER_AHEAD (3) prepared ahead: unit 4 only once unit 1 plays.
+    const units = ['a', 'b', 'c', 'd', 'e'].map((c) => c.repeat(10))
+    const { result } = renderHook(() => useTTS('irrelevant content', { units }))
+    expect(result.current.isFullyBuffered).toBe(false)
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(createObjectURL).toHaveBeenCalledTimes(4))
+    expect(result.current.isFullyBuffered).toBe(false)
+
+    await endCurrentUnit()
+    await waitFor(() => expect(createObjectURL).toHaveBeenCalledTimes(5))
+    // Unit 0's URL is revoked at the swap; the content is still fully buffered.
+    await waitFor(() => expect(result.current.isFullyBuffered).toBe(true))
+  })
+})
+
 describe('useTTS playFromUnit', () => {
   const units = ['a'.repeat(10), 'b'.repeat(20), 'c'.repeat(30)]
 

@@ -154,6 +154,15 @@ export interface TTSPlayback extends TTSState {
   stop: () => void
   resume: () => Promise<void>
   readMediaPosition: () => MediaPositionSnapshot | null
+  /**
+   * Whether every unit of the current content from where this session started
+   * reading has been handed to the carrier — nothing is left to fetch ahead.
+   * False while the chunk list is empty, and again after `stop()`, completion
+   * or new content. It is a record of appends, not a sweep of what the carrier
+   * still holds: retention releasing a unit the playhead has passed does not
+   * clear it. The reader gates warm-ahead of the next section on it.
+   */
+  isFullyBuffered: boolean
 }
 
 const detectLanguage = detectLanguageFromContent
@@ -322,6 +331,40 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
    * record of what the carrier is holding right now.
    */
   const timelineLiveRef = useRef(false)
+  /**
+   * The units of the CURRENT content the carrier has accepted, in the hook's
+   * own numbering (never the carrier's absolute one — a continued timeline
+   * would otherwise count the previous section's units as this one's). A unit
+   * given up on is not in here: it was walked over, not appended, and the
+   * section still has it to fetch. Emptied with the append queue.
+   */
+  const appendedUnitsRef = useRef<Set<number>>(new Set())
+  /**
+   * Bumped whenever `appendedUnitsRef` is emptied, so an append that was
+   * already in flight when the content ended cannot record itself against the
+   * content that replaced it.
+   */
+  const appendedEpochRef = useRef(0)
+  /**
+   * The first unit this session reads: a jump forward skips the units below it
+   * for good, so they must not keep the content "not fully buffered" forever.
+   */
+  const bufferFloorRef = useRef(0)
+  const [isFullyBuffered, setIsFullyBuffered] = useState(false)
+  const refreshFullyBuffered = useCallback(() => {
+    const total = chunksRef.current.length
+    let full = total > 0
+    for (let index = bufferFloorRef.current; full && index < total; index += 1) {
+      full = appendedUnitsRef.current.has(index)
+    }
+    setIsFullyBuffered(full)
+  }, [])
+  const forgetAppendedUnits = useCallback(() => {
+    appendedUnitsRef.current = new Set()
+    appendedEpochRef.current += 1
+    bufferFloorRef.current = 0
+    setIsFullyBuffered(false)
+  }, [])
   const toCarrierIndex = useCallback(
     (index: number): number => index + unitIndexBaseRef.current,
     []
@@ -635,11 +678,18 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
    */
   const appendNow = useCallback(
     async (index: number, data: ArrayBuffer): Promise<void> => {
+      const epoch = appendedEpochRef.current
       await getCarrier().appendUnits(
         [{ index: toCarrierIndex(index), data, duration: 0 }],
         { continueTimeline: timelineLiveRef.current }
       )
       timelineLiveRef.current = true
+      // Recorded only on success, and only for the content that asked: a unit
+      // retried out of order counts when it lands, wherever that is.
+      if (epoch === appendedEpochRef.current) {
+        appendedUnitsRef.current.add(index)
+        refreshFullyBuffered()
+      }
       // The section's start is fixed the moment its first unit lands, and this
       // is the only place that can know it before retention takes the unit
       // back off the map. Asking the timeline later — at the first position
@@ -651,7 +701,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       // retained audio for the whole buffered window.
       bufferCacheRef.current.delete(index)
     },
-    [getCarrier, getLiveTimeline, toCarrierIndex]
+    [getCarrier, getLiveTimeline, refreshFullyBuffered, toCarrierIndex]
   )
 
   /**
@@ -752,13 +802,17 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
    * synthesis produces, so every catch in this file treats it the same way.
    */
   const resetAppendQueue = useCallback(() => {
+    // Every path that ends the session empties this queue — stop, completion,
+    // the carrier rebuild — and each is also where "fully buffered" must go
+    // back to false: what the next session reads has to be appended again.
+    forgetAppendedUnits()
     appendCursorRef.current = 0
     skippedAppendsRef.current.clear()
     bufferCacheRef.current.clear()
     const waiters = Array.from(appendWaitersRef.current.values())
     appendWaitersRef.current.clear()
     for (const waiter of waiters) waiter.reject(new DOMException('Aborted', 'AbortError'))
-  }, [])
+  }, [forgetAppendedUnits])
 
   const prepareUnit = useCallback(
     (index: number, data: ArrayBuffer): Promise<void> => {
@@ -1864,6 +1918,8 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     // the base without a stop would still forget with it.
     sectionStartRef.current = null
 
+    // New content: nothing of it has been appended yet.
+    forgetAppendedUnits()
     const providedUnits = unitsRef.current
     chunksRef.current =
       providedUnits && providedUnits.length > 0
@@ -1879,7 +1935,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       totalChunks: chunksRef.current.length,
       totalEstimatedTime: estimatedSeconds,
     }))
-  }, [content, flushCarrierRelease])
+  }, [content, flushCarrierRelease, forgetAppendedUnits])
 
   /**
    * Where the OS should be told the reader is — section-relative, or nothing.
@@ -1979,6 +2035,11 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     // its retry with the new session, so nothing stays given up on either.
     appendCursorRef.current = startIdx
     skippedAppendsRef.current.clear()
+    // The same floor for "fully buffered": a jump past units never appended
+    // leaves nothing behind it to fetch, and a resume onto held units may
+    // already be done.
+    bufferFloorRef.current = startIdx
+    refreshFullyBuffered()
 
     // Fetch first chunk (must have it to start playing)
     if (
@@ -2051,6 +2112,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     onError,
     playChunk,
     prepareUnit,
+    refreshFullyBuffered,
     retryWhileStarved,
     unlockElementForGesture,
     voice,
@@ -2220,6 +2282,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     stop,
     resume: play,
     readMediaPosition,
+    isFullyBuffered,
   }
 
   return playback

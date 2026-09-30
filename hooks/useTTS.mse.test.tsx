@@ -1663,6 +1663,118 @@ describe('useTTS appends in index order on the MSE carrier', () => {
   })
 })
 
+describe('useTTS isFullyBuffered on the MSE carrier', () => {
+  /**
+   * "Fully buffered" is the reader's signal that the section being read has
+   * nothing left to fetch, so warming the NEXT one can no longer compete with
+   * it for the synthesis queue. It is a record of what this content has
+   * appended, not a live sweep of what the buffer still holds.
+   */
+  it('reports fully buffered once the last unit is appended', async () => {
+    let releaseLast!: (audio: ArrayBuffer) => void
+    const lastAudio = new Promise<ArrayBuffer>((resolve) => {
+      releaseLast = resolve
+    })
+    vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) =>
+      text === UNITS[2] ? lastAudio : new ArrayBuffer(8)
+    )
+
+    const { result } = renderHook(() => useTTS('irrelevant content', { units: UNITS }))
+    expect(result.current.isFullyBuffered).toBe(false)
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0, 1]))
+    await settle()
+    expect(result.current.isFullyBuffered).toBe(false)
+
+    await act(async () => {
+      releaseLast(new ArrayBuffer(8))
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2]))
+    await waitFor(() => expect(result.current.isFullyBuffered).toBe(true))
+  })
+
+  it('is not fully buffered while a unit is missing', async () => {
+    // Unit 1's prefetch fails and is walked over, so the buffer holds the LAST
+    // unit while unit 1 is not there at all. A unit given up on is not a unit
+    // appended: the section still has something to fetch.
+    const releaseMiddle = failMiddleThenHoldRetry()
+
+    const { result } = renderHook(() => useTTS('irrelevant content', { units: UNITS }))
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0, 2]))
+    await settle()
+    expect(result.current.isFullyBuffered).toBe(false)
+
+    // The hook reaches unit 1 in its turn and its retry is held in flight.
+    await emitTimeUpdate(15)
+    await settle()
+    expect(result.current.isFullyBuffered).toBe(false)
+
+    // The retry lands out of order — and that IS the last missing unit.
+    await act(async () => {
+      releaseMiddle(new ArrayBuffer(8))
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0, 2, 1]))
+    await waitFor(() => expect(result.current.isFullyBuffered).toBe(true))
+  })
+
+  it('resets on stop and on completion', async () => {
+    const onComplete = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: UNITS, onComplete })
+    )
+    await startAllThree(result)
+    expect(result.current.isFullyBuffered).toBe(true)
+
+    act(() => {
+      result.current.stop()
+    })
+    expect(result.current.isFullyBuffered).toBe(false)
+
+    // A fresh session of the same content has to append everything again.
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(result.current.isFullyBuffered).toBe(true))
+    await settle()
+
+    await emitTimeUpdate(12)
+    await emitTimeUpdate(22)
+    await emitTimeUpdate(29.95)
+    expect(onComplete).toHaveBeenCalledTimes(1)
+    expect(result.current.isFullyBuffered).toBe(false)
+  })
+
+  it('stays fully buffered when retention evicts a played unit', async () => {
+    // Spans long enough that the retention window (RETAIN_SECONDS, 600 s) is
+    // crossed inside the article: unit n is [400n, 400n + 400).
+    mse.spanSeconds = 400
+    const FIVE = Array.from({ length: 5 }, (_, i) => String.fromCharCode(97 + i).repeat(10))
+
+    const { result } = renderHook(() => useTTS('irrelevant content', { units: FIVE }))
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2, 3]))
+    await settle()
+    expect(result.current.isFullyBuffered).toBe(false)
+
+    // Into unit 2, with the horizon (1050 − 600) inside unit 1: the read-ahead
+    // appends unit 4, and that append trims unit 0 off the buffer.
+    await emitTimeUpdate(1050)
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2, 3, 4]))
+    await waitFor(() => expect(mse.start).toBe(400))
+    await settle()
+
+    expect(result.current.isFullyBuffered).toBe(true)
+  })
+})
+
 describe('useTTS logging play-called on the MSE carrier', () => {
   /**
    * The device log is read for "a unit started with no `play-called` after
