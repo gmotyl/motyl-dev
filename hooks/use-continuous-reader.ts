@@ -11,7 +11,7 @@ import {
 } from '@/lib/reader/media-session-tracks'
 import { logReaderEvent } from '@/lib/reader/diagnostic-log'
 import { useMediaSession } from './use-media-session'
-import { useTTS } from './useTTS'
+import { BUFFER_AHEAD, useTTS } from './useTTS'
 import { useWakeLock } from './useWakeLock'
 import type { TTSPlayback } from './useTTS'
 
@@ -84,15 +84,17 @@ function resolvePositionIndex(
   return 0
 }
 
-// How many prebuffer warm requests run concurrently. Each edge-tts synthesis is
-// a fresh WebSocket, so keep this low enough not to starve the real
-// play-from-here request while still warming the ladder quickly.
-const PREBUFFER_CONCURRENCY = 2
+// How many prebuffer warm requests the ladder hands over at a time. The
+// synthesis client now runs one edge-tts synthesis at a time, playback lane
+// first, so a second worker would only queue behind the first: one keeps the
+// warm lane short, and a Play pressed meanwhile waits behind at most one warm.
+const PREBUFFER_CONCURRENCY = 1
 
 /**
  * Warm the synthesis cache for a tier of unit texts with bounded concurrency.
  * Best-effort: `synthesizeSpeech` caches + dedupes, so already-warm texts are
- * skipped and failures are ignored (the real playback request retries).
+ * skipped and failures are ignored (the real playback request retries). Every
+ * request is `warm` priority: whatever playback asks for is served first.
  */
 async function warmTier(
   texts: readonly string[],
@@ -107,7 +109,7 @@ async function warmTier(
       const text = queue.shift()
       if (!text) continue
       try {
-        await synthesizeSpeech(text, { voice })
+        await synthesizeSpeech(text, { voice, priority: 'warm' })
       } catch {
         /* best-effort warm; the real request will retry */
       }
@@ -385,6 +387,7 @@ export function useContinuousReader(
   const {
     isPlaying,
     isBuffering,
+    isFullyBuffered,
     progress,
     currentTime,
     totalEstimatedTime,
@@ -509,13 +512,16 @@ export function useContinuousReader(
   // here — they load on demand as playback approaches them.
   //
   // IDLE-ONLY: playback has absolute priority over warming. While audio is
-  // running or waiting the wide tiers are skipped and the ladder warms only the
-  // next section's first unit (the seam into auto-advance); the current
-  // section's runway belongs to `useTTS`'s BUFFER_AHEAD. `isPlaying` /
-  // `isBuffering` are the destructured values, NOT `playback` — its identity
+  // running or waiting the wide tiers are skipped and the ladder does only
+  // WARM-AHEAD: once `useTTS` reports the current section fully buffered — so
+  // nothing it still needs can queue behind a warm — it warms the next
+  // section's first BUFFER_AHEAD units, one at a time, which is exactly what
+  // `useTTS` asks for first after the handoff. Before that it warms nothing: the
+  // current section's runway is `useTTS`'s own. `isPlaying` / `isBuffering` /
+  // `isFullyBuffered` are the destructured values, NOT `playback` — its identity
   // changes on every progress tick, which would restart the ladder constantly.
   // Entering `isBuffering` therefore re-runs the effect, whose cleanup aborts
-  // the warms already in flight.
+  // the warms not yet handed to the synthesis queue.
   useEffect(() => {
     if (unitTextsBySection.length === 0) return
 
@@ -526,8 +532,9 @@ export function useContinuousReader(
     const run = async (): Promise<void> => {
       const all = unitTextsBySectionRef.current
       if (audioActive) {
-        const nextFirst = all[currentIndexRef.current + 1]?.[0]
-        if (nextFirst) await warmTier([nextFirst], voice, 1, signal)
+        if (!isFullyBuffered) return
+        const next = all[currentIndexRef.current + 1]
+        if (next) await warmTier(next.slice(0, BUFFER_AHEAD), voice, 1, signal)
         return
       }
       // T1: current section's title + TLDR.
@@ -558,7 +565,7 @@ export function useContinuousReader(
         clearTimeout(handle as ReturnType<typeof setTimeout>)
       }
     }
-  }, [unitTextsBySection, voice, currentIndex, isPlaying, isBuffering])
+  }, [unitTextsBySection, voice, currentIndex, isPlaying, isBuffering, isFullyBuffered])
 
   useEffect(() => {
     const pending = pendingStartRef.current

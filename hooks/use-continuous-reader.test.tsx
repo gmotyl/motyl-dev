@@ -1,7 +1,7 @@
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { sectionKey, type SpeechSection } from '@/lib/tts/speech'
+import { sectionKey, splitIntoSpeechUnits, type SpeechSection } from '@/lib/tts/speech'
 import { DEFAULT_TTS_VOICE, setStoredTtsVoice, TTS_VOICE_STORAGE_KEY } from '@/lib/tts/voices'
 import { useContinuousReader } from './use-continuous-reader'
 
@@ -12,6 +12,7 @@ const ttsMock = vi.hoisted(() => {
   const playback = {
     isPlaying: false,
     isBuffering: false,
+    isFullyBuffered: false,
     progress: 0,
     currentTime: 0,
     totalEstimatedTime: 0,
@@ -305,6 +306,7 @@ describe('useContinuousReader', () => {
     ttsMock.useActualTTS = false
     ttsMock.playback.isPlaying = false
     ttsMock.playback.isBuffering = false
+    ttsMock.playback.isFullyBuffered = false
     ttsMock.playback.currentTime = 0
     ttsMock.playback.progress = 0
     mediaSessionMock.reset()
@@ -656,21 +658,128 @@ describe('useContinuousReader', () => {
     expect(calls.indexOf('Visible markdown 0')).toBeLessThan(calls.indexOf('Section 1'))
   })
 
-  it("warms only the next section's first unit while playing", async () => {
-    ttsClientMock.synthesizeSpeech.mockResolvedValue(new ArrayBuffer(0))
-    ttsMock.playback.isPlaying = true
+  describe('warm-ahead while playing', () => {
+    // Four units — title and three body paragraphs — so a warm-ahead capped at
+    // BUFFER_AHEAD (3) has one it must leave alone.
+    const longSection: SpeechSection = {
+      ...makeSection('long', 1),
+      markdown: [
+        '## Long',
+        '',
+        `a${LONG_PARAGRAPH}`,
+        '',
+        `b${LONG_PARAGRAPH}`,
+        '',
+        `c${LONG_PARAGRAPH}`,
+      ].join('\n'),
+    }
+    const longTexts = splitIntoSpeechUnits(longSection).map((unit) => unit.text)
+
+    const pause = () => new Promise((resolve) => setTimeout(resolve, 20))
+    const warmCalls = () =>
+      ttsClientMock.synthesizeSpeech.mock.calls.map(
+        ([text, options]) => [text, (options as { priority?: string }).priority] as const
+      )
+
+    it('while playing, warms nothing until the current section is fully buffered', async () => {
+      ttsClientMock.synthesizeSpeech.mockResolvedValue(new ArrayBuffer(0))
+      ttsMock.playback.isPlaying = true
+      ttsMock.playback.isFullyBuffered = false
+      const items = [makeItem(0), makeItem(1), makeItem(2)]
+      const { rerender } = renderReader(items)
+
+      await pause()
+      // The section being read has the synthesis queue to itself: not the next
+      // section's first unit, no wide tier, not the current section's units.
+      expect(ttsClientMock.synthesizeSpeech).not.toHaveBeenCalled()
+
+      // Its last unit lands: now the seam into the next section is warmed.
+      ttsMock.playback.isFullyBuffered = true
+      act(() => rerender({ items }))
+      await waitFor(() => expect(ttsClientMock.synthesizeSpeech).toHaveBeenCalled())
+      expect(warmCalls()[0]).toEqual(['Section 1', 'warm'])
+    })
+
+    it("once fully buffered, warms the next section's first units one at a time at warm priority", async () => {
+      expect(longTexts).toHaveLength(4)
+      const { events, requestsByText } = setupPendingSynthesis()
+      ttsMock.playback.isPlaying = true
+      ttsMock.playback.isFullyBuffered = true
+      renderReader([makeItem(0), longSection, makeItem(2)])
+      const synthesized = () => events.filter((event) => event.startsWith('synthesize:'))
+
+      // Each request only after the previous one settled: exactly one in flight.
+      for (const [index, text] of longTexts.slice(0, 3).entries()) {
+        await waitFor(() => expect(synthesized()).toHaveLength(index + 1))
+        expect(synthesized().at(-1)).toBe(`synthesize:${text}`)
+        await pause()
+        expect(synthesized()).toHaveLength(index + 1)
+        await act(async () => {
+          requestsByText.get(text)!.resolve(new ArrayBuffer(0))
+        })
+      }
+      await pause()
+
+      // BUFFER_AHEAD of them and no more; nothing of the wide tiers.
+      expect(warmCalls()).toEqual(longTexts.slice(0, 3).map((text) => [text, 'warm']))
+    })
+
+    it('warms only the units a short next section has', async () => {
+      ttsClientMock.synthesizeSpeech.mockResolvedValue(new ArrayBuffer(0))
+      ttsMock.playback.isPlaying = true
+      ttsMock.playback.isFullyBuffered = true
+      renderReader([makeItem(0), makeItem(1), makeItem(2)])
+
+      await waitFor(() => expect(ttsClientMock.synthesizeSpeech).toHaveBeenCalledTimes(2))
+      await pause()
+
+      expect(warmCalls()).toEqual([
+        ['Section 1', 'warm'],
+        ['Visible markdown 1', 'warm'],
+      ])
+    })
+
+    it('warms nothing on the last section', async () => {
+      ttsClientMock.synthesizeSpeech.mockResolvedValue(new ArrayBuffer(0))
+      ttsMock.playback.isPlaying = true
+      ttsMock.playback.isFullyBuffered = true
+      renderReader([makeItem(0)])
+
+      await pause()
+      expect(ttsClientMock.synthesizeSpeech).not.toHaveBeenCalled()
+    })
+  })
+
+  it('idle tiers run one at a time at warm priority', async () => {
+    const { events, requestsByText } = setupPendingSynthesis()
     renderReader([makeItem(0), makeItem(1), makeItem(2)])
 
-    const warmed = () =>
-      ttsClientMock.synthesizeSpeech.mock.calls.map(([text]) => text as string)
+    // T1 current title + TLDR, T2 every title, T3 every TLDR — texts already
+    // warmed in an earlier tier are cache hits and make no new request.
+    const expected = [
+      'News',
+      'Visible markdown 0',
+      'Section 1',
+      'Section 2',
+      'Visible markdown 1',
+      'Visible markdown 2',
+    ]
+    const synthesized = () => events.filter((event) => event.startsWith('synthesize:'))
+    for (const [index, text] of expected.entries()) {
+      await waitFor(() => expect(synthesized()).toHaveLength(index + 1))
+      expect(synthesized().at(-1)).toBe(`synthesize:${text}`)
+      await new Promise((resolve) => setTimeout(resolve, 20))
+      expect(synthesized()).toHaveLength(index + 1)
+      await act(async () => {
+        requestsByText.get(text)!.resolve(new ArrayBuffer(0))
+      })
+    }
 
-    await waitFor(() => expect(warmed()).toContain('Section 1'))
-    await new Promise((resolve) => setTimeout(resolve, 20))
-
-    // The wide tiers stay out of playback's way: no other section's title, no
-    // TLDR tier, and not even the current section's own units (that runway
-    // belongs to useTTS's BUFFER_AHEAD).
-    expect(warmed()).toEqual(['Section 1'])
+    const priorities = ttsClientMock.synthesizeSpeech.mock.calls.map(
+      ([, options]) => (options as { priority?: string }).priority
+    )
+    expect(priorities.length).toBeGreaterThan(0)
+    expect(priorities.every((priority) => priority === 'warm')).toBe(true)
   })
 
   it('aborts in-flight warms when the player starts buffering', async () => {

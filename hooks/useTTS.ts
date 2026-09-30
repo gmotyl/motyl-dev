@@ -167,8 +167,10 @@ export interface TTSPlayback extends TTSState {
 
 const detectLanguage = detectLanguageFromContent
 
-// Number of chunks to keep buffered ahead of current playback
-const BUFFER_AHEAD = 3
+// Number of chunks to keep buffered ahead of current playback. Exported because
+// the reader's warm-ahead of the next section is the same runway, seen from the
+// other side of a handoff: it warms exactly what this hook will ask for first.
+export const BUFFER_AHEAD = 3
 
 // A chunk whose synthesis fails (even after lib/tts-client's own
 // fresh-connection retry — see STREAM_STALL_TIMEOUT_MS) is skipped rather than
