@@ -146,12 +146,25 @@ export function sectionRelativePosition(
   }
 }
 
+export interface TTSStopOptions {
+  /**
+   * Leave the element playing while the session and the content end. Honoured
+   * on the MSE carrier only, where the caller is about to continue this very
+   * timeline (the reader's auto-advance): the element sits at the end of its
+   * buffer and plays straight into the next section's first append, so there is
+   * no pause for the phone to see and no second `play()` to make. The src-swap
+   * carrier ignores it — the next unit there is a new `src`, and an element
+   * left running would only keep reading audio this stop is about to release.
+   */
+  keepElementRunning?: boolean
+}
+
 export interface TTSPlayback extends TTSState {
   play: () => Promise<void>
   /** Abort current audio and start at `unitIndex` of the current content. */
   playFromUnit: (unitIndex: number) => Promise<void>
   pause: () => void
-  stop: () => void
+  stop: (options?: TTSStopOptions) => void
   resume: () => Promise<void>
   readMediaPosition: () => MediaPositionSnapshot | null
   /**
@@ -1602,6 +1615,14 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         // phone can revoke the page's media status, and having none of them per
         // unit is the whole reason this carrier exists.
         if (!resuming) {
+          // Also taken on a handoff that kept the element running (see
+          // `TTSStopOptions`). The seek is kept there on purpose: the playhead
+          // sits at, or within the completion tolerance short of, the end of
+          // the finished section, which IS this unit's start — so the write
+          // lands on the same position or moves forward over a tail already
+          // counted as read. It never rewinds audio that played, and without
+          // it a playhead parked short of the boundary would be left outside
+          // this unit's span.
           carrier.seekToUnit(toCarrierIndex(index))
           // The seek MOVED the playhead; nothing was read on the way. Re-seat
           // so the next tick does not report every span between the old
@@ -2300,8 +2321,14 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   )
 
   // Stop
-  const stop = useCallback(() => {
-    pause()
+  const stop = useCallback((options?: TTSStopOptions) => {
+    // `pause()` unless the caller is continuing the MSE timeline — see
+    // `TTSStopOptions`. The session guards do not depend on the pause: the
+    // interrupt clears `sessionRef` and `isPlayingRef`, and the lines below
+    // clear `loadedUnitIndexRef`, so a tick from the still-running element is
+    // inert until the next session seats itself, exactly as it is after a
+    // running "play from here" interrupt.
+    interrupt(!(options?.keepElementRunning === true && getCarrier().kind === 'mse'))
 
     chunksRef.current = []
     charCountsRef.current = []
@@ -2338,7 +2365,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       currentChunkIndex: 0,
       totalChunks: 0,
     })
-  }, [detachUnitHandlers, pause, releaseCarrier, resetAppendQueue])
+  }, [detachUnitHandlers, getCarrier, interrupt, releaseCarrier, resetAppendQueue])
 
   // Exactly one <audio> element per hook instance, created on mount and torn
   // down (with every unit the carrier ever prepared) on unmount.

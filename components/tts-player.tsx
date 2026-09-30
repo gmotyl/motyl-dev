@@ -60,7 +60,7 @@ export function TTSPlayer({ content, title, voice, className, compact = false }:
           {isBuffering ? 'Loading...' : isPlaying ? 'Pause' : 'Read Aloud'}
         </Button>
         {isPlaying && (
-          <Button onClick={stop} variant="ghost" size="sm" title="Stop reading">
+          <Button onClick={() => stop()} variant="ghost" size="sm" title="Stop reading">
             <Square className="h-4 w-4" />
           </Button>
         )}
@@ -116,7 +116,7 @@ export function TTSPlayer({ content, title, voice, className, compact = false }:
             )}
           </Button>
           <Button
-            onClick={stop}
+            onClick={() => stop()}
             variant="outline"
             size="sm"
             disabled={!isPlaying && progress === 0}

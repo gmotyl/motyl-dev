@@ -481,6 +481,83 @@ describe('section handoffs on the MSE carrier', () => {
     expect(mse.created).toBe(sourcesAtStart)
   })
 
+  it('an auto-advance handoff does not pause the element', async () => {
+    /**
+     * The handoff's other boundary. Continuing the timeline removed the `src`
+     * assignment, but a `pause()` at the section's end still hands the phone a
+     * paused element and makes the next section START it again — and device
+     * logs put the first synthesis after that pause/start pair at the head of
+     * most dead edge-tts clusters. The element is left running instead: it is
+     * sitting at the end of its buffer, and the next section's first append is
+     * what it plays into.
+     *
+     * Paired like everything in this file: "pause was not called" is also what
+     * a reader that never reached the next section would show, so the next
+     * section has to be audibly under way on the same element.
+     */
+    const items = [makeItem(0), makeItem(1)]
+    const { result } = renderReader(items)
+    await startFirstSection(result, items)
+
+    const firstSectionUnits = unitCount(items[0])
+    const sourcesAtStart = mse.created
+    // Baselined past the in-gesture unlock poke of the first play(), which
+    // spends a play()/pause() pair of its own.
+    const pausesAtStart = audioPause.mock.calls.length
+    const playsAtStart = audioPlay.mock.calls.length
+
+    await playOutOnMse(items)
+
+    await waitFor(() => expect(result.current.currentIndex).toBe(1))
+    await waitFor(() =>
+      expect(mse.appended.length).toBe(firstSectionUnits + unitCount(items[1]))
+    )
+    await waitFor(() => expect(result.current.isPlaying).toBe(true))
+    const newSectionStart = firstSectionUnits * mse.spanSeconds
+    await waitFor(() =>
+      expect(currentAudio().currentTime).toBeGreaterThanOrEqual(newSectionStart)
+    )
+
+    // Never paused, so never started a second time either: the element simply
+    // carried on into the new section.
+    expect(audioPause.mock.calls).toHaveLength(pausesAtStart)
+    expect(audioPlay.mock.calls).toHaveLength(playsAtStart)
+    expect(currentAudio().paused).toBe(false)
+    expect(mse.created).toBe(sourcesAtStart)
+
+    // And the finished session did not come back through the running element:
+    // a tick inside the new section is booked against the new section.
+    await emitTimeUpdate(newSectionStart + 2)
+    expect(result.current.currentIndex).toBe(1)
+    expect(result.current.currentChunkIndex).toBe(0)
+    expect(result.current.isPlaying).toBe(true)
+  })
+
+  it('play-from-here still pauses before rebuilding', async () => {
+    /**
+     * The inverse control for the test above. A tap is a user-chosen boundary
+     * with the screen on, and it rebuilds the timeline — an element left
+     * running there would keep reading the abandoned buffer until the new
+     * source landed. So the pause stays, and it comes BEFORE the rebuild.
+     */
+    const items = [makeItem(0), makeItem(1)]
+    const { result } = renderReader(items)
+    await startFirstSection(result, items)
+
+    const pausesAtStart = audioPause.mock.calls.length
+    const sourcesAtStart = mse.created
+
+    act(() => result.current.playFrom(1))
+    await waitFor(() => expect(result.current.currentIndex).toBe(1))
+    await waitFor(() => expect(mse.appended.length).toBe(unitCount(items[1])))
+
+    expect(mse.created).toBe(sourcesAtStart + 1)
+    expect(audioPause.mock.calls.length).toBeGreaterThan(pausesAtStart)
+    const pausedAt = audioPause.mock.invocationCallOrder[pausesAtStart]
+    const rebuiltAt = vi.mocked(createMseCarrier).mock.invocationCallOrder.at(-1)!
+    expect(pausedAt).toBeLessThan(rebuiltAt)
+  })
+
   it('rebuilds the timeline on play-from-here', async () => {
     /**
      * The inverse control, and the reason the test above cannot be passed by an

@@ -411,6 +411,27 @@ describe('useTTS on the MSE carrier', () => {
     expect(srcAssignments).toHaveLength(srcAtStart)
   })
 
+  it('keeps the element running on a stop that asks it to', async () => {
+    /**
+     * The handoff form of `stop()`: the session and the content end exactly as
+     * on any stop, but the element is not paused, because the next section
+     * continues this timeline and plays into it.
+     */
+    const { result } = renderHook(() => useTTS('irrelevant content', { units: UNITS }))
+    await startAllThree(result)
+
+    const pausesBefore = audioPause.mock.calls.length
+    act(() => {
+      result.current.stop({ keepElementRunning: true })
+    })
+
+    expect(audioPause.mock.calls).toHaveLength(pausesBefore)
+    expect(mediaPaused).toBe(false)
+    // Everything else a stop does still happened.
+    expect(result.current.isPlaying).toBe(false)
+    expect(result.current.totalChunks).toBe(0)
+  })
+
   it('resumes from the stop point without an offset', async () => {
     /**
      * `pauseOffset` exists on the src-swap path only because a `src`

@@ -234,4 +234,28 @@ describe('useTTS carrier seam', () => {
     expect(element.hasAttribute('src')).toBe(false)
     expect(element.src).toBe('')
   })
+
+  it('keepElementRunning is ignored on the src-swap carrier', async () => {
+    /**
+     * The option exists for one continuous timeline, where the next section
+     * plays into the buffer the element is already reading. Here a unit is a
+     * file and the next section's first unit is a new `src` anyway, so an
+     * element left running would only keep reading audio that `stop()` is
+     * about to release.
+     */
+    const { result } = renderHook(() => useTTS('Hello world.'))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(srcAssignments).toHaveLength(1))
+    const pausesBefore = audioPause.mock.calls.length
+
+    act(() => {
+      result.current.stop({ keepElementRunning: true })
+    })
+
+    expect(audioPause.mock.calls).toHaveLength(pausesBefore + 1)
+    expect(result.current.isPlaying).toBe(false)
+  })
 })

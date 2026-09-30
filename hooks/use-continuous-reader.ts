@@ -310,7 +310,13 @@ export function useContinuousReader(
       // only decides on the release, and the release reads this value once the
       // commit carrying it has landed.
       setContinuesTimeline(continuesTheTimeline)
-      playbackRef.current?.stop()
+      // A continued timeline also keeps the ELEMENT running: it is at the end
+      // of its buffer and plays into the next section's first append, so the
+      // phone sees neither a pause nor a second start at the boundary (device
+      // logs put most dead synthesis clusters right after that pair). Every
+      // other start rebuilds, and pausing first keeps the abandoned buffer
+      // silent until the new one lands.
+      playbackRef.current?.stop(continuesTheTimeline ? { keepElementRunning: true } : undefined)
       setError(null)
 
       if (reportChange) {
