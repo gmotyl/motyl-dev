@@ -880,7 +880,12 @@ export function useContinuousReader(
   useMediaSession({
     active: hasQueue,
     metadata: mediaMetadata,
-    playbackState: isPlaying ? 'playing' : hasQueue ? 'paused' : 'none',
+    // A handoff is not a pause, for the same reason it does not drop the wake
+    // lock (see `isHandingOff`): `useTTS` reports the finished section a commit
+    // or two before the next one starts, and the OS controls — the lock screen,
+    // a car head unit over AVRCP — would see `paused` then `playing` at every
+    // section boundary of a run nobody stopped.
+    playbackState: isPlaying || isHandingOff ? 'playing' : hasQueue ? 'paused' : 'none',
     readPosition: readMediaPosition,
     handlers: mediaHandlers,
   })

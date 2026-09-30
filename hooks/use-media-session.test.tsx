@@ -950,4 +950,53 @@ describe('useMediaSession diagnostic log', () => {
     unmount()
     expect(readReaderLog()).toEqual([])
   })
+
+  describe('playback state writes', () => {
+    /**
+     * Every value written through the `playbackState` setter, in order. Like
+     * the metadata, each write is forwarded to the browser process and on to
+     * the OS media controls, so a `none` in between two real states is a
+     * transient the lock screen and a car head unit both see.
+     */
+    let playbackStateWrites: string[]
+
+    beforeEach(() => {
+      playbackStateWrites = []
+      let value = mediaSession.playbackState
+      Object.defineProperty(mediaSession, 'playbackState', {
+        configurable: true,
+        get: () => value,
+        set: (next: string) => {
+          value = next
+          playbackStateWrites.push(next)
+        },
+      })
+    })
+
+    it('a value change does not write a transient none', () => {
+      const { rerender } = renderHook(
+        (options: UseMediaSessionOptions) => useMediaSession(options),
+        { initialProps: baseOptions({ playbackState: 'playing' }) },
+      )
+
+      rerender(baseOptions({ playbackState: 'paused' }))
+      rerender(baseOptions({ playbackState: 'playing' }))
+
+      expect(playbackStateWrites).toEqual(['playing', 'paused', 'playing'])
+      expect(lines('mediasession-playbackstate')).toEqual(['playing', 'paused', 'playing'])
+    })
+
+    it('unmount still releases the playback state', () => {
+      const { rerender, unmount } = renderHook(
+        (options: UseMediaSessionOptions) => useMediaSession(options),
+        { initialProps: baseOptions({ playbackState: 'playing' }) },
+      )
+      rerender(baseOptions({ playbackState: 'paused' }))
+
+      unmount()
+
+      expect(playbackStateWrites).toEqual(['playing', 'paused', 'none'])
+      expect(lines('mediasession-playbackstate')).toEqual(['playing', 'paused', 'none (release)'])
+    })
+  })
 })

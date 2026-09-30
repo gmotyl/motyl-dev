@@ -287,7 +287,11 @@ export function useMediaSession({
     }
   }, [active, token])
 
-  // Owns playbackState, including resetting it on teardown.
+  // Publishes playbackState. Deliberately without a cleanup, like the metadata:
+  // a cleanup here runs on every VALUE change too, and it wrote `none` between
+  // two real states — device logs showed each section handoff cycling the OS
+  // controls through `none (release)` → `paused` → `playing`. A change is one
+  // write of the new value; teardown is the next effect's job.
   useEffect(() => {
     const session = getMediaSession()
     if (!session || !active) return
@@ -295,13 +299,22 @@ export function useMediaSession({
 
     logReaderEvent('mediasession-playbackstate', playbackState)
     session.playbackState = playbackState
+  }, [active, playbackState, token])
+
+  // Releases playbackState on deactivate/unmount only, through the same
+  // ownership guard: a former owner going away must not reset the state the
+  // current owner published.
+  useEffect(() => {
+    const session = getMediaSession()
+    if (!session || !active) return
+    owner = token
 
     return () => {
       if (owner !== token) return
       logReaderEvent('mediasession-playbackstate', 'none (release)')
       session.playbackState = 'none'
     }
-  }, [active, playbackState, token])
+  }, [active, token])
 
   /**
    * Publishes the position state, through the same ownership guard as

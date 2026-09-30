@@ -6,6 +6,7 @@ import { synthesizeSpeech } from '@/lib/tts/client'
 import { createMseCarrier } from '@/lib/reader/mse-carrier'
 import type { SeamReport } from '@/lib/reader/seam-report'
 import { useContinuousReader } from './use-continuous-reader'
+import { useMediaSession } from './use-media-session'
 
 /**
  * What a SECTION HANDOFF costs, end to end — the reader, `useTTS` and the real
@@ -531,6 +532,76 @@ describe('section handoffs on the MSE carrier', () => {
     expect(result.current.currentIndex).toBe(1)
     expect(result.current.currentChunkIndex).toBe(0)
     expect(result.current.isPlaying).toBe(true)
+  })
+
+  it('the media session is not written across an auto-advance handoff', async () => {
+    /**
+     * The OS-facing half of the handoff. Device logs show every handoff
+     * cycling the lock screen through `none (release)` → `paused` → `playing`:
+     * `useTTS` drops `isPlaying` for the commit or two before the next section
+     * starts, and the media-session hook tore its state down on each value
+     * change. From the listener's side nothing stopped, so nothing may be
+     * written.
+     *
+     * The real `useMediaSession` runs here, against a stubbed
+     * `navigator.mediaSession`, because the claim is about the two hooks
+     * together: the reader's state could stay `playing` while the hook still
+     * wrote, or the hook could stay quiet while the reader's state blinked.
+     * This file's mock is swapped for the real hook for this test alone, and
+     * put back (after the unmount, so the hook count never changes under a
+     * mounted reader) before the next one.
+     */
+    const actual = await vi.importActual<typeof import('./use-media-session')>(
+      './use-media-session'
+    )
+    const playbackStateWrites: string[] = []
+    let playbackStateValue = 'none'
+    Object.defineProperty(navigator, 'mediaSession', {
+      configurable: true,
+      writable: true,
+      value: {
+        metadata: null,
+        get playbackState() {
+          return playbackStateValue
+        },
+        set playbackState(next: string) {
+          playbackStateValue = next
+          playbackStateWrites.push(next)
+        },
+        setActionHandler: vi.fn(),
+        setPositionState: vi.fn(),
+      },
+    })
+    vi.mocked(useMediaSession).mockImplementation(actual.useMediaSession)
+
+    const items = [makeItem(0), makeItem(1)]
+    const { result, unmount } = renderReader(items)
+    try {
+      await startFirstSection(result, items)
+      await waitFor(() => expect(playbackStateWrites.at(-1)).toBe('playing'))
+      const writesBeforeHandoff = playbackStateWrites.length
+
+      await playOutOnMse(items)
+      await waitFor(() => expect(result.current.currentIndex).toBe(1))
+      await waitFor(() =>
+        expect(mse.appended.length).toBe(unitCount(items[0]) + unitCount(items[1]))
+      )
+      await waitFor(() => expect(result.current.isPlaying).toBe(true))
+      await settle()
+
+      // Not a single write between the section's end and the next one playing.
+      expect(playbackStateWrites.slice(writesBeforeHandoff)).toEqual([])
+
+      // The pairing: a real stop is still published, so the silence above is
+      // the handoff's and not a hook that stopped writing altogether.
+      act(() => result.current.stop())
+      await settle()
+      expect(playbackStateWrites.slice(writesBeforeHandoff)).toEqual(['paused'])
+    } finally {
+      unmount()
+      vi.mocked(useMediaSession).mockReset()
+      delete (navigator as unknown as Record<string, unknown>).mediaSession
+    }
   })
 
   it('play-from-here still pauses before rebuilding', async () => {
