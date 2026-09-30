@@ -164,6 +164,40 @@ describe('ReaderDiagnosticPanel', () => {
     expect(screen.queryByRole('textbox')).toBeNull()
   })
 
+  describe('build line', () => {
+    /**
+     * 2026-09-30: a log copied from a page that had not been reloaded since a
+     * deploy described code that was no longer live. The header names the
+     * build so a log is read against the code that produced it.
+     */
+    afterEach(() => vi.unstubAllEnvs())
+
+    const copyHeader = async () => {
+      const user = userEvent.setup()
+      const writeText = vi.fn().mockResolvedValue(undefined)
+      stubClipboard(writeText)
+      enableFlag()
+      render(<ReaderDiagnosticPanel />)
+      await user.click(screen.getByRole('button', { name: 'Copy log' }))
+      await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1))
+      return (writeText.mock.calls[0][0] as string).split('\n')
+    }
+
+    it('names the build in the copied header', async () => {
+      vi.stubEnv('NEXT_PUBLIC_BUILD_SHA', 'abc1234')
+      const lines = await copyHeader()
+      // Directly after the title line.
+      expect(lines[0]).toBe('motyl.dev reader diagnostic log')
+      expect(lines[1]).toBe('build: abc1234')
+    })
+
+    it('says unknown when no build is set', async () => {
+      vi.stubEnv('NEXT_PUBLIC_BUILD_SHA', undefined)
+      const lines = await copyHeader()
+      expect(lines[1]).toBe('build: unknown')
+    })
+  })
+
   it('falls back to a selectable textarea when the clipboard rejects', async () => {
     const user = userEvent.setup()
     const writeText = vi.fn().mockRejectedValue(new DOMException('denied', 'NotAllowedError'))

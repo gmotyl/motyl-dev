@@ -25,11 +25,17 @@ export interface ReaderDiagnosticPanelProps {
  * The user agent is load-bearing, not decoration — which Chrome/Edge build is
  * running decides which page-lifecycle behaviours apply at all, and the whole
  * point of the instrument is to attribute a screen-off failure to one of them.
+ *
+ * The build line is load-bearing too: a page that was never reloaded after a
+ * deploy keeps running the old code, so its log describes code that is no
+ * longer live (observed 2026-09-30). `NEXT_PUBLIC_BUILD_SHA` is inlined at
+ * build time by `next.config.ts`.
  */
 function buildExportText(snapshot: readonly ReaderLogEntry[]): string {
   const userAgent = typeof navigator === 'undefined' ? 'unknown' : navigator.userAgent
   const header = [
     'motyl.dev reader diagnostic log',
+    `build: ${process.env.NEXT_PUBLIC_BUILD_SHA || 'unknown'}`,
     `copied: ${new Date().toISOString()}`,
     `flag: ${READER_LOG_FLAG}=${isReaderLogEnabled() ? 'on' : 'off'}`,
     `entries: ${snapshot.length}/${READER_LOG_CAPACITY}`,

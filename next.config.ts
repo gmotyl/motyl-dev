@@ -3,6 +3,11 @@ import { getAllContentMetadata } from './lib/content/articles'
 import { ItemType } from './lib/content/types'
 
 const nextConfig: NextConfig = {
+  // Inlined into the client bundle so a copied reader log names the build that
+  // produced it: a page never reloaded after a deploy still runs the old code.
+  env: {
+    NEXT_PUBLIC_BUILD_SHA: (process.env.VERCEL_GIT_COMMIT_SHA || 'local').slice(0, 7),
+  },
   experimental: {
     viewTransition: true,
   },
