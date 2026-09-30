@@ -924,13 +924,26 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         detailFor(unit, `${document.visibilityState}${options?.retry ? ' (retry)' : ''}`)
       )
 
+      // The client runs one synthesis at a time, so the total splits into
+      // waiting for the slot and synthesizing; `onStart` marks the boundary.
+      // A client that never reports a start gets no wait claimed for it.
+      let queueStartedAt: number | undefined
+      const elapsed = () =>
+        `${Date.now() - startedAt}ms` +
+        (queueStartedAt === undefined ? '' : ` (queued ${queueStartedAt - startedAt}ms)`)
+
       let arrayBuffer: ArrayBuffer
       try {
-        arrayBuffer = await synthesizeSpeech(text, { voice: detectedVoice })
+        arrayBuffer = await synthesizeSpeech(text, {
+          voice: detectedVoice,
+          onStart: () => {
+            queueStartedAt = Date.now()
+          },
+        })
       } catch (error) {
         logReaderEvent(
           'synth-end',
-          detailFor(unit, `failed after ${Date.now() - startedAt}ms, ${document.visibilityState}`)
+          detailFor(unit, `failed after ${elapsed()}, ${document.visibilityState}`)
         )
         throw error
       }
@@ -938,14 +951,11 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       if (signal.aborted) {
         logReaderEvent(
           'synth-end',
-          detailFor(unit, `${Date.now() - startedAt}ms, dropped (aborted), ${document.visibilityState}`)
+          detailFor(unit, `${elapsed()}, dropped (aborted), ${document.visibilityState}`)
         )
         throw new DOMException('Aborted', 'AbortError')
       }
-      logReaderEvent(
-        'synth-end',
-        detailFor(unit, `${Date.now() - startedAt}ms, ${document.visibilityState}`)
-      )
+      logReaderEvent('synth-end', detailFor(unit, `${elapsed()}, ${document.visibilityState}`))
 
       // The synthesis cache (lib/tts/client) hands the SAME ArrayBuffer instance
       // to every caller for a given voice+text, so this buffer is shared and

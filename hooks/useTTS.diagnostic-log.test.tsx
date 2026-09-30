@@ -674,4 +674,105 @@ describe('useTTS diagnostic log — synthesis', () => {
       expect.stringMatching(/^synth-end 1: \d+ms, dropped \(aborted\), visible$/)
     )
   })
+
+  /**
+   * The synthesis queue (lib/tts/client) runs one socket at a time, so a unit's
+   * total now splits into waiting for the slot and synthesizing. The client
+   * reports the split through `onStart`; the clock is injected so the numbers
+   * are exact.
+   */
+  describe('queue wait', () => {
+    let now = 0
+    beforeEach(() => {
+      now = 10_000
+      vi.spyOn(Date, 'now').mockImplementation(() => now)
+    })
+
+    type Pending = { onStart?: () => void; resolve: () => void; reject: (error: Error) => void }
+    const deferSynthesis = () => {
+      const pending: Pending[] = []
+      vi.mocked(synthesizeSpeech).mockImplementation(
+        (_text: string, options?: { onStart?: () => void }) =>
+          new Promise<ArrayBuffer>((resolve, reject) => {
+            pending.push({
+              onStart: options?.onStart,
+              resolve: () => resolve(new ArrayBuffer(8)),
+              reject,
+            })
+          })
+      )
+      return pending
+    }
+
+    const startPlaying = async (onError?: () => void) => {
+      const { result } = renderHook(() =>
+        useTTS('irrelevant content', { units: ['only unit'], onError })
+      )
+      let playing: Promise<void> = Promise.resolve()
+      act(() => {
+        playing = result.current.play()
+      })
+      await waitFor(() => expect(synthLines()).toEqual(['synth-start 0: visible']))
+      return () => playing
+    }
+
+    it('records how long a synthesis waited in the queue', async () => {
+      enableLog()
+      const pending = deferSynthesis()
+      const playing = await startPlaying()
+
+      now += 1200
+      pending[0].onStart?.()
+      now += 900
+      await act(async () => {
+        pending[0].resolve()
+        await playing()
+      })
+
+      expect(synthLines()[1]).toBe('synth-end 0: 2100ms (queued 1200ms), visible')
+
+      // The failure form carries the same split.
+      cleanup()
+      clearReaderLog()
+      const failing = deferSynthesis()
+      const failedPlay = await startPlaying(vi.fn())
+      now += 300
+      failing[0].onStart?.()
+      now += 500
+      await act(async () => {
+        failing[0].reject(new Error('socket closed'))
+        await failedPlay()
+      })
+
+      expect(synthLines()[1]).toBe('synth-end 0: failed after 800ms (queued 300ms), visible')
+    })
+
+    it('records a missing queue start consistently', async () => {
+      enableLog()
+      // A client that never reports a start: no wait is claimed, and the line
+      // is exactly what it was before the queue existed.
+      const pending = deferSynthesis()
+      const playing = await startPlaying()
+
+      now += 900
+      await act(async () => {
+        pending[0].resolve()
+        await playing()
+      })
+
+      expect(synthLines()[1]).toBe('synth-end 0: 900ms, visible')
+
+      cleanup()
+      clearReaderLog()
+      const failing = deferSynthesis()
+      const failedPlay = await startPlaying(vi.fn())
+      now += 500
+      await act(async () => {
+        failing[0].reject(new Error('socket closed'))
+        await failedPlay()
+      })
+
+      expect(synthLines()[1]).toBe('synth-end 0: failed after 500ms, visible')
+    })
+  })
 })
