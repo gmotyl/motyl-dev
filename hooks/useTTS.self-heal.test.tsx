@@ -736,6 +736,38 @@ describe('useTTS starved state — restart on wake', () => {
     await emitVisible()
     expect(restartStalledSynthesis).not.toHaveBeenCalled()
   })
+
+  it('unmounting removes the wake listener it added', async () => {
+    // Neither behaviour test can see a leaked listener: unmount runs `stop()`,
+    // which clears the starved state, so a leaked handler returns early just
+    // like a removed one. The removal itself is what is pinned here.
+    const added = vi.spyOn(document, 'addEventListener')
+    const removed = vi.spyOn(document, 'removeEventListener')
+    starveSetup({ failFirst: [UNITS[1]], held: [UNITS[1], UNITS[2], UNITS[3]] })
+    const { result, unmount } = renderHook(() => useTTS('irrelevant content', { units: UNITS }))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle()
+    await emitTimeUpdate(5)
+    await emitWaiting(10)
+
+    const listeners = added.mock.calls
+      .filter(([type]) => type === 'visibilitychange')
+      .map(([, listener]) => listener)
+    expect(listeners.length).toBeGreaterThan(0)
+
+    unmount()
+    const removedListeners = removed.mock.calls
+      .filter(([type]) => type === 'visibilitychange')
+      .map(([, listener]) => listener)
+    for (const listener of listeners) expect(removedListeners).toContain(listener)
+
+    vi.mocked(restartStalledSynthesis).mockReturnValue(true)
+    await emitVisible()
+    expect(restartStalledSynthesis).not.toHaveBeenCalled()
+  })
 })
 
 describe('useTTS starved state — retry within the failure cap', () => {

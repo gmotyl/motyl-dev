@@ -1592,26 +1592,35 @@ describe('useTTS appends in index order on the MSE carrier', () => {
     expect(firstOfType('stop-with-error')).toBeDefined()
     expect(result.current.isPlaying).toBe(false)
   })
-  it('holds later units behind an earlier one the buffer refuses', async () => {
+  it('holds later units behind an earlier one the buffer refuses, and ends at the cap', async () => {
     // The other failure a queued unit can have: its bytes arrived and the
-    // SourceBuffer rejected them. It holds its place the same way, and a retry
-    // the buffer takes lands in order.
+    // SourceBuffer rejected them. It holds its place the same way. But the real carrier (`mse-carrier.ts`)
+    // poisons its queue on a refused append and never clears the poison, so
+    // every later append — the retries of 1 included — is refused too. The
+    // mock models that by refusing everything from 1 on. The honest outcome
+    // is therefore not a recovery but the capped, loud end.
     enableLog()
-    mse.refuse = [1]
+    mse.refuse = [1, 2, 3]
+    const onError = vi.fn()
 
-    const { result } = renderHook(() => useTTS('irrelevant content', { units: FOUR }))
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: FOUR, onError })
+    )
     await act(async () => {
       await result.current.play()
     })
     await settle(16)
     expect(mse.appended).toEqual([0])
 
-    mse.refuse = []
     await emitTimeUpdate(5)
     await emitWaiting(10)
-    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2, 3]))
+    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1))
+
+    // (Not `mse.appended`: the error stop rebuilds the carrier, which empties
+    // the mock's record.)
+    expect(firstOfType('stop-with-error')).toBeDefined()
     expect(entriesOfType('synthesis-failed')).toEqual([])
-    expect(result.current.isPlaying).toBe(true)
+    expect(result.current.isPlaying).toBe(false)
   })
   it('resets the append cursor on a seek', async () => {
     /**
