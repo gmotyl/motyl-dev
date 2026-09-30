@@ -719,17 +719,19 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
    * with, and this cursor is where the wait is measured from. The src-swap
    * carrier keys units by index and never reads it.
    *
-   * The cursor waits only for a unit that is still ON ITS WAY. A unit whose
-   * synthesis or append failed is not, and it is skipped (see
-   * `abandonPendingAppend`) rather than waited for: with the playhead parked
-   * at the end of the buffer no crossing could ever reach `playChunk`, which
-   * is the only thing that retries a unit — so waiting would have parked the
-   * whole rest of the article behind a unit nothing was fetching. The retry
-   * lands where it lands; a unit heard out of place is the price of a unit
-   * that failed once, not of every unit that follows it.
+   * A unit whose BACKGROUND synthesis or append failed holds its place: the
+   * cursor keeps waiting for it and the units behind it wait in the cache.
+   * That wait is not forever — the playhead runs to the end of the unit before
+   * it, the element starves, and the starved refill asks for it again (see
+   * self-heal); the retry lands in order and the queue behind it drains.
+   * Skipping it instead let the next unit through at once, and the device log
+   * of 2026-09-30 20:18 showed the price: 19 appended straight after 16, the
+   * retry of 18 heard after it, 17 never. Only a unit that failed as the
+   * CURRENT unit is skipped (see `abandonPendingAppend`): the playhead has
+   * moved past it already.
    */
   const appendCursorRef = useRef(0)
-  /** Indices the cursor walks over without waiting: their unit is not coming. */
+  /** Indices the cursor walks over without waiting: `failUnit` moved past them. */
   const skippedAppendsRef = useRef<Set<number>>(new Set())
   /** Whoever is waiting for a queued unit's own append to settle, by index. */
   const appendWaitersRef = useRef<Map<number, Deferred>>(new Map())
@@ -766,10 +768,11 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
           await appendNow(index, data)
         } catch (error) {
           // The buffer refused it. Whoever queued it is told — a `playChunk`
-          // counts the failure, a prefetch only warns — and every one of them
-          // gives the unit up through `abandonPendingAppend`, which is what
-          // moves the cursor on and drains again. Not here: the cursor has one
-          // rule for a unit that is not coming, not one per way of failing.
+          // counts the failure and gives the unit up through
+          // `abandonPendingAppend`, which moves the cursor on; a prefetch only
+          // warns and leaves the unit holding its place for self-heal to ask
+          // for again. Not here: the cursor has one rule per caller, not one
+          // per way of failing.
           bufferCacheRef.current.delete(index)
           appendWaitersRef.current.delete(index)
           waiter?.reject(error)
@@ -785,8 +788,10 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   }, [appendNow, carrierHasUnit])
 
   /**
-   * Stop waiting for `index`: its synthesis or append failed, so nothing is
-   * bringing it. The units queued behind it are drained at once.
+   * Stop waiting for `index`: it failed as the CURRENT unit and `failUnit` has
+   * moved the playhead past it. The units queued behind it are drained at
+   * once. A background failure does not come here — it holds its place until
+   * self-heal re-requests it (see `appendCursorRef`).
    */
   const abandonPendingAppend = useCallback(
     (index: number) => {
@@ -1096,9 +1101,10 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   /**
    * Trigger (b) of the starved state: a background synthesis of the CURRENT
    * session failed (the caller has already dropped a superseded session's
-   * failure and given the unit up in the append queue). Outside the starved
-   * state that only warns — `playChunk` retries the unit when the playhead
-   * reaches it. While starved the playhead never will, so the failure counts
+   * failure; the unit keeps its place in the append queue). Outside the
+   * starved state that only warns — the starved refill asks for the unit again
+   * when the playhead reaches the gap. While starved that refill has already
+   * run, so the failure counts
    * against the same streak `failUnit` uses and the unit is asked for again;
    * past the cap the session ends loudly instead of retrying forever.
    *
@@ -1157,18 +1163,17 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
             // failure: giving the unit up here would do it in the NEXT
             // session's append queue, whose own request for it is still coming.
             if (generation !== requestGenerationRef.current || signal.aborted) return
-            // The unit is not coming; the ones queued behind it must not
-            // wait for it. `playChunk` retries it in its turn and counts a
-            // second failure there — unless the element is starved, and its
-            // turn never comes.
-            abandonPendingAppend(i)
+            // The unit holds its place: the ones queued behind it wait for
+            // it, and the playhead running dry at the gap is what asks for it
+            // again (the starved refill). Already starved, that refill has
+            // run — so the failure is counted and the unit asked for here.
             if (retryWhileStarved(err as Error)) {
               fillBuffer(i, generation, signal, { retry: true })
             }
           })
       }
     },
-    [abandonPendingAppend, carrierHasUnit, fetchUnitAudio, prepareUnit, retryWhileStarved]
+    [carrierHasUnit, fetchUnitAudio, prepareUnit, retryWhileStarved]
   )
 
   /**
@@ -2100,10 +2105,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
             inFlight.delete(i)
             if ((err as Error).name === 'AbortError') return
             // As in `fillBuffer`: a failure of a session already over is that
-            // session's, and otherwise the unit is not coming, so the ones
-            // queued behind it are not to wait for it.
+            // session's, and otherwise the unit holds its place in the append
+            // queue until self-heal asks for it again.
             if (generation !== requestGenerationRef.current || signal.aborted) return
-            abandonPendingAppend(i)
             if (retryWhileStarved(err as Error)) {
               fillBuffer(i, generation, signal, { retry: true })
             }
@@ -2117,7 +2121,6 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     pauseOffsetRef.current = 0
     void playChunk(startIdx, offset, generation, signal)
   }, [
-    abandonPendingAppend,
     armDiagnostics,
     carrierHasUnit,
     ensureChunks,

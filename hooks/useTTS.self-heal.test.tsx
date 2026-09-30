@@ -379,7 +379,7 @@ describe('useTTS in-flight synthesis across sessions', () => {
 
 /**
  * The production shape of a starve: a unit's prefetch failed while the element
- * was still playing buffered media, so it only warned and was abandoned —
+ * was still playing buffered media, so it only warned and held its place —
  * nothing asks for it again until the playhead reaches it, and on one
  * continuous timeline the playhead never does: the element runs out of data at
  * the end of what was appended and says `waiting`, once.
@@ -861,10 +861,115 @@ describe('useTTS starved state — retry within the failure cap', () => {
     expect(entriesOfType('stop-with-error')).toHaveLength(0)
     expect(onError).not.toHaveBeenCalled()
     expect(result.current.isPlaying).toBe(true)
-    // All of it lands. Unit 1 lands last: 2 and 3 arrived while it was still
-    // failing, and the cursor does not wait for a unit that is not coming —
-    // the known gap of a retried unit, unchanged here.
-    await waitFor(() => expect([...mse.appended].sort()).toEqual([0, 1, 2, 3]))
+    // All of it lands, in order: 2 and 3 arrived while unit 1 was still
+    // failing, and waited for it — a background failure holds its place.
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2, 3]))
+  })
+})
+
+/**
+ * The element reports it cannot play what it holds — the entry into
+ * `failUnit` for the CURRENT unit that needs no boundary crossing.
+ */
+const failCurrentUnitInElement = async (turns = 12) => {
+  await act(async () => {
+    currentAudio().dispatchEvent(new Event('error'))
+    for (let i = 0; i < turns; i += 1) await Promise.resolve()
+  })
+}
+
+describe('useTTS append order — a failed unit holds its place', () => {
+  it('a background failure holds its place in the append order', async () => {
+    enableLog()
+    // Unit 1's prefetch fails while unit 0 still plays; 2 and 3 resolve at once.
+    const synth = starveSetup({ failFirst: [UNITS[1]], held: [UNITS[1]] })
+    const { result } = renderHook(() => useTTS('irrelevant content', { units: UNITS }))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle(16)
+    // 2 and 3 have their bytes — and wait behind the unit that failed.
+    expect(synth.calls(UNITS[2])).toBe(1)
+    expect(synth.calls(UNITS[3])).toBe(1)
+    expect(mse.appended).toEqual([0])
+
+    // The playhead reaches the gap: the starved refill asks for 1 again, and
+    // only 1 — the units behind it are held, not lost.
+    await emitTimeUpdate(5)
+    await emitWaiting(10)
+    expect(synth.calls(UNITS[1])).toBe(2)
+    expect(synth.calls(UNITS[2])).toBe(1)
+    expect(synth.calls(UNITS[3])).toBe(1)
+    expect(mse.appended).toEqual([0])
+
+    await synth.release(UNITS[1], 0)
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2, 3]))
+    expect(result.current.isPlaying).toBe(true)
+  })
+
+  it('units that failed before the starve are appended in order after recovery', async () => {
+    // The 2026-09-30 20:18 device shape: two consecutive units fail in the
+    // background, the one after them arrives and must not jump the queue.
+    enableLog()
+    const synth = starveSetup({
+      failFirst: [UNITS[1], UNITS[2]],
+      held: [UNITS[1], UNITS[2]],
+    })
+    const { result } = renderHook(() => useTTS('irrelevant content', { units: UNITS }))
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle(16)
+    expect(synth.calls(UNITS[3])).toBe(1)
+    expect(mse.appended).toEqual([0])
+
+    await emitTimeUpdate(5)
+    await emitWaiting(10)
+    expect(synth.calls(UNITS[1])).toBe(2)
+    expect(synth.calls(UNITS[2])).toBe(2)
+    expect(synth.calls(UNITS[3])).toBe(1)
+
+    // The retries come back out of order: 2 first. It waits for 1 as well.
+    await synth.release(UNITS[2], 0)
+    expect(mse.appended).toEqual([0])
+    await synth.release(UNITS[1], 0)
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2, 3]))
+    expect(result.current.isPlaying).toBe(true)
+  })
+
+  it('a unit that fails as the current unit is still skipped', async () => {
+    enableLog()
+    // Unit 1's read-ahead request stays in flight; 2 and 3 wait behind it.
+    const synth = holdSynthesis([UNITS[1]])
+    const onError = vi.fn()
+    const { result } = renderHook(() =>
+      useTTS('irrelevant content', { units: UNITS, onError })
+    )
+
+    await act(async () => {
+      await result.current.play()
+    })
+    await settle(16)
+    expect(mse.appended).toEqual([0])
+
+    // The element drops unit 0, so the hook moves on to unit 1 and asks for it
+    // itself; that request fails as the CURRENT unit's.
+    await failCurrentUnitInElement()
+    expect(synth.calls(UNITS[1])).toBe(2)
+    await synth.fail(UNITS[1], 1)
+
+    // The playhead has moved past it: counted, skipped, and the next unit is
+    // appended in its turn (and the read-ahead from unit 2 brings 4).
+    await waitFor(() => expect(mse.appended).toEqual([0, 2, 3, 4]))
+    expect(entriesOfType('synthesis-failed').map((entry) => entry.detail)).toEqual([
+      expect.stringMatching(/^0: /),
+      expect.stringMatching(/^1: /),
+    ])
+    expect(result.current.currentChunkIndex).toBe(2)
+    expect(result.current.isPlaying).toBe(true)
+    expect(onError).not.toHaveBeenCalled()
   })
 })
 
