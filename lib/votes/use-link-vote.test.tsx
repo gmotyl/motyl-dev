@@ -176,6 +176,123 @@ describe('useLinkVote', () => {
   })
 })
 
+describe('useLinkVote seeding and robustness', () => {
+  let fetchMock: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    resetLinkVotesForTests()
+    localStorage.clear()
+    fetchMock = vi.fn(async () => okResponse({ vote: { voteCount: 13 }, isNew: false, newRank: 5 }))
+    vi.stubGlobal('fetch', fetchMock)
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+
+  it('lets a real count beat an earlier 0 placeholder seed (article -> trending)', async () => {
+    // Article page seeds the link with a 0 placeholder and unmounts (client navigation).
+    const article = renderHook(() => useLinkVote(URL_A, 0))
+    article.unmount()
+
+    // /trending seeds the real count for the same link.
+    const trending = renderHook(() => useLinkVote(URL_A, 12))
+    await waitFor(() => expect(trending.result.current.count).toBe(12))
+  })
+
+  it('re-seeds when initialCount changes on the same instance', async () => {
+    const { result, rerender } = renderHook(({ n }) => useLinkVote(URL_A, n), { initialProps: { n: 0 } })
+    expect(result.current.count).toBe(0)
+    rerender({ n: 12 })
+    await waitFor(() => expect(result.current.count).toBe(12))
+  })
+
+  it('never lowers a stored count with a lower seed', async () => {
+    renderHook(() => useLinkVote(URL_A, 12))
+    const later = renderHook(() => useLinkVote(URL_A, 3))
+    // Give the seed effect a chance to run.
+    await act(async () => {})
+    expect(later.result.current.count).toBe(12)
+  })
+
+  it('treats a missing initialCount as unknown (0 until seeded) without lowering a stored count', async () => {
+    const unknown = renderHook(() => useLinkVote(URL_B))
+    expect(unknown.result.current.count).toBe(0)
+
+    renderHook(() => useLinkVote(URL_A, 12))
+    const strip = renderHook(() => useLinkVote(URL_A))
+    await act(async () => {})
+    expect(strip.result.current.count).toBe(12)
+  })
+
+  it('ignores a seed that arrives while a vote is pending', async () => {
+    let resolve!: (r: Response) => void
+    fetchMock.mockImplementationOnce(() => new Promise<Response>(r => { resolve = r }))
+    const { result } = renderHook(() => useLinkVote(URL_A, 5))
+
+    let promise!: Promise<unknown>
+    act(() => {
+      promise = result.current.vote(payload(URL_A))
+    })
+    expect(result.current.count).toBe(6)
+
+    const other = renderHook(() => useLinkVote(URL_A, 20))
+    await act(async () => {})
+    expect(other.result.current).toMatchObject({ count: 6, pending: true })
+
+    await act(async () => {
+      resolve(okResponse({ vote: { voteCount: 21 }, newRank: 5 }))
+      await promise
+    })
+    expect(other.result.current).toMatchObject({ count: 21, pending: false })
+  })
+
+  it('fetches once when two separate instances vote concurrently for the same URL', async () => {
+    const first = renderHook(() => useLinkVote(URL_A, 5))
+    const second = renderHook(() => useLinkVote(URL_A, 5))
+
+    await act(async () => {
+      await Promise.all([
+        first.result.current.vote(payload(URL_A)),
+        second.result.current.vote(payload(URL_A)),
+      ])
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(first.result.current).toMatchObject({ count: 13, voted: true, pending: false })
+  })
+
+  it('does not roll back a recorded vote when localStorage throws after success', async () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceededError')
+    })
+    const { result } = renderHook(() => useLinkVote(URL_A, 5))
+
+    let returned: number | null = null
+    await act(async () => {
+      returned = await result.current.vote(payload(URL_A))
+    })
+
+    expect(Storage.prototype.setItem).toHaveBeenCalled()
+    expect(returned).toBe(13)
+    expect(result.current).toMatchObject({ count: 13, voted: true, pending: false })
+  })
+
+  it("always posts the hook's own URL, whatever linkUrl the payload carries", async () => {
+    const { result } = renderHook(() => useLinkVote(URL_A, 5))
+    const other = renderHook(() => useLinkVote(URL_B, 2))
+
+    await act(async () => {
+      await result.current.vote(payload(URL_B))
+    })
+
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).linkUrl).toBe(URL_A)
+    expect(result.current).toMatchObject({ count: 13, voted: true })
+    expect(other.result.current).toMatchObject({ count: 2, voted: false })
+  })
+})
+
 describe('VoteButton on shared state', () => {
   beforeEach(() => {
     resetLinkVotesForTests()

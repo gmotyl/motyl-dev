@@ -13,6 +13,10 @@ import type { ContentCategory } from '@/lib/content/og'
  *
  * Scope is deliberately small: counts are NOT fetched and `voted` is NOT
  * persisted — both reset on a full page load.
+ *
+ * Module state survives client navigation, so seeds merge rather than "first
+ * wins": counts only grow, so a 0 placeholder seed (article pages) never hides a
+ * real count seeded later (/trending), and a fresher, higher server count wins.
  */
 
 export interface LinkVotePayload {
@@ -38,9 +42,15 @@ export interface UseLinkVoteResult {
   voted: boolean
   pending: boolean
   superAdmin: boolean
-  /** Resolves to the server count on success, `null` when skipped or failed (callers may ignore it). */
-  vote: (payload: LinkVotePayload) => Promise<number | null>
+  /**
+   * Votes for the hook's own `linkUrl` (any `linkUrl` in the payload is ignored).
+   * Resolves to the server count on success, `null` when skipped or failed (callers may ignore it).
+   */
+  vote: (payload: HookVotePayload) => Promise<number | null>
 }
+
+/** Payload for the hook's `vote`; `linkUrl` is optional because the hook always uses its own. */
+export type HookVotePayload = Omit<LinkVotePayload, 'linkUrl'> & { linkUrl?: string }
 
 const CONTRIBUTIONS_KEY = 'motyl:contributions'
 
@@ -69,10 +79,20 @@ function setEntry(linkUrl: string, update: (prev: LinkVoteEntry) => LinkVoteEntr
   emit()
 }
 
-/** Seeds an entry only when the store has none yet — the first seed wins. */
+/**
+ * Merges a known count into the store. Counts only grow: the stored count
+ * becomes `max(stored, seed)`, and a seed is ignored while a vote is pending so
+ * it cannot clobber the optimistic +1. `voted` / `superAdmin` are never touched.
+ */
 function seedEntry(linkUrl: string, initialCount: number) {
-  if (entries.has(linkUrl)) return
-  entries.set(linkUrl, defaultEntry(initialCount))
+  const prev = entries.get(linkUrl)
+  if (!prev) {
+    entries.set(linkUrl, defaultEntry(initialCount))
+    emit()
+    return
+  }
+  if (prev.pending || initialCount <= prev.count) return
+  entries.set(linkUrl, { ...prev, count: initialCount })
   emit()
 }
 
@@ -142,6 +162,7 @@ export async function castLinkVote(payload: LinkVotePayload, fallbackCount = 0):
       pending: false,
     }))
 
+  let data: VoteResponse
   try {
     const res = await fetch('/api/trends/votes', {
       method: 'POST',
@@ -161,30 +182,42 @@ export async function castLinkVote(payload: LinkVotePayload, fallbackCount = 0):
       return null
     }
 
-    const data = (await res.json()) as VoteResponse
-    const serverCount = data.vote?.voteCount ?? optimisticCount
-    setEntry(linkUrl, prev => ({
-      ...prev,
-      count: serverCount,
-      pending: false,
-      superAdmin: prev.superAdmin || Boolean(data.isSuperAdmin),
-    }))
-
-    showImpactToast(data, incrementContributions())
-    return serverCount
+    data = (await res.json()) as VoteResponse
   } catch {
     rollback()
     return null
   }
+
+  // The server recorded the vote: from here on nothing may roll it back.
+  const serverCount = data.vote?.voteCount ?? optimisticCount
+  setEntry(linkUrl, prev => ({
+    ...prev,
+    count: serverCount,
+    pending: false,
+    superAdmin: prev.superAdmin || Boolean(data.isSuperAdmin),
+  }))
+
+  // Cosmetic side effects (localStorage may throw, e.g. quota / privacy mode).
+  try {
+    showImpactToast(data, incrementContributions())
+  } catch {
+    // ignore
+  }
+  return serverCount
 }
 
-export function useLinkVote(linkUrl: string, initialCount = 0): UseLinkVoteResult {
+/**
+ * @param initialCount - Known server count for the link. Omit when unknown (the
+ *   count then shows 0 until some surface seeds it or a vote lands).
+ */
+export function useLinkVote(linkUrl: string, initialCount?: number): UseLinkVoteResult {
+  const fallbackCount = initialCount ?? 0
   // Fallback used until the entry is seeded (and as the SSR snapshot). Memoised
   // so the snapshot reference is stable across renders.
-  const fallback = useMemo(() => defaultEntry(initialCount), [initialCount])
+  const fallback = useMemo(() => defaultEntry(fallbackCount), [fallbackCount])
 
   useEffect(() => {
-    seedEntry(linkUrl, initialCount)
+    if (initialCount !== undefined) seedEntry(linkUrl, initialCount)
   }, [linkUrl, initialCount])
 
   const entry = useSyncExternalStore(
@@ -194,8 +227,8 @@ export function useLinkVote(linkUrl: string, initialCount = 0): UseLinkVoteResul
   )
 
   const vote = useCallback(
-    (payload: LinkVotePayload) => castLinkVote(payload, initialCount),
-    [initialCount],
+    (payload: HookVotePayload) => castLinkVote({ ...payload, linkUrl }, fallbackCount),
+    [linkUrl, fallbackCount],
   )
 
   return {
