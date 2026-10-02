@@ -323,3 +323,99 @@ describe('VoteButton on shared state', () => {
     expect(second).toBeDisabled()
   })
 })
+
+describe('useLinkVote lifetime (state lives only while a surface is mounted)', () => {
+  let fetchMock: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    resetLinkVotesForTests()
+    localStorage.clear()
+    fetchMock = vi.fn(async () => okResponse({ vote: { voteCount: 6 }, newRank: 5 }))
+    vi.stubGlobal('fetch', fetchMock)
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('clears voted when the last surface unmounts (remount reseeds from the new count)', async () => {
+    const first = renderHook(() => useLinkVote(URL_A, 5))
+    await act(async () => {
+      await first.result.current.vote(payload(URL_A))
+    })
+    expect(first.result.current).toMatchObject({ count: 6, voted: true })
+    first.unmount()
+
+    // e.g. after an admin reset the server reports 0 votes again.
+    const again = renderHook(() => useLinkVote(URL_A, 0))
+    await act(async () => {})
+    expect(again.result.current).toMatchObject({ count: 0, voted: false, pending: false })
+  })
+
+  it('keeps the remaining surface voted when another surface for the link unmounts', async () => {
+    const strip = renderHook(() => useLinkVote(URL_A))
+    const inline = renderHook(() => useLinkVote(URL_A, 5))
+    await act(async () => {
+      await inline.result.current.vote(payload(URL_A))
+    })
+
+    inline.unmount()
+    await act(async () => {})
+    expect(strip.result.current).toMatchObject({ count: 6, voted: true })
+
+    // A surface mounting while the strip is still up sees the shared vote.
+    const back = renderHook(() => useLinkVote(URL_A, 5))
+    await act(async () => {})
+    expect(back.result.current).toMatchObject({ count: 6, voted: true })
+  })
+
+  it('does not resurrect an entry when a pending vote settles after every surface unmounted', async () => {
+    let resolve!: (r: Response) => void
+    fetchMock.mockImplementationOnce(() => new Promise<Response>(r => { resolve = r }))
+    const { result, unmount } = renderHook(() => useLinkVote(URL_A, 5))
+
+    let promise!: Promise<unknown>
+    act(() => {
+      promise = result.current.vote(payload(URL_A))
+    })
+    unmount()
+
+    await act(async () => {
+      resolve(okResponse({ vote: { voteCount: 6 }, newRank: 5 }))
+      await promise
+    })
+
+    const later = renderHook(() => useLinkVote(URL_A, 2))
+    await act(async () => {})
+    expect(later.result.current).toMatchObject({ count: 2, voted: false, pending: false })
+  })
+
+  it('keeps the pending entry while a surface stays mounted through the settle', async () => {
+    let resolve!: (r: Response) => void
+    fetchMock.mockImplementationOnce(() => new Promise<Response>(r => { resolve = r }))
+    const first = renderHook(() => useLinkVote(URL_A, 5))
+    const second = renderHook(() => useLinkVote(URL_A, 5))
+
+    let promise!: Promise<unknown>
+    act(() => {
+      promise = first.result.current.vote(payload(URL_A))
+    })
+    first.unmount()
+
+    await act(async () => {
+      resolve(okResponse({ vote: { voteCount: 6 }, newRank: 5 }))
+      await promise
+    })
+    expect(second.result.current).toMatchObject({ count: 6, voted: true, pending: false })
+  })
+
+  it('survives StrictMode effect double-invocation without losing a seed', async () => {
+    const { result } = renderHook(() => useLinkVote(URL_A, 7), { reactStrictMode: true })
+    await act(async () => {})
+    expect(result.current).toMatchObject({ count: 7, voted: false })
+    await act(async () => {
+      await result.current.vote(payload(URL_A))
+    })
+    expect(result.current).toMatchObject({ count: 6, voted: true })
+  })
+})
