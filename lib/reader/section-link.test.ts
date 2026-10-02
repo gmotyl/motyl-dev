@@ -22,8 +22,7 @@ function renderedHrefs(markdown: string): string[] {
           return null
         },
       },
-      children: markdown,
-    }),
+    }, markdown),
   )
   return hrefs
 }
