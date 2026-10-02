@@ -1,22 +1,8 @@
 'use client'
 
-import { useState } from 'react'
 import { ThumbsUp } from 'lucide-react'
-import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-
-const CONTRIBUTIONS_KEY = 'motyl:contributions'
-
-function getContributions(): number {
-  if (typeof window === 'undefined') return 0
-  return parseInt(localStorage.getItem(CONTRIBUTIONS_KEY) || '0', 10)
-}
-
-function incrementContributions(): number {
-  const count = getContributions() + 1
-  localStorage.setItem(CONTRIBUTIONS_KEY, String(count))
-  return count
-}
+import { useLinkVote } from '@/lib/votes/use-link-vote'
 
 interface VoteButtonProps {
   linkUrl: string
@@ -42,62 +28,13 @@ export function VoteButton({
   initialVoteCount,
   onVote,
 }: VoteButtonProps) {
-  const [voted, setVoted] = useState(false)
-  const [voteCount, setVoteCount] = useState(initialVoteCount)
-  const [isLoading, setIsLoading] = useState(false)
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false)
+  // Vote state is shared per linkUrl with every other vote surface on the page.
+  const { count: voteCount, voted, pending: isLoading, superAdmin: isSuperAdmin, vote } =
+    useLinkVote(linkUrl, initialVoteCount)
 
   const handleVote = async () => {
-    if ((!isSuperAdmin && voted) || isLoading) return
-
-    // Optimistic update
-    setVoteCount(prev => prev + 1)
-    if (!isSuperAdmin) setVoted(true)
-    setIsLoading(true)
-
-    try {
-      const res = await fetch('/api/trends/votes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ linkUrl, title, description, category, sourceDomain, patternName }),
-      })
-
-      if (!res.ok) {
-        setVoteCount(prev => prev - 1)
-        if (!isSuperAdmin) setVoted(false)
-        return
-      }
-
-      const data = await res.json()
-      if (data.isSuperAdmin) setIsSuperAdmin(true)
-
-      const serverCount = data.vote?.voteCount ?? (voteCount + 1)
-      setVoteCount(serverCount)
-
-      const contributions = incrementContributions()
-
-      // Build impact message
-      if (data.isNew) {
-        toast.success('🎯 Added to trending!', {
-          description: `You've contributed ${contributions} time${contributions !== 1 ? 's' : ''}`,
-        })
-      } else if (data.newRank <= 3) {
-        toast.success(`🔥 Now #${data.newRank}!`, {
-          description: `${contributions} contribution${contributions !== 1 ? 's' : ''} from this browser`,
-        })
-      } else {
-        toast.success('👍 Vote counted!', {
-          description: `#${data.newRank} this week · ${contributions} total`,
-        })
-      }
-
-      onVote?.(serverCount)
-    } catch {
-      setVoteCount(prev => prev - 1)
-      if (!isSuperAdmin) setVoted(false)
-    } finally {
-      setIsLoading(false)
-    }
+    const serverCount = await vote({ linkUrl, title, description, category, sourceDomain, patternName })
+    if (serverCount !== null) onVote?.(serverCount)
   }
 
   return (
