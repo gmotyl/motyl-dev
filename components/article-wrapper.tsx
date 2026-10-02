@@ -14,6 +14,8 @@ import { getContentCategory } from '@/lib/content/og'
 import { prepareSpeechSections, stripMarkdown, type SpeechSection } from '@/lib/tts/speech'
 import { headingToId } from '@/lib/content/heading-slug'
 import { scrollHeadingIntoView } from '@/lib/reader/scroll-heading'
+import { firstExternalLink } from '@/lib/reader/section-link'
+import type { ReaderVoteStripProps } from '@/components/reader-vote-strip'
 import { detectLanguageFromHashtags } from '@/lib/tts/voice-map'
 import { useSectionVisibility } from '@/hooks/use-section-visibility'
 
@@ -94,6 +96,27 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
     [reader.playFromHere, reader.playFromLine, article.slug, speechSections, currentSectionId]
   )
 
+  // Same values the article's MarkdownContent gets, so a strip vote and an
+  // inline vote send the same payload.
+  const category = getContentCategory(article.hashtags ?? [])
+
+  // The bar's vote strip targets the Section being READ (`currentItem`) —
+  // playing, paused or not yet started — never the eye Next cascades while
+  // playing. `firstExternalLink` parses markdown, so it runs once per Section,
+  // not on every progress tick.
+  const currentMarkdown = reader.currentItem?.markdown
+  const currentTitle = reader.currentItem?.title
+  const currentLink = useMemo(
+    () => (currentMarkdown == null ? null : firstExternalLink(currentMarkdown)),
+    [currentMarkdown]
+  )
+  const vote = useMemo<ReaderVoteStripProps | undefined>(
+    () => (currentTitle == null
+      ? undefined
+      : { heading: currentTitle, link: currentLink, category, patternName: article.sourcePattern }),
+    [currentTitle, currentLink, category, article.sourcePattern]
+  )
+
   return (
     <>
       {isNews && isHydrated && (
@@ -127,6 +150,7 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
           onNext={reader.next}
           onMarkRead={() => undefined}
           error={reader.error}
+          vote={vote}
         />
       )}
 
@@ -134,7 +158,7 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
         <MarkdownContent
           content={filteredContent}
           itemType={article.itemType}
-          category={getContentCategory(article.hashtags ?? [])}
+          category={category}
           patternName={article.sourcePattern}
           reader={markdownReader}
         />
@@ -143,7 +167,7 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
           content={filteredContent}
           itemType={article.itemType}
           articleSlug={article.slug}
-          category={getContentCategory(article.hashtags ?? [])}
+          category={category}
           patternName={article.sourcePattern}
         />
       )}

@@ -3,11 +3,20 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ArticleWrapper } from './article-wrapper'
 import { ItemType } from '@/lib/content/types'
+import { getContentCategory } from '@/lib/content/og'
 
 const mockUseContinuousReader = vi.fn()
 let latestReaderItems: any[] = []
 let latestReaderOptions: any
 let latestTTSProps: { voice?: string } | undefined
+type VoteStripProps = {
+  heading: string
+  link: { url: string; title: string } | null
+  category?: string
+  patternName?: string
+}
+let latestStripProps: VoteStripProps | undefined
+let latestMarkdownProps: { category?: string; patternName?: string } | undefined
 
 vi.mock('@/hooks/use-continuous-reader', () => ({
   useContinuousReader: (items: any[], options: any) => {
@@ -55,7 +64,19 @@ vi.mock('@/components/continuous-reader-controls', () => ({
 }))
 
 vi.mock('@/components/markdown-content', () => ({
-  MarkdownContent: ({ content }: any) => <div data-testid="markdown-content">{content}</div>,
+  MarkdownContent: (props: { content: string; category?: string; patternName?: string }) => {
+    latestMarkdownProps = props
+    return <div data-testid="markdown-content">{props.content}</div>
+  },
+}))
+
+// Records what the bar's strip is told to vote for; the strip itself is
+// covered by its own tests.
+vi.mock('@/components/reader-vote-strip', () => ({
+  ReaderVoteStrip: (props: VoteStripProps) => {
+    latestStripProps = props
+    return <div data-testid="reader-vote-strip" />
+  },
 }))
 
 vi.mock('@/components/markdown-with-cta', () => ({
@@ -87,6 +108,8 @@ describe('ArticleWrapper', () => {
     latestReaderItems = []
     latestReaderOptions = undefined
     latestTTSProps = undefined
+    latestStripProps = undefined
+    latestMarkdownProps = undefined
     mockUseContinuousReader.mockReset()
     mockUseContinuousReader.mockReturnValue(makeReaderState())
   })
@@ -124,6 +147,8 @@ describe('ArticleWrapper', () => {
 
     expect(latestReaderItems).toHaveLength(0)
     expect(screen.getByRole('button', { name: 'Play' })).toBeDisabled()
+    // Empty queue: no Section being read, so the bar carries no strip.
+    expect(screen.queryByTestId('reader-vote-strip')).not.toBeInTheDocument()
   })
 
   it('Blog Article still renders the compact TTSPlayer and no reader bar', () => {
@@ -134,5 +159,40 @@ describe('ArticleWrapper', () => {
     expect(screen.getByTestId('blog-markdown')).toBeInTheDocument()
     expect(screen.getByTestId('compact-player')).toBeInTheDocument()
     expect(latestTTSProps?.voice).toBe('pl-PL-MarekNeural')
+  })
+
+  it("article page strip uses the article's category and pattern", () => {
+    const hashtags = ['#react', '#typescript']
+    mockUseContinuousReader.mockImplementation((items: unknown[]) => ({
+      ...makeReaderState(),
+      currentIndex: 1,
+      currentItem: items[1],
+    }))
+
+    render(
+      <ArticleWrapper
+        article={{
+          ...article(
+            ItemType.News,
+            hashtags,
+            '# News One\n\n## First section\n\nSee [First](https://first.dev).\n\n## Second section\n\nSee [Second link](https://second.dev/post) and [Later](https://later.dev).',
+          ),
+          sourcePattern: 'weekly-digest',
+        }}
+        translatePrompt="prompt"
+      />,
+    )
+
+    expect(document.querySelector('[data-reader-floating]')).toContainElement(screen.getByTestId('reader-vote-strip'))
+    expect(getContentCategory(hashtags)).not.toBe('general')
+    expect(latestStripProps).toEqual({
+      heading: 'Second section',
+      link: { url: 'https://second.dev/post', title: 'Second link' },
+      category: getContentCategory(hashtags),
+      patternName: 'weekly-digest',
+    })
+    // Exactly what the article's MarkdownContent (and so its inline VoteButton) gets.
+    expect(latestStripProps?.category).toBe(latestMarkdownProps?.category)
+    expect(latestStripProps?.patternName).toBe(latestMarkdownProps?.patternName)
   })
 })

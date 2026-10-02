@@ -21,6 +21,8 @@ import { prepareSpeechSections, stripMarkdown, type SpeechSection } from '@/lib/
 import { headingToId } from '@/lib/content/heading-slug'
 import { scrollHeadingIntoView } from '@/lib/reader/scroll-heading'
 import { resolveScrollTarget } from '@/lib/reader/scroll-target'
+import { firstExternalLink } from '@/lib/reader/section-link'
+import type { ReaderVoteStripProps } from '@/components/reader-vote-strip'
 
 interface ReadAllNewsPageProps {
   initialItems: ContentItem[]
@@ -58,6 +60,29 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
   }, [speechSections])
 
   const reader = useContinuousReader(speechSections, { onItemChange: scrollToSection })
+
+  // The bar's vote strip targets the Section being READ (`currentItem`) —
+  // playing, paused or not yet started — never the eye Next cascades while
+  // playing. `firstExternalLink` parses markdown, so it runs once per Section,
+  // not on every progress tick.
+  const currentSection = reader.currentItem
+  const currentMarkdown = currentSection?.markdown
+  const currentLink = useMemo(
+    () => (currentMarkdown == null ? null : firstExternalLink(currentMarkdown)),
+    [currentMarkdown]
+  )
+  const currentTitle = currentSection?.title
+  // Same values the owning article's MarkdownContent gets (patternName only,
+  // no category), so a strip vote and an inline vote send the same payload.
+  const currentPattern = currentSection
+    ? items.find((item) => item.slug === currentSection.sourceSlug)?.sourcePattern
+    : undefined
+  const vote = useMemo<ReaderVoteStripProps | undefined>(
+    () => (currentTitle == null
+      ? undefined
+      : { heading: currentTitle, link: currentLink, category: undefined, patternName: currentPattern }),
+    [currentTitle, currentLink, currentPattern]
+  )
 
   const handlePlayPause = useCallback(() => {
     if (reader.isPlaying) {
@@ -318,7 +343,9 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <main className="flex-1 container py-8 px-4 pb-48 sm:pb-8 max-w-2xl mx-auto">
+      {/* Bottom padding reserves the floating bar; with the vote strip the bar
+          is 60px taller (min-h-[52px] strip + mb-2 gap). */}
+      <main className={`flex-1 container py-8 px-4 ${vote ? 'pb-[15.75rem] sm:pb-[5.75rem]' : 'pb-48 sm:pb-8'} max-w-2xl mx-auto`}>
         <h1 className="text-3xl font-bold mb-2">Read all news</h1>
         <p className="text-muted-foreground mb-8">
           Scroll through unvisited articles. Mark them as read when you're done.
@@ -368,7 +395,8 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
       <Footer />
 
       {/* Floating utility buttons */}
-      <div className="fixed bottom-[11rem] sm:bottom-[7rem] right-4 z-40 flex flex-col items-end gap-3">
+      {/* Kept clear of the floating bar, which grows 60px with the vote strip. */}
+      <div className={`fixed ${vote ? 'bottom-[14.75rem] sm:bottom-[10.75rem]' : 'bottom-[11rem] sm:bottom-[7rem]'} right-4 z-40 flex flex-col items-end gap-3`}>
         {/* Settings button — wait for hydration so toggle has localStorage state */}
         {isHydrated && (
           <button
@@ -408,6 +436,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
           onPlayPause={handlePlayPause}
           onNext={reader.next}
           error={reader.error}
+          vote={vote}
         />
       )}
 

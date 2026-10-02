@@ -3,7 +3,6 @@
 import ReactMarkdown from 'react-markdown'
 import rehypeSlug from 'rehype-slug'
 import remarkGfm from 'remark-gfm'
-import * as emoji from 'node-emoji'
 import { ShareAIButton } from '@/components/share-ai-button'
 import { VoteButton } from '@/components/vote-button'
 import { SectionPlayFromHere } from '@/components/section-play-from-here'
@@ -14,6 +13,7 @@ import GithubSlugger from 'github-slugger'
 import { ItemType, type ItemTypeValue } from '@/lib/content/types'
 import type { ContentCategory } from '@/lib/content/og'
 import { stripMarkdown } from '@/lib/tts/speech'
+import { preprocessMarkdown } from '@/lib/content/markdown-preprocess'
 import { cn } from '@/lib/utils'
 
 const MermaidDiagram = lazy(() => import('@/components/mermaid-diagram').then(m => ({ default: m.MermaidDiagram })))
@@ -42,12 +42,13 @@ export interface MarkdownReaderOptions {
   onPlayFromLine?: (line: number) => void
 }
 
-function getHeadingText(children: ReactNode): string {
+/** Plain text of rendered markdown children, recursing through inline elements (strong, em, code, ...). */
+function plainText(children: ReactNode): string {
   return Children.toArray(children)
     .map((child) => {
       if (typeof child === 'string' || typeof child === 'number') return String(child)
       if (isValidElement<{ children?: ReactNode }>(child)) {
-        return getHeadingText(child.props.children)
+        return plainText(child.props.children)
       }
       return ''
     })
@@ -72,11 +73,8 @@ export const MarkdownContent = memo(function MarkdownContent({ content, itemType
       .catch((err) => console.error('Failed to load TRANSLATE_PROMPT.md:', err))
   }, [])
 
-  // Strip "**Link:**" labels (redundant with inline vote buttons)
-  const contentCleaned = content.replace(/\*\*Link:\*\*\s*/g, '')
-
-  // Process emojis
-  const contentWithEmojis = emoji.emojify(contentCleaned)
+  // "**Link:**" labels stripped and emoji shortcodes expanded (shared with firstExternalLink)
+  const contentWithEmojis = preprocessMarkdown(content)
 
   // Line ranges [start, end) each `##` section governs, keyed by the rehype-slug
   // id of its heading. Lets a link be mapped to its enclosing section so it can
@@ -134,7 +132,7 @@ export const MarkdownContent = memo(function MarkdownContent({ content, itemType
   const components: Components = {
     ...(paragraphPlayEnabled ? { p: paragraph } : {}),
     h2: ({ children, ...props }) => {
-      const heading = getHeadingText(children)
+      const heading = plainText(children)
       const readerEnabled = reader?.enabled !== false && Boolean(reader?.onPlayFromHere)
       const resolvedIndex = reader?.getSectionIndex?.(heading)
       const sectionIndex = readerEnabled ? resolvedIndex : undefined
@@ -156,7 +154,9 @@ export const MarkdownContent = memo(function MarkdownContent({ content, itemType
     },
     a: ({ href, children, node, ...props }) => {
       const isExternal = href?.startsWith('http://') || href?.startsWith('https://')
-      const title = typeof children === 'string' ? children : ''
+      // Plain text even for formatted labels (`[**Article**](url)`); the votes API
+      // rejects an empty title. Same rule as firstExternalLink: fall back to the URL.
+      const title = plainText(children).replace(/\s+/g, ' ').trim() || (href ?? '')
       const sectionId = sectionIdForNode(node)
       const linkIsCurrent = sectionId != null && sectionId === reader?.currentSectionId
       const linkHighlight = linkIsCurrent && 'ring-2 ring-yellow-400/70 bg-yellow-400/10 rounded-md px-1 transition-colors'

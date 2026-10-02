@@ -1,34 +1,12 @@
 import { prisma } from '@/lib/db/prisma'
 import { mockGetHomepageFeed, mockCastVote } from '@/lib/trends/mock'
 import { recordInclusion } from '@/lib/trends/pattern-stats'
+import { isoWeekKey } from '@/lib/trends/iso-week'
 
 const isDevMock = process.env.DATABASE_URL?.includes('dummy') ?? false
 
 export async function getCurrentWeek(): Promise<string> {
-  const date = new Date()
-
-  // Step 1: Find Thursday of the current week
-  // If today is Thursday (4), offset is 0
-  // If today is Monday (1), offset is +3
-  // If today is Sunday (0), offset is +4
-  const day = date.getDay()
-  const diff = date.getDate() - day + (day === 0 ? -3 : 4)
-  const thursday = new Date(date.getFullYear(), date.getMonth(), diff)
-
-  // Step 2: Thursday determines the week's year (ISO 8601 standard)
-  const year = thursday.getFullYear()
-
-  // Step 3: Find Thursday of week 1 (use Jan 4 as reference - always in week 1)
-  const jan4 = new Date(year, 0, 4)
-  const jan4Day = jan4.getDay()
-  const jan4Diff = jan4.getDate() - jan4Day + (jan4Day === 0 ? -3 : 4)
-  const weekOneThursday = new Date(year, 0, jan4Diff)
-
-  // Step 4: Count weeks between Thursday of week 1 and current Thursday
-  const msPerWeek = 7 * 24 * 60 * 60 * 1000
-  const weekNum = Math.floor((thursday.getTime() - weekOneThursday.getTime()) / msPerWeek) + 1
-
-  return `${year}-w${String(weekNum).padStart(2, '0')}`
+  return isoWeekKey(new Date())
 }
 
 const ACTIVE_WEEK = 'current'

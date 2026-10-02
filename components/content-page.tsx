@@ -92,7 +92,9 @@ export default async function ContentPage({ article, prevArticle, nextArticle }:
       <ArticleViewTracker slug={article.slug} />
       <ArticleScrollHandler />
       <Header />
-      <main className={`flex-1 container py-10${isNewsArticle ? ' pb-40 sm:pb-0' : ''}`}>
+      {/* News reserves the floating reader bar, including its vote strip
+          (min-h-[52px] + mb-2 gap = 60px over the bare bar's pb-40 / sm:pb-0). */}
+      <main className={`flex-1 container py-10${isNewsArticle ? ' pb-[13.75rem] sm:pb-[3.75rem]' : ''}`}>
         <article className="max-w-3xl mx-auto">
           <Breadcrumb
             items={[
