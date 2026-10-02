@@ -23,7 +23,7 @@ export function ReaderVoteStrip({ heading, link, category, patternName }: Reader
     return (
       <div
         data-reader-vote-strip=""
-        className="flex w-full min-h-[52px] items-center justify-center rounded-md border border-dashed border-muted-foreground/30 px-3.5 text-sm text-muted-foreground"
+        className="flex w-full min-h-[52px] items-center justify-center rounded-md border border-dashed border-border px-3.5 text-sm text-muted-foreground"
       >
         This section has no link to vote for
       </div>
@@ -62,15 +62,16 @@ function LinkVoteStrip({ heading, link, category, patternName }: LinkVoteStripPr
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
         voted
           ? 'bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-400'
-          : 'border-primary/20 text-muted-foreground hover:border-primary/40 hover:bg-primary/5 hover:text-primary',
+          // Idle is filled, as in mockup B: soft primary fill + primary text.
+          : 'bg-primary/10 border-primary/35 text-primary hover:bg-primary/15 hover:border-primary/50',
         pending ? 'cursor-wait' : locked ? 'cursor-default' : 'cursor-pointer',
         pending && 'opacity-70'
       )}
     >
       <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{heading}</span>
-      <span className="flex shrink-0 items-center gap-1.5 text-sm font-medium">
+      <span className="flex shrink-0 items-center gap-1.5 text-sm font-bold">
         <ThumbsUp aria-hidden="true" className={cn('h-5 w-5 transition-all', voted && 'fill-current')} />
-        <span>{count}</span>
+        <span className="tabular-nums">{count}</span>
       </span>
     </button>
   )
