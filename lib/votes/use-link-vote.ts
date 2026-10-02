@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react'
 import { toast } from 'sonner'
 import type { ContentCategory } from '@/lib/content/og'
-import { isoWeekKey, msUntilNextIsoWeek } from '@/lib/trends/iso-week'
 
 /**
  * Minimal shared per-link vote state.
@@ -13,12 +12,11 @@ import { isoWeekKey, msUntilNextIsoWeek } from '@/lib/trends/iso-week'
  * shows up in all of them and cannot be cast twice.
  *
  * Scope is deliberately small: counts are NOT fetched and `voted` is NOT
- * persisted — both reset on a full page load.
- *
- * Entries are also scoped to the ISO week they were written in: the weekly
- * trends reset clears every server vote row, so an entry from a previous week
- * reads as fresh (not voted, count 0 until re-seeded). A timer re-renders
- * subscribers at the week boundary so a disabled "voted" button re-enables.
+ * persisted. `voted` is per-tab session state, cleared on any full page load.
+ * There is no clock-based reset: the server has no weekly vote window (live
+ * votes sit under one active bucket, reset manually by an admin). Clearing
+ * `voted` when the server resets is future work, driven by a server-side reset
+ * signal (the "real vote counts" change).
  *
  * Module state survives client navigation, so seeds merge rather than "first
  * wins": counts only grow, so a 0 placeholder seed (article pages) never hides a
@@ -41,8 +39,6 @@ interface LinkVoteEntry {
   pending: boolean
   /** Set once the server reports a super admin; such a user may vote repeatedly. */
   superAdmin: boolean
-  /** ISO week key (see isoWeekKey) the entry belongs to. */
-  week: string
 }
 
 export interface UseLinkVoteResult {
@@ -64,7 +60,6 @@ const CONTRIBUTIONS_KEY = 'motyl:contributions'
 
 const entries = new Map<string, LinkVoteEntry>()
 const listeners = new Set<() => void>()
-let weekTimer: ReturnType<typeof setTimeout> | null = null
 
 function emit() {
   for (const listener of listeners) listener()
@@ -77,42 +72,13 @@ function subscribe(listener: () => void) {
   }
 }
 
-function currentWeek(): string {
-  return isoWeekKey(new Date())
-}
-
 function defaultEntry(count: number): LinkVoteEntry {
-  return { count, voted: false, pending: false, superAdmin: false, week: currentWeek() }
-}
-
-/**
- * The stored entry, with an entry from a previous week swapped (once) for a
- * fresh one. The replacement is stored, so repeated reads return the same
- * object and useSyncExternalStore snapshots stay stable. A pending entry is
- * left alone until its request settles.
- */
-function readEntry(linkUrl: string): LinkVoteEntry | undefined {
-  const entry = entries.get(linkUrl)
-  if (!entry || entry.pending) return entry
-  const week = currentWeek()
-  if (entry.week === week) return entry
-  const fresh: LinkVoteEntry = { count: 0, voted: false, pending: false, superAdmin: entry.superAdmin, week }
-  entries.set(linkUrl, fresh)
-  return fresh
-}
-
-/** Re-renders subscribers when the ISO week changes, so stale entries expire on screen. */
-function scheduleWeekRollover() {
-  if (weekTimer !== null) return
-  weekTimer = setTimeout(() => {
-    weekTimer = null
-    emit()
-  }, msUntilNextIsoWeek(new Date()))
+  return { count, voted: false, pending: false, superAdmin: false }
 }
 
 /** Entries are replaced immutably so useSyncExternalStore snapshots stay referentially stable. */
 function setEntry(linkUrl: string, update: (prev: LinkVoteEntry) => LinkVoteEntry, fallbackCount = 0) {
-  const prev = readEntry(linkUrl) ?? defaultEntry(fallbackCount)
+  const prev = entries.get(linkUrl) ?? defaultEntry(fallbackCount)
   entries.set(linkUrl, update(prev))
   emit()
 }
@@ -123,7 +89,7 @@ function setEntry(linkUrl: string, update: (prev: LinkVoteEntry) => LinkVoteEntr
  * it cannot clobber the optimistic +1. `voted` / `superAdmin` are never touched.
  */
 function seedEntry(linkUrl: string, initialCount: number) {
-  const prev = readEntry(linkUrl)
+  const prev = entries.get(linkUrl)
   if (!prev) {
     entries.set(linkUrl, defaultEntry(initialCount))
     emit()
@@ -137,8 +103,6 @@ function seedEntry(linkUrl: string, initialCount: number) {
 /** Test-only: clears all shared vote state. */
 export function resetLinkVotesForTests() {
   entries.clear()
-  if (weekTimer !== null) clearTimeout(weekTimer)
-  weekTimer = null
   emit()
 }
 
@@ -178,9 +142,8 @@ function showImpactToast(data: VoteResponse, contributions: number) {
  */
 export async function castLinkVote(payload: LinkVotePayload, fallbackCount = 0): Promise<number | null> {
   const { linkUrl } = payload
-  const current = readEntry(linkUrl) ?? defaultEntry(fallbackCount)
+  const current = entries.get(linkUrl) ?? defaultEntry(fallbackCount)
   if ((current.voted && !current.superAdmin) || current.pending) return null
-  scheduleWeekRollover()
 
   // Optimistic update
   const optimisticCount = current.count + 1
@@ -263,7 +226,7 @@ export function useLinkVote(linkUrl: string, initialCount?: number): UseLinkVote
 
   const entry = useSyncExternalStore(
     subscribe,
-    () => readEntry(linkUrl) ?? fallback,
+    () => entries.get(linkUrl) ?? fallback,
     () => fallback,
   )
 

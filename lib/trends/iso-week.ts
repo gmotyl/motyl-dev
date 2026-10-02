@@ -20,10 +20,3 @@ export function isoWeekKey(date: Date): string {
 
   return `${year}-w${String(weekNum).padStart(2, '0')}`
 }
-
-/** Milliseconds from `date` until the next local Monday 00:00, when the ISO week changes. */
-export function msUntilNextIsoWeek(date: Date): number {
-  const daysAhead = (8 - date.getDay()) % 7 || 7
-  const nextMonday = new Date(date.getFullYear(), date.getMonth(), date.getDate() + daysAhead)
-  return nextMonday.getTime() - date.getTime()
-}
