@@ -3,7 +3,6 @@
 import ReactMarkdown from 'react-markdown'
 import rehypeSlug from 'rehype-slug'
 import remarkGfm from 'remark-gfm'
-import * as emoji from 'node-emoji'
 import { ShareAIButton } from '@/components/share-ai-button'
 import { VoteButton } from '@/components/vote-button'
 import { SectionPlayFromHere } from '@/components/section-play-from-here'
@@ -14,6 +13,7 @@ import GithubSlugger from 'github-slugger'
 import { ItemType, type ItemTypeValue } from '@/lib/content/types'
 import type { ContentCategory } from '@/lib/content/og'
 import { stripMarkdown } from '@/lib/tts/speech'
+import { preprocessMarkdown } from '@/lib/content/markdown-preprocess'
 import { cn } from '@/lib/utils'
 
 const MermaidDiagram = lazy(() => import('@/components/mermaid-diagram').then(m => ({ default: m.MermaidDiagram })))
@@ -73,11 +73,8 @@ export const MarkdownContent = memo(function MarkdownContent({ content, itemType
       .catch((err) => console.error('Failed to load TRANSLATE_PROMPT.md:', err))
   }, [])
 
-  // Strip "**Link:**" labels (redundant with inline vote buttons)
-  const contentCleaned = content.replace(/\*\*Link:\*\*\s*/g, '')
-
-  // Process emojis
-  const contentWithEmojis = emoji.emojify(contentCleaned)
+  // "**Link:**" labels stripped and emoji shortcodes expanded (shared with firstExternalLink)
+  const contentWithEmojis = preprocessMarkdown(content)
 
   // Line ranges [start, end) each `##` section governs, keyed by the rehype-slug
   // id of its heading. Lets a link be mapped to its enclosing section so it can

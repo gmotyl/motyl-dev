@@ -3,6 +3,7 @@ import remarkGfm from 'remark-gfm'
 import remarkParse from 'remark-parse'
 import remarkRehype from 'remark-rehype'
 import { unified } from 'unified'
+import { preprocessMarkdown } from '@/lib/content/markdown-preprocess'
 
 export interface SectionLink {
   url: string
@@ -20,7 +21,7 @@ interface HastNode {
 
 /**
  * The same markdown -> hast pipeline `<MarkdownContent>` hands to react-markdown
- * (remark-parse + remark-gfm + remark-rehype). rehype-slug is left out: it only
+ * (remark-parse + remark-gfm + remark-rehype), fed the same preprocessed string. rehype-slug is left out: it only
  * adds heading ids and never touches links. Frozen once; reused per call.
  */
 const processor = unified().use(remarkParse).use(remarkGfm).use(remarkRehype).freeze()
@@ -56,12 +57,13 @@ function findLink(node: HastNode): SectionLink | null {
  * The first external (http/https) link in a Section's markdown body, exactly as
  * the rendered page sees it: the URL is the `href` react-markdown gives the
  * inline `a` renderer (so the per-link vote state, keyed by URL, matches the
- * inline VoteButton), and the title is the link's plain text. Covers inline,
+ * inline VoteButton), and the title is the link's plain text. The markdown
+ * first goes through MarkdownContent's own `preprocessMarkdown`. Covers inline,
  * reference-style and GFM autolink-literal links; links inside code, images,
  * relative paths, `#anchors` and `mailto:` are skipped.
  */
 export function firstExternalLink(markdown: string): SectionLink | null {
   if (!markdown) return null
-  const tree = processor.runSync(processor.parse(markdown)) as unknown as HastNode
+  const tree = processor.runSync(processor.parse(preprocessMarkdown(markdown))) as unknown as HastNode
   return findLink(tree)
 }

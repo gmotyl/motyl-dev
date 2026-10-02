@@ -5,10 +5,12 @@ import rehypeSlug from 'rehype-slug'
 import remarkGfm from 'remark-gfm'
 import { describe, expect, it } from 'vitest'
 import { firstExternalLink } from './section-link'
+import { preprocessMarkdown } from '@/lib/content/markdown-preprocess'
+import { MarkdownContent } from '@/components/markdown-content'
 
 /**
  * Every href react-markdown hands the `a` renderer, configured with the same
- * plugins as `<MarkdownContent>`, in document order.
+ * plugins and preprocessing as `<MarkdownContent>`, in document order.
  */
 function renderedHrefs(markdown: string): string[] {
   const hrefs: string[] = []
@@ -22,9 +24,17 @@ function renderedHrefs(markdown: string): string[] {
           return null
         },
       },
-    }, markdown),
+    }, preprocessMarkdown(markdown)),
   )
   return hrefs
+}
+
+/** First external href in the markup the real `<MarkdownContent>` renders. */
+function firstMarkdownContentExternal(markdown: string): string | null {
+  const html = renderToStaticMarkup(createElement(MarkdownContent, { content: markdown }))
+  const doc = new DOMParser().parseFromString(html, 'text/html')
+  const hrefs = Array.from(doc.querySelectorAll('a[href]'), (a) => a.getAttribute('href') ?? '')
+  return hrefs.find((h) => h.startsWith('http://') || h.startsWith('https://')) ?? null
 }
 
 const firstRenderedExternal = (markdown: string) =>
@@ -137,9 +147,18 @@ describe('firstExternalLink', () => {
       'www.example.com/autolink i [x](https://late.example)',
       '[Mail](mailto:a@b.pl) <https://angle.example/x?y="z">',
       '[Duże](HTTPS://example.com/x)',
+      '[Rakieta](https://example.com/:rocket:)',
+      'https://example.com/:fire:/autolink',
     ]
     for (const md of cases) {
       expect(firstExternalLink(md)?.url ?? null, md).toBe(firstRenderedExternal(md))
+      expect(firstExternalLink(md)?.url ?? null, md).toBe(firstMarkdownContentExternal(md))
     }
+  })
+
+  it('expands emoji shortcodes in the URL like MarkdownContent does', () => {
+    expect(firstExternalLink('[Rakieta](https://example.com/:rocket:)')?.url).toBe(
+      'https://example.com/%F0%9F%9A%80',
+    )
   })
 })
