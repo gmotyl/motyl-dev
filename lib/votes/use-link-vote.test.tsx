@@ -323,3 +323,87 @@ describe('VoteButton on shared state', () => {
     expect(second).toBeDisabled()
   })
 })
+
+describe('useLinkVote across the weekly reset', () => {
+  let fetchMock: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
+    // Sunday 23:00 local, one hour before the ISO week changes.
+    vi.setSystemTime(new Date(2026, 9, 4, 23, 0))
+    resetLinkVotesForTests()
+    localStorage.clear()
+    fetchMock = vi.fn(async () => okResponse({ vote: { voteCount: 6 }, newRank: 5 }))
+    vi.stubGlobal('fetch', fetchMock)
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+  })
+
+  it('treats a vote from the previous week as not voted once the week changes', async () => {
+    const { result } = renderHook(() => useLinkVote(URL_A, 5))
+    await act(async () => {
+      await result.current.vote(payload(URL_A))
+    })
+    expect(result.current).toMatchObject({ voted: true, count: 6 })
+
+    act(() => {
+      vi.advanceTimersByTime(60 * 60 * 1000)
+    })
+    expect(result.current).toMatchObject({ voted: false, count: 0, pending: false })
+
+    fetchMock.mockResolvedValueOnce(okResponse({ vote: { voteCount: 1 }, isNew: true }))
+    await act(async () => {
+      await result.current.vote(payload(URL_A))
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(result.current).toMatchObject({ voted: true, count: 1 })
+  })
+
+  it('keeps a vote within the same week', async () => {
+    const { result } = renderHook(() => useLinkVote(URL_A, 5))
+    await act(async () => {
+      await result.current.vote(payload(URL_A))
+    })
+    act(() => {
+      vi.advanceTimersByTime(59 * 60 * 1000)
+    })
+    expect(result.current.voted).toBe(true)
+  })
+
+  it('returns a stable snapshot after the rollover', async () => {
+    const { result, rerender } = renderHook(() => useLinkVote(URL_A, 5))
+    await act(async () => {
+      await result.current.vote(payload(URL_A))
+    })
+    act(() => {
+      vi.advanceTimersByTime(60 * 60 * 1000)
+    })
+    const renders: number[] = []
+    rerender()
+    renders.push(result.current.count)
+    rerender()
+    renders.push(result.current.count)
+    expect(renders).toEqual([0, 0])
+  })
+
+  it('re-enables a voted VoteButton at the week boundary', async () => {
+    render(<VoteButton linkUrl={URL_A} title="T" initialVoteCount={5} />)
+    const button = screen.getByRole('button')
+    await act(async () => {
+      fireEvent.click(button)
+      // Let the mocked fetch and its json() settle inside act.
+      for (let i = 0; i < 10; i++) await Promise.resolve()
+    })
+    expect(button).toBeDisabled()
+    expect(button).toHaveTextContent('6')
+
+    act(() => {
+      vi.advanceTimersByTime(60 * 60 * 1000)
+    })
+    expect(button).not.toBeDisabled()
+    expect(button).toHaveAttribute('aria-pressed', 'false')
+  })
+})
