@@ -42,12 +42,13 @@ export interface MarkdownReaderOptions {
   onPlayFromLine?: (line: number) => void
 }
 
-function getHeadingText(children: ReactNode): string {
+/** Plain text of rendered markdown children, recursing through inline elements (strong, em, code, ...). */
+function plainText(children: ReactNode): string {
   return Children.toArray(children)
     .map((child) => {
       if (typeof child === 'string' || typeof child === 'number') return String(child)
       if (isValidElement<{ children?: ReactNode }>(child)) {
-        return getHeadingText(child.props.children)
+        return plainText(child.props.children)
       }
       return ''
     })
@@ -134,7 +135,7 @@ export const MarkdownContent = memo(function MarkdownContent({ content, itemType
   const components: Components = {
     ...(paragraphPlayEnabled ? { p: paragraph } : {}),
     h2: ({ children, ...props }) => {
-      const heading = getHeadingText(children)
+      const heading = plainText(children)
       const readerEnabled = reader?.enabled !== false && Boolean(reader?.onPlayFromHere)
       const resolvedIndex = reader?.getSectionIndex?.(heading)
       const sectionIndex = readerEnabled ? resolvedIndex : undefined
@@ -156,7 +157,9 @@ export const MarkdownContent = memo(function MarkdownContent({ content, itemType
     },
     a: ({ href, children, node, ...props }) => {
       const isExternal = href?.startsWith('http://') || href?.startsWith('https://')
-      const title = typeof children === 'string' ? children : ''
+      // Plain text even for formatted labels (`[**Article**](url)`); the votes API
+      // rejects an empty title. Same rule as firstExternalLink: fall back to the URL.
+      const title = plainText(children).replace(/\s+/g, ' ').trim() || (href ?? '')
       const sectionId = sectionIdForNode(node)
       const linkIsCurrent = sectionId != null && sectionId === reader?.currentSectionId
       const linkHighlight = linkIsCurrent && 'ring-2 ring-yellow-400/70 bg-yellow-400/10 rounded-md px-1 transition-colors'

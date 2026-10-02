@@ -1,6 +1,10 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MarkdownContent } from './markdown-content'
+import { ItemType } from '@/lib/content/types'
+import { resetLinkVotesForTests } from '@/lib/votes/use-link-vote'
+
+vi.mock('sonner', () => ({ toast: { success: vi.fn() } }))
 
 // Guards the performance contract: MarkdownContent must be wrapped in React.memo
 // so that ~60fps progress ticks on the host reader component (which re-render the
@@ -256,5 +260,43 @@ describe('MarkdownContent paragraph play-from-here', () => {
 
     expect(onPlayFromHere).toHaveBeenCalledTimes(1)
     expect(onPlayFromHere).toHaveBeenCalledWith(0)
+  })
+})
+
+describe('MarkdownContent inline vote title', () => {
+  let fetchMock: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    resetLinkVotesForTests()
+    // TRANSLATE_PROMPT.md must be non-empty for the news vote button to render.
+    fetchMock = vi.fn(async (url: string) =>
+      url === '/TRANSLATE_PROMPT.md'
+        ? ({ text: async () => 'prompt' } as Response)
+        : ({ ok: true, json: async () => ({ vote: { voteCount: 1 }, isNew: true }) } as Response),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  async function voteBodyFor(content: string) {
+    render(<MarkdownContent content={content} itemType={ItemType.News} />)
+    const button = await screen.findByRole('button', { name: /Upvote/ })
+    fireEvent.click(button)
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/trends/votes', expect.anything()))
+    const call = fetchMock.mock.calls.find(([url]) => url === '/api/trends/votes')!
+    return JSON.parse((call[1] as RequestInit).body as string)
+  }
+
+  it('sends the plain text of a formatted link label as the title', async () => {
+    const body = await voteBodyFor('See [**Big** _news_ `today`](https://example.com/a).')
+    expect(body).toMatchObject({ linkUrl: 'https://example.com/a', title: 'Big news today' })
+  })
+
+  it('falls back to the URL when the label has no text', async () => {
+    const body = await voteBodyFor('See [![](https://example.com/i.png)](https://example.com/b).')
+    expect(body).toMatchObject({ linkUrl: 'https://example.com/b', title: 'https://example.com/b' })
   })
 })
