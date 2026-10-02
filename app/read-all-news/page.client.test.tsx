@@ -41,6 +41,18 @@ let latestReaderOptions: ReaderOptions | undefined
 let latestReaderHarness: ReaderHarness
 let latestMarkReadDialogProps: MarkReadDialogProps | undefined
 let readerIndex = 0
+// Read by the harness: lets a test play the reader and make Next move only the
+// eye (the real reader's non-interrupting Next while playing).
+let readerPlaying = false
+let nextMovesEyeOnly = false
+let eyeIndex = 0
+type VoteStripProps = {
+  heading: string
+  link: { url: string; title: string } | null
+  category?: string
+  patternName?: string
+}
+let latestStripProps: VoteStripProps | undefined
 let intersectionCallback: ((entries: Array<{ isIntersecting: boolean }>) => void) | undefined
 
 // Hoisted so the module factory below can read it without a TDZ crash.
@@ -81,15 +93,22 @@ vi.mock('@/hooks/use-continuous-reader', () => ({
       options.onItemChange?.(item, index)
       play()
     }
+    const moveEye = () => {
+      eyeIndex += 1
+      const item = items[eyeIndex]
+      // The eye scrolls to its target through the same callback, while the
+      // reading position (currentItem) stays put.
+      if (item) options.onItemChange?.(item, eyeIndex)
+    }
     latestReaderHarness = {
-      isPlaying: false,
+      isPlaying: readerPlaying,
       isBuffering: false,
       currentIndex: readerIndex,
       currentItem: items[readerIndex],
       currentSlug: items[readerIndex]?.sourceSlug ?? null,
       play,
       pause: vi.fn(),
-      next: vi.fn(() => selectAndPlay(readerIndex + 1)),
+      next: vi.fn(() => (nextMovesEyeOnly ? moveEye() : selectAndPlay(readerIndex + 1))),
       playFromHere: vi.fn((index: number) => selectAndPlay(index)),
       playFromLine: vi.fn(),
       complete: vi.fn(() => selectAndPlay(readerIndex + 1)),
@@ -146,6 +165,15 @@ vi.mock('@/components/markdown-content', () => ({
       ))}
     </div>
   ),
+}))
+
+// Records what the bar's strip is told to vote for; the strip itself (and its
+// shared vote store) is covered by its own tests.
+vi.mock('@/components/reader-vote-strip', () => ({
+  ReaderVoteStrip: (props: VoteStripProps) => {
+    latestStripProps = props
+    return <div data-testid="reader-vote-strip" data-heading={props.heading} />
+  },
 }))
 
 vi.mock('@/components/markdown-with-cta', () => ({
@@ -211,6 +239,25 @@ const items = (count: number, offset = 0) => Array.from({ length: count }, (_, i
   itemType: ItemType.News,
 }))
 
+// Every section carries its own first external link (plus a second one that
+// must never win), and each article its own source pattern.
+const linkedItems = (count: number) => items(count).map((item, index) => {
+  const n = index + 1
+  return {
+    ...item,
+    sourcePattern: `pattern-${n}`,
+    content: [
+      `## Section ${n}A`,
+      '',
+      `Read [Link ${n}A](https://example.com/${n}a) and [Other](https://other.dev/${n}a).`,
+      '',
+      `## Section ${n}B`,
+      '',
+      `Read [Link ${n}B](https://example.com/${n}b).`,
+    ].join('\n'),
+  }
+})
+
 describe('ReadAllNewsPage continuous reader', () => {
   beforeEach(() => {
     vi.stubGlobal('IntersectionObserver', MockIntersectionObserver)
@@ -219,6 +266,10 @@ describe('ReadAllNewsPage continuous reader', () => {
     latestReaderHarness = undefined as unknown as ReaderHarness
     latestMarkReadDialogProps = undefined
     readerIndex = 0
+    readerPlaying = false
+    nextMovesEyeOnly = false
+    eyeIndex = 0
+    latestStripProps = undefined
     playbackEvents.length = 0
     intersectionCallback = undefined
     observers.length = 0
@@ -390,5 +441,50 @@ describe('ReadAllNewsPage continuous reader', () => {
     expect(scrollTo).toHaveBeenCalledWith({ top: 0 })
     expect(screen.queryByText('News 1')).not.toBeInTheDocument()
     expect(screen.getByText('News 2')).toBeInTheDocument()
+  })
+
+  it('read all news strip targets the section being read', () => {
+    readerIndex = 1
+    render(<ReadAllNewsPage initialItems={linkedItems(2)} totalItems={2} />)
+
+    const bar = document.querySelector('[data-reader-floating]')
+    expect(bar).toContainElement(screen.getByTestId('reader-vote-strip'))
+    expect(latestStripProps).toEqual({
+      heading: 'Section 1B',
+      link: { url: 'https://example.com/1b', title: 'Link 1B' },
+      // Same values the article's MarkdownContent gets: no category, its pattern.
+      category: undefined,
+      patternName: 'pattern-1',
+    })
+    // The taller bar reserves its strip (52px + 8px gap) on top of the old padding.
+    expect(screen.getByRole('main')).toHaveClass('pb-[15.75rem]')
+  })
+
+  it('strip follows a section advance', async () => {
+    readerIndex = 1
+    const { rerender } = render(<ReadAllNewsPage initialItems={linkedItems(2)} totalItems={2} />)
+
+    await userEvent.click(within(screen.getByRole('group', { name: 'Continuous reader controls' })).getByRole('button', { name: 'Next' }))
+    rerender(<ReadAllNewsPage initialItems={linkedItems(2)} totalItems={2} />)
+
+    expect(latestStripProps?.heading).toBe('Section 2A')
+    expect(latestStripProps?.link).toEqual({ url: 'https://example.com/2a', title: 'Link 2A' })
+    expect(latestStripProps?.patternName).toBe('pattern-2')
+  })
+
+  it('strip ignores the eye', async () => {
+    readerPlaying = true
+    nextMovesEyeOnly = true
+    const { rerender } = render(<ReadAllNewsPage initialItems={linkedItems(2)} totalItems={2} />)
+
+    const group = screen.getByRole('group', { name: 'Continuous reader controls' })
+    await userEvent.click(within(group).getByRole('button', { name: 'Next' }))
+    await userEvent.click(within(group).getByRole('button', { name: 'Next' }))
+    rerender(<ReadAllNewsPage initialItems={linkedItems(2)} totalItems={2} />)
+
+    // The eye moved two sections ahead; the strip stays on the section playing.
+    expect(eyeIndex).toBe(2)
+    expect(latestStripProps?.heading).toBe('Section 1A')
+    expect(latestStripProps?.link).toEqual({ url: 'https://example.com/1a', title: 'Link 1A' })
   })
 })
