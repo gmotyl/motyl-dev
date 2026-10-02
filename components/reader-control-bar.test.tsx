@@ -1,10 +1,15 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { READER_LOG_FLAG, clearReaderLog, readReaderLog } from '@/lib/reader/diagnostic-log'
+import { resetLinkVotesForTests } from '@/lib/votes/use-link-vote'
 
 import { ReaderControlBar } from './reader-control-bar'
+import { VoteButton } from './vote-button'
+
+// The vote store raises an impact toast after a successful vote.
+vi.mock('sonner', () => ({ toast: { success: vi.fn() } }))
 
 /**
  * The flag is enabled by writing the real key. An INSTANCE spy on
@@ -38,6 +43,8 @@ beforeEach(() => {
 
 afterEach(() => {
   visitWith('')
+  vi.unstubAllGlobals()
+  resetLinkVotesForTests()
 })
 
 describe('ReaderControlBar', () => {
@@ -172,5 +179,92 @@ describe('ReaderControlBar', () => {
     // One listener set, so one entry. A host that mounted its own
     // `useReaderLifecycleLog` next to the bar would double every entry.
     expect(readReaderLog().filter((entry) => entry.type === 'freeze')).toHaveLength(1)
+  })
+
+  describe('vote strip', () => {
+    const link = { url: 'https://example.com/post', title: 'Example post' }
+    const vote = { heading: 'Nowe funkcje w React 20', link, category: 'frontend' as const }
+
+    const stripOf = (container: HTMLElement) =>
+      container.querySelector<HTMLElement>('[data-reader-vote-strip]')
+
+    it('renders the vote strip above the controls', () => {
+      enableFlag()
+
+      const { container } = render(<ReaderControlBar {...baseProps} vote={vote} />)
+
+      const floating = container.querySelector('[data-reader-floating]') as HTMLElement
+      const panel = container.querySelector('[data-reader-diagnostic]') as HTMLElement
+      const strip = stripOf(container)
+      const controls = screen.getByRole('group', { name: 'Continuous reader controls' })
+
+      expect(strip).not.toBeNull()
+      expect(strip).toHaveTextContent(vote.heading)
+      expect(floating).toContainElement(strip)
+      // Order inside the bar: diagnostic panel, then strip, then controls.
+      expect(panel.compareDocumentPosition(strip!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      expect(strip!.compareDocumentPosition(controls) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    })
+
+    it('renders no strip without a vote prop', () => {
+      const { container } = render(<ReaderControlBar {...baseProps} />)
+
+      expect(stripOf(container)).toBeNull()
+      // Exactly the pre-strip structure: no spacer or wrapper element — the
+      // controls group is the bar's only child while the diagnostic flag is off.
+      const floating = container.querySelector('[data-reader-floating]') as HTMLElement
+      const controls = screen.getByRole('group', { name: 'Continuous reader controls' })
+      expect(floating.childElementCount).toBe(1)
+      expect(floating.firstElementChild).toBe(controls)
+    })
+
+    it('strip and inline vote button share one vote state', async () => {
+      const fetchMock = vi.fn(
+        async () =>
+          new Response(JSON.stringify({ vote: { voteCount: 42 }, isNew: false, newRank: 9 }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+      )
+      vi.stubGlobal('fetch', fetchMock)
+
+      const renderBoth = () =>
+        render(
+          <>
+            <ReaderControlBar {...baseProps} vote={vote} />
+            <VoteButton linkUrl={link.url} title={link.title} category="frontend" initialVoteCount={41} />
+          </>,
+        )
+      const inlineButton = () => screen.getByRole('button', { name: /^Upvote — / })
+
+      // Strip -> inline button.
+      const first = renderBoth()
+      // The inline button seeds the shared count, so the strip shows it too.
+      await waitFor(() => expect(stripOf(first.container)).toHaveTextContent('41'))
+
+      await userEvent.click(stripOf(first.container)!)
+
+      await waitFor(() => expect(inlineButton()).toHaveTextContent('42'))
+      expect(inlineButton()).toHaveAttribute('aria-pressed', 'true')
+      expect(stripOf(first.container)).toHaveAttribute('aria-pressed', 'true')
+      expect(stripOf(first.container)).toHaveTextContent('42')
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+      first.unmount()
+
+      // Inline button -> strip, from a fresh store.
+      resetLinkVotesForTests()
+      fetchMock.mockClear()
+      const second = renderBoth()
+      await waitFor(() => expect(stripOf(second.container)).toHaveTextContent('41'))
+      expect(stripOf(second.container)).toHaveAttribute('aria-pressed', 'false')
+
+      await userEvent.click(inlineButton())
+
+      await waitFor(() => expect(stripOf(second.container)).toHaveTextContent('42'))
+      expect(stripOf(second.container)).toHaveAttribute('aria-pressed', 'true')
+      expect(inlineButton()).toHaveAttribute('aria-pressed', 'true')
+      expect(inlineButton()).toHaveTextContent('42')
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    })
   })
 })

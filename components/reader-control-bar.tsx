@@ -7,12 +7,18 @@ import {
   type ContinuousReaderControlsProps,
 } from '@/components/continuous-reader-controls'
 import { ReaderDiagnosticPanel } from '@/components/reader-diagnostic-panel'
+import { ReaderVoteStrip, type ReaderVoteStripProps } from '@/components/reader-vote-strip'
 import { useReaderLifecycleLog } from '@/hooks/use-reader-lifecycle-log'
 import { applyReaderLogParam } from '@/lib/reader/diagnostic-flag'
 
 export type ReaderControlBarProps = ContinuousReaderControlsProps & {
   /** The reader's current error, surfaced in the diagnostic panel. */
   error?: Error | null
+  /**
+   * The Section being read, voted for from a strip above the controls. Omitted,
+   * the bar renders exactly as it did without the strip (no extra element).
+   */
+  vote?: ReaderVoteStripProps
 }
 
 /**
@@ -48,7 +54,7 @@ function usePersistedReaderLogParam(): void {
   )
 }
 
-export function ReaderControlBar({ error = null, ...controlsProps }: ReaderControlBarProps) {
+export function ReaderControlBar({ error = null, vote, ...controlsProps }: ReaderControlBarProps) {
   usePersistedReaderLogParam()
   // Mounted HERE, once, because this bar is the single floating control used by
   // BOTH the single News page and Read All News. Per host it would attach a
@@ -64,6 +70,14 @@ export function ReaderControlBar({ error = null, ...controlsProps }: ReaderContr
           positioning, and below them it would push the thumb targets off the
           bottom of a phone screen. It renders nothing unless the flag is set. */}
       <ReaderDiagnosticPanel error={error} />
+      {/* Between the panel and the controls, spaced like the panel (`mb-2`).
+          The wrapper exists only with a strip, so a bar without one is
+          unchanged. */}
+      {vote && (
+        <div className="mb-2">
+          <ReaderVoteStrip {...vote} />
+        </div>
+      )}
       <ContinuousReaderControls {...controlsProps} />
     </div>
   )
