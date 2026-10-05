@@ -59,7 +59,7 @@ For a trends issue, the intro paragraph states the through-line of the week. Tha
 
 Write a NanoBanana-optimized prompt in **English**.
 
-**If the user supplied a style or angle note, follow it and skip the default style block below.** Keep only the hard constraints (no text in image, 16:9, and the negative list).
+**If the user supplied a style or angle note, follow it and skip the default style block below.** Keep only the hard constraints (no logos, 16:9, and the negative list).
 
 **Default style (used only when the user gave no direction):**
 - Abstract/conceptual visual, not a literal illustration
@@ -68,13 +68,13 @@ Write a NanoBanana-optimized prompt in **English**.
 - Dark background (navy, deep teal, charcoal) with one bright accent (electric blue, amber, emerald)
 
 **Hard constraints, always applied:**
-- No text, letterforms, or logos in the image
+- No logos in the image. Text is allowed when the scene calls for it (a stamp, a sign, a label). Keep it to a word or two and spell it out exactly in quotes in the prompt.
 - 16:9 hero banner
 - Name a concrete lighting setup and a concrete medium (film stock, lens, or paint/print medium). "Digital art" and "highly detailed" are not descriptions.
 - Always append a negative list. These are the generic AI-image tells and they make the newsletter look cheap:
 
 ```
-Negative: no text, no logos, no lens-flare spam, no neon circuit-board motifs, no
+Negative: no logos, no lens-flare spam, no neon circuit-board motifs, no
 holographic HUD overlays, no glowing wireframe grids, no hexagon patterns, no glossy
 3D-render plastic look, no perfect symmetry, no floating particles.
 ```
