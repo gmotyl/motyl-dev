@@ -3,7 +3,19 @@
  * The simple EdgeTTS/EdgeTTSBrowser wrappers have a bug where the DRM token
  * (async generateSecMsGec) is not awaited in the WebSocket URL construction.
  * BrowserCommunicate.stream() correctly awaits it.
+ *
+ * The library is patched (patches/edge-tts-universal@1.3.3.patch): it sends
+ * the Sec-MS-GEC v2 token Microsoft requires since ~2026-10-10, computed by
+ * `./sec-ms-gec` and installed as `DRM.secMsGecProvider` on every import below,
+ * and a refused handshake (HTTP 403) now rejects the stream instead of hanging.
+ *
+ * Known limit: with a valid v2 token Microsoft still refuses (403) any
+ * handshake whose User-Agent is not Edge >= 137, and browsers do not let page
+ * code set it. Only Edge browsers synthesize; elsewhere the reader now stops
+ * with a visible error. A server-side relay is the fix for other browsers.
  */
+
+import { generateSecMsGecV2 } from './sec-ms-gec'
 
 /**
  * Who is asking for a synthesis. `play` is anything the reader needs to keep
@@ -139,10 +151,12 @@ async function collectAudio(
   runningAttempt = attempt
 
   try {
-    const { Communicate } = await Promise.race([
+    const { Communicate, DRM } = await Promise.race([
       import('edge-tts-universal/browser'),
       firstByteDeadline,
     ])
+    // The patched library refuses to connect without a v2 token provider.
+    DRM.secMsGecProvider = generateSecMsGecV2
 
     const communicate = new Communicate(text, {
       voice,

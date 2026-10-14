@@ -12,7 +12,7 @@ import { useReaderLifecycleLog } from '@/hooks/use-reader-lifecycle-log'
 import { applyReaderLogParam } from '@/lib/reader/diagnostic-flag'
 
 export type ReaderControlBarProps = ContinuousReaderControlsProps & {
-  /** The reader's current error, surfaced in the diagnostic panel. */
+  /** The reader's current error, shown above the controls and in the diagnostic panel. */
   error?: Error | null
   /**
    * The Section being read, voted for from a strip above the controls. Omitted,
@@ -70,6 +70,18 @@ export function ReaderControlBar({ error = null, vote, ...controlsProps }: Reade
           positioning, and below them it would push the thumb targets off the
           bottom of a phone screen. It renders nothing unless the flag is set. */}
       <ReaderDiagnosticPanel error={error} />
+      {/* Visible to every listener, not only behind the diagnostic flag: a
+          synthesis outage (e.g. the endpoint refusing every request) used to
+          end playback with no message at all. */}
+      {error && (
+        <p
+          role="alert"
+          data-reader-error
+          className="mb-2 break-words rounded-md border border-destructive/40 px-3 py-2 text-xs text-destructive"
+        >
+          Read-aloud stopped: {error.message || error.name || 'unknown error'}
+        </p>
+      )}
       {/* Between the panel and the controls, spaced like the panel (`mb-2`).
           The wrapper exists only with a strip, so a bar without one is
           unchanged. */}
