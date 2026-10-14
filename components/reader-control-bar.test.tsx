@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -164,9 +164,29 @@ describe('ReaderControlBar', () => {
   it('passes the reader error through to the panel', () => {
     enableFlag()
 
-    render(<ReaderControlBar {...baseProps} error={new Error('playback died while hidden')} />)
+    const { container } = render(
+      <ReaderControlBar {...baseProps} error={new Error('playback died while hidden')} />
+    )
 
-    expect(screen.getByRole('alert')).toHaveTextContent('playback died while hidden')
+    const panel = container.querySelector('[data-reader-diagnostic]') as HTMLElement
+    expect(within(panel).getByRole('alert')).toHaveTextContent('playback died while hidden')
+  })
+
+  it('shows the reader error to every listener, without the diagnostic flag', () => {
+    const { container, rerender } = render(<ReaderControlBar {...baseProps} />)
+    expect(container.querySelector('[data-reader-error]')).toBeNull()
+
+    rerender(
+      <ReaderControlBar
+        {...baseProps}
+        error={new Error('WebSocket closed before it opened (handshake refused, e.g. HTTP 403)')}
+      />
+    )
+
+    expect(container.querySelector('[data-reader-diagnostic]')).toBeNull()
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Read-aloud stopped: WebSocket closed before it opened'
+    )
   })
 
   it('records page lifecycle events exactly once per mounted bar', () => {
