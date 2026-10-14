@@ -1,4 +1,4 @@
-import { ACRONYM_MAP, PRONUNCIATION_MAP } from '@/lib/tts/pronunciation'
+import { ACRONYM_MAP, EXACT_ACRONYMS, PRONUNCIATION_MAP } from '@/lib/tts/pronunciation'
 import { splitIntoChunks } from '@/lib/tts/chunks'
 
 export interface SpeechSource {
@@ -33,40 +33,100 @@ export interface SpeechSection extends ReviewedSection {
 
 const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
+/**
+ * Case-SENSITIVE whole-word replacement of every key at once: one alternation
+ * regex, longest key first, so a longer key always beats one of its own
+ * prefixes and each match is rewritten exactly once (a replacement's output can
+ * never be re-matched by a later key). This is the engine of the `exact` pass.
+ *
+ * A trailing plural "s" is part of the match and is re-attached to the
+ * replacement, exactly as word mode does it ("PRs" → "pi-ars"): the plural is
+ * the same acronym, and an exact key must not lose it just by being
+ * case-sensitive. The `s` is literal and the flags stay `gu` — never `i` — so
+ * "prs" and "PRS" remain ordinary words.
+ */
 export const replaceWholeWordMappings = (
   text: string,
   mappings: Readonly<Record<string, string>>
 ): string => {
   const names = Object.keys(mappings).sort((a, b) => b.length - a.length)
+  // An empty alternation would match the empty string everywhere.
+  if (names.length === 0) return text
+
   const pattern = new RegExp(
-    `(?<![\\p{L}\\p{N}_])(${names.map(escapeRegExp).join('|')})(?![\\p{L}\\p{N}_])`,
+    `(?<![\\p{L}\\p{N}_])(${names.map(escapeRegExp).join('|')})(s?)(?![\\p{L}\\p{N}_])`,
     'gu'
   )
 
-  return text.replace(pattern, (name) => mappings[name])
+  return text.replace(pattern, (_match, name: string, plural: string) => mappings[name] + plural)
+}
+
+/**
+ * How loosely one pronunciation entry is allowed to match.
+ *
+ * - `word` — standalone word (Unicode boundaries, so Polish diacritics count)
+ *   plus an optional plural "s" (APIs, GPUs), case-insensitive. NOT a prefix,
+ *   so "client"/"click" are never touched by `cli`.
+ * - `stem` — word start, with any trailing Polish inflection preserved
+ *   ("benchmarki" → "benczmarki"), case-insensitive. The loosest mode: only
+ *   keys of at least `MIN_STEM_KEY_LENGTH` may use it.
+ * - `exact` — standalone word plus the same optional plural "s" as `word`, but
+ *   case-SENSITIVE. For acronyms whose lowercase form is an ordinary Polish
+ *   word, where a case-insensitive match would rewrite the ordinary word too.
+ */
+export type PronunciationMatchMode = 'word' | 'stem' | 'exact'
+
+export interface PronunciationPass {
+  readonly mode: PronunciationMatchMode
+  readonly map: Readonly<Record<string, string>>
+}
+
+/**
+ * The passes `applyPronunciation` runs, in order.
+ *
+ * `exact` MUST stay last: the `ci/cd` key (word mode) has to consume "CI/CD"
+ * whole before a bare `CI` exact key could ever split it into "si-aj/CD".
+ */
+export const PRONUNCIATION_PASSES: readonly PronunciationPass[] = Object.freeze([
+  { mode: 'word', map: ACRONYM_MAP },
+  { mode: 'stem', map: PRONUNCIATION_MAP },
+  { mode: 'exact', map: EXACT_ACRONYMS },
+])
+
+const WORD_START = '(?<![\\p{L}\\p{N}_])'
+const WORD_END = '(?![\\p{L}\\p{N}_])'
+
+// `exact` is absent on purpose: it needs no per-key regex — the whole map runs
+// as one alternation through `replaceWholeWordMappings`.
+const patternFor = (mode: Exclude<PronunciationMatchMode, 'exact'>, key: string): RegExp => {
+  const head = `${WORD_START}${escapeRegExp(key)}`
+  switch (mode) {
+    case 'word':
+      return new RegExp(`${head}(s?)${WORD_END}`, 'giu')
+    case 'stem':
+      return new RegExp(`${head}(\\p{L}*)`, 'giu')
+  }
 }
 
 export const applyPronunciation = (text: string): string => {
   let out = text
 
-  // 1) Whole-word acronyms first. Match only as a standalone word (Unicode
-  // boundaries, so Polish diacritics count) plus an optional plural "s"
-  // (APIs, GPUs) — NOT as a prefix, so "client"/"click" are never touched.
-  const acronymKeys = Object.keys(ACRONYM_MAP).sort((a, b) => b.length - a.length)
-  for (const key of acronymKeys) {
-    const re = new RegExp(
-      `(?<![\\p{L}\\p{N}_])${escapeRegExp(key)}(s?)(?![\\p{L}\\p{N}_])`,
-      'giu'
-    )
-    out = out.replace(re, (_m, plural: string) => ACRONYM_MAP[key] + plural)
+  for (const { mode, map } of PRONUNCIATION_PASSES) {
+    // `exact` is case-sensitive, whole-word, longest-key-first — precisely
+    // `replaceWholeWordMappings`, which does the whole map in one regex.
+    if (mode === 'exact') {
+      out = replaceWholeWordMappings(out, map)
+      continue
+    }
+
+    // Longest key first, so a longer key always beats one of its own prefixes
+    // (`cloudflare` over `cloud`, a phrase over its component words).
+    const keys = Object.keys(map).sort((a, b) => b.length - a.length)
+    for (const key of keys) {
+      out = out.replace(patternFor(mode, key), (_m, suffix: string) => map[key] + suffix)
+    }
   }
 
-  // 2) Stem map: match at a word start and preserve trailing Polish inflection.
-  const keys = Object.keys(PRONUNCIATION_MAP).sort((a, b) => b.length - a.length)
-  for (const key of keys) {
-    const re = new RegExp(`(?<![\\p{L}\\p{N}_])${escapeRegExp(key)}(\\p{L}*)`, 'giu')
-    out = out.replace(re, (_m, suffix: string) => PRONUNCIATION_MAP[key] + suffix)
-  }
   return out
 }
 
