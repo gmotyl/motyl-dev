@@ -58,6 +58,8 @@ const edgeMock = vi.hoisted(() => {
 
 vi.mock('edge-tts-universal/browser', () => ({
   Communicate: edgeMock.FakeCommunicate,
+  // The client installs the Sec-MS-GEC v2 provider on it.
+  DRM: { secMsGecProvider: null },
 }))
 
 let synthesizeSpeech: typeof import('@/lib/tts/client').synthesizeSpeech
