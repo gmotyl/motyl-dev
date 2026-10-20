@@ -1,253 +1,18 @@
 import { describe, expect, it } from 'vitest'
+import { applyPronunciation } from 'anytts/text'
 import {
-  applyPronunciation,
   normalizeVersionNumbers,
   prepareSpeechSections,
   prepareSpeechText,
-  replaceWholeWordMappings,
   sectionKey,
   splitIntoSpeechUnits,
   splitReviewedSections,
   stripMarkdown,
   UNIT_MAX_CHARS,
   UNIT_MIN_CHARS,
-  PRONUNCIATION_PASSES,
   type SpeechSection,
 } from '@/lib/tts/speech'
-import {
-  ACRONYM_MAP,
-  EXACT_ACRONYMS,
-  MIN_STEM_KEY_LENGTH,
-  PRONUNCIATION_MAP,
-} from '@/lib/tts/pronunciation'
 import { headingToId } from '@/lib/content/heading-slug'
-import { PROSE_WITHOUT_ACRONYMS } from '@/lib/tts/__fixtures__/prose-without-acronyms'
-
-// Assert against the map's own values so ear-tuning the spellings never breaks
-// these behavioral tests.
-describe('applyPronunciation — whole-word acronyms (ACRONYM_MAP)', () => {
-  it('replaces a standalone acronym with its mapped spelling', () => {
-    expect(applyPronunciation('Użyj CLI do tego')).toBe(`Użyj ${ACRONYM_MAP.cli} do tego`)
-    expect(applyPronunciation('nowe API i GPU')).toContain(ACRONYM_MAP.api)
-    expect(applyPronunciation('nowe API i GPU')).toContain(ACRONYM_MAP.gpu)
-  })
-
-  it('handles multi-token acronyms containing a slash (CI/CD)', () => {
-    expect(applyPronunciation('nasz CI/CD tutaj')).toBe(
-      `nasz ${ACRONYM_MAP['ci/cd']} tutaj`
-    )
-  })
-
-  it('does NOT corrupt normal words that start with an acronym (client/click)', () => {
-    const out = applyPronunciation('client kliknął, potem click i clipboard')
-    expect(out).toContain('client')
-    expect(out).toContain('click')
-    expect(out).toContain('clipboard')
-    expect(out).not.toContain(ACRONYM_MAP.cli)
-  })
-
-  it('handles a trailing plural s but not a longer suffix', () => {
-    expect(applyPronunciation('mamy dwa GPUs')).toBe(`mamy dwa ${ACRONYM_MAP.gpu}s`)
-    // Not a standalone word (Polish diacritic follows) → left untouched.
-    expect(applyPronunciation('CLIą')).toBe('CLIą')
-  })
-
-  it('word-style acronym (JSON) uses its mapped token', () => {
-    expect(applyPronunciation('zwraca JSON')).toBe(`zwraca ${ACRONYM_MAP.json}`)
-  })
-
-  it('is case-insensitive', () => {
-    expect(applyPronunciation('cli i Cli i CLI')).toBe(
-      `${ACRONYM_MAP.cli} i ${ACRONYM_MAP.cli} i ${ACRONYM_MAP.cli}`
-    )
-  })
-})
-
-// Polish "ci" ("mówię ci to") and "cd." ("ciąg dalszy") are ordinary words that
-// spell the acronyms CI and CD; "ide" is a verb form ("ide do domu"). Measured
-// over the corpus the uppercase spelling dominates (CI 630/99, CD 157/15,
-// IDE 245/16, PR 538/7, QA 83/9) AND the error is asymmetric: a missed
-// lowercase "ci failed" merely reads as Polish, while a case-insensitive `ci`
-// would demolish every Polish "ci". Hence a case-SENSITIVE pass.
-// Expected values are written out literally: interpolating the map would make
-// these tests pass against a map that lost the entry.
-describe('applyPronunciation — case-sensitive acronyms (EXACT_ACRONYMS)', () => {
-  it('an exact acronym is pronounced in uppercase', () => {
-    expect(applyPronunciation('CI failed again')).toBe('si-aj failed again')
-    expect(applyPronunciation('nowe IDE')).toBe('nowe aj-di-i')
-    expect(applyPronunciation('otwórz PR')).toBe('otwórz pi-ar')
-    expect(applyPronunciation('zespół QA')).toBe('zespół kju-ej')
-  })
-
-  it('an exact acronym leaves its lowercase Polish homograph alone', () => {
-    expect(applyPronunciation('mówię ci to teraz')).toBe('mówię ci to teraz')
-    expect(applyPronunciation('cd. nastąpi w kolejnym wpisie')).toBe(
-      'cd. nastąpi w kolejnym wpisie'
-    )
-    expect(applyPronunciation('ide do domu')).toBe('ide do domu')
-  })
-
-  it('an exact acronym leaves the Polish polite capitalised form alone', () => {
-    // Polite Polish capitalises only the first letter: "Ci", never "CI".
-    expect(applyPronunciation('Mówię Ci to')).toBe('Mówię Ci to')
-  })
-
-  it('the compound ci/cd key still wins over the bare CI acronym', () => {
-    expect(applyPronunciation('nasz CI/CD działa')).toBe('nasz si-aj-si-di działa')
-    expect(applyPronunciation('CI/CD i CI razem')).toBe('si-aj-si-di i si-aj razem')
-  })
-
-  // The plural is the same acronym. Word mode has always carried an optional
-  // trailing "s", so moving a key into the exact pass must not drop it: "PRs"
-  // occurs 201 times in the corpus and "IDEs" 33, and both were pronounced
-  // before these keys became case-sensitive.
-  it('a plural of a case-sensitive acronym is still pronounced', () => {
-    expect(applyPronunciation('dwa PRs czekają')).toBe('dwa pi-ars czekają')
-    expect(applyPronunciation('zamknąłem PRs.')).toBe('zamknąłem pi-ars.')
-    expect(applyPronunciation('nowe IDEs')).toBe('nowe aj-di-is')
-    expect(applyPronunciation('dwa QAs i CIs')).toBe('dwa kju-ejs i si-ajs')
-  })
-
-  // The counter-case: the plural group must not smuggle in case-insensitivity.
-  it('a lowercase plural of a case-sensitive acronym stays an ordinary word', () => {
-    expect(applyPronunciation('prs')).toBe('prs')
-    expect(applyPronunciation('ides')).toBe('ides')
-    expect(applyPronunciation('cis jest przed d')).toBe('cis jest przed d')
-    // Uppercase is the whole key, so "PRS" is not "PR" + a plural either.
-    expect(applyPronunciation('PRS')).toBe('PRS')
-  })
-})
-
-// A stem key replaces a word PREFIX and re-appends whatever letters follow, with
-// no idea where the word ends. Short keys therefore swallow ordinary words that
-// merely start with them — `mac` turned "machine" into "makhine". Those keys
-// belong in ACRONYM_MAP, which matches the whole word only.
-describe('applyPronunciation — short keys match whole words, not prefixes', () => {
-  it('a short key no longer rewrites a longer word that starts with it', () => {
-    expect(applyPronunciation('macierz kowariancji rośnie')).toBe('macierz kowariancji rośnie')
-    expect(applyPronunciation('Nasz codebase rośnie')).toBe('Nasz codebase rośnie')
-    expect(applyPronunciation('ainews dzisiaj')).toBe('ainews dzisiaj')
-    // "machine" is left alone; "macOS" is pronounced from its own word entry.
-    expect(applyPronunciation('machine learning i macOS')).toBe(
-      `machine learning i ${ACRONYM_MAP.macos}`
-    )
-  })
-
-  it('a short key still rewrites the bare word', () => {
-    expect(applyPronunciation('nowy Mac i AI')).toBe(
-      `nowy ${ACRONYM_MAP.mac} i ${ACRONYM_MAP.ai}`
-    )
-    expect(applyPronunciation('GPT pisze code')).toBe(
-      `${ACRONYM_MAP.gpt} pisze ${ACRONYM_MAP.code}`
-    )
-  })
-
-  // Word mode only matches the bare word, so demoting a short key also dropped
-  // the Polish inflections it used to catch as a stem. Those come back as
-  // explicit word-mode entries — one per form that actually occurs in the corpus.
-  it('Polish inflections of a demoted short key are pronounced from explicit entries', () => {
-    expect(applyPronunciation('bugi')).toBe('bagi')
-    expect(applyPronunciation('bugów')).toBe('bagów')
-    expect(applyPronunciation('buga')).toBe('baga')
-    expect(applyPronunciation('bugiem')).toBe('bagiem')
-    expect(applyPronunciation('buggy')).toBe('bagi')
-    expect(applyPronunciation('hooki')).toBe('huki')
-    expect(applyPronunciation('hooków')).toBe('huków')
-    expect(applyPronunciation('hooka')).toBe('huka')
-    expect(applyPronunciation('hookami')).toBe('hukami')
-    expect(applyPronunciation('hookach')).toBe('hukach')
-    expect(applyPronunciation('edges')).toBe('edżes')
-    expect(applyPronunciation('Naprawiamy bugi i hooki')).toBe('Naprawiamy bagi i huki')
-  })
-
-  // The first sweep for these forms asked whether a guessed word list occurred
-  // instead of asking the corpus which forms it contains, so these measured
-  // ones stayed silent: hookiem 4, hooku 3, bugami 3, Maca 8, Maców 3.
-  it('pronounces the inflections the first measurement missed', () => {
-    expect(applyPronunciation('hookiem')).toBe('hukiem')
-    expect(applyPronunciation('hooku')).toBe('huku')
-    expect(applyPronunciation('bugami')).toBe('bagami')
-    // Capitalised in the corpus; the map is case-insensitive, so both spellings
-    // land on the same lowercase value.
-    expect(applyPronunciation('bez Maca')).toBe('bez maka')
-    expect(applyPronunciation('kilka Maców')).toBe('kilka maków')
-    expect(applyPronunciation('maca')).toBe('maka')
-  })
-
-  it("English plurals of a demoted short key still come from the base key's plural group", () => {
-    expect(applyPronunciation('bugs')).toBe('bags')
-    expect(applyPronunciation('hooks')).toBe('huks')
-    // The bare words keep working too — the explicit forms do not shadow them.
-    expect(applyPronunciation('bug')).toBe('bag')
-    expect(applyPronunciation('hook')).toBe('huk')
-    expect(applyPronunciation('edge')).toBe('edż')
-  })
-})
-
-// A stem replaces the prefix it matched and keeps the rest of the word, so a
-// shorter stem inside a compound leaves the tail unspoken: `tailwind` turned
-// "tailwindcss" into "tejlłindcss" and `claude` turned "claudecode" into
-// "klodcode". The fix is an explicit longer key — longest-key-first makes it win
-// — and stem mode keeps Polish endings attaching to it.
-describe('applyPronunciation — compounds whose tail a shorter stem swallowed', () => {
-  it('pronounces the css tail of tailwindcss', () => {
-    expect(applyPronunciation('tailwindcss')).toBe(
-      `${PRONUNCIATION_MAP.tailwind} ${ACRONYM_MAP.css}`
-    )
-    expect(applyPronunciation('Piszemy w TailwindCSS dzisiaj')).toBe(
-      `Piszemy w ${PRONUNCIATION_MAP.tailwind} ${ACRONYM_MAP.css} dzisiaj`
-    )
-  })
-
-  it('pronounces the code tail of claudecode', () => {
-    expect(applyPronunciation('claudecode')).toBe(
-      `${PRONUNCIATION_MAP.claude} ${ACRONYM_MAP.code}`
-    )
-    expect(applyPronunciation('ClaudeCode robi to sam')).toBe(
-      `${PRONUNCIATION_MAP.claude} ${ACRONYM_MAP.code} robi to sam`
-    )
-  })
-
-  it('keeps a Polish ending on the new compound keys', () => {
-    expect(applyPronunciation('claudecodem')).toBe(
-      `${PRONUNCIATION_MAP.claude} ${ACRONYM_MAP.code}m`
-    )
-  })
-
-  // The guard on the fix: a new longer key must not shadow any shorter word it
-  // contains. These outputs are pinned to what they were before the two entries
-  // were added.
-  it('does not shadow the shorter words the new keys contain', () => {
-    expect(applyPronunciation('cloud')).toBe('klałd')
-    expect(applyPronunciation('cloudflare')).toBe('klałdfler')
-    expect(applyPronunciation('commit')).toBe('komit')
-    expect(applyPronunciation('commitment')).toBe('komitment')
-    expect(applyPronunciation('tailwind')).toBe('tejlłind')
-    expect(applyPronunciation('claude')).toBe('klod')
-  })
-})
-
-// The guard against the NEXT collision, not the ones already fixed. Every map
-// key is a prefix rule, so any new entry can quietly start rewriting ordinary
-// prose; this pins that it does not.
-describe('applyPronunciation — ordinary prose survives the maps', () => {
-  it('ordinary prose with no acronyms passes through applyPronunciation unchanged', () => {
-    const rewritten = PROSE_WITHOUT_ACRONYMS.map((sentence) => ({
-      sentence,
-      spoken: applyPronunciation(sentence),
-    })).filter(({ sentence, spoken }) => spoken !== sentence)
-
-    // Asserted as a joined report rather than per-sentence, so ONE failure
-    // lists every offending sentence with what it became — enough to act on
-    // without a debugger.
-    expect(
-      rewritten.map(({ sentence, spoken }) => `${sentence}\n  became: ${spoken}`).join('\n'),
-      'applyPronunciation rewrote prose that contains nothing to pronounce. ' +
-        'Fix this by adding an explicit pronunciation entry for the offending ' +
-        'word — never by editing the fixture sentence.'
-    ).toBe('')
-  })
-})
 
 const section = (over: Partial<SpeechSection>): SpeechSection => ({
   sourceSlug: 'news',
@@ -629,6 +394,19 @@ describe('normalizeVersionNumbers', () => {
 })
 
 describe('prepareSpeechText', () => {
+  it('prepareSpeechText applies the anytts pl preset to English and Polish text alike', () => {
+    // Plain prose (no markdown, no version numbers), so the pipeline reduces to
+    // the pronunciation step and must equal the anytts `pl` preset exactly.
+    const english = 'The CLI calls the API, then React renders on the GPU.'
+    const polish = 'Nasz CI/CD odpala benchmarki Reacta, a PRs czekają na review.'
+
+    expect(prepareSpeechText(english)).toBe(applyPronunciation(english, 'pl'))
+    expect(prepareSpeechText(polish)).toBe(applyPronunciation(polish, 'pl'))
+    // The preset actually rewrote something: the equality above is not vacuous.
+    expect(prepareSpeechText(english)).not.toBe(english)
+    expect(prepareSpeechText(polish)).not.toBe(polish)
+  })
+
   it('prepareSpeechText normalizes semver version numbers', () => {
     expect(prepareSpeechText('Wersja 3.6.3 wychodzi')).toContain('3 6 3')
   })
@@ -678,28 +456,13 @@ hashtags: "#pl #ai"
     const source = 'AI i GPT 5.6 działają z React oraz Microsoft. Unknown Xyzzy.'
 
     // Acronyms are NOT letter-spelled — spelling was removed; specific acronyms
-    // live in PRONUNCIATION_MAP instead. Only the map applies: AI -> 'ej aj',
+    // live in the anytts pl preset instead. Only the preset applies: AI -> 'ej aj',
     // GPT -> 'dżi pi ti', React -> reakt, Microsoft -> mikrosoft; version
     // 5.6 -> '5 6'. 'Xyzzy' (no map stem) is left untouched.
     expect(prepareSpeechText(source)).toBe(
       'ej aj i dżi pi ti 5 6 działają z reakt oraz mikrosoft. Unknown Xyzzy.'
     )
     expect(source).toBe('AI i GPT 5.6 działają z React oraz Microsoft. Unknown Xyzzy.')
-  })
-
-  it('replaces overlapping mappings longest-first and transforms each match once', () => {
-    expect(
-      replaceWholeWordMappings('React Native oraz React.', {
-        React: 'R',
-        'React Native': 'React',
-      })
-    ).toBe('React oraz R.')
-  })
-
-  it('re-attaches a trailing plural s to a whole-word replacement', () => {
-    expect(replaceWholeWordMappings('PR i PRs', { PR: 'pi-ar' })).toBe('pi-ar i pi-ars')
-    // Case-sensitive still: only the exact spelling of the key is a match.
-    expect(replaceWholeWordMappings('pr i prs', { PR: 'pi-ar' })).toBe('pr i prs')
   })
 
   it('applies inflection-aware pronunciation for English stems', () => {
@@ -877,68 +640,5 @@ React działa.`,
       'Dzisiejsze wiadomości ej aj w praktyce ej aj pomaga.',
       'reakt rośnie reakt działa.',
     ])
-  })
-})
-
-// The maps carry the looseness of their own match mode, so these invariants are
-// the net: a key in the wrong map silently changes how loosely it matches.
-describe('pronunciation map invariants', () => {
-  it('every stem key is at least MIN_STEM_KEY_LENGTH characters', () => {
-    const tooShort = Object.keys(PRONUNCIATION_MAP).filter(
-      (key) => key.length < MIN_STEM_KEY_LENGTH
-    )
-
-    expect(
-      tooShort,
-      `PRONUNCIATION_MAP keys shorter than MIN_STEM_KEY_LENGTH (${MIN_STEM_KEY_LENGTH}) match as a stem and swallow longer words: ${tooShort.join(', ')}. Move them to ACRONYM_MAP (word) or EXACT_ACRONYMS (exact).`
-    ).toEqual([])
-  })
-
-  it('every exact-acronym key is uppercase', () => {
-    const notUppercase = Object.keys(EXACT_ACRONYMS).filter((key) => key !== key.toUpperCase())
-
-    expect(
-      notUppercase,
-      `EXACT_ACRONYMS is matched case-sensitively, so a lowercase key can never match: ${notUppercase.join(', ')}`
-    ).toEqual([])
-  })
-
-  it('no key appears in more than one pronunciation map', () => {
-    const named: ReadonlyArray<readonly [string, Readonly<Record<string, string>>]> = [
-      ['ACRONYM_MAP', ACRONYM_MAP],
-      ['PRONUNCIATION_MAP', PRONUNCIATION_MAP],
-      ['EXACT_ACRONYMS', EXACT_ACRONYMS],
-    ]
-    const owners = new Map<string, string[]>()
-    for (const [mapName, map] of named) {
-      for (const key of Object.keys(map)) {
-        const lower = key.toLowerCase()
-        owners.set(lower, [...(owners.get(lower) ?? []), mapName])
-      }
-    }
-    const duplicated = [...owners.entries()]
-      .filter(([, maps]) => maps.length > 1)
-      .map(([key, maps]) => `${key} (${maps.join(' + ')})`)
-
-    expect(
-      duplicated,
-      `a key may only live in one map — its map decides how loosely it matches: ${duplicated.join('; ')}`
-    ).toEqual([])
-  })
-
-  it('applyPronunciation applies word, stem and exact modes in that order', () => {
-    expect(PRONUNCIATION_PASSES.map((pass) => pass.mode)).toEqual(['word', 'stem', 'exact'])
-    expect(PRONUNCIATION_PASSES.map((pass) => pass.map)).toEqual([
-      ACRONYM_MAP,
-      PRONUNCIATION_MAP,
-      EXACT_ACRONYMS,
-    ])
-    // Behavioural, not just declarative: the assertion above only describes the
-    // list, so the one below pins the order the list is actually CONSUMED in.
-    // The `ci/cd` word key must consume "CI/CD" whole before a bare `CI` exact
-    // key could split it — consume the passes in reverse and this reads
-    // "si-aj/si-di" instead.
-    expect(applyPronunciation('nasz CI/CD działa')).toBe('nasz si-aj-si-di działa')
-    expect(applyPronunciation('CI/CD i CI razem')).toBe('si-aj-si-di i si-aj razem')
   })
 })
