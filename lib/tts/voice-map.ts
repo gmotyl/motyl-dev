@@ -2,19 +2,11 @@
  * TTS (Text-to-Speech) utilities for language detection and voice mapping
  */
 
-// Map of hashtags to TTS voices
+// Map of hashtags to TTS voices. Only languages whose voice is in the anytts
+// edge catalog belong here; any other hashtag falls back to the default voice.
 const LANGUAGE_VOICE_MAP: Record<string, string> = {
   pl: 'pl-PL-MarekNeural',
   en: 'en-GB-RyanNeural',
-  es: 'es-ES-ElviraNeural',
-  fr: 'fr-FR-DeniseNeural',
-  de: 'de-DE-KatjaNeural',
-  it: 'it-IT-ElsaNeural',
-  pt: 'pt-PT-RaquelNeural',
-  ru: 'ru-RU-SvetlanaNeural',
-  ja: 'ja-JP-NanamiNeural',
-  zh: 'zh-CN-XiaoxiaoNeural',
-  ko: 'ko-KR-SunHiNeural',
 }
 
 // Common Polish words for content-based language detection
