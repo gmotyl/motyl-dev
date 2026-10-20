@@ -17,7 +17,6 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
-  serverExternalPackages: ['edge-tts'],
   async redirects() {
     // Legacy /articles/<news-slug> URLs have to land on /news/<slug>. Emitting one
     // redirect per news item pushed the build past Vercel's 2048-route limit, so

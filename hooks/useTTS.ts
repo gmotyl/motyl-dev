@@ -420,7 +420,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   // that never produced bytes, or bytes the element refused. Reset when a unit
   // actually plays to its end (and at the start of a play session), NOT when
   // synthesis merely resolves. Bounds the auto-skip below: a systemic outage
-  // (no network, edge-tts fully down, a decoder that rejects everything) must
+  // (no network, Edge TTS fully down, a decoder that rejects everything) must
   // still surface as a stop + onError instead of racing silently through every
   // remaining chunk.
   const consecutiveFailuresRef = useRef(0)
@@ -1122,7 +1122,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
   /**
    * THE give-up: too many units in a row were unreadable — systemic (no
-   * network, edge-tts down, a decoder that rejects everything) rather than one
+   * network, Edge TTS down, a decoder that rejects everything) rather than one
    * bad paragraph. The session ends here, so the whole buffered window of
    * prepared audio goes with it, and the element carries nothing this hook
    * counts as loaded. One helper for both ways past the cap — `playChunk`'s

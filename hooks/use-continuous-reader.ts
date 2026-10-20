@@ -85,7 +85,7 @@ function resolvePositionIndex(
 }
 
 // How many prebuffer warm requests the ladder hands over at a time. The
-// synthesis client now runs one edge-tts synthesis at a time, playback lane
+// synthesis client now runs one anytts synthesis at a time, playback lane
 // first, so a second worker would only queue behind the first: one keeps the
 // warm lane short, and a Play pressed meanwhile waits behind at most one warm.
 const PREBUFFER_CONCURRENCY = 1

@@ -488,7 +488,7 @@ describe('section handoffs on the MSE carrier', () => {
      * assignment, but a `pause()` at the section's end still hands the phone a
      * paused element and makes the next section START it again — and device
      * logs put the first synthesis after that pause/start pair at the head of
-     * most dead edge-tts clusters. The element is left running instead: it is
+     * most dead Edge TTS clusters. The element is left running instead: it is
      * sitting at the end of its buffer, and the next section's first append is
      * what it plays into.
      *

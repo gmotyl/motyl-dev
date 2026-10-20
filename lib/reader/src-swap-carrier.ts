@@ -34,7 +34,7 @@ import type { Carrier, PreparedUnit } from '@/lib/reader/carrier'
 import { createUnitTimeline, type UnitTimeline } from '@/lib/reader/unit-timeline'
 
 /**
- * `lib/tts/client` returns MP3 bytes straight from edge-tts. Nothing in the
+ * `lib/tts/client` returns MP3 bytes straight from anytts. Nothing in the
  * reader needs decoded samples, so the bytes are handed to the media element
  * as-is, correctly typed, and the browser decodes them on its own audio thread.
  */

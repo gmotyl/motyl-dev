@@ -35,7 +35,7 @@ import type { SeamReport } from '@/lib/reader/seam-report'
  * carrier measures from the buffer.
  */
 
-// Mock the synthesis client so no real network / edge-tts is touched.
+// Mock the synthesis client so no real network / TTS engine is touched.
 vi.mock('@/lib/tts/client', () => ({
   synthesizeSpeech: vi.fn(async () => new ArrayBuffer(8)),
   prefetchSpeech: vi.fn(),
@@ -1589,7 +1589,7 @@ describe('useTTS appends in index order on the MSE carrier', () => {
      */
     enableLog()
     vi.mocked(synthesizeSpeech).mockImplementation(async (text: string) => {
-      if (text === FOUR[1]) throw new Error('edge-tts down')
+      if (text === FOUR[1]) throw new Error('Edge TTS down')
       return new ArrayBuffer(8)
     })
     const onError = vi.fn()
