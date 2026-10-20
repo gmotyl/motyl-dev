@@ -16,7 +16,7 @@
  * other browsers and is deliberately not configured yet.
  */
 
-import { createTts, type Tts } from 'anytts'
+import { createTts, resolveVoice, type Tts } from 'anytts'
 import { DEFAULT_TTS_VOICE } from './voices'
 
 /**
@@ -138,4 +138,24 @@ export function prefetchSpeech(text: string, options: TTSOptions = {}): void {
  */
 export function restartStalledSynthesis(): boolean {
   return tts().restartStalled()
+}
+
+/**
+ * Resolve a saved voice against the engine's catalog for the settings card: a
+ * voice outside it falls back to the configured default with `fellBack: true`.
+ * An engine this instance does not configure resolves against the one it does.
+ * Creates the shared instance on first use, so call it from an effect, not at
+ * import or during render.
+ */
+export function resolveStoredVoice(
+  engine: string,
+  voice: string | null
+): { voice: string; fellBack: boolean } {
+  const query = { voice: voice ?? undefined }
+  try {
+    return resolveVoice(tts(), { ...query, engine })
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error
+    return resolveVoice(tts(), { ...query, engine: ENGINE })
+  }
 }
