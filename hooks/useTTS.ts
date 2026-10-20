@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { detectLanguageFromContent } from '@/lib/tts/voice-map'
 import { splitIntoChunks } from '@/lib/tts/chunks'
 import { restartStalledSynthesis, synthesizeSpeech } from '@/lib/tts/client'
+import { TtsError } from 'anytts'
 import {
   describeError,
   detailFor,
@@ -1050,7 +1051,10 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         // The error's name tells a stall from a closed socket; the same day's
         // log had a retry fail in 1447 ms with nothing to say which it was.
         const name = (error as { name?: unknown } | null)?.name
-        const errorName = typeof name === 'string' && name !== '' ? name : 'Error'
+        const baseName = typeof name === 'string' && name !== '' ? name : 'Error'
+        // anytts reports every failure as one TtsError class, so its name no
+        // longer separates a refused handshake from a stall — the kind does.
+        const errorName = error instanceof TtsError ? `${baseName} ${error.kind}` : baseName
         logReaderEvent(
           'synth-end',
           detailFor(unit, `failed after ${elapsed()}, ${errorName}, ${document.visibilityState}`)

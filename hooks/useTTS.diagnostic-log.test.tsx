@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { useTTS } from './useTTS'
 import { synthesizeSpeech } from '@/lib/tts/client'
+import { TtsError } from 'anytts'
 import {
   READER_LOG_FLAG,
   clearReaderLog,
@@ -815,6 +816,64 @@ describe('useTTS diagnostic log — synthesis', () => {
 
       expect(synthLines()[1]).toBe(
         'synth-end 0: failed after 30100ms (queued 100ms), TTSStreamStallError, visible'
+      )
+    })
+
+    it('synth-end names the TtsError kind on failure', async () => {
+      /**
+       * anytts reports every failure as one `TtsError` class, so the name
+       * alone no longer tells a refused handshake from a stall — the kind does.
+       */
+      enableLog()
+      const failing = deferSynthesis()
+      const failedPlay = await startPlaying(vi.fn())
+      now += 100
+      failing[0].onStart?.()
+      now += 712
+      await act(async () => {
+        failing[0].reject(new TtsError('rejected', 'handshake refused'))
+        await failedPlay()
+      })
+
+      expect(synthLines()[1]).toBe(
+        'synth-end 0: failed after 812ms (queued 100ms), TtsError rejected, visible'
+      )
+    })
+
+    it('synth-end keeps queue and first-byte timings through anytts', async () => {
+      enableLog()
+      const pending = deferSynthesis()
+      const playing = await startPlaying()
+
+      now += 150
+      pending[0].onStart?.()
+      now += 450
+      pending[0].onFirstByte?.()
+      now += 600
+      await act(async () => {
+        pending[0].resolve()
+        await playing()
+      })
+
+      expect(synthLines()[1]).toBe('synth-end 0: 1200ms (queued 150ms, first byte 600ms), visible')
+
+      // A TtsError after audio started keeps both timings next to its kind.
+      cleanup()
+      clearReaderLog()
+      const failing = deferSynthesis()
+      const failedPlay = await startPlaying(vi.fn())
+      now += 100
+      failing[0].onStart?.()
+      now += 300
+      failing[0].onFirstByte?.()
+      now += 10_000
+      await act(async () => {
+        failing[0].reject(new TtsError('stalled'))
+        await failedPlay()
+      })
+
+      expect(synthLines()[1]).toBe(
+        'synth-end 0: failed after 10400ms (queued 100ms, first byte 400ms), TtsError stalled, visible'
       )
     })
 
