@@ -119,8 +119,8 @@ importers:
         specifier: ^1.3.1
         version: 1.3.1(next@16.0.10(@babel/core@7.29.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react@19.2.4)
       anytts:
-        specifier: 0.3.0
-        version: 0.3.0
+        specifier: 0.3.1
+        version: 0.3.1
       autoprefixer:
         specifier: ^10.4.20
         version: 10.4.24(postcss@8.5.6)
@@ -2692,8 +2692,8 @@ packages:
     resolution: {integrity: sha512-KMReFUr0B4t+D+OBkjR3KYqvocp2XaSzO55UcB6mgQMd3KbcE+mWTyvVV7D/zsdEbNnV6acZUutkiHQXvTr1Rw==}
     engines: {node: '>= 8'}
 
-  anytts@0.3.0:
-    resolution: {integrity: sha512-SPncghaqjNYtILPIXuBvfSzKnnMMuyHw8pbGyuORkZlV2Vz8waNvtrHOudcVH7R7uNNt2UydPgVY7Uj6dQGmEQ==}
+  anytts@0.3.1:
+    resolution: {integrity: sha512-ayzjkphZfUe1Uffy3F7y9Ut4k17lJgZtvDH6+5C2I2tqXouLRBdniaVk6L5XoCWQoZs4K0CuGY2ti/V7DWjBLg==}
     engines: {node: '>=22'}
 
   arg@5.0.2:
@@ -7847,7 +7847,7 @@ snapshots:
       normalize-path: 3.0.0
       picomatch: 2.3.1
 
-  anytts@0.3.0: {}
+  anytts@0.3.1: {}
 
   arg@5.0.2: {}
 
