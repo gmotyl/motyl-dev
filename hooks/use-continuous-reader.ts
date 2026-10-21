@@ -55,9 +55,10 @@ export const QUEUE_HOLD_TIMEOUT_MS = 30_000
 
 /**
  * Where the reader is relative to the end of the queue: `idle` everywhere but
- * there, `holding` while it waits for more sections with the timeline kept.
+ * there, `holding` while it waits for more sections with the timeline kept,
+ * `closing` while it says there is nothing more (see `closingLine`).
  */
-type HoldPhase = 'idle' | 'holding'
+type HoldPhase = 'idle' | 'holding' | 'closing'
 
 type RequestMoreResult = Awaited<ReturnType<NonNullable<ContinuousReaderOptions['requestMore']>>>
 
@@ -156,7 +157,7 @@ async function warmTier(
 
 export function useContinuousReader(
   items: readonly SpeechSection[],
-  { onItemChange, moreMayCome, requestMore }: ContinuousReaderOptions = {}
+  { onItemChange, moreMayCome, requestMore, closingLine }: ContinuousReaderOptions = {}
 ) {
   const [position, setPosition] = useState<ReadingPosition>(() =>
     items[0] ? { sectionKey: items[0].key, unitIndex: 0 } : NO_POSITION
@@ -252,6 +253,15 @@ export function useContinuousReader(
   const [holdAnswerTick, setHoldAnswerTick] = useState(0)
   const moreMayComeRef = useRef(moreMayCome === true)
   const requestMoreRef = useRef(requestMore)
+  const closingLineRef = useRef(closingLine)
+  // The closing line has been swapped in and its start is owed to the effect
+  // that runs once the swap has committed (see `enterClosing`).
+  const closingStartPendingRef = useRef(false)
+  // Whether the units `useTTS` holds right now are the closing line's — i.e.
+  // the last COMMITTED phase was `closing`. `holdPhaseRef` cannot answer that:
+  // it turns `idle` the moment a hold is aborted, a render before `useTTS`
+  // sees the section's units again.
+  const closingUnitsLiveRef = useRef(false)
 
   useEffect(() => {
     moreMayComeRef.current = moreMayCome === true
@@ -260,6 +270,10 @@ export function useContinuousReader(
   useEffect(() => {
     requestMoreRef.current = requestMore
   }, [requestMore])
+
+  useEffect(() => {
+    closingLineRef.current = closingLine
+  }, [closingLine])
 
   const setHoldPhase = useCallback((phase: HoldPhase) => {
     holdPhaseRef.current = phase
@@ -274,6 +288,7 @@ export function useContinuousReader(
     }
     holdGenerationRef.current += 1
     holdAnswerRef.current = null
+    closingStartPendingRef.current = false
     setHoldPhase('idle')
   }, [setHoldPhase])
 
@@ -308,6 +323,33 @@ export function useContinuousReader(
     },
     [endHold]
   )
+
+  /**
+   * Nothing more will come: say so. Called from `onComplete` (the last section
+   * ended with nothing more to come) or from the hold's judge (the page found
+   * out there is nothing more while the reader held). Either way the timeline
+   * is live and the element is running at the end of its buffer, so the line
+   * is appended to it like the next section of a handoff: the claim on the
+   * timeline is taken here — in the completion's batch on the first path, so
+   * its release is dropped — and the start itself waits for the commit that
+   * hands `useTTS` the swapped units.
+   *
+   * Not a section: `items`, the position and everything derived from them stay
+   * on the last section; only the units handed to `useTTS` change.
+   */
+  const enterClosing = useCallback(() => {
+    // Coming from a hold, its deadline and any answer still in flight are over.
+    if (holdTimerRef.current !== null) {
+      clearTimeout(holdTimerRef.current)
+      holdTimerRef.current = null
+    }
+    holdGenerationRef.current += 1
+    holdAnswerRef.current = null
+    closingStartPendingRef.current = true
+    setHoldPhase('closing')
+    setContinuesTimeline(true)
+    setIsHandingOff(true)
+  }, [setHoldPhase])
 
   /** Ask for more on behalf of the hold that is running now. */
   const requestMoreDuringHold = useCallback(() => {
@@ -486,6 +528,10 @@ export function useContinuousReader(
       // Any start the user asked for ends a hold. The arrival path has already
       // left it by the time it gets here, so this is a no-op for it.
       abortHold('play-from-here')
+      // `useTTS` still holds the closing line's units until the abort above has
+      // re-rendered — read synchronously, a start right here would say the
+      // closing line again (see `closingUnitsLiveRef`).
+      const unitsAreStale = closingUnitsLiveRef.current
 
       previewKeyRef.current = selectedItem.key
       setPreviewKey(selectedItem.key)
@@ -511,7 +557,7 @@ export function useContinuousReader(
       }
 
       // Already on this section: `useTTS` holds its units, so start right away.
-      if (selectedItem.key === positionRef.current.sectionKey) {
+      if (selectedItem.key === positionRef.current.sectionKey && !unitsAreStale) {
         pendingStartRef.current = null
         updatePosition(selectedItem.key, unitIndex)
         void (unitIndex > 0
@@ -520,9 +566,10 @@ export function useContinuousReader(
         return
       }
 
-      // Another section: `useTTS` only sees its units after the position commits,
-      // so hand the start to the effect below. From here until playback actually
-      // resumes the reader counts as running — see `isHandingOff`.
+      // Another section — or this one with the closing line still swapped in:
+      // `useTTS` only sees its units after the next commit, so hand the start to
+      // the effect below. From here until playback actually resumes the reader
+      // counts as running — see `isHandingOff`.
       pendingStartRef.current = { sectionKey: selectedItem.key, unitIndex }
       setIsHandingOff(true)
       updatePosition(selectedItem.key, unitIndex)
@@ -530,13 +577,25 @@ export function useContinuousReader(
     [abortHold, updatePosition]
   )
 
+  // The closing line is a swap of the units, nothing more: the content, the
+  // position and the section list all stay on the last section.
+  const closingUnits = useMemo(() => (closingLine ? [closingLine] : undefined), [closingLine])
+  const ttsUnits =
+    holdPhase === 'closing' && closingUnits ? closingUnits : unitTextsBySection[currentIndex]
+
   const playback = useTTS(currentItem?.speechText ?? '', {
     voice,
     continueTimeline: continuesTimeline,
-    units: unitTextsBySection[currentIndex],
+    units: ttsUnits,
     onComplete: useCallback(() => {
       // Stale completion: the position moved on since this section started.
       if (positionRef.current.sectionKey !== currentKey) return
+
+      // The closing line has been said: the end of the queue, for real.
+      if (holdPhaseRef.current === 'closing') {
+        stopAtQueueEnd('no-more')
+        return
+      }
 
       const nextIndex = itemsRef.current.findIndex((section) => section.key === currentKey) + 1
       if (nextIndex > 0 && nextIndex < itemsRef.current.length) {
@@ -556,8 +615,13 @@ export function useContinuousReader(
       // The last section ended on its own, but the page may still be loading
       // more: hold the timeline for it instead of stopping (see `holdPhase`).
       // Without the option this is today's end of the queue, untouched.
-      if (nextIndex > 0 && moreMayComeRef.current) enterHold()
-    }, [currentKey, enterHold, selectAndStart]),
+      if (nextIndex > 0 && moreMayComeRef.current) {
+        enterHold()
+        return
+      }
+      // Nothing more will come: say so, if the page gave the reader the words.
+      if (nextIndex > 0 && closingLineRef.current) enterClosing()
+    }, [currentKey, enterClosing, enterHold, selectAndStart, stopAtQueueEnd]),
     onError: useCallback((nextError: Error) => {
       // `onError` is a public callback contract, so what actually arrives is
       // whatever the caller passed — today always a real `Error` built by
@@ -580,6 +644,25 @@ export function useContinuousReader(
   useEffect(() => {
     playbackRef.current = playback
   }, [playback])
+
+  // Declared before every effect that may start playback in the same commit
+  // (the re-seat and the pending start below), so they read this commit's
+  // answer.
+  useEffect(() => {
+    closingUnitsLiveRef.current = holdPhase === 'closing'
+  }, [holdPhase])
+
+  // Start the closing line once `useTTS` has its units. The pending-start
+  // effect's twin: `stop()` with the element kept running, then `play()` — the
+  // same pair the auto-advance makes — so `ensureChunks` appends the one unit
+  // on the live timeline instead of starting a new one. After the
+  // `playbackRef` sync, so it drives this commit's playback.
+  useEffect(() => {
+    if (holdPhase !== 'closing' || !closingStartPendingRef.current) return
+    closingStartPendingRef.current = false
+    playbackRef.current?.stop({ keepElementRunning: true })
+    void playbackRef.current?.play()
+  }, [holdPhase])
 
   // Destructured here, above the prebuffer ladder, so the ladder can depend on
   // `isPlaying`/`isBuffering` as VALUES: `playback`'s identity churns every
@@ -682,7 +765,7 @@ export function useContinuousReader(
 
     // A re-seat is the page's doing, not an arrival: the section the hold was
     // waiting behind is gone, so the hold goes with it.
-    abortHold('reseat')
+    const leftQueueEnd = abortHold('reseat')
 
     // Reaching here means the section under the position vanished, which also
     // voids any queued handoff — its target may be one of the removed sections,
@@ -701,7 +784,9 @@ export function useContinuousReader(
       return
     }
 
-    const wasActive = Boolean(
+    // Past the end of the queue nothing was being read — the closing line is
+    // playing, but it is not the section — so nothing resumes on the survivor.
+    const wasActive = !leftQueueEnd && Boolean(
       playbackRef.current?.isPlaying || playbackRef.current?.isBuffering
     )
     updatePosition(currentItem.key, 0)
@@ -753,14 +838,17 @@ export function useContinuousReader(
     const answer = holdAnswerRef.current
     holdAnswerRef.current = null
     if (answer === 'exhausted' || !moreMayCome) {
-      stopAtQueueEnd('no-more')
+      // Nothing more is coming: say so on the timeline the hold kept, or stop
+      // as the end of the queue always has when there are no words for it.
+      if (closingLineRef.current) enterClosing()
+      else stopAtQueueEnd('no-more')
       return
     }
     // Something was appended, none of it playable, and more may still come.
     if (answer === 'appended') requestMoreDuringHold()
   }, [
     items, currentKey, moreMayCome, holdAnswerTick,
-    endHold, requestMoreDuringHold, selectAndStart, stopAtQueueEnd,
+    endHold, enterClosing, requestMoreDuringHold, selectAndStart, stopAtQueueEnd,
   ])
 
   // An unmount mid-hold drops the deadline and any answer still in flight.
@@ -865,13 +953,16 @@ export function useContinuousReader(
     }
   }, [unitTextsBySection, voice, currentIndex, isPlaying, isBuffering, isFullyBuffered])
 
+  // Keyed on `holdPhase` as well: a start on the SAME section, taken while the
+  // closing line was swapped in, waits here for the commit that hands `useTTS`
+  // the section's units back — the key does not change for it.
   useEffect(() => {
     const pending = pendingStartRef.current
     if (pending?.sectionKey !== currentKey) return
 
     pendingStartRef.current = null
     void (pending.unitIndex > 0 ? playback.playFromUnit(pending.unitIndex) : playback.play())
-  }, [currentKey, playback.play, playback.playFromUnit])
+  }, [currentKey, holdPhase, playback.play, playback.playFromUnit])
 
   const play = useCallback(() => {
     setError(null)

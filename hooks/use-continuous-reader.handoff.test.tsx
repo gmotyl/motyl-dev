@@ -1080,6 +1080,83 @@ describe('holding at the end of the queue', () => {
   })
 })
 
+describe('the closing line at the end of the queue', () => {
+  const CLOSING_LINE = 'To już wszystkie nowe artykuły.'
+  const synthesized = () => vi.mocked(synthesizeSpeech).mock.calls.map(([text]) => text)
+
+  it('speaks the closing line on the same timeline, then replays the section on Play', async () => {
+    /**
+     * The whole sequence on the real hook and carrier: the line is appended
+     * behind the last section on the SAME buffer (index 2 of one timeline),
+     * its end is the end of the queue — a clean stop that releases the
+     * timeline — and Play afterwards reads the section again from a new one.
+     */
+    enableReaderLog()
+    const items = [makeItem(0)]
+    const options = { moreMayCome: false, closingLine: CLOSING_LINE }
+    const { result } = renderHoldingReader(items, options)
+    await startFirstSection(result, items)
+    const sourcesAtStart = mse.created
+    const pausesAtStart = audioPause.mock.calls.length
+
+    await playOutOnMse(items)
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2]))
+    await settle()
+    expect(mse.created).toBe(sourcesAtStart)
+    expect(audioPause.mock.calls).toHaveLength(pausesAtStart)
+    expect(synthesized().at(-1)).toBe(CLOSING_LINE)
+    expect(result.current.isPlaying).toBe(true)
+    expect(result.current.currentIndex).toBe(0)
+    expect(queueLog()).toEqual([])
+
+    // The line is read to its end.
+    await emitTimeUpdate(3 * mse.spanSeconds - 0.05)
+    await settle()
+    expect(queueLog()).toEqual(['queue-end no-more'])
+    expect(result.current.isPlaying).toBe(false)
+    expect(currentAudio().paused).toBe(true)
+    expect(mse.created).toBe(sourcesAtStart + 1)
+
+    // Play: the section, from unit 0 of a fresh timeline — not the line.
+    const synthesizedBefore = synthesized().length
+    act(() => result.current.play())
+    await waitFor(() => expect(mse.appended).toEqual([0, 1]))
+    await settle()
+    expect(synthesized().slice(synthesizedBefore)).not.toContain(CLOSING_LINE)
+    expect(result.current.isPlaying).toBe(true)
+    expect(queueLog()).toEqual(['queue-end no-more'])
+  })
+
+  it('a re-seat during the closing line does not resume reading', async () => {
+    /**
+     * The closing line is playing, so the element reports playback — but no
+     * section is being read. A re-seat then must not pick reading up on the
+     * survivor (and certainly must not say the line again on a new timeline).
+     */
+    enableReaderLog()
+    const items = [makeItem(0)]
+    const options = { moreMayCome: false, closingLine: CLOSING_LINE }
+    const { result, rerender } = renderHoldingReader(items, options)
+    await startFirstSection(result, items)
+    await playOutOnMse(items)
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2]))
+    await settle()
+    const sourcesAtClosing = mse.created
+    const synthesizedBefore = synthesized().length
+
+    rerender({ items: [makeItem(1)], options })
+    await waitFor(() => expect(result.current.currentItem?.key).toBe(makeItem(1).key))
+    await settle()
+
+    expect(queueLog()).toEqual(['queue-hold aborted:reseat'])
+    expect(mse.created).toBe(sourcesAtClosing + 1)
+    expect(mse.appended).toEqual([])
+    expect(currentAudio().paused).toBe(true)
+    expect(result.current.isPlaying).toBe(false)
+    expect(synthesized().slice(synthesizedBefore)).not.toContain(CLOSING_LINE)
+  })
+})
+
 describe('section handoffs on the src-swap carrier', () => {
   it('ignores continueTimeline on the src-swap carrier', async () => {
     /**
