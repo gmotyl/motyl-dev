@@ -44,6 +44,7 @@ let readerIndex = 0
 // Read by the harness: lets a test play the reader and make Next move only the
 // eye (the real reader's non-interrupting Next while playing).
 let readerPlaying = false
+let readerBuffering = false
 let nextMovesEyeOnly = false
 let eyeIndex = 0
 type VoteStripProps = {
@@ -102,7 +103,7 @@ vi.mock('@/hooks/use-continuous-reader', () => ({
     }
     latestReaderHarness = {
       isPlaying: readerPlaying,
-      isBuffering: false,
+      isBuffering: readerBuffering,
       currentIndex: readerIndex,
       currentItem: items[readerIndex],
       currentSlug: items[readerIndex]?.sourceSlug ?? null,
@@ -267,6 +268,7 @@ describe('ReadAllNewsPage continuous reader', () => {
     latestMarkReadDialogProps = undefined
     readerIndex = 0
     readerPlaying = false
+    readerBuffering = false
     nextMovesEyeOnly = false
     eyeIndex = 0
     latestStripProps = undefined
@@ -444,8 +446,24 @@ describe('ReadAllNewsPage continuous reader', () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
     expect(String(fetchMock.mock.calls[0][0])).toContain('/api/content?')
-    // No observer callback was involved: no sentinel or article marker fired.
-    expect(screen.getByRole('button', { name: 'Mark read' })).toBeDisabled()
+    // The harness never triggers an IntersectionObserver callback in this
+    // test, so neither the scroll sentinel nor an article marker can have
+    // made this request: it can only have come from the reader prefetch.
+  })
+
+  it('prefetches while the reader is buffering on the last loaded article', async () => {
+    // "Active" is playing OR buffering: a reader waiting for audio — a cold
+    // first unit, or the hold at the end of the queue — still counts.
+    const fetchMock = vi.fn().mockReturnValue(new Promise(() => {}))
+    vi.stubGlobal('fetch', fetchMock)
+    readerPlaying = false
+    readerBuffering = true
+    readerIndex = 2
+
+    render(<ReadAllNewsPage initialItems={items(2)} totalItems={4} />)
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/api/content?')
   })
 
   it('prefetches once per last article', async () => {
