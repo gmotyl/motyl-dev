@@ -31,6 +31,9 @@ interface ReadAllNewsPageProps {
 
 const MAX_DOM_ARTICLES = 12
 
+/** How a load-more ended: new items arrived, the server has nothing further, or the request failed. */
+type LoadMoreResult = 'appended' | 'exhausted' | 'failed'
+
 export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNewsPageProps) {
   const { data: session } = useSession()
   const [items, setItems] = useState<ContentItem[]>(initialItems)
@@ -111,27 +114,14 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
   useEffect(() => { sessionRef.current = session }, [session])
   useEffect(() => { readerSlugRef.current = reader.currentSlug }, [reader.currentSlug])
 
-  // Infinite scroll observer
-  useEffect(() => {
-    if (!loadMoreRef.current || !hasMore || loading) return
+  // Mirrors hasMore so fetchMore stays stable and never reads a stale closure.
+  const hasMoreRef = useRef(hasMore)
+  // The running load-more, shared by every caller (scroll now, the reader at
+  // the queue end later) so concurrent triggers ride one request.
+  const inFlightRef = useRef<Promise<LoadMoreResult> | null>(null)
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !loading) {
-          fetchMore()
-        }
-      },
-      { rootMargin: '200px' }
-    )
-
-    observer.observe(loadMoreRef.current)
-    return () => observer.disconnect()
-  }, [hasMore, loading])
-
-  const fetchMore = useCallback(async () => {
-    if (loading || !hasMore) return
-    setLoading(true)
-
+  // One request against /api/content; fetchMore below owns the sharing.
+  const loadMore = useCallback(async (): Promise<LoadMoreResult> => {
     try {
       const exclude = Array.from(loadedSlugsRef.current)
       const params = new URLSearchParams({
@@ -144,6 +134,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
       if (exclude.length) params.set('excludeSlugs', exclude.join(','))
 
       const res = await fetch(`/api/content?${params}`)
+      if (!res.ok) throw new Error(`Load more failed: ${res.status}`)
       const data = await res.json()
 
       if (data.items?.length > 0) {
@@ -192,16 +183,49 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
         }
 
         setItems(finalItems)
-        setHasMore(data.currentPage < data.totalPages)
-      } else {
-        setHasMore(false)
+        hasMoreRef.current = data.currentPage < data.totalPages
+        setHasMore(hasMoreRef.current)
+        return 'appended'
       }
+      hasMoreRef.current = false
+      setHasMore(false)
+      return 'exhausted'
     } catch (error) {
+      // Items and hasMore stay as they were, so a later trigger can retry.
       console.error('Failed to fetch more items:', error)
-    } finally {
-      setLoading(false)
+      return 'failed'
     }
-  }, [loading, hasMore])
+  }, [])
+
+  const fetchMore = useCallback((): Promise<LoadMoreResult> => {
+    if (inFlightRef.current) return inFlightRef.current
+    if (!hasMoreRef.current) return Promise.resolve('exhausted')
+    setLoading(true)
+
+    const request = loadMore().finally(() => {
+      inFlightRef.current = null
+      setLoading(false)
+    })
+    inFlightRef.current = request
+    return request
+  }, [loadMore])
+
+  // Infinite scroll observer. Re-armed when items change, so a sentinel still
+  // in view after an append keeps loading; a failure leaves items unchanged and
+  // waits for the next scroll instead of retrying in a loop.
+  useEffect(() => {
+    if (!loadMoreRef.current || !hasMore) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) fetchMore()
+      },
+      { rootMargin: '200px' }
+    )
+
+    observer.observe(loadMoreRef.current)
+    return () => observer.disconnect()
+  }, [hasMore, items, fetchMore])
 
   // Track scrolled-past articles
   const handleScrolledPast = useCallback((slug: string) => {

@@ -349,6 +349,7 @@ describe('ReadAllNewsPage continuous reader', () => {
 
   it('appends newly loaded Read All News sections to the reader queue', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
       json: async () => ({ items: items(1, 1), currentPage: 1, totalPages: 1 }),
     })
     vi.stubGlobal('fetch', fetchMock)
@@ -361,6 +362,72 @@ describe('ReadAllNewsPage continuous reader', () => {
       'news-1', 'news-1', 'news-2', 'news-2',
     ]))
     expect(screen.getByText('News 2')).toBeInTheDocument()
+  })
+
+  it('concurrent fetchMore calls share one request', async () => {
+    let resolveFetch: (value: unknown) => void = () => {}
+    const fetchMock = vi.fn().mockReturnValue(new Promise((resolve) => { resolveFetch = resolve }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<ReadAllNewsPage initialItems={items(1)} totalItems={2} />)
+
+    // Two triggers before the first request settles (scroll now, the reader
+    // later) must ride the same request.
+    act(() => {
+      reachLoadMoreSentinel()
+      reachLoadMoreSentinel()
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      resolveFetch({
+        ok: true,
+        json: async () => ({ items: items(1, 1), currentPage: 1, totalPages: 1 }),
+      })
+    })
+
+    await waitFor(() => expect(screen.getByText('News 2')).toBeInTheDocument())
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(screen.getAllByText('News 2')).toHaveLength(1)
+  })
+
+  it('non-OK response resolves failed and keeps hasMore', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: async () => ({ items: items(1, 1), currentPage: 1, totalPages: 1 }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { container } = render(<ReadAllNewsPage initialItems={items(1)} totalItems={2} />)
+
+    await act(async () => { reachLoadMoreSentinel() })
+
+    await waitFor(() => expect(screen.queryByText('Loading more...')).not.toBeInTheDocument())
+    expect(screen.queryByText('News 2')).not.toBeInTheDocument()
+    expect(latestReaderItems.map((item) => item.sourceSlug)).toEqual(['news-1', 'news-1'])
+    // hasMore survives the failure: the sentinel stays and a later trigger retries.
+    expect(container.querySelector('.h-10')).toBeInTheDocument()
+    await act(async () => { reachLoadMoreSentinel() })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('empty response resolves exhausted', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ items: [], currentPage: 1, totalPages: 1 }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { container } = render(<ReadAllNewsPage initialItems={items(1)} totalItems={2} />)
+
+    await act(async () => { reachLoadMoreSentinel() })
+
+    // hasMore turns false: the sentinel goes away and nothing fetches again.
+    await waitFor(() => expect(container.querySelector('.h-10')).not.toBeInTheDocument())
+    expect(screen.queryByText('Loading more...')).not.toBeInTheDocument()
+    await act(async () => { reachLoadMoreSentinel() })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
   it('Read All News renders a single floating reader bar whose Next calls reader.next', async () => {
@@ -393,6 +460,7 @@ describe('ReadAllNewsPage continuous reader', () => {
 
   it('never evicts the article the reader is currently on', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
       json: async () => ({ items: items(5, 12), currentPage: 1, totalPages: 2 }),
     })
     vi.stubGlobal('fetch', fetchMock)
