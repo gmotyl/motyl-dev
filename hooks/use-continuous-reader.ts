@@ -225,11 +225,15 @@ export function useContinuousReader(
    * later has to start a new `MediaSource` — with the phone in a pocket, which
    * is the one boundary the carrier exists to avoid. So the reader treats the
    * end as a handoff whose next section is late: the element keeps running at
-   * the end of its buffer, `continuesTimeline` and `isHandingOff` stay up (so
-   * the release, the wake lock and the media session all behave as they do
-   * mid-handoff), and the first section to arrive is started on the same
-   * timeline. It ends on an arrival, on "nothing more", on the deadline, or the
-   * moment the user does anything else (`abortHold`).
+   * the end of its buffer and the first section to arrive is started on the
+   * same timeline. `continuesTimeline` is claimed through the entry commit
+   * only — long enough for the completion's release to be dropped — and then
+   * lowered; the timeline stays live because nothing releases it after entry,
+   * and the arrival (or the closing line) re-claims the flag for its own start.
+   * `isHandingOff` stays up throughout, so the wake lock and the media session
+   * behave as they do mid-handoff. It ends on an arrival, on "nothing more"
+   * (the closing line, when there is one), on the deadline, or the moment the
+   * user does anything else (`abortHold`).
    *
    * State drives the returned `isPlaying`/`isBuffering`; the ref is what the
    * callbacks and the late `requestMore` results read synchronously.
@@ -387,7 +391,10 @@ export function useContinuousReader(
   /**
    * Enter the hold. Called from `onComplete`, so the two claims below land in
    * the same batch as `useTTS`'s completion — the batch whose commit decides
-   * the carrier release — exactly as the auto-advance's do.
+   * the carrier release — exactly as the auto-advance's do. The timeline claim
+   * is held through that entry commit only (an effect lowers it right after);
+   * the timeline stays live because nothing releases it after entry, and the
+   * arrival (or the closing line) re-claims it. `isHandingOff` stays up.
    */
   const enterHold = useCallback(() => {
     if (holdTimerRef.current !== null) clearTimeout(holdTimerRef.current)
