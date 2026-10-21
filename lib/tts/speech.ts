@@ -94,11 +94,21 @@ export const stripMarkdown = (text: string): string =>
     .replace(/\s+/g, ' ')
     .trim()
 
+/**
+ * motyl-only respellings on top of the anytts `pl` preset. General tech terms
+ * belong in the preset (shared with other apps); this holds phrases that only
+ * motyl's own content uses, such as the newsletter's "Why do I care:" label.
+ */
+export const MOTYL_PRONUNCIATION = Object.freeze({
+  pl: Object.freeze({ 'why do i care': 'łaj du aj ker' }),
+})
+
 export function prepareSpeechText(markdown: string): string {
   // No acronym letter-spelling: the TTS voice reads acronyms like "CTO" more
   // naturally on its own than a hyphenated spell-out. Only the anytts `pl`
-  // pronunciation preset (for terms the voice genuinely mangles) is applied.
-  return applyPronunciation(normalizeVersionNumbers(stripMarkdown(markdown)), 'pl')
+  // pronunciation preset (for terms the voice genuinely mangles) plus motyl's
+  // own phrases are applied.
+  return applyPronunciation(normalizeVersionNumbers(stripMarkdown(markdown)), 'pl', MOTYL_PRONUNCIATION)
 }
 
 export function splitReviewedSections(sources: readonly SpeechSource[]): ReviewedSection[] {

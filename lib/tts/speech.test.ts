@@ -407,6 +407,15 @@ describe('prepareSpeechText', () => {
     expect(prepareSpeechText(polish)).not.toBe(polish)
   })
 
+  it('prepareSpeechText respells the newsletter "Why do I care" label', () => {
+    expect(prepareSpeechText('**Why do I care:** As a senior frontend dev')).toBe(
+      'łaj du aj ker: As a senior frontend dev'
+    )
+    expect(prepareSpeechText('why do I care')).toBe('łaj du aj ker')
+    // Whole phrase only: a longer word is not a match.
+    expect(prepareSpeechText('Why do I careful')).toBe('Why do I careful')
+  })
+
   it('prepareSpeechText normalizes semver version numbers', () => {
     expect(prepareSpeechText('Wersja 3.6.3 wychodzi')).toContain('3 6 3')
   })
