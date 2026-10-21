@@ -430,6 +430,75 @@ describe('ReadAllNewsPage continuous reader', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
+  it('prefetches when the reader enters the last loaded article', async () => {
+    const fetchMock = vi.fn().mockReturnValue(new Promise(() => {}))
+    vi.stubGlobal('fetch', fetchMock)
+    readerPlaying = true
+
+    const { rerender } = render(<ReadAllNewsPage initialItems={items(2)} totalItems={4} />)
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    // Section 2A: the reader is now in news-2, the last loaded article.
+    readerIndex = 2
+    rerender(<ReadAllNewsPage initialItems={items(2)} totalItems={4} />)
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/api/content?')
+    // No observer callback was involved: no sentinel or article marker fired.
+    expect(screen.getByRole('button', { name: 'Mark read' })).toBeDisabled()
+  })
+
+  it('prefetches once per last article', async () => {
+    // A failed load leaves items and hasMore as they were, so nothing but the
+    // once-per-article guard stops a second prefetch.
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({}) })
+    vi.stubGlobal('fetch', fetchMock)
+    readerPlaying = true
+    readerIndex = 2
+
+    const { rerender } = render(<ReadAllNewsPage initialItems={items(2)} totalItems={4} />)
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(screen.queryByText('Loading more...')).not.toBeInTheDocument())
+
+    // Section 2B, then a pause and a resume, all inside news-2.
+    readerIndex = 3
+    rerender(<ReadAllNewsPage initialItems={items(2)} totalItems={4} />)
+    readerPlaying = false
+    rerender(<ReadAllNewsPage initialItems={items(2)} totalItems={4} />)
+    readerPlaying = true
+    rerender(<ReadAllNewsPage initialItems={items(2)} totalItems={4} />)
+
+    await act(async () => {})
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not prefetch while idle or before the last article', async () => {
+    const fetchMock = vi.fn().mockReturnValue(new Promise(() => {}))
+    vi.stubGlobal('fetch', fetchMock)
+
+    // Idle on the last article.
+    readerIndex = 2
+    readerPlaying = false
+    const idle = render(<ReadAllNewsPage initialItems={items(2)} totalItems={4} />)
+    await act(async () => {})
+    idle.unmount()
+
+    // Playing, but still in news-1.
+    readerIndex = 1
+    readerPlaying = true
+    const early = render(<ReadAllNewsPage initialItems={items(2)} totalItems={4} />)
+    await act(async () => {})
+    early.unmount()
+
+    // Playing on the last article, but nothing more exists.
+    readerIndex = 2
+    const done = render(<ReadAllNewsPage initialItems={items(2)} totalItems={2} />)
+    await act(async () => {})
+    done.unmount()
+
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it('Read All News renders a single floating reader bar whose Next calls reader.next', async () => {
     render(<ReadAllNewsPage initialItems={items(2)} totalItems={2} />)
 

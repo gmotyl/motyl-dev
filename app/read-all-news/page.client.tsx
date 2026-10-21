@@ -227,6 +227,19 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
     return () => observer.disconnect()
   }, [hasMore, items, fetchMore])
 
+  // Position-driven prefetch: a reader entering the last loaded article asks for
+  // more without waiting for a scroll, so a hidden page keeps its queue topped
+  // up. Once per article; fetchMore owns the hasMore check and the sharing.
+  const prefetchedSlugsRef = useRef<Set<string>>(new Set())
+  const readerActive = reader.isPlaying || reader.isBuffering
+  useEffect(() => {
+    const slug = reader.currentSlug
+    if (!readerActive || slug == null || slug !== items.at(-1)?.slug) return
+    if (prefetchedSlugsRef.current.has(slug)) return
+    prefetchedSlugsRef.current.add(slug)
+    fetchMore()
+  }, [reader.currentSlug, readerActive, items, fetchMore])
+
   // Track scrolled-past articles
   const handleScrolledPast = useCallback((slug: string) => {
     setScrolledPastSlugs(prev => {
