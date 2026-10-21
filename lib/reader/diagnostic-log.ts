@@ -90,8 +90,8 @@ export type ReaderLogEventType =
   // while it asked for more. Detail `start` | `retry` | `arrived` |
   // `aborted:<cause>`.
   | 'queue-hold'
-  // The hold gave up and the reader stopped. Detail `no-more` (the server had
-  // nothing further) | `timeout` (the wait ran out).
+  // The queue end is final and the reader stopped. Detail `no-more` (the
+  // server had nothing further) | `timeout` (the hold timed out).
   | 'queue-end'
 
 export type ReaderLogEntry = {
