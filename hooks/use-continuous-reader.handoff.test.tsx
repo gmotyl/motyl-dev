@@ -1163,6 +1163,75 @@ describe('the closing line at the end of the queue', () => {
     expect(result.current.isPlaying).toBe(false)
     expect(synthesized().slice(synthesizedBefore)).not.toContain(CLOSING_LINE)
   })
+
+  /**
+   * The hold's two ways of learning that nothing more is coming — the page's
+   * fetch answering `exhausted`, and `moreMayCome` turning false — each say
+   * the closing line on the timeline the hold kept: appended to the SAME
+   * MediaSource behind the section (index 2), with the element never paused,
+   * and its end is the end of the queue.
+   */
+  const holdThenClose = async (
+    learnNoMore: (ctx: {
+      pending: ReturnType<typeof deferred>
+      rerender: (props: { items: SpeechSection[]; options: ContinuousReaderOptions }) => void
+      items: SpeechSection[]
+      options: ContinuousReaderOptions
+    }) => Promise<void>
+  ) => {
+    enableReaderLog()
+    const pending = deferred()
+    const items = [makeItem(0)]
+    const options: ContinuousReaderOptions = {
+      moreMayCome: true,
+      requestMore: vi.fn(() => pending.promise),
+      closingLine: CLOSING_LINE,
+    }
+    const { result, rerender } = renderHoldingReader(items, options)
+    await startFirstSection(result, items)
+    const sourcesAtStart = mse.created
+    const pausesAtStart = audioPause.mock.calls.length
+
+    await playOutOnMse(items)
+    await settle()
+    expect(queueLog()).toEqual(['queue-hold start'])
+    expect(result.current.isBuffering).toBe(true)
+    expect(mse.appended).toEqual([0, 1])
+
+    await learnNoMore({ pending, rerender, items, options })
+
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2]))
+    await settle()
+    expect(mse.created).toBe(sourcesAtStart)
+    expect(audioPause.mock.calls).toHaveLength(pausesAtStart)
+    expect(currentAudio().paused).toBe(false)
+    expect(result.current.isPlaying).toBe(true)
+    expect(result.current.isBuffering).toBe(false)
+    expect(result.current.currentIndex).toBe(0)
+    expect(queueLog()).toEqual(['queue-hold start'])
+
+    await emitTimeUpdate(3 * mse.spanSeconds - 0.05)
+    await settle()
+    expect(queueLog()).toEqual(['queue-hold start', 'queue-end no-more'])
+    expect(result.current.isPlaying).toBe(false)
+    expect(currentAudio().paused).toBe(true)
+  }
+
+  it('a hold answered exhausted says the closing line on the same timeline', async () => {
+    await holdThenClose(async ({ pending }) => {
+      await act(async () => {
+        pending.resolve('exhausted')
+        await Promise.resolve()
+      })
+    })
+  })
+
+  it('a hold whose moreMayCome turns false says the closing line on the same timeline', async () => {
+    await holdThenClose(async ({ rerender, items, options }) => {
+      rerender({ items, options: { ...options, moreMayCome: false } })
+      await settle()
+    })
+  })
 })
 
 describe('section handoffs on the src-swap carrier', () => {

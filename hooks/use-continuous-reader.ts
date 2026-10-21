@@ -652,9 +652,12 @@ export function useContinuousReader(
     playbackRef.current = playback
   }, [playback])
 
-  // Declared before every effect that may start playback in the same commit
-  // (the re-seat and the pending start below), so they read this commit's
-  // answer.
+  // Read by `selectAndStart` alone: play-from-here, play-from-line, the
+  // auto-advance and the hold's arrival all start through it. Declared above
+  // the one effect that reaches it in the same commit (the hold's judge
+  // below), so that start reads this commit's answer. The re-seat does NOT
+  // read it: it learns the closing line was playing from `abortHold`'s return
+  // value (`leftQueueEnd`).
   useEffect(() => {
     closingUnitsLiveRef.current = holdPhase === 'closing'
   }, [holdPhase])
