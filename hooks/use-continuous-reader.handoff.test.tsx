@@ -1118,11 +1118,19 @@ describe('the closing line at the end of the queue', () => {
     expect(mse.created).toBe(sourcesAtStart + 1)
 
     // Play: the section, from unit 0 of a fresh timeline — not the line.
-    const synthesizedBefore = synthesized().length
+    // Counted without the ladder's `warm` requests: the last section fully
+    // buffered warms the closing line again, which is warm-ahead doing its
+    // job, not the line being read.
+    const synthesizedBefore = vi.mocked(synthesizeSpeech).mock.calls.length
     act(() => result.current.play())
     await waitFor(() => expect(mse.appended).toEqual([0, 1]))
     await settle()
-    expect(synthesized().slice(synthesizedBefore)).not.toContain(CLOSING_LINE)
+    const readSincePlay = vi
+      .mocked(synthesizeSpeech)
+      .mock.calls.slice(synthesizedBefore)
+      .filter(([, opts]) => opts?.priority !== 'warm')
+      .map(([text]) => text)
+    expect(readSincePlay).not.toContain(CLOSING_LINE)
     expect(result.current.isPlaying).toBe(true)
     expect(queueLog()).toEqual(['queue-end no-more'])
   })

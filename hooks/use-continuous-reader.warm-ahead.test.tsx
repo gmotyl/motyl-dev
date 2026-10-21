@@ -6,7 +6,7 @@ import { synthesizeSpeech } from '@/lib/tts/client'
 import { createMseCarrier } from '@/lib/reader/mse-carrier'
 import type { SeamReport } from '@/lib/reader/seam-report'
 import { READER_LOG_FLAG, clearReaderLog, readReaderLog } from '@/lib/reader/diagnostic-log'
-import { useContinuousReader } from './use-continuous-reader'
+import { useContinuousReader, type ContinuousReaderOptions } from './use-continuous-reader'
 
 /**
  * WARM-AHEAD across a continued-timeline handoff — the reader's prebuffer
@@ -464,5 +464,137 @@ describe('warm-ahead diagnostic log', () => {
     await waitFor(() => expect(warmLines()).toContain('scheduled none'))
     await settle()
     expect(warmLines()).toEqual(['scheduled none'])
+  })
+})
+
+describe('warm-ahead at the end of the queue', () => {
+  /**
+   * On the last section there is no next section to warm, but there may be
+   * something to say next: the closing line, when nothing more can come. And
+   * Read All News appends articles while the last section plays, so the "last"
+   * section is often not last for long — the appended one is warmed like any
+   * next section.
+   */
+  const CLOSING_LINE = 'To już wszystkie nowe artykuły.'
+
+  beforeEach(() => {
+    window.localStorage.setItem(READER_LOG_FLAG, '1')
+    clearReaderLog()
+  })
+  afterEach(() => clearReaderLog())
+
+  const warmLines = () =>
+    readReaderLog()
+      .filter((entry) => entry.type === 'warm-ahead')
+      .map((entry) => entry.detail ?? '')
+
+  const renderWithOptions = (items: SpeechSection[], options: ContinuousReaderOptions) =>
+    renderHook(
+      ({ items: current, options: currentOptions }: {
+        items: SpeechSection[]
+        options: ContinuousReaderOptions
+      }) => useContinuousReader(current, currentOptions),
+      { initialProps: { items, options } }
+    )
+
+  /** Let the ladder's `setTimeout(0)` / idle fallback run. */
+  const flushTimers = async () => {
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    })
+    await settle()
+  }
+
+  it('warms the closing line on the last section', async () => {
+    const items = [makeItem(0)]
+    const { result } = renderWithOptions(items, { moreMayCome: false, closingLine: CLOSING_LINE })
+    await startFirstSection(result, items)
+
+    await waitFor(() => expect(warmedTexts()).toEqual([CLOSING_LINE]))
+    await flushTimers()
+    expect(warmedTexts()).toEqual([CLOSING_LINE])
+    expect(warmLines()).toEqual([
+      'scheduled closing',
+      'start closing',
+      expect.stringMatching(/^unit 0: \d+ms$/),
+    ])
+
+    // Once: speaking the line itself (the closing phase) warms nothing more —
+    // `isFullyBuffered` then describes the line, not a section.
+    await playOutOnMse(items)
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2]))
+    await flushTimers()
+    expect(warmedTexts()).toEqual([CLOSING_LINE])
+  })
+
+  it('does not warm the closing line while more may come, nor without one', async () => {
+    // Pairs the test above: the line is only true once nothing more can come,
+    // and with no line the last section has nothing to warm (unchanged).
+    for (const options of [
+      { moreMayCome: true, requestMore: vi.fn(() => new Promise<never>(() => {})), closingLine: CLOSING_LINE },
+      { moreMayCome: false },
+    ] satisfies ContinuousReaderOptions[]) {
+      clearReaderLog()
+      vi.mocked(synthesizeSpeech).mockClear()
+      const items = [makeItem(0)]
+      const { result, unmount } = renderWithOptions(items, options)
+      await startFirstSection(result, items)
+      await waitFor(() => expect(warmLines()).toContain('scheduled none'))
+      await flushTimers()
+      expect(warmedTexts()).toEqual([])
+      unmount()
+      document.querySelectorAll('audio').forEach((el) => el.remove())
+    }
+  })
+
+  it('warms a section appended while the last one plays', async () => {
+    const items = [makeItem(0)]
+    const options = {
+      moreMayCome: true,
+      requestMore: vi.fn(() => new Promise<never>(() => {})),
+      closingLine: CLOSING_LINE,
+    }
+    const { result, rerender } = renderWithOptions(items, options)
+    await startFirstSection(result, items)
+    await waitFor(() => expect(warmLines()).toContain('scheduled none'))
+    expect(warmedTexts()).toEqual([])
+
+    const appended = makeLongItem(1, 5)
+    rerender({ items: [items[0], appended], options })
+
+    await waitFor(() => expect(warmedTexts()).toEqual(unitTexts(appended).slice(0, 3)))
+    expect(warmLines()).toContain(`scheduled ${appended.key}`)
+    expect(warmLines()).toContainEqual(
+      expect.stringMatching(new RegExp(`^start ${appended.key}: 3 units`))
+    )
+    expect(result.current.currentIndex).toBe(0)
+  })
+
+  it('idle tiers stay off during the hold', async () => {
+    /**
+     * Holding, `useTTS` itself is done with the section — its raw playing and
+     * buffering flags may both be down — but the element is still running on a
+     * claimed timeline. That is active audio: the speculative idle tiers (every
+     * section's title and TLDR) must not fire.
+     */
+    const items = [makeItem(0)]
+    const options = {
+      moreMayCome: true,
+      requestMore: vi.fn(() => new Promise<never>(() => {})),
+    }
+    const { result } = renderWithOptions(items, options)
+    await startFirstSection(result, items)
+    await playOutOnMse(items)
+    await settle()
+    await waitFor(() => expect(options.requestMore).toHaveBeenCalledTimes(1))
+    expect(result.current.isBuffering).toBe(true)
+
+    // Not cleared first: the ladder re-runs the moment the raw flags drop,
+    // so an idle tier would already have fired by now. Nothing at 'warm' since
+    // Play — the last section had no next one to warm ahead.
+    await flushTimers()
+    await flushTimers()
+    expect(warmedTexts()).toEqual([])
+    expect(result.current.isBuffering).toBe(true)
   })
 })

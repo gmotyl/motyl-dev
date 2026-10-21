@@ -882,22 +882,39 @@ export function useContinuousReader(
   // changes on every progress tick, which would restart the ladder constantly.
   // Entering `isBuffering` therefore re-runs the effect, whose cleanup aborts
   // the warms not yet handed to the synthesis queue.
+  //
+  // AT THE QUEUE END: an article appended while the last section plays changes
+  // `unitTextsBySection`, so the ladder re-runs and warms the new next section
+  // like any other. With no next section, nothing more to come and a closing
+  // line, the line is what `useTTS` will ask for next, so it is warmed instead.
+  // The hold counts as active audio: `useTTS` is done with the section and its
+  // raw flags are down, but the element is still running on a claimed timeline
+  // and the idle tiers would compete with the arrival the hold is waiting for.
+  // The section it finished is fully buffered by definition, so the hold warms
+  // ahead too — an arrival's first units, should one come. During the closing
+  // line nothing is warmed: `isFullyBuffered` then describes the line, which
+  // is already being read.
   useEffect(() => {
     if (unitTextsBySection.length === 0) return
 
     const controller = new AbortController()
     const { signal } = controller
-    const audioActive = isPlaying || isBuffering
+    const holding = holdPhase === 'holding'
+    const audioActive = isPlaying || isBuffering || holding
 
     // Warm-ahead is the one tier that is logged: the 2026-09-30 device log had a
     // handoff whose next title was cold after 80 s of runway, and nothing said
     // whether warm-ahead was scheduled, held back, found no next section, or
     // missed. The idle tiers stay silent — dozens of lines per pause.
-    const warmingAhead = audioActive && isFullyBuffered
+    const warmingAhead = audioActive && (isFullyBuffered || holding) && holdPhase !== 'closing'
     const scheduledAt = Date.now()
+    const closingText = !moreMayCome && closingLine ? closingLine : null
     if (warmingAhead) {
       const nextKey = itemsRef.current[currentIndexRef.current + 1]?.key
-      logReaderEvent('warm-ahead', nextKey ? `scheduled ${nextKey}` : 'scheduled none')
+      logReaderEvent(
+        'warm-ahead',
+        nextKey ? `scheduled ${nextKey}` : closingText ? 'scheduled closing' : 'scheduled none'
+      )
     }
 
     const run = async (): Promise<void> => {
@@ -906,7 +923,15 @@ export function useContinuousReader(
         if (!warmingAhead) return
         const nextKey = itemsRef.current[currentIndexRef.current + 1]?.key
         const next = all[currentIndexRef.current + 1]
-        if (!nextKey) return
+        if (!nextKey) {
+          if (!closingText) return
+          logReaderEvent('warm-ahead', 'start closing')
+          await warmTier([closingText], voice, 1, signal, (position, ms, failed) => {
+            logReaderEvent('warm-ahead', `unit ${position}: ${failed ? `failed after ${ms}ms` : `${ms}ms`}`)
+          })
+          if (signal.aborted) logReaderEvent('warm-ahead', 'aborted')
+          return
+        }
         if (!next || next.length === 0) {
           // The next section is in the queue but its units are not: exactly the
           // case where the log would otherwise go quiet.
@@ -958,7 +983,10 @@ export function useContinuousReader(
         clearTimeout(handle as ReturnType<typeof setTimeout>)
       }
     }
-  }, [unitTextsBySection, voice, currentIndex, isPlaying, isBuffering, isFullyBuffered])
+  }, [
+    unitTextsBySection, voice, currentIndex, isPlaying, isBuffering, isFullyBuffered,
+    holdPhase, moreMayCome, closingLine,
+  ])
 
   // Keyed on `holdPhase` as well: a start on the SAME section, taken while the
   // closing line was swapped in, waits here for the commit that hands `useTTS`
