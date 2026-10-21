@@ -499,6 +499,55 @@ describe('ReadAllNewsPage continuous reader', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
+  it('an exhausted load stops the reader from fetching at the last article', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ items: [], currentPage: 1, totalPages: 1 }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    readerPlaying = true
+    readerIndex = 2
+
+    const { container, rerender } = render(<ReadAllNewsPage initialItems={items(3)} totalItems={10} />)
+
+    // Scroll reaches the sentinel while the reader is still in news-2.
+    await act(async () => { reachLoadMoreSentinel() })
+    await waitFor(() => expect(container.querySelector('.h-10')).not.toBeInTheDocument())
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    // The reader then enters news-3, the last article: the server already said
+    // there is nothing further, so no second request goes out.
+    readerIndex = 4
+    rerender(<ReadAllNewsPage initialItems={items(3)} totalItems={10} />)
+    await act(async () => {})
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('re-arms a live sentinel observer after an append', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ items: items(1, 1), currentPage: 1, totalPages: 2 }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<ReadAllNewsPage initialItems={items(1)} totalItems={3} />)
+
+    const sentinelObservers = () => observers.filter((o) => o.elements.some((el) => ownerSlug(el) === null))
+    const [first] = sentinelObservers()
+    expect(first.disconnected).toBe(false)
+
+    await act(async () => { reachLoadMoreSentinel() })
+    await waitFor(() => expect(screen.getByText('News 2')).toBeInTheDocument())
+
+    // hasMore stayed true, yet the observer was replaced: a sentinel still in
+    // view after the append gets a fresh intersection and keeps loading.
+    expect(first.disconnected).toBe(true)
+    const rearmed = sentinelObservers().filter((o) => !o.disconnected)
+    expect(rearmed).toHaveLength(1)
+    expect(rearmed[0]).not.toBe(first)
+    expect(rearmed[0].elements[0].isConnected).toBe(true)
+  })
+
   it('Read All News renders a single floating reader bar whose Next calls reader.next', async () => {
     render(<ReadAllNewsPage initialItems={items(2)} totalItems={2} />)
 
