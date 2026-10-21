@@ -154,6 +154,19 @@ describe('logReaderEvent', () => {
     expect(entries[0].suppressed).toBe(true)
     expect(entries[1].suppressed).toBeUndefined()
   })
+
+  it('records queue-hold and queue-end events', () => {
+    enable()
+
+    logReaderEvent('queue-hold', 'start')
+    logReaderEvent('queue-end', 'timeout')
+
+    const entries = readReaderLog()
+    expect(entries.map((e) => [e.type, e.detail])).toEqual([
+      ['queue-hold', 'start'],
+      ['queue-end', 'timeout'],
+    ])
+  })
 })
 
 describe('formatReaderLog', () => {

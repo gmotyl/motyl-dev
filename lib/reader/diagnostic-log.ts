@@ -86,6 +86,13 @@ export type ReaderLogEventType =
   // was invisible, so a device log could show a position collapse right
   // after an append and never show the trim that caused it.
   | 'evict'
+  // Queue end: the reader reached the last queued article and held playback
+  // while it asked for more. Detail `start` | `retry` | `arrived` |
+  // `aborted:<cause>`.
+  | 'queue-hold'
+  // The hold gave up and the reader stopped. Detail `no-more` (the server had
+  // nothing further) | `timeout` (the wait ran out).
+  | 'queue-end'
 
 export type ReaderLogEntry = {
   /** `Date.now()` when the event was recorded. */
