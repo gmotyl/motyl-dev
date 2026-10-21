@@ -34,6 +34,9 @@ const MAX_DOM_ARTICLES = 12
 /** How a load-more ended: new items arrived, the server has nothing further, or the request failed. */
 type LoadMoreResult = 'appended' | 'exhausted' | 'failed'
 
+/** Spoken once the reader has read everything and the server has nothing further. */
+export const READ_ALL_NEWS_CLOSING_LINE = 'To już wszystkie nowe artykuły.'
+
 export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNewsPageProps) {
   const { data: session } = useSession()
   const [items, setItems] = useState<ContentItem[]>(initialItems)
@@ -62,49 +65,15 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
     scrollHeadingIntoView(resolveScrollTarget(article, speechSections, section, index, scroll))
   }, [speechSections])
 
-  const reader = useContinuousReader(speechSections, { onItemChange: scrollToSection })
-
-  // The bar's vote strip targets the Section being READ (`currentItem`) —
-  // playing, paused or not yet started — never the eye Next cascades while
-  // playing. `firstExternalLink` parses markdown, so it runs once per Section,
-  // not on every progress tick.
-  const currentSection = reader.currentItem
-  const currentMarkdown = currentSection?.markdown
-  const currentLink = useMemo(
-    () => (currentMarkdown == null ? null : firstExternalLink(currentMarkdown)),
-    [currentMarkdown]
-  )
-  const currentTitle = currentSection?.title
-  // Same values the owning article's MarkdownContent gets (patternName only,
-  // no category), so a strip vote and an inline vote send the same payload.
-  const currentPattern = currentSection
-    ? items.find((item) => item.slug === currentSection.sourceSlug)?.sourcePattern
-    : undefined
-  const vote = useMemo<ReaderVoteStripProps | undefined>(
-    () => (currentTitle == null
-      ? undefined
-      : { heading: currentTitle, link: currentLink, category: undefined, patternName: currentPattern }),
-    [currentTitle, currentLink, currentPattern]
-  )
-
-  const handlePlayPause = useCallback(() => {
-    if (reader.isPlaying) {
-      reader.pause()
-      return
-    }
-
-    if (reader.currentItem) scrollToSection(reader.currentItem, reader.currentIndex)
-    reader.play()
-  }, [reader, scrollToSection])
-
   const loadMoreRef = useRef<HTMLDivElement>(null)
   // Refs so fetchMore can read current values without stale closures or extra deps
   const itemsRef = useRef<ContentItem[]>(initialItems)
   const scrolledPastSlugsRef = useRef<Set<string>>(new Set())
   const sessionRef = useRef(session)
   // The article the reader is on. Read as a ref so the eviction guard sees the
-  // live value without adding a per-tick dep to fetchMore.
-  const readerSlugRef = useRef<string | null>(reader.currentSlug)
+  // live value without adding a per-tick dep to fetchMore. Synced right after
+  // the reader is created below (fetchMore has to exist before the reader).
+  const readerSlugRef = useRef<string | null>(null)
   // Every slug we have ever fetched, including those evicted from the DOM.
   // Sent as excludeSlugs so the server doesn't return them again, regardless
   // of how the visited cookie shifts mid-session.
@@ -112,7 +81,6 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
   useEffect(() => { itemsRef.current = items }, [items])
   useEffect(() => { scrolledPastSlugsRef.current = scrolledPastSlugs }, [scrolledPastSlugs])
   useEffect(() => { sessionRef.current = session }, [session])
-  useEffect(() => { readerSlugRef.current = reader.currentSlug }, [reader.currentSlug])
 
   // Mirrors hasMore so fetchMore stays stable and never reads a stale closure.
   const hasMoreRef = useRef(hasMore)
@@ -209,6 +177,48 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
     inFlightRef.current = request
     return request
   }, [loadMore])
+
+  const reader = useContinuousReader(speechSections, {
+    onItemChange: scrollToSection,
+    moreMayCome: hasMore,
+    requestMore: fetchMore,
+    closingLine: READ_ALL_NEWS_CLOSING_LINE,
+  })
+  useEffect(() => { readerSlugRef.current = reader.currentSlug }, [reader.currentSlug])
+
+  // The bar's vote strip targets the Section being READ (`currentItem`) —
+  // playing, paused or not yet started — never the eye Next cascades while
+  // playing. `firstExternalLink` parses markdown, so it runs once per Section,
+  // not on every progress tick.
+  const currentSection = reader.currentItem
+  const currentMarkdown = currentSection?.markdown
+  const currentLink = useMemo(
+    () => (currentMarkdown == null ? null : firstExternalLink(currentMarkdown)),
+    [currentMarkdown]
+  )
+  const currentTitle = currentSection?.title
+  // Same values the owning article's MarkdownContent gets (patternName only,
+  // no category), so a strip vote and an inline vote send the same payload.
+  const currentPattern = currentSection
+    ? items.find((item) => item.slug === currentSection.sourceSlug)?.sourcePattern
+    : undefined
+  const vote = useMemo<ReaderVoteStripProps | undefined>(
+    () => (currentTitle == null
+      ? undefined
+      : { heading: currentTitle, link: currentLink, category: undefined, patternName: currentPattern }),
+    [currentTitle, currentLink, currentPattern]
+  )
+
+  const handlePlayPause = useCallback(() => {
+    if (reader.isPlaying) {
+      reader.pause()
+      return
+    }
+
+    if (reader.currentItem) scrollToSection(reader.currentItem, reader.currentIndex)
+    reader.play()
+  }, [reader, scrollToSection])
+
 
   // Infinite scroll observer. Re-armed when items change, so a sentinel still
   // in view after an append keeps loading; a failure leaves items unchanged and

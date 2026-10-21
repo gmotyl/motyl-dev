@@ -2,7 +2,7 @@ import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Mock } from 'vitest'
-import ReadAllNewsPage from './page.client'
+import ReadAllNewsPage, { READ_ALL_NEWS_CLOSING_LINE } from './page.client'
 import { ItemType } from '@/lib/content/types'
 
 // The reader no longer calls scrollIntoView; it delegates to this helper.
@@ -14,7 +14,12 @@ vi.mock('@/lib/reader/scroll-heading', () => ({ scrollHeadingIntoView }))
 const mockUseContinuousReader = vi.fn()
 const playbackEvents: string[] = []
 type ReaderItem = { sourceSlug: string; title: string }
-type ReaderOptions = { onItemChange?: (item: ReaderItem, index: number) => void }
+type ReaderOptions = {
+  onItemChange?: (item: ReaderItem, index: number) => void
+  moreMayCome?: boolean
+  requestMore?: () => Promise<'appended' | 'exhausted' | 'failed'>
+  closingLine?: string
+}
 type ReaderAction = Mock<() => void>
 type ReaderHarness = {
   isPlaying: boolean
@@ -690,5 +695,36 @@ describe('ReadAllNewsPage continuous reader', () => {
     expect(eyeIndex).toBe(2)
     expect(latestStripProps?.heading).toBe('Section 1A')
     expect(latestStripProps?.link).toEqual({ url: 'https://example.com/1a', title: 'Link 1A' })
+  })
+
+  it('passes load-more and the closing line to the reader', async () => {
+    let resolveFetch: (value: unknown) => void = () => {}
+    const fetchMock = vi.fn().mockReturnValue(new Promise((resolve) => { resolveFetch = resolve }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { rerender } = render(<ReadAllNewsPage initialItems={items(1)} totalItems={3} />)
+
+    expect(READ_ALL_NEWS_CLOSING_LINE).toBe('To już wszystkie nowe artykuły.')
+    expect(latestReaderOptions?.closingLine).toBe(READ_ALL_NEWS_CLOSING_LINE)
+    expect(latestReaderOptions?.moreMayCome).toBe(true)
+    const requestMore = latestReaderOptions?.requestMore
+    expect(requestMore).toBeTypeOf('function')
+    // Stable across renders: the reader keeps one callback.
+    rerender(<ReadAllNewsPage initialItems={items(1)} totalItems={3} />)
+    expect(latestReaderOptions?.requestMore).toBe(requestMore)
+
+    // It is fetchMore itself: the reader's request and a scroll trigger share one fetch.
+    let pending!: Promise<'appended' | 'exhausted' | 'failed'>
+    act(() => { pending = requestMore!() })
+    act(() => reachLoadMoreSentinel())
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      resolveFetch({ ok: true, json: async () => ({ items: items(1, 1), currentPage: 1, totalPages: 1 }) })
+    })
+    await expect(pending).resolves.toBe('appended')
+
+    // moreMayCome follows hasMore once the server says there is nothing further.
+    await waitFor(() => expect(latestReaderOptions?.moreMayCome).toBe(false))
   })
 })
