@@ -16,7 +16,7 @@ import { createSrcSwapCarrier } from '@/lib/reader/src-swap-carrier'
  * broken without a single assertion in `useTTS.test.tsx` moving.
  */
 
-// Mock the synthesis client so no real network / edge-tts is touched.
+// Mock the synthesis client so no real network / TTS engine is touched.
 vi.mock('@/lib/tts/client', () => ({
   synthesizeSpeech: vi.fn(async () => new ArrayBuffer(8)),
   prefetchSpeech: vi.fn(),

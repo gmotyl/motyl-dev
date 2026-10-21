@@ -1,69 +1,13 @@
+import { listEngines, listVoices } from 'anytts'
+
 export const TTS_VOICE_STORAGE_KEY = 'tts-voice'
+export const TTS_ENGINE_STORAGE_KEY = 'tts-engine'
 export const TTS_VOICE_CHANGE_EVENT = 'tts-voice-change'
 export const DEFAULT_TTS_VOICE = 'en-AU-WilliamMultilingualNeural'
+export const DEFAULT_TTS_ENGINE = 'edge'
 
-export const TTS_VOICES = [
-  {
-    id: 'en-AU-WilliamMultilingualNeural',
-    label: 'William (multilingual · EN-AU)',
-  },
-  {
-    id: 'en-US-AndrewMultilingualNeural',
-    label: 'Andrew (multilingual · EN-US)',
-  },
-  {
-    id: 'en-US-EmmaMultilingualNeural',
-    label: 'Emma (multilingual · EN-US)',
-  },
-  {
-    id: 'en-US-AvaMultilingualNeural',
-    label: 'Ava (multilingual · EN-US)',
-  },
-  {
-    id: 'en-US-BrianMultilingualNeural',
-    label: 'Brian (multilingual · EN-US)',
-  },
-  {
-    id: 'de-DE-SeraphinaMultilingualNeural',
-    label: 'Seraphina (multilingual · DE)',
-  },
-  {
-    id: 'de-DE-FlorianMultilingualNeural',
-    label: 'Florian (multilingual · DE)',
-  },
-  {
-    id: 'fr-FR-VivienneMultilingualNeural',
-    label: 'Vivienne (multilingual · FR)',
-  },
-  {
-    id: 'fr-FR-RemyMultilingualNeural',
-    label: 'Remy (multilingual · FR)',
-  },
-  {
-    id: 'it-IT-GiuseppeMultilingualNeural',
-    label: 'Giuseppe (multilingual · IT)',
-  },
-  {
-    id: 'pl-PL-MarekNeural',
-    label: 'Marek (Polish)',
-  },
-  {
-    id: 'pl-PL-ZofiaNeural',
-    label: 'Zofia (Polish)',
-  },
-] as const
-
-export type TtsVoice = (typeof TTS_VOICES)[number]['id']
-
-const supportedVoices = new Set<string>(TTS_VOICES.map((voice) => voice.id))
-
-export function isSupportedTtsVoice(value: string | null | undefined): value is TtsVoice {
-  return value !== null && value !== undefined && supportedVoices.has(value)
-}
-
-export function resolveTtsVoice(value: string | null | undefined): TtsVoice {
-  return isSupportedTtsVoice(value) ? value : DEFAULT_TTS_VOICE
-}
+/** A voice id from the anytts catalog of the chosen engine. */
+export type TtsVoice = string
 
 function getBrowserStorage(): Storage | null {
   if (typeof window === 'undefined') return null
@@ -75,30 +19,66 @@ function getBrowserStorage(): Storage | null {
   }
 }
 
-export function getStoredTtsVoice(): TtsVoice {
-  const storage = getBrowserStorage()
-  if (!storage) return DEFAULT_TTS_VOICE
-
+function readStorage(key: string): string | null {
   try {
-    return resolveTtsVoice(storage.getItem(TTS_VOICE_STORAGE_KEY))
+    return getBrowserStorage()?.getItem(key) ?? null
   } catch {
-    return DEFAULT_TTS_VOICE
+    return null
   }
 }
 
-export function setStoredTtsVoice(value: string): TtsVoice {
-  if (!isSupportedTtsVoice(value)) return getStoredTtsVoice()
-
-  const voice = value
+function writeStorage(key: string, value: string): void {
   try {
-    getBrowserStorage()?.setItem(TTS_VOICE_STORAGE_KEY, voice)
+    getBrowserStorage()?.setItem(key, value)
   } catch {
     // Preferences remain usable when browser storage is unavailable.
   }
+}
+
+function isKnownEngine(value: string | null): value is string {
+  return value !== null && listEngines().some((engine) => engine.id === value)
+}
+
+function isCatalogVoice(engine: string, value: string | null): value is string {
+  return value !== null && listVoices(engine).some((voice) => voice.id === value)
+}
+
+/** The raw stored voice id, unchecked — for the settings card's `resolveVoice` pass. */
+export function readStoredTtsVoice(): string | null {
+  return readStorage(TTS_VOICE_STORAGE_KEY)
+}
+
+export function getStoredTtsEngine(): string {
+  const stored = readStorage(TTS_ENGINE_STORAGE_KEY)
+  return isKnownEngine(stored) ? stored : DEFAULT_TTS_ENGINE
+}
+
+export function setStoredTtsEngine(value: string): string {
+  if (!isKnownEngine(value)) return getStoredTtsEngine()
+
+  writeStorage(TTS_ENGINE_STORAGE_KEY, value)
+  return value
+}
+
+/**
+ * The stored voice when it is in the chosen engine's catalog, else the default.
+ * Synthesis rejects a voice outside the catalog (`unknown-voice`), so a stale
+ * id saved by an older build must never reach it; this check needs no anytts
+ * instance and matches `resolveVoice` with `voices.default` = the default voice.
+ */
+export function getStoredTtsVoice(): TtsVoice {
+  const stored = readStoredTtsVoice()
+  return isCatalogVoice(getStoredTtsEngine(), stored) ? stored : DEFAULT_TTS_VOICE
+}
+
+export function setStoredTtsVoice(value: string): TtsVoice {
+  if (!isCatalogVoice(getStoredTtsEngine(), value)) return getStoredTtsVoice()
+
+  writeStorage(TTS_VOICE_STORAGE_KEY, value)
 
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event(TTS_VOICE_CHANGE_EVENT))
   }
 
-  return voice
+  return value
 }

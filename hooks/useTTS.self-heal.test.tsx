@@ -22,7 +22,7 @@ import type { SeamReport } from '@/lib/reader/seam-report'
  * decides exactly when — and in which session — a unit's bytes arrive.
  */
 
-// Mock the synthesis client so no real network / edge-tts is touched.
+// Mock the synthesis client so no real network / TTS engine is touched.
 vi.mock('@/lib/tts/client', () => ({
   synthesizeSpeech: vi.fn(async () => new ArrayBuffer(8)),
   prefetchSpeech: vi.fn(),

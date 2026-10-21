@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { detectLanguageFromContent } from '@/lib/tts/voice-map'
 import { splitIntoChunks } from '@/lib/tts/chunks'
 import { restartStalledSynthesis, synthesizeSpeech } from '@/lib/tts/client'
+import { TtsError } from 'anytts'
 import {
   describeError,
   detailFor,
@@ -419,7 +420,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   // that never produced bytes, or bytes the element refused. Reset when a unit
   // actually plays to its end (and at the start of a play session), NOT when
   // synthesis merely resolves. Bounds the auto-skip below: a systemic outage
-  // (no network, edge-tts fully down, a decoder that rejects everything) must
+  // (no network, Edge TTS fully down, a decoder that rejects everything) must
   // still surface as a stop + onError instead of racing silently through every
   // remaining chunk.
   const consecutiveFailuresRef = useRef(0)
@@ -1050,7 +1051,10 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         // The error's name tells a stall from a closed socket; the same day's
         // log had a retry fail in 1447 ms with nothing to say which it was.
         const name = (error as { name?: unknown } | null)?.name
-        const errorName = typeof name === 'string' && name !== '' ? name : 'Error'
+        const baseName = typeof name === 'string' && name !== '' ? name : 'Error'
+        // anytts reports every failure as one TtsError class, so its name no
+        // longer separates a refused handshake from a stall — the kind does.
+        const errorName = error instanceof TtsError ? `${baseName} ${error.kind}` : baseName
         logReaderEvent(
           'synth-end',
           detailFor(unit, `failed after ${elapsed()}, ${errorName}, ${document.visibilityState}`)
@@ -1118,7 +1122,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
   /**
    * THE give-up: too many units in a row were unreadable — systemic (no
-   * network, edge-tts down, a decoder that rejects everything) rather than one
+   * network, Edge TTS down, a decoder that rejects everything) rather than one
    * bad paragraph. The session ends here, so the whole buffered window of
    * prepared audio goes with it, and the element carries nothing this hook
    * counts as loaded. One helper for both ways past the cap — `playChunk`'s

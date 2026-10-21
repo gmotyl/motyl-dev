@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useTTS } from './useTTS'
 import { synthesizeSpeech } from '@/lib/tts/client'
 
-// Mock the synthesis client so no real network / edge-tts is touched.
+// Mock the synthesis client so no real network / TTS engine is touched.
 vi.mock('@/lib/tts/client', () => ({
   synthesizeSpeech: vi.fn(async () => new ArrayBuffer(8)),
   prefetchSpeech: vi.fn(),
@@ -678,7 +678,7 @@ describe('useTTS playFromUnit', () => {
 })
 
 describe('useTTS chunk-synthesis failure recovery', () => {
-  // Regression test: a stalled/failed chunk (edge-tts stream stall surviving
+  // Regression test: a stalled/failed chunk (Edge TTS stream stall surviving
   // tts-client's own retry) used to stop playback outright via onError,
   // stranding the reader until the user manually pressed Play again. It must
   // now skip the unreadable chunk and continue automatically.

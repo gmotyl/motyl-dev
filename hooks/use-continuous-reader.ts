@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { splitIntoSpeechUnits, type SpeechSection } from '@/lib/tts/speech'
 import { synthesizeSpeech } from '@/lib/tts/client'
-import { DEFAULT_TTS_VOICE, getStoredTtsVoice, TTS_VOICE_CHANGE_EVENT, type TtsVoice } from '@/lib/tts/voices'
+import { DEFAULT_TTS_VOICE, getStoredTtsVoice, TTS_VOICE_CHANGE_EVENT } from '@/lib/tts/voices'
 import {
   resolveArticleTitle,
   resolveNextTrackIndex,
@@ -85,7 +85,7 @@ function resolvePositionIndex(
 }
 
 // How many prebuffer warm requests the ladder hands over at a time. The
-// synthesis client now runs one edge-tts synthesis at a time, playback lane
+// synthesis client now runs one anytts synthesis at a time, playback lane
 // first, so a second worker would only queue behind the first: one keeps the
 // warm lane short, and a Play pressed meanwhile waits behind at most one warm.
 const PREBUFFER_CONCURRENCY = 1
@@ -156,7 +156,7 @@ export function useContinuousReader(
   // The section keys of the previously rendered queue, in order — the only way
   // to tell where a removed section used to sit when resolving the fallback.
   const previousKeysRef = useRef<readonly string[]>([])
-  const [voice, setVoice] = useState<TtsVoice>(DEFAULT_TTS_VOICE)
+  const [voice, setVoice] = useState<string>(DEFAULT_TTS_VOICE)
   /**
    * Whether the section about to be handed to `useTTS` continues the timeline
    * the carrier is already playing, rather than starting a new one.
