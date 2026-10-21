@@ -5,7 +5,12 @@ import { sectionKey, splitIntoSpeechUnits, type SpeechSection } from '@/lib/tts/
 import { synthesizeSpeech } from '@/lib/tts/client'
 import { createMseCarrier } from '@/lib/reader/mse-carrier'
 import type { SeamReport } from '@/lib/reader/seam-report'
-import { useContinuousReader } from './use-continuous-reader'
+import { READER_LOG_FLAG, clearReaderLog, readReaderLog } from '@/lib/reader/diagnostic-log'
+import {
+  QUEUE_HOLD_TIMEOUT_MS,
+  useContinuousReader,
+  type ContinuousReaderOptions,
+} from './use-continuous-reader'
 import { useMediaSession } from './use-media-session'
 
 /**
@@ -721,6 +726,357 @@ describe('section handoffs on the MSE carrier', () => {
 
     expect(mse.created).toBe(sourcesAfterHandoff + 1)
     expect(mse.appended).toEqual([0, 1])
+  })
+})
+
+type RequestResult = 'appended' | 'exhausted' | 'failed'
+
+/** The reader with Read All News' options, re-renderable with new items. */
+const renderHoldingReader = (items: SpeechSection[], options: ContinuousReaderOptions) =>
+  renderHook(
+    ({ items: current, options: currentOptions }: {
+      items: SpeechSection[]
+      options: ContinuousReaderOptions
+    }) => useContinuousReader(current, currentOptions),
+    { initialProps: { items, options } }
+  )
+
+/** A `requestMore` result the test settles by hand — the page's fetch in flight. */
+const deferred = () => {
+  let resolve!: (result: RequestResult) => void
+  const promise = new Promise<RequestResult>((settle) => {
+    resolve = settle
+  })
+  return { promise, resolve }
+}
+
+const enableReaderLog = () => {
+  window.localStorage.setItem(READER_LOG_FLAG, '1')
+  clearReaderLog()
+}
+
+/** Only the queue-end entries, as `type detail` — the hold's own story. */
+const queueLog = () =>
+  readReaderLog()
+    .filter((entry) => entry.type === 'queue-hold' || entry.type === 'queue-end')
+    .map((entry) => `${entry.type} ${entry.detail}`)
+
+/**
+ * Fire the hold's 30 s deadline without waiting for it. The timer is found by
+ * its delay among every `setTimeout` the run made, which also proves one was
+ * armed at all; faking timers instead would freeze `useTTS`'s own and every
+ * `waitFor` in this file with them.
+ */
+const fireHoldTimeout = async (setTimeoutSpy: { mock: { calls: unknown[][] } }) => {
+  const call = setTimeoutSpy.mock.calls.find(([, ms]) => ms === QUEUE_HOLD_TIMEOUT_MS)
+  expect(call).toBeDefined()
+  await act(async () => {
+    ;(call![0] as () => void)()
+    await Promise.resolve()
+  })
+  await settle()
+}
+
+/** Play the only section of a one-section queue to its end: the queue's end. */
+const reachQueueEnd = async (
+  result: { current: ReturnType<typeof useContinuousReader> },
+  items: SpeechSection[]
+) => {
+  await startFirstSection(result, items)
+  await playOutOnMse(items)
+  await settle()
+}
+
+describe('holding at the end of the queue', () => {
+  /**
+   * Read All News keeps loading articles as the reader moves, so the end of
+   * the queue is usually not the end of the content — just the end of what has
+   * arrived. Stopping there would hand a pocketed phone a paused element and a
+   * released timeline, and the next article would have to start a new
+   * `MediaSource` with the screen off: exactly the boundary the carrier exists
+   * to avoid. So the reader HOLDS: the element keeps running at the end of its
+   * buffer and the timeline stays claimed until a section arrives, the request
+   * gives up, or 30 s pass.
+   */
+  it('holds instead of stopping when more may come', async () => {
+    enableReaderLog()
+    const items = [makeItem(0)]
+    const requestMore = vi.fn(() => new Promise<RequestResult>(() => {}))
+    const { result } = renderHoldingReader(items, { moreMayCome: true, requestMore })
+    await startFirstSection(result, items)
+
+    const sourcesAtStart = mse.created
+    const pausesAtStart = audioPause.mock.calls.length
+
+    await playOutOnMse(items)
+    await settle()
+
+    // More is asked for exactly once, and the hold says so.
+    expect(requestMore).toHaveBeenCalledTimes(1)
+    expect(queueLog()).toEqual(['queue-hold start'])
+    // Not paused and not released: the element is still running on the same
+    // timeline, as it does across an ordinary handoff.
+    expect(audioPause.mock.calls).toHaveLength(pausesAtStart)
+    expect(currentAudio().paused).toBe(false)
+    expect(mse.created).toBe(sourcesAtStart)
+    // The controls read "playing, waiting for audio" — Pause and a spinner —
+    // and there is still nothing to skip to.
+    expect(result.current.isPlaying).toBe(true)
+    expect(result.current.isBuffering).toBe(true)
+    expect(result.current.canNext).toBe(false)
+    expect(result.current.currentIndex).toBe(0)
+  })
+
+  it('continues on the same timeline when a section arrives', async () => {
+    /**
+     * Paired like the handoff test: "not paused" is also what a reader that
+     * never moved shows, so the arriving section has to be appended to the
+     * SAME buffer (indices 2 and 3, not a restart at 0) and be what plays.
+     */
+    enableReaderLog()
+    const items = [makeItem(0)]
+    const options = {
+      moreMayCome: true,
+      requestMore: vi.fn(() => new Promise<RequestResult>(() => {})),
+    }
+    const { result, rerender } = renderHoldingReader(items, options)
+    await reachQueueEnd(result, items)
+
+    const sourcesAtStart = mse.created
+    const pausesAtStart = audioPause.mock.calls.length
+
+    rerender({ items: [items[0], makeItem(1)], options })
+
+    await waitFor(() => expect(result.current.currentIndex).toBe(1))
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2, 3]))
+    await waitFor(() => expect(result.current.isPlaying).toBe(true))
+    expect(mse.created).toBe(sourcesAtStart)
+    expect(audioPause.mock.calls).toHaveLength(pausesAtStart)
+    // The playhead is inside the arrived section's span, not back at second 0.
+    await waitFor(() =>
+      expect(currentAudio().currentTime).toBeGreaterThanOrEqual(2 * mse.spanSeconds)
+    )
+    expect(queueLog()).toEqual(['queue-hold start', 'queue-hold arrived'])
+  })
+
+  it('hidden-only arrivals keep holding and request again', async () => {
+    /**
+     * A page of articles whose sections are all hidden appends nothing the
+     * reader can play: the queue it is handed is unchanged. That is not an
+     * arrival — the hold goes on and asks for the next page.
+     */
+    enableReaderLog()
+    const items = [makeItem(0)]
+    const requestMore = vi
+      .fn<() => Promise<RequestResult>>()
+      .mockResolvedValueOnce('appended')
+      .mockImplementation(() => new Promise<RequestResult>(() => {}))
+    const options = { moreMayCome: true, requestMore }
+    const { result, rerender } = renderHoldingReader(items, options)
+    await reachQueueEnd(result, items)
+
+    await waitFor(() => expect(requestMore).toHaveBeenCalledTimes(2))
+
+    // A re-render with an equal queue is not another "appended" answer.
+    rerender({ items: [...items], options })
+    await settle()
+    expect(requestMore).toHaveBeenCalledTimes(2)
+
+    expect(result.current.currentIndex).toBe(0)
+    expect(result.current.isPlaying).toBe(true)
+    expect(result.current.isBuffering).toBe(true)
+    expect(queueLog()).toEqual(['queue-hold start'])
+  })
+
+  it('retries a failed request once', async () => {
+    enableReaderLog()
+    const items = [makeItem(0)]
+    const requestMore = vi.fn(async (): Promise<RequestResult> => 'failed')
+    const { result } = renderHoldingReader(items, { moreMayCome: true, requestMore })
+    await reachQueueEnd(result, items)
+
+    await waitFor(() => expect(requestMore).toHaveBeenCalledTimes(2))
+    // The second failure is final: no third call, and the hold waits out its
+    // deadline instead of hammering a failing server.
+    await settle()
+    expect(requestMore).toHaveBeenCalledTimes(2)
+    expect(queueLog()).toEqual(['queue-hold start', 'queue-hold retry'])
+    expect(result.current.isBuffering).toBe(true)
+  })
+
+  it('stops cleanly after the hold timeout without a closing line', async () => {
+    /**
+     * Nothing arrived, but nothing said "no more" either — the closing line
+     * would be a lie, so the reader stops as it always has at the end of the
+     * queue. A request that settles afterwards must not wake it up.
+     */
+    enableReaderLog()
+    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout')
+    const closingLine = 'To już wszystkie nowe artykuły.'
+    const pending = deferred()
+    const options = { moreMayCome: true, requestMore: vi.fn(() => pending.promise), closingLine }
+    const items = [makeItem(0)]
+    const { result, rerender } = renderHoldingReader(items, options)
+    await reachQueueEnd(result, items)
+    const sourcesAtHold = mse.created
+
+    await fireHoldTimeout(setTimeoutSpy)
+
+    expect(queueLog()).toEqual(['queue-hold start', 'queue-end timeout'])
+    expect(result.current.isPlaying).toBe(false)
+    expect(result.current.isBuffering).toBe(false)
+    expect(currentAudio().paused).toBe(true)
+    // Clean: the timeline was released (the carrier rebuilt, so the next Play
+    // starts fresh), and nothing — no closing line — was appended to it.
+    expect(mse.created).toBe(sourcesAtHold + 1)
+    expect(mse.appended).toEqual([])
+    expect(vi.mocked(synthesizeSpeech).mock.calls.map(([text]) => text)).not.toContain(
+      closingLine
+    )
+
+    // The late answer, with a section in it: nothing moves.
+    rerender({ items: [items[0], makeItem(1)], options })
+    await act(async () => {
+      pending.resolve('appended')
+      await Promise.resolve()
+    })
+    await settle()
+    expect(result.current.currentIndex).toBe(0)
+    expect(result.current.isPlaying).toBe(false)
+    expect(queueLog()).toEqual(['queue-hold start', 'queue-end timeout'])
+  })
+
+  it('pause, play-from-here and unmount abort the hold', async () => {
+    const items = [makeItem(0)]
+
+    // Pause: the hold ends at once and the reader is stopped, not left
+    // spinning; the request settling later with a new section moves nothing.
+    {
+      enableReaderLog()
+      const pending = deferred()
+      const options = { moreMayCome: true, requestMore: vi.fn(() => pending.promise) }
+      const { result, rerender, unmount } = renderHoldingReader(items, options)
+      await reachQueueEnd(result, items)
+
+      act(() => result.current.pause())
+      await settle()
+      expect(queueLog()).toEqual(['queue-hold start', 'queue-hold aborted:pause'])
+      expect(result.current.isPlaying).toBe(false)
+      expect(result.current.isBuffering).toBe(false)
+
+      rerender({ items: [items[0], makeItem(1)], options })
+      await act(async () => {
+        pending.resolve('appended')
+        await Promise.resolve()
+      })
+      await settle()
+      expect(result.current.currentIndex).toBe(0)
+      expect(result.current.isPlaying).toBe(false)
+      expect(options.requestMore).toHaveBeenCalledTimes(1)
+      unmount()
+    }
+
+    // Play-from-here: a tap, so it rebuilds the timeline exactly as it does
+    // outside a hold, and the arrival that follows is not taken as one.
+    {
+      enableReaderLog()
+      const pending = deferred()
+      const options = { moreMayCome: true, requestMore: vi.fn(() => pending.promise) }
+      const { result, rerender, unmount } = renderHoldingReader(items, options)
+      await reachQueueEnd(result, items)
+      const sourcesAtHold = mse.created
+
+      act(() => result.current.playFrom(0))
+      await waitFor(() => expect(mse.created).toBe(sourcesAtHold + 1))
+      await waitFor(() => expect(mse.appended).toEqual([0, 1]))
+      expect(queueLog()).toEqual(['queue-hold start', 'queue-hold aborted:play-from-here'])
+
+      rerender({ items: [items[0], makeItem(1)], options })
+      await act(async () => {
+        pending.resolve('appended')
+        await Promise.resolve()
+      })
+      await settle()
+      expect(result.current.currentIndex).toBe(0)
+      unmount()
+    }
+
+    // Unmount: the timer and the late result die with the reader.
+    {
+      enableReaderLog()
+      const pending = deferred()
+      const options = { moreMayCome: true, requestMore: vi.fn(() => pending.promise) }
+      const { result, unmount } = renderHoldingReader(items, options)
+      await reachQueueEnd(result, items)
+
+      unmount()
+      await act(async () => {
+        pending.resolve('appended')
+        await Promise.resolve()
+      })
+      expect(queueLog()).toEqual(['queue-hold start', 'queue-hold aborted:unmount'])
+    }
+  })
+
+  it('previous section and a queue re-seat abort the hold', async () => {
+    /** The other two ways the user (or the page) leaves the hold. */
+    const holdOnSecondSection = async () => {
+      enableReaderLog()
+      const items = [makeItem(0), makeItem(1)]
+      const options = {
+        moreMayCome: true,
+        requestMore: vi.fn(() => new Promise<RequestResult>(() => {})),
+      }
+      const rendered = renderHoldingReader(items, options)
+      await startFirstSection(rendered.result, items)
+      await playOutOnMse(items)
+      await waitFor(() => expect(rendered.result.current.currentIndex).toBe(1))
+      await waitFor(() => expect(mse.appended).toEqual([0, 1, 2, 3]))
+      await emitTimeUpdate(2 * mse.spanSeconds + 12)
+      await emitTimeUpdate(4 * mse.spanSeconds - 0.05)
+      await settle()
+      expect(queueLog()).toEqual(['queue-hold start'])
+      return { ...rendered, items, options }
+    }
+
+    {
+      const { result, unmount } = await holdOnSecondSection()
+      const sourcesAtHold = mse.created
+      // Twenty seconds into the section, so Previous restarts it: a `stop()`
+      // and a `play()` in one block, which must rebuild like any tap.
+      act(() => result.current.previous())
+      await waitFor(() => expect(mse.created).toBe(sourcesAtHold + 1))
+      await waitFor(() => expect(mse.appended).toEqual([0, 1]))
+      expect(result.current.currentIndex).toBe(1)
+      expect(queueLog()).toEqual(['queue-hold start', 'queue-hold aborted:previous'])
+      unmount()
+    }
+
+    {
+      const { result, rerender, items, options, unmount } = await holdOnSecondSection()
+      rerender({ items: [items[0]], options })
+      await waitFor(() => expect(result.current.currentIndex).toBe(0))
+      await settle()
+      expect(queueLog()).toEqual(['queue-hold start', 'queue-hold aborted:reseat'])
+      unmount()
+    }
+  })
+
+  it('no hold without options', async () => {
+    /**
+     * The single News page passes no options, and its last section ends as it
+     * always has: no hold, no request, no deadline.
+     */
+    enableReaderLog()
+    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout')
+    const items = [makeItem(0)]
+    const { result } = renderReader(items)
+    await reachQueueEnd(result, items)
+
+    expect(result.current.isPlaying).toBe(false)
+    expect(result.current.isBuffering).toBe(false)
+    expect(queueLog()).toEqual([])
+    expect(setTimeoutSpy.mock.calls.some(([, ms]) => ms === QUEUE_HOLD_TIMEOUT_MS)).toBe(false)
   })
 })
 

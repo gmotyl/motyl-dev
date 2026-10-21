@@ -28,7 +28,38 @@ export type ScrollHint = { line: number } | { link: true }
 
 export interface ContinuousReaderOptions {
   onItemChange?: (item: SpeechSection, index: number, scroll?: ScrollHint) => void
+  /**
+   * More sections may still be appended to `items` (Read All News loads
+   * articles as the reader moves). When the last section ends while this is
+   * true the reader HOLDS instead of stopping — see `holdPhase`. Absent (the
+   * single News page) means the end of `items` is the end of the content.
+   */
+  moreMayCome?: boolean
+  /**
+   * Ask the page for more articles. Called when the hold begins, again when an
+   * answer added nothing playable, and once more after a first failure.
+   * Whatever it appends arrives through `items`; the result only says whether
+   * to keep asking.
+   */
+  requestMore?: () => Promise<'appended' | 'exhausted' | 'failed'>
+  /** Spoken when the queue ends with nothing more to come. */
+  closingLine?: string
 }
+
+/**
+ * How long the reader holds at the end of the queue for a section to arrive
+ * before it stops. Long enough for a slow fetch plus its one retry, short
+ * enough that a starved element is not left running silent for minutes.
+ */
+export const QUEUE_HOLD_TIMEOUT_MS = 30_000
+
+/**
+ * Where the reader is relative to the end of the queue: `idle` everywhere but
+ * there, `holding` while it waits for more sections with the timeline kept.
+ */
+type HoldPhase = 'idle' | 'holding'
+
+type RequestMoreResult = Awaited<ReturnType<NonNullable<ContinuousReaderOptions['requestMore']>>>
 
 /**
  * Where the reader is. The section is addressed by its stable key, never by a
@@ -125,7 +156,7 @@ async function warmTier(
 
 export function useContinuousReader(
   items: readonly SpeechSection[],
-  { onItemChange }: ContinuousReaderOptions = {}
+  { onItemChange, moreMayCome, requestMore }: ContinuousReaderOptions = {}
 ) {
   const [position, setPosition] = useState<ReadingPosition>(() =>
     items[0] ? { sectionKey: items[0].key, unitIndex: 0 } : NO_POSITION
@@ -183,6 +214,155 @@ export function useContinuousReader(
         : { sectionKey, unitIndex }
     )
   }, [])
+
+  /**
+   * The hold at the end of the queue.
+   *
+   * On Read All News the last section ending is usually not the end of the
+   * content, only the end of what has arrived so far. Stopping there pauses
+   * the element and releases the timeline, so the article that lands a second
+   * later has to start a new `MediaSource` — with the phone in a pocket, which
+   * is the one boundary the carrier exists to avoid. So the reader treats the
+   * end as a handoff whose next section is late: the element keeps running at
+   * the end of its buffer, `continuesTimeline` and `isHandingOff` stay up (so
+   * the release, the wake lock and the media session all behave as they do
+   * mid-handoff), and the first section to arrive is started on the same
+   * timeline. It ends on an arrival, on "nothing more", on the deadline, or the
+   * moment the user does anything else (`abortHold`).
+   *
+   * State drives the returned `isPlaying`/`isBuffering`; the ref is what the
+   * callbacks and the late `requestMore` results read synchronously.
+   */
+  const [holdPhase, setHoldPhaseState] = useState<HoldPhase>('idle')
+  const holdPhaseRef = useRef<HoldPhase>('idle')
+  // Wall-clock deadline, re-checked on every queue commit: the timer below is
+  // throttled on a hidden page, which is exactly where the hold happens.
+  const holdDeadlineRef = useRef(0)
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // One retry per hold, so a failing server is not asked every few ms.
+  const holdRetriedRef = useRef(false)
+  // Bumped whenever a hold begins or ends: a `requestMore` result carrying an
+  // older generation belongs to a hold that is already over and is dropped.
+  const holdGenerationRef = useRef(0)
+  // An answer the arrival effect still has to judge — it can only do so once
+  // the items the page appended alongside it have committed.
+  const holdAnswerRef = useRef<Exclude<RequestMoreResult, 'failed'> | null>(null)
+  // Re-runs the arrival effect for an answer that changed no items at all
+  // (a page of articles whose sections are all hidden).
+  const [holdAnswerTick, setHoldAnswerTick] = useState(0)
+  const moreMayComeRef = useRef(moreMayCome === true)
+  const requestMoreRef = useRef(requestMore)
+
+  useEffect(() => {
+    moreMayComeRef.current = moreMayCome === true
+  }, [moreMayCome])
+
+  useEffect(() => {
+    requestMoreRef.current = requestMore
+  }, [requestMore])
+
+  const setHoldPhase = useCallback((phase: HoldPhase) => {
+    holdPhaseRef.current = phase
+    setHoldPhaseState(phase)
+  }, [])
+
+  /** Leave the hold, whatever comes next: no timer, no late answers. */
+  const endHold = useCallback(() => {
+    if (holdTimerRef.current !== null) {
+      clearTimeout(holdTimerRef.current)
+      holdTimerRef.current = null
+    }
+    holdGenerationRef.current += 1
+    holdAnswerRef.current = null
+    setHoldPhase('idle')
+  }, [setHoldPhase])
+
+  /**
+   * The user (or the page) did something else while the reader was holding.
+   * Returns whether there was a hold to abort, so a caller whose own action
+   * means something different mid-hold (Pause) can tell. Callers then carry on
+   * exactly as they would outside a hold.
+   */
+  const abortHold = useCallback(
+    (cause: string): boolean => {
+      if (holdPhaseRef.current === 'idle') return false
+      endHold()
+      logReaderEvent('queue-hold', `aborted:${cause}`)
+      return true
+    },
+    [endHold]
+  )
+
+  /**
+   * The end of the queue is final. A CLEAN stop: the claim on the timeline is
+   * dropped first, so `stop()`'s release actually rebuilds the carrier and the
+   * next Play starts the current section afresh.
+   */
+  const stopAtQueueEnd = useCallback(
+    (reason: 'timeout' | 'no-more') => {
+      endHold()
+      setContinuesTimeline(false)
+      setIsHandingOff(false)
+      playbackRef.current?.stop()
+      logReaderEvent('queue-end', reason)
+    },
+    [endHold]
+  )
+
+  /** Ask for more on behalf of the hold that is running now. */
+  const requestMoreDuringHold = useCallback(() => {
+    const generation = holdGenerationRef.current
+
+    const ask = () => {
+      const request = requestMoreRef.current
+      if (!request) return
+      let answer: Promise<RequestMoreResult>
+      try {
+        answer = request()
+      } catch {
+        answer = Promise.resolve('failed')
+      }
+      answer.then(onAnswer, () => onAnswer('failed'))
+    }
+
+    const onAnswer = (result: RequestMoreResult) => {
+      if (generation !== holdGenerationRef.current) return
+      if (result === 'failed') {
+        // A second failure is final: the hold waits out its deadline.
+        if (holdRetriedRef.current) return
+        holdRetriedRef.current = true
+        logReaderEvent('queue-hold', 'retry')
+        ask()
+        return
+      }
+      holdAnswerRef.current = result
+      setHoldAnswerTick((tick) => tick + 1)
+    }
+
+    ask()
+  }, [])
+
+  /**
+   * Enter the hold. Called from `onComplete`, so the two claims below land in
+   * the same batch as `useTTS`'s completion — the batch whose commit decides
+   * the carrier release — exactly as the auto-advance's do.
+   */
+  const enterHold = useCallback(() => {
+    if (holdTimerRef.current !== null) clearTimeout(holdTimerRef.current)
+    holdGenerationRef.current += 1
+    holdRetriedRef.current = false
+    holdAnswerRef.current = null
+    holdDeadlineRef.current = Date.now() + QUEUE_HOLD_TIMEOUT_MS
+    setHoldPhase('holding')
+    setContinuesTimeline(true)
+    setIsHandingOff(true)
+    logReaderEvent('queue-hold', 'start')
+    holdTimerRef.current = setTimeout(() => {
+      holdTimerRef.current = null
+      if (holdPhaseRef.current === 'holding') stopAtQueueEnd('timeout')
+    }, QUEUE_HOLD_TIMEOUT_MS)
+    requestMoreDuringHold()
+  }, [requestMoreDuringHold, setHoldPhase, stopAtQueueEnd])
 
   // `currentIndex` is DERIVED from the position, never the other way round: the
   // queue mutating re-derives the index instead of renumbering what is read.
@@ -303,6 +483,10 @@ export function useContinuousReader(
       const selectedItem = itemsRef.current[index]
       if (!selectedItem) return
 
+      // Any start the user asked for ends a hold. The arrival path has already
+      // left it by the time it gets here, so this is a no-op for it.
+      abortHold('play-from-here')
+
       previewKeyRef.current = selectedItem.key
       setPreviewKey(selectedItem.key)
 
@@ -343,7 +527,7 @@ export function useContinuousReader(
       setIsHandingOff(true)
       updatePosition(selectedItem.key, unitIndex)
     },
-    [updatePosition]
+    [abortHold, updatePosition]
   )
 
   const playback = useTTS(currentItem?.speechText ?? '', {
@@ -367,8 +551,13 @@ export function useContinuousReader(
         // assignment, and that is where a backgrounded page loses the media
         // exemption this carrier exists to keep.
         selectAndStart(nextIndex, 0, true, undefined, true)
+        return
       }
-    }, [currentKey, selectAndStart]),
+      // The last section ended on its own, but the page may still be loading
+      // more: hold the timeline for it instead of stopping (see `holdPhase`).
+      // Without the option this is today's end of the queue, untouched.
+      if (nextIndex > 0 && moreMayComeRef.current) enterHold()
+    }, [currentKey, enterHold, selectAndStart]),
     onError: useCallback((nextError: Error) => {
       // `onError` is a public callback contract, so what actually arrives is
       // whatever the caller passed — today always a real `Error` built by
@@ -376,6 +565,7 @@ export function useContinuousReader(
       // an Error with an EMPTY-STRING message must fall through to the name,
       // which `??` would keep.
       logReaderEvent('reader-error', nextError?.message || nextError?.name || String(nextError))
+      abortHold('error')
       // A failed start is not a handoff either, so the timeline it was going to
       // continue is released with everything else.
       setContinuesTimeline(false)
@@ -384,7 +574,7 @@ export function useContinuousReader(
       // reader would look eternally "about to play" and never drop the lock.
       setIsHandingOff(false)
       setError(nextError)
-    }, []),
+    }, [abortHold]),
   })
 
   useEffect(() => {
@@ -407,6 +597,20 @@ export function useContinuousReader(
     stop: playbackStop,
     resume: playbackResume,
   } = playback
+
+  // The hold's claim on the timeline has done its job once the commit that
+  // entered the hold has landed: `useTTS`'s release backstop (an effect of its
+  // own, so it runs before this one) has seen it and dropped the completion's
+  // release. Left up, it would also swallow the release of a start the user
+  // takes mid-hold — play-from-here on the same section, or a Previous that
+  // restarts it, both `stop()` and `play()` in one block, before any render
+  // could lower the flag — and continue a timeline they are entitled to have
+  // rebuilt. The timeline itself stays live, since nothing releases it; the
+  // arrival re-claims the flag for its own handoff.
+  useEffect(() => {
+    if (holdPhase !== 'holding') return
+    setContinuesTimeline(false)
+  }, [holdPhase])
 
   const { isActive: isWakeLockActive, requestWakeLock, releaseWakeLock } = useWakeLock()
 
@@ -476,6 +680,10 @@ export function useContinuousReader(
   useEffect(() => {
     if (position.sectionKey === currentKey) return
 
+    // A re-seat is the page's doing, not an arrival: the section the hold was
+    // waiting behind is gone, so the hold goes with it.
+    abortHold('reseat')
+
     // Reaching here means the section under the position vanished, which also
     // voids any queued handoff — its target may be one of the removed sections,
     // in which case the start below never fires and the flag would stick.
@@ -512,7 +720,53 @@ export function useContinuousReader(
     // gate an empty → populated queue would start speaking section 0 on its own.
     if (!wasActive) return
     void playbackRef.current?.play()
-  }, [currentIndex, currentItem, currentKey, position.sectionKey, updatePosition])
+  }, [abortHold, currentIndex, currentItem, currentKey, position.sectionKey, updatePosition])
+
+  // The hold's judge, run whenever the queue or an answer to `requestMore`
+  // commits. Declared after the drift effect, so a commit that both removes the
+  // read section and appends new ones has already aborted the hold as a
+  // re-seat and is not mistaken for an arrival.
+  useEffect(() => {
+    if (holdPhaseRef.current !== 'holding') return
+
+    // Arrived: a section now follows the one the hold sits on. Measured by
+    // index, so an answer whose articles are all hidden — nothing new in
+    // `items` — does not count.
+    const nextIndex = items.findIndex((section) => section.key === currentKey) + 1
+    if (nextIndex > 0 && nextIndex < items.length) {
+      endHold()
+      logReaderEvent('queue-hold', 'arrived')
+      logReaderEvent('section-advance', items[nextIndex].key)
+      // The same handoff `onComplete` makes, only late: the element has been
+      // running at the end of its buffer all along, and the timeline is
+      // continued exactly as if the section had been there on time.
+      selectAndStart(nextIndex, 0, true, undefined, true)
+      return
+    }
+
+    // The timer may not have fired on a hidden page; the commit still happens.
+    if (Date.now() >= holdDeadlineRef.current) {
+      stopAtQueueEnd('timeout')
+      return
+    }
+
+    const answer = holdAnswerRef.current
+    holdAnswerRef.current = null
+    if (answer === 'exhausted' || !moreMayCome) {
+      stopAtQueueEnd('no-more')
+      return
+    }
+    // Something was appended, none of it playable, and more may still come.
+    if (answer === 'appended') requestMoreDuringHold()
+  }, [
+    items, currentKey, moreMayCome, holdAnswerTick,
+    endHold, requestMoreDuringHold, selectAndStart, stopAtQueueEnd,
+  ])
+
+  // An unmount mid-hold drops the deadline and any answer still in flight.
+  useEffect(() => () => {
+    abortHold('unmount')
+  }, [abortHold])
 
   // Prebuffer ladder: warm the synthesis cache ahead of user intent so
   // play-from-here on any section starts from cache. Order: current section's
@@ -628,8 +882,27 @@ export function useContinuousReader(
   }, [])
 
   const pause = useCallback(() => {
+    if (abortHold('pause')) {
+      // A hold has no unit under the playhead to pause on — the section has
+      // already finished — so Pause there is the clean stop the end of the
+      // queue would have been, without the claim on the timeline.
+      setContinuesTimeline(false)
+      setIsHandingOff(false)
+      playbackRef.current?.stop()
+      return
+    }
     playbackRef.current?.pause()
-  }, [])
+  }, [abortHold])
+
+  // The Stop button mid-hold: the same clean stop, so the reader is not left
+  // claiming a timeline (and spinning) until the deadline.
+  const stop = useCallback(() => {
+    if (abortHold('stop')) {
+      setContinuesTimeline(false)
+      setIsHandingOff(false)
+    }
+    playbackStop()
+  }, [abortHold, playbackStop])
 
   const next = useCallback(() => {
     const currentItems = itemsRef.current
@@ -776,13 +1049,17 @@ export function useContinuousReader(
     const currentItems = itemsRef.current
     if (currentItems.length === 0) return
 
+    // Named here rather than left to `selectAndStart`, so the log says which
+    // control ended the hold.
+    abortHold('previous')
+
     const target = resolvePreviousTrackIndex(
       currentItems,
       currentIndexRef.current,
       playbackRef.current?.currentTime ?? 0
     )
     playFromHere(target, 0)
-  }, [playFromHere])
+  }, [abortHold, playFromHere])
 
   /**
    * Interrupting Media-session skip forwards — NOT the in-app `next`, which is a
@@ -890,9 +1167,16 @@ export function useContinuousReader(
     handlers: mediaHandlers,
   })
 
+  // What the controls see. A hold is playback waiting for audio, so it reads as
+  // playing AND buffering — Pause plus a spinner, and `readingActive` stays up
+  // on the page. Only the returned values say so: every effect above keeps the
+  // raw `useTTS` values, because the voice really has stopped.
+  const readerIsPlaying = isPlaying || holdPhase !== 'idle'
+  const readerIsBuffering = isBuffering || holdPhase === 'holding'
+
   return useMemo(() => ({
-    isPlaying,
-    isBuffering,
+    isPlaying: readerIsPlaying,
+    isBuffering: readerIsBuffering,
     progress,
     currentTime,
     totalEstimatedTime,
@@ -900,7 +1184,7 @@ export function useContinuousReader(
     totalChunks,
     play,
     pause,
-    stop: playbackStop,
+    stop,
     resume: playbackResume,
     currentIndex,
     currentItem,
@@ -916,8 +1200,8 @@ export function useContinuousReader(
     playFromLine,
     retry,
   }), [
-    isPlaying, isBuffering, progress, currentTime, totalEstimatedTime,
-    currentChunkIndex, totalChunks, playbackStop, playbackResume, currentIndex,
+    readerIsPlaying, readerIsBuffering, progress, currentTime, totalEstimatedTime,
+    currentChunkIndex, totalChunks, stop, playbackResume, currentIndex,
     currentItem, position, error, play, pause, next, canNext,
     previous, canPrevious, playFromHere, playFromLine, retry,
   ])

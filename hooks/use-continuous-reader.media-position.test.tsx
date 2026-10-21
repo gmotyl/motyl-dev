@@ -5,7 +5,11 @@ import { sectionKey, splitIntoSpeechUnits, type SpeechSection } from '@/lib/tts/
 import { synthesizeSpeech } from '@/lib/tts/client'
 import { createMseCarrier } from '@/lib/reader/mse-carrier'
 import type { SeamReport } from '@/lib/reader/seam-report'
-import { useContinuousReader } from './use-continuous-reader'
+import {
+  QUEUE_HOLD_TIMEOUT_MS,
+  useContinuousReader,
+  type ContinuousReaderOptions,
+} from './use-continuous-reader'
 
 /**
  * What the reader tells the OS about its POSITION, across a section handoff —
@@ -357,5 +361,57 @@ describe('media-session position across a section handoff', () => {
     })
 
     await waitFor(() => expect(latestPosition()).toBeNull())
+  })
+})
+
+describe('media-session state at the end of the queue', () => {
+  it('media session stays playing through the hold', async () => {
+    /**
+     * A hold is a handoff whose next section has not arrived yet, so the OS
+     * controls see what they see across a handoff: `playing`, never a
+     * `paused` blip. Paired with the clean stop at the deadline, which IS
+     * published — so the silence is the hold's, not a spy that stopped looking.
+     */
+    const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout')
+    const items = [makeItem(0)]
+    const options: ContinuousReaderOptions = {
+      moreMayCome: true,
+      requestMore: vi.fn(() => new Promise<'appended' | 'exhausted' | 'failed'>(() => {})),
+    }
+    const { result } = renderHook(
+      ({ items: current }: { items: SpeechSection[] }) => useContinuousReader(current, options),
+      { initialProps: { items } }
+    )
+    await startFirstSection(result, items)
+    await waitFor(() => expect(mediaSessionMock.calls.at(-1)?.playbackState).toBe('playing'))
+    const callsBeforeEnd = mediaSessionMock.calls.length
+
+    await playOutOnMse(items)
+    await settle()
+    expect(result.current.isBuffering).toBe(true)
+
+    const statesDuringHold = mediaSessionMock.calls
+      .slice(callsBeforeEnd)
+      .map((call) => call.playbackState)
+    expect(statesDuringHold.length).toBeGreaterThan(0)
+    expect(new Set(statesDuringHold)).toEqual(new Set(['playing']))
+
+    // `nexttrack` has nowhere to go: the hold continues, untouched.
+    const handlers = mediaSessionMock.calls.at(-1)?.handlers as { nexttrack: () => void }
+    act(() => handlers.nexttrack())
+    await settle()
+    expect(result.current.currentIndex).toBe(0)
+    expect(result.current.isBuffering).toBe(true)
+    expect(mediaSessionMock.calls.at(-1)?.playbackState).toBe('playing')
+
+    // The deadline: a clean stop, published as one.
+    const call = setTimeoutSpy.mock.calls.find(([, ms]) => ms === QUEUE_HOLD_TIMEOUT_MS)
+    expect(call).toBeDefined()
+    await act(async () => {
+      ;(call![0] as () => void)()
+      await Promise.resolve()
+    })
+    await settle()
+    expect(mediaSessionMock.calls.at(-1)?.playbackState).toBe('paused')
   })
 })
