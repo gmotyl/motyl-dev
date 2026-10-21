@@ -515,7 +515,7 @@ describe('warm-ahead at the end of the queue', () => {
     expect(warmedTexts()).toEqual([CLOSING_LINE])
     expect(warmLines()).toEqual([
       'scheduled closing',
-      'start closing',
+      expect.stringMatching(/^start closing, \d+ms after scheduled$/),
       expect.stringMatching(/^unit 0: \d+ms$/),
     ])
 
@@ -568,6 +568,36 @@ describe('warm-ahead at the end of the queue', () => {
       expect.stringMatching(new RegExp(`^start ${appended.key}: 3 units`))
     )
     expect(result.current.currentIndex).toBe(0)
+  })
+
+  it('the end of a hold does not schedule a closing warm it never starts', async () => {
+    /**
+     * Holding when the source says nothing more can come, the reader goes
+     * straight to the closing line and asks for it at play priority. Warming
+     * it ahead from the hold would be cancelled by that very switch, leaving a
+     * `scheduled closing` with no `start` or `aborted` after it.
+     */
+    const items = [makeItem(0)]
+    const holdOptions = {
+      moreMayCome: true,
+      requestMore: vi.fn(() => new Promise<never>(() => {})),
+      closingLine: CLOSING_LINE,
+    }
+    const { result, rerender } = renderWithOptions(items, holdOptions)
+    await startFirstSection(result, items)
+    await playOutOnMse(items)
+    await settle()
+    await waitFor(() => expect(holdOptions.requestMore).toHaveBeenCalledTimes(1))
+    expect(result.current.isBuffering).toBe(true)
+    clearReaderLog()
+
+    rerender({ items, options: { ...holdOptions, moreMayCome: false } })
+    await waitFor(() =>
+      expect(vi.mocked(synthesizeSpeech).mock.calls.map(([text]) => text)).toContain(CLOSING_LINE)
+    )
+    await flushTimers()
+
+    expect(warmLines()).not.toContain('scheduled closing')
   })
 
   it('idle tiers stay off during the hold', async () => {

@@ -894,7 +894,8 @@ export function useContinuousReader(
   // raw flags are down, but the element is still running on a claimed timeline
   // and the idle tiers would compete with the arrival the hold is waiting for.
   // The section it finished is fully buffered by definition, so the hold warms
-  // ahead too — an arrival's first units, should one come. During the closing
+  // ahead too — an arrival's first units, should one come, but never the
+  // closing line: ending the hold requests that line itself. During the closing
   // line nothing is warmed: `isFullyBuffered` then describes the line, which
   // is already being read.
   useEffect(() => {
@@ -903,7 +904,9 @@ export function useContinuousReader(
     const controller = new AbortController()
     const { signal } = controller
     const holding = holdPhase === 'holding'
-    const audioActive = isPlaying || isBuffering || holding
+    // Any hold phase is active audio: the closing gap is as much a claimed
+    // timeline as the hold, so the idle tiers cannot fire in it.
+    const audioActive = isPlaying || isBuffering || holdPhase !== 'idle'
 
     // Warm-ahead is the one tier that is logged: the 2026-09-30 device log had a
     // handoff whose next title was cold after 80 s of runway, and nothing said
@@ -911,7 +914,10 @@ export function useContinuousReader(
     // missed. The idle tiers stay silent — dozens of lines per pause.
     const warmingAhead = audioActive && (isFullyBuffered || holding) && holdPhase !== 'closing'
     const scheduledAt = Date.now()
-    const closingText = !moreMayCome && closingLine ? closingLine : null
+    // Never from the hold: when it ends with nothing more to come, the switch
+    // to the closing phase asks for the line at play priority and would cancel
+    // this warm on the next render, orphaning its `scheduled closing` line.
+    const closingText = !holding && !moreMayCome && closingLine ? closingLine : null
     if (warmingAhead) {
       const nextKey = itemsRef.current[currentIndexRef.current + 1]?.key
       logReaderEvent(
@@ -928,7 +934,7 @@ export function useContinuousReader(
         const next = all[currentIndexRef.current + 1]
         if (!nextKey) {
           if (!closingText) return
-          logReaderEvent('warm-ahead', 'start closing')
+          logReaderEvent('warm-ahead', `start closing, ${Date.now() - scheduledAt}ms after scheduled`)
           await warmTier([closingText], voice, 1, signal, (position, ms, failed) => {
             logReaderEvent('warm-ahead', `unit ${position}: ${failed ? `failed after ${ms}ms` : `${ms}ms`}`)
           })
