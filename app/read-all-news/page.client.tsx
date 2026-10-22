@@ -41,6 +41,11 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
   const { data: session } = useSession()
   const [items, setItems] = useState<ContentItem[]>(initialItems)
   const [scrolledPastSlugs, setScrolledPastSlugs] = useState<Set<string>>(new Set())
+  // Bumped on every mark read. Clearing scrolledPastSlugs also drops the
+  // articles that survive (the one being read, any the user unchecked), and
+  // each FullArticle reports its scroll-past only once — so the survivors
+  // re-arm their observer on this bump, or they could never rejoin the list.
+  const [scrollPastEpoch, setScrollPastEpoch] = useState(0)
   const [loading, setLoading] = useState(false)
   const [hasMore, setHasMore] = useState(initialItems.length < totalItems)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -290,6 +295,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
     // Remove marked articles and reset counter
     setItems(prev => prev.filter(item => !slugs.includes(item.slug)))
     setScrolledPastSlugs(new Set())
+    setScrollPastEpoch(epoch => epoch + 1)
 
     // Navigate if there was a pending URL
     if (pendingNavUrl) {
@@ -419,6 +425,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
                   key={item.slug}
                   item={item}
                   onScrolledPast={handleScrolledPast}
+                  scrollPastEpoch={scrollPastEpoch}
                   isLast={index === items.length - 1}
                   hiddenSections={hiddenSections}
                   reader={reader}
@@ -512,6 +519,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
 function FullArticle({
   item,
   onScrolledPast,
+  scrollPastEpoch,
   isLast,
   hiddenSections,
   reader,
@@ -519,13 +527,13 @@ function FullArticle({
 }: {
   item: ContentItem
   onScrolledPast: (slug: string) => void
+  scrollPastEpoch: number
   isLast: boolean
   hiddenSections: Set<SectionType>
   reader: ReturnType<typeof useContinuousReader>
   speechSections: ReturnType<typeof prepareSpeechSections>
 }) {
   const bottomRef = useRef<HTMLDivElement>(null)
-  const hasTriggeredRef = useRef(false)
 
   const filteredContent = useMemo(
     () => filterHiddenSections(item.content, hiddenSections),
@@ -571,13 +579,17 @@ function FullArticle({
     [reader.playFromHere, reader.playFromLine, speechSections, item.slug, currentSectionId]
   )
 
+  // Reports once per mark-read epoch: a new epoch re-arms the observer, which
+  // reports the current state on observe, so a survivor whose bottom is
+  // already on screen rejoins at once instead of waiting for another scroll.
   useEffect(() => {
-    if (hasTriggeredRef.current || !bottomRef.current) return
+    if (!bottomRef.current) return
 
+    let triggered = false
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !hasTriggeredRef.current) {
-          hasTriggeredRef.current = true
+        if (entries[0].isIntersecting && !triggered) {
+          triggered = true
           onScrolledPast(item.slug)
           observer.disconnect()
         }
@@ -587,7 +599,7 @@ function FullArticle({
 
     observer.observe(bottomRef.current)
     return () => observer.disconnect()
-  }, [item.slug, onScrolledPast])
+  }, [item.slug, onScrolledPast, scrollPastEpoch])
 
   return (
     <article className="py-8" data-reader-article={item.slug}>

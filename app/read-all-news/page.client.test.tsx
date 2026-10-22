@@ -727,4 +727,179 @@ describe('ReadAllNewsPage continuous reader', () => {
     // moreMayCome follows hasMore once the server says there is nothing further.
     await waitFor(() => expect(latestReaderOptions?.moreMayCome).toBe(false))
   })
+
+  describe('mark-read list', () => {
+    const listed = () => latestMarkReadDialogProps?.items.map((item) => item.slug)
+    let rerenderPage = () => {}
+    const mount = (initial: ReturnType<typeof items>, total: number) => {
+      const view = render(<ReadAllNewsPage initialItems={initial} totalItems={total} />)
+      rerenderPage = () => view.rerender(<ReadAllNewsPage initialItems={initial} totalItems={total} />)
+    }
+    // Moves the reader onto a Section. The harness only picks the index up on
+    // the next render, and has no re-seat of its own, so a test sets the
+    // post-removal index the real reader would land on.
+    const readSection = (index: number) => {
+      act(() => latestReaderHarness.playFromHere(index))
+      rerenderPage()
+    }
+    const confirm = (slugs: string[]) => act(() => latestMarkReadDialogProps?.onConfirm(slugs))
+
+    beforeEach(() => {
+      vi.stubGlobal('scrollTo', vi.fn())
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ items: [] }) }))
+    })
+
+    it('lists exactly the articles scrolled past, in page order', () => {
+      mount(items(5), 5)
+
+      act(() => scrollPast('news-2'))
+      act(() => scrollPast('news-1'))
+      readSection(4) // news-3
+
+      expect(listed()).toEqual(['news-1', 'news-2'])
+      expect(latestMarkReadDialogProps?.currentlyReadingSlug).toBe('news-3')
+    })
+
+    it('lists the reading article too, flagged so the dialog leaves it unchecked', () => {
+      mount(items(5), 5)
+
+      act(() => scrollPast('news-1'))
+      act(() => scrollPast('news-2'))
+      readSection(2) // news-2
+
+      expect(listed()).toEqual(['news-1', 'news-2'])
+      expect(latestMarkReadDialogProps?.currentlyReadingSlug).toBe('news-2')
+    })
+
+    it('empties the list on confirm and keeps the reader keyed by slug', () => {
+      mount(items(5), 5)
+      act(() => scrollPast('news-1'))
+      act(() => scrollPast('news-2'))
+      readSection(4) // news-3
+
+      // news-3's first Section is index 0 once news-1 and news-2 are gone.
+      readerIndex = 0
+      confirm(['news-1', 'news-2'])
+
+      expect(screen.queryByText('News 1')).not.toBeInTheDocument()
+      expect(screen.queryByText('News 2')).not.toBeInTheDocument()
+      expect(listed()).toEqual([])
+      expect(latestMarkReadDialogProps?.currentlyReadingSlug).toBe('news-3')
+      expect(screen.getByRole('button', { name: 'Mark read' })).toBeDisabled()
+    })
+
+    it('lists the next article read after a mid-session mark read', () => {
+      mount(items(5), 5)
+      act(() => scrollPast('news-1'))
+      act(() => scrollPast('news-2'))
+      readSection(4) // news-3
+      readerIndex = 0
+      confirm(['news-1', 'news-2'])
+
+      act(() => scrollPast('news-3'))
+      readSection(2) // news-4
+
+      expect(listed()).toEqual(['news-3'])
+      expect(latestMarkReadDialogProps?.currentlyReadingSlug).toBe('news-4')
+    })
+
+    // The reported bug: the article being read at mark-read time has usually
+    // scrolled past already, so the dialog shows it unchecked and it survives.
+    // It then sits at the top, and once the reader moves on and its bottom is
+    // seen again it must rejoin the list.
+    it('lists the article that was being read at mark-read time once it is passed again', () => {
+      mount(items(5), 5)
+      act(() => scrollPast('news-1'))
+      act(() => scrollPast('news-2'))
+      act(() => scrollPast('news-3'))
+      readSection(4) // news-3
+      expect(listed()).toEqual(['news-1', 'news-2', 'news-3'])
+
+      readerIndex = 0
+      confirm(['news-1', 'news-2'])
+      expect(screen.getByText('News 3')).toBeInTheDocument()
+      expect(listed()).toEqual([])
+
+      readSection(2) // news-4
+      act(() => scrollPast('news-3'))
+
+      expect(listed()).toEqual(['news-3'])
+    })
+
+    it('lists a skipped (unchecked) article again once it is passed again', () => {
+      mount(items(5), 5)
+      act(() => scrollPast('news-1'))
+      act(() => scrollPast('news-2'))
+      readSection(4) // news-3
+
+      confirm(['news-1'])
+      expect(listed()).toEqual([])
+
+      act(() => scrollPast('news-2'))
+
+      expect(listed()).toEqual(['news-2'])
+    })
+
+    // A real IntersectionObserver reports the current state on observe, so a
+    // re-armed survivor whose bottom is already on screen after the jump to
+    // the top joins at once — no scroll that "leaves the viewport" is needed.
+    it('re-arms scroll-past tracking for every surviving article after mark read', () => {
+      mount(items(4), 4)
+      for (const slug of ['news-1', 'news-2', 'news-3']) act(() => scrollPast(slug))
+      readSection(4) // news-3
+
+      readerIndex = 0
+      confirm(['news-1'])
+
+      const armed = (slug: string) =>
+        live().some((o) => o.elements.some((el) => ownerSlug(el) === slug))
+      expect(armed('news-2')).toBe(true)
+      expect(armed('news-3')).toBe(true)
+      expect(armed('news-4')).toBe(true)
+    })
+
+    it('tracks articles appended by a load-more after mark read', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ items: items(2, 3), currentPage: 1, totalPages: 1 }),
+      }))
+      mount(items(3), 5)
+      act(() => scrollPast('news-1'))
+      confirm(['news-1'])
+
+      await act(async () => { reachLoadMoreSentinel() })
+      await waitFor(() => expect(screen.getByText('News 5')).toBeInTheDocument())
+
+      act(() => scrollPast('news-2'))
+      act(() => scrollPast('news-4'))
+
+      expect(listed()).toEqual(['news-2', 'news-4'])
+    })
+
+    it('evicts a survivor passed again after mark read, but never the reading article', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ items: items(5, 13), currentPage: 1, totalPages: 2 }),
+      }))
+      mount(items(13), 20)
+      act(() => scrollPast('news-1'))
+      act(() => scrollPast('news-2'))
+      readSection(2) // news-2
+      readerIndex = 0 // news-2 after news-1 goes
+      confirm(['news-1'])
+
+      // news-2 (reading) and news-3 survive and are passed again.
+      act(() => scrollPast('news-2'))
+      act(() => scrollPast('news-3'))
+      readSection(2) // news-3 sits at index 2 now
+      await act(async () => { reachLoadMoreSentinel() })
+      await waitFor(() => expect(screen.getByText('News 18')).toBeInTheDocument())
+
+      // 12 + 5 = 17 > 12: news-2 is evictable, news-3 is being read.
+      expect(screen.queryByText('News 2')).not.toBeInTheDocument()
+      expect(screen.getByText('News 3')).toBeInTheDocument()
+      expect(JSON.parse(localStorage.getItem('visitedArticles') ?? '[]')).toContain('news-2')
+      expect(listed()).toEqual(['news-3'])
+    })
+  })
 })
