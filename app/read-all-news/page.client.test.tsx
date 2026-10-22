@@ -804,10 +804,10 @@ describe('ReadAllNewsPage continuous reader', () => {
     })
 
     // The reported bug: the article being read at mark-read time has usually
-    // scrolled past already, so the dialog shows it unchecked and it survives.
-    // It then sits at the top, and once the reader moves on and its bottom is
-    // seen again it must rejoin the list.
-    it('lists the article that was being read at mark-read time once it is passed again', () => {
+    // scrolled past already, so the dialog shows it unchecked and it survives
+    // at the top. Its bottom sentinel reported once and is done, so it must
+    // stay on the list rather than wait to be seen again.
+    it('keeps the article that was being read at mark-read time on the list', () => {
       mount(items(5), 5)
       act(() => scrollPast('news-1'))
       act(() => scrollPast('news-2'))
@@ -818,44 +818,49 @@ describe('ReadAllNewsPage continuous reader', () => {
       readerIndex = 0
       confirm(['news-1', 'news-2'])
       expect(screen.getByText('News 3')).toBeInTheDocument()
-      expect(listed()).toEqual([])
+      // Still being read, so the dialog shows it unchecked.
+      expect(listed()).toEqual(['news-3'])
+      expect(latestMarkReadDialogProps?.currentlyReadingSlug).toBe('news-3')
 
       readSection(2) // news-4
-      act(() => scrollPast('news-3'))
 
+      // The reader moved on, so the dialog pre-checks it.
       expect(listed()).toEqual(['news-3'])
+      expect(latestMarkReadDialogProps?.currentlyReadingSlug).toBe('news-4')
     })
 
-    it('lists a skipped (unchecked) article again once it is passed again', () => {
+    it('keeps a skipped (unchecked) article on the list', () => {
       mount(items(5), 5)
       act(() => scrollPast('news-1'))
       act(() => scrollPast('news-2'))
       readSection(4) // news-3
 
       confirm(['news-1'])
-      expect(listed()).toEqual([])
-
-      act(() => scrollPast('news-2'))
 
       expect(listed()).toEqual(['news-2'])
     })
 
-    // A real IntersectionObserver reports the current state on observe, so a
-    // re-armed survivor whose bottom is already on screen after the jump to
-    // the top joins at once — no scroll that "leaves the viewport" is needed.
-    it('re-arms scroll-past tracking for every surviving article after mark read', () => {
-      mount(items(4), 4)
-      for (const slug of ['news-1', 'news-2', 'news-3']) act(() => scrollPast(slug))
+    // With prefers-reduced-motion the jump to the top and the reader's heading
+    // scroll are instant, so a survivor's bottom sentinel can end up above the
+    // viewport without ever being drawn inside it. Nothing may depend on it
+    // intersecting again.
+    it('lists a survivor whose sentinel never intersects again after mark read', () => {
+      mount(items(5), 5)
+      act(() => scrollPast('news-1'))
+      act(() => scrollPast('news-2'))
+      act(() => scrollPast('news-3'))
       readSection(4) // news-3
-
       readerIndex = 0
-      confirm(['news-1'])
+      confirm(['news-1', 'news-2'])
 
-      const armed = (slug: string) =>
-        live().some((o) => o.elements.some((el) => ownerSlug(el) === slug))
-      expect(armed('news-2')).toBe(true)
-      expect(armed('news-3')).toBe(true)
-      expect(armed('news-4')).toBe(true)
+      // Anything still watching news-3 only ever sees it off screen.
+      for (const entry of live().filter((o) => o.elements.some((el) => ownerSlug(el) === 'news-3'))) {
+        act(() => entry.callback([{ isIntersecting: false }]))
+      }
+      readSection(2) // news-4
+
+      expect(listed()).toEqual(['news-3'])
+      expect(latestMarkReadDialogProps?.currentlyReadingSlug).toBe('news-4')
     })
 
     it('tracks articles appended by a load-more after mark read', async () => {
@@ -876,7 +881,7 @@ describe('ReadAllNewsPage continuous reader', () => {
       expect(listed()).toEqual(['news-2', 'news-4'])
     })
 
-    it('evicts a survivor passed again after mark read, but never the reading article', async () => {
+    it('evicts a survivor still listed after mark read, but never the reading article', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
         ok: true,
         json: async () => ({ items: items(5, 13), currentPage: 1, totalPages: 2 }),
@@ -888,8 +893,7 @@ describe('ReadAllNewsPage continuous reader', () => {
       readerIndex = 0 // news-2 after news-1 goes
       confirm(['news-1'])
 
-      // news-2 (reading) and news-3 survive and are passed again.
-      act(() => scrollPast('news-2'))
+      // news-2 (reading, so unchecked) survives on the list; news-3 is passed.
       act(() => scrollPast('news-3'))
       readSection(2) // news-3 sits at index 2 now
       await act(async () => { reachLoadMoreSentinel() })
