@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { applyPronunciation } from 'anytts/text'
 import {
-  normalizeVersionNumbers,
+  separateDottedNumberGroups,
   prepareSpeechSections,
   prepareSpeechText,
   sectionKey,
@@ -362,50 +362,50 @@ Treść drugiego tematu.`,
   })
 })
 
-describe('normalizeVersionNumbers', () => {
-  it('normalizeVersionNumbers separates three-group runs with commas', () => {
-    expect(normalizeVersionNumbers('15.5.26')).toBe('15, 5, 26')
-    expect(normalizeVersionNumbers('16.3.6')).toBe('16, 3, 6')
-    expect(normalizeVersionNumbers('3.6.3')).toBe('3, 6, 3')
-    expect(normalizeVersionNumbers('10.6.3')).toBe('10, 6, 3')
+describe('separateDottedNumberGroups', () => {
+  it('separateDottedNumberGroups separates three-group runs with commas', () => {
+    expect(separateDottedNumberGroups('15.5.26')).toBe('15, 5, 26')
+    expect(separateDottedNumberGroups('16.3.6')).toBe('16, 3, 6')
+    expect(separateDottedNumberGroups('3.6.3')).toBe('3, 6, 3')
+    expect(separateDottedNumberGroups('10.6.3')).toBe('10, 6, 3')
   })
 
-  it('normalizeVersionNumbers handles four-part versions', () => {
-    expect(normalizeVersionNumbers('1.2.3.4')).toBe('1, 2, 3, 4')
+  it('separateDottedNumberGroups handles four-part versions', () => {
+    expect(separateDottedNumberGroups('1.2.3.4')).toBe('1, 2, 3, 4')
   })
 
-  it('normalizeVersionNumbers separates two-group runs with commas', () => {
-    expect(normalizeVersionNumbers('5.6')).toBe('5, 6')
-    expect(normalizeVersionNumbers('16.3')).toBe('16, 3')
-    expect(normalizeVersionNumbers('Next.js 16.3')).toBe('Next.js 16, 3')
+  it('separateDottedNumberGroups separates two-group runs with commas', () => {
+    expect(separateDottedNumberGroups('5.6')).toBe('5, 6')
+    expect(separateDottedNumberGroups('16.3')).toBe('16, 3')
+    expect(separateDottedNumberGroups('Next.js 16.3')).toBe('Next.js 16, 3')
   })
 
-  it('normalizeVersionNumbers allows groups up to five digits', () => {
-    expect(normalizeVersionNumbers('12345.6')).toBe('12345, 6')
+  it('separateDottedNumberGroups allows groups up to five digits', () => {
+    expect(separateDottedNumberGroups('12345.6')).toBe('12345, 6')
   })
 
-  it('normalizeVersionNumbers leaves numbers with a 6+ digit group unchanged', () => {
-    expect(normalizeVersionNumbers('123456.7')).toBe('123456.7')
+  it('separateDottedNumberGroups leaves numbers with a 6+ digit group unchanged', () => {
+    expect(separateDottedNumberGroups('123456.7')).toBe('123456.7')
   })
 
-  it('normalizeVersionNumbers leaves comma decimals and plain integers unchanged', () => {
-    expect(normalizeVersionNumbers('42')).toBe('42')
-    expect(normalizeVersionNumbers('3,14')).toBe('3,14')
-    expect(normalizeVersionNumbers('Wersja 3,14 liczby')).toBe('Wersja 3,14 liczby')
+  it('separateDottedNumberGroups leaves comma decimals and plain integers unchanged', () => {
+    expect(separateDottedNumberGroups('42')).toBe('42')
+    expect(separateDottedNumberGroups('3,14')).toBe('3,14')
+    expect(separateDottedNumberGroups('Wersja 3,14 liczby')).toBe('Wersja 3,14 liczby')
   })
 
-  it('normalizeVersionNumbers rewrites the reported date-misread input as separate numbers', () => {
+  it('separateDottedNumberGroups rewrites the reported date-misread input as separate numbers', () => {
     // Pinned from a bug report: with a bare space separator the voice read
     // `15 5 26` as a date. The comma separator makes it read separate numbers.
     expect(
-      normalizeVersionNumbers('16.3.6 (Active LTS) lub 15.5.26 (Maintenance LTS)')
+      separateDottedNumberGroups('16.3.6 (Active LTS) lub 15.5.26 (Maintenance LTS)')
     ).toBe('16, 3, 6 (Active LTS) lub 15, 5, 26 (Maintenance LTS)')
   })
 })
 
 describe('prepareSpeechText', () => {
   it('prepareSpeechText applies the anytts pl preset to English and Polish text alike', () => {
-    // Plain prose (no markdown, no version numbers), so the pipeline reduces to
+    // Plain prose (no markdown, no dotted-number runs), so the pipeline reduces to
     // the pronunciation step and must equal the anytts `pl` preset exactly.
     const english = 'The CLI calls the API, then React renders on the GPU.'
     const polish = 'Nasz CI/CD odpala benchmarki Reacta, a PRs czekają na review.'
