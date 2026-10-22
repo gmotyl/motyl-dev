@@ -31,6 +31,12 @@ interface ReadAllNewsPageProps {
 
 const MAX_DOM_ARTICLES = 12
 
+/** How a load-more ended: new items arrived, the server has nothing further, or the request failed. */
+type LoadMoreResult = 'appended' | 'exhausted' | 'failed'
+
+/** Spoken once the reader has read everything and the server has nothing further. */
+export const READ_ALL_NEWS_CLOSING_LINE = 'To już wszystkie nowe artykuły.'
+
 export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNewsPageProps) {
   const { data: session } = useSession()
   const [items, setItems] = useState<ContentItem[]>(initialItems)
@@ -59,49 +65,15 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
     scrollHeadingIntoView(resolveScrollTarget(article, speechSections, section, index, scroll))
   }, [speechSections])
 
-  const reader = useContinuousReader(speechSections, { onItemChange: scrollToSection })
-
-  // The bar's vote strip targets the Section being READ (`currentItem`) —
-  // playing, paused or not yet started — never the eye Next cascades while
-  // playing. `firstExternalLink` parses markdown, so it runs once per Section,
-  // not on every progress tick.
-  const currentSection = reader.currentItem
-  const currentMarkdown = currentSection?.markdown
-  const currentLink = useMemo(
-    () => (currentMarkdown == null ? null : firstExternalLink(currentMarkdown)),
-    [currentMarkdown]
-  )
-  const currentTitle = currentSection?.title
-  // Same values the owning article's MarkdownContent gets (patternName only,
-  // no category), so a strip vote and an inline vote send the same payload.
-  const currentPattern = currentSection
-    ? items.find((item) => item.slug === currentSection.sourceSlug)?.sourcePattern
-    : undefined
-  const vote = useMemo<ReaderVoteStripProps | undefined>(
-    () => (currentTitle == null
-      ? undefined
-      : { heading: currentTitle, link: currentLink, category: undefined, patternName: currentPattern }),
-    [currentTitle, currentLink, currentPattern]
-  )
-
-  const handlePlayPause = useCallback(() => {
-    if (reader.isPlaying) {
-      reader.pause()
-      return
-    }
-
-    if (reader.currentItem) scrollToSection(reader.currentItem, reader.currentIndex)
-    reader.play()
-  }, [reader, scrollToSection])
-
   const loadMoreRef = useRef<HTMLDivElement>(null)
   // Refs so fetchMore can read current values without stale closures or extra deps
   const itemsRef = useRef<ContentItem[]>(initialItems)
   const scrolledPastSlugsRef = useRef<Set<string>>(new Set())
   const sessionRef = useRef(session)
   // The article the reader is on. Read as a ref so the eviction guard sees the
-  // live value without adding a per-tick dep to fetchMore.
-  const readerSlugRef = useRef<string | null>(reader.currentSlug)
+  // live value without adding a per-tick dep to fetchMore. Synced right after
+  // the reader is created below (fetchMore has to exist before the reader).
+  const readerSlugRef = useRef<string | null>(null)
   // Every slug we have ever fetched, including those evicted from the DOM.
   // Sent as excludeSlugs so the server doesn't return them again, regardless
   // of how the visited cookie shifts mid-session.
@@ -109,29 +81,15 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
   useEffect(() => { itemsRef.current = items }, [items])
   useEffect(() => { scrolledPastSlugsRef.current = scrolledPastSlugs }, [scrolledPastSlugs])
   useEffect(() => { sessionRef.current = session }, [session])
-  useEffect(() => { readerSlugRef.current = reader.currentSlug }, [reader.currentSlug])
 
-  // Infinite scroll observer
-  useEffect(() => {
-    if (!loadMoreRef.current || !hasMore || loading) return
+  // Mirrors hasMore so fetchMore stays stable and never reads a stale closure.
+  const hasMoreRef = useRef(hasMore)
+  // The running load-more, shared by every caller (scroll now, the reader at
+  // the queue end later) so concurrent triggers ride one request.
+  const inFlightRef = useRef<Promise<LoadMoreResult> | null>(null)
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !loading) {
-          fetchMore()
-        }
-      },
-      { rootMargin: '200px' }
-    )
-
-    observer.observe(loadMoreRef.current)
-    return () => observer.disconnect()
-  }, [hasMore, loading])
-
-  const fetchMore = useCallback(async () => {
-    if (loading || !hasMore) return
-    setLoading(true)
-
+  // One request against /api/content; fetchMore below owns the sharing.
+  const loadMore = useCallback(async (): Promise<LoadMoreResult> => {
     try {
       const exclude = Array.from(loadedSlugsRef.current)
       const params = new URLSearchParams({
@@ -144,6 +102,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
       if (exclude.length) params.set('excludeSlugs', exclude.join(','))
 
       const res = await fetch(`/api/content?${params}`)
+      if (!res.ok) throw new Error(`Load more failed: ${res.status}`)
       const data = await res.json()
 
       if (data.items?.length > 0) {
@@ -192,16 +151,104 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
         }
 
         setItems(finalItems)
-        setHasMore(data.currentPage < data.totalPages)
-      } else {
-        setHasMore(false)
+        hasMoreRef.current = data.currentPage < data.totalPages
+        setHasMore(hasMoreRef.current)
+        return 'appended'
       }
+      hasMoreRef.current = false
+      setHasMore(false)
+      return 'exhausted'
     } catch (error) {
+      // Items and hasMore stay as they were, so a later trigger can retry.
       console.error('Failed to fetch more items:', error)
-    } finally {
-      setLoading(false)
+      return 'failed'
     }
-  }, [loading, hasMore])
+  }, [])
+
+  const fetchMore = useCallback((): Promise<LoadMoreResult> => {
+    if (inFlightRef.current) return inFlightRef.current
+    if (!hasMoreRef.current) return Promise.resolve('exhausted')
+    setLoading(true)
+
+    const request = loadMore().finally(() => {
+      inFlightRef.current = null
+      setLoading(false)
+    })
+    inFlightRef.current = request
+    return request
+  }, [loadMore])
+
+  const reader = useContinuousReader(speechSections, {
+    onItemChange: scrollToSection,
+    moreMayCome: hasMore,
+    requestMore: fetchMore,
+    closingLine: READ_ALL_NEWS_CLOSING_LINE,
+  })
+  useEffect(() => { readerSlugRef.current = reader.currentSlug }, [reader.currentSlug])
+
+  // The bar's vote strip targets the Section being READ (`currentItem`) —
+  // playing, paused or not yet started — never the eye Next cascades while
+  // playing. `firstExternalLink` parses markdown, so it runs once per Section,
+  // not on every progress tick.
+  const currentSection = reader.currentItem
+  const currentMarkdown = currentSection?.markdown
+  const currentLink = useMemo(
+    () => (currentMarkdown == null ? null : firstExternalLink(currentMarkdown)),
+    [currentMarkdown]
+  )
+  const currentTitle = currentSection?.title
+  // Same values the owning article's MarkdownContent gets (patternName only,
+  // no category), so a strip vote and an inline vote send the same payload.
+  const currentPattern = currentSection
+    ? items.find((item) => item.slug === currentSection.sourceSlug)?.sourcePattern
+    : undefined
+  const vote = useMemo<ReaderVoteStripProps | undefined>(
+    () => (currentTitle == null
+      ? undefined
+      : { heading: currentTitle, link: currentLink, category: undefined, patternName: currentPattern }),
+    [currentTitle, currentLink, currentPattern]
+  )
+
+  const handlePlayPause = useCallback(() => {
+    if (reader.isPlaying) {
+      reader.pause()
+      return
+    }
+
+    if (reader.currentItem) scrollToSection(reader.currentItem, reader.currentIndex)
+    reader.play()
+  }, [reader, scrollToSection])
+
+
+  // Infinite scroll observer. Re-armed when items change, so a sentinel still
+  // in view after an append keeps loading; a failure leaves items unchanged and
+  // waits for the next scroll instead of retrying in a loop.
+  useEffect(() => {
+    if (!loadMoreRef.current || !hasMore) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) fetchMore()
+      },
+      { rootMargin: '200px' }
+    )
+
+    observer.observe(loadMoreRef.current)
+    return () => observer.disconnect()
+  }, [hasMore, items, fetchMore])
+
+  // Position-driven prefetch: a reader entering the last loaded article asks for
+  // more without waiting for a scroll, so a hidden page keeps its queue topped
+  // up. Once per article; fetchMore owns the hasMore check and the sharing.
+  const prefetchedSlugsRef = useRef<Set<string>>(new Set())
+  const readerActive = reader.isPlaying || reader.isBuffering
+  useEffect(() => {
+    const slug = reader.currentSlug
+    if (!readerActive || slug == null || slug !== items.at(-1)?.slug) return
+    if (prefetchedSlugsRef.current.has(slug)) return
+    prefetchedSlugsRef.current.add(slug)
+    fetchMore()
+  }, [reader.currentSlug, readerActive, items, fetchMore])
 
   // Track scrolled-past articles
   const handleScrolledPast = useCallback((slug: string) => {
@@ -240,9 +287,15 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
       window.scrollTo({ top: 0 })
     }
 
-    // Remove marked articles and reset counter
+    // Remove marked articles and drop only them from the list. Survivors (the
+    // one being read, any the user unchecked) stay listed: each FullArticle
+    // reports its scroll-past once, so clearing them would strand them.
     setItems(prev => prev.filter(item => !slugs.includes(item.slug)))
-    setScrolledPastSlugs(new Set())
+    setScrolledPastSlugs(prev => {
+      const next = new Set(prev)
+      slugs.forEach(slug => next.delete(slug))
+      return next
+    })
 
     // Navigate if there was a pending URL
     if (pendingNavUrl) {

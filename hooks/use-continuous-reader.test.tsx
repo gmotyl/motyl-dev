@@ -3,7 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { sectionKey, splitIntoSpeechUnits, type SpeechSection } from '@/lib/tts/speech'
 import { DEFAULT_TTS_VOICE, setStoredTtsVoice, TTS_VOICE_STORAGE_KEY } from '@/lib/tts/voices'
-import { useContinuousReader } from './use-continuous-reader'
+import { READER_LOG_FLAG, clearReaderLog, readReaderLog } from '@/lib/reader/diagnostic-log'
+import {
+  QUEUE_HOLD_TIMEOUT_MS,
+  useContinuousReader,
+  type ContinuousReaderOptions,
+} from './use-continuous-reader'
 
 const ttsMock = vi.hoisted(() => {
   let latestOptions: Record<string, unknown> | undefined
@@ -1837,6 +1842,510 @@ describe('useContinuousReader', () => {
 
       expect(wakeLockMock.releaseWakeLock).not.toHaveBeenCalled()
       expect(wakeLockMock.requestWakeLock).toHaveBeenCalledOnce()
+    })
+  })
+
+  describe('closing line at the end of the queue', () => {
+    /**
+     * On Read All News the end of the content is audible: the reader says so,
+     * on the timeline it is already playing, instead of falling silent. The
+     * line is not a section — it is a swap of the units handed to `useTTS`
+     * while everything the page reads off the reader stays on the last
+     * section.
+     */
+    const CLOSING_LINE = 'To już wszystkie nowe artykuły.'
+    const items = [makeItem(0), makeItem(1)]
+    const lastSectionUnits = splitIntoSpeechUnits(items[1]).map((unit) => unit.text)
+
+    // What `useTTS` would actually speak on each `play()`: it reads the units of
+    // the LAST RENDER, so a start taken before the swap back has re-rendered
+    // would still say the closing line.
+    let unitsAtPlay: unknown[] = []
+
+    beforeEach(() => {
+      unitsAtPlay = []
+      ttsMock.playback.play.mockImplementation(() => {
+        unitsAtPlay.push(ttsMock.getLatestOptions()?.units)
+        return Promise.resolve()
+      })
+      localStorage.setItem(READER_LOG_FLAG, '1')
+      clearReaderLog()
+    })
+
+    afterEach(() => {
+      ttsMock.playback.play.mockImplementation(() => Promise.resolve())
+    })
+
+    const queueLog = () =>
+      readReaderLog()
+        .filter((entry) => entry.type === 'queue-hold' || entry.type === 'queue-end')
+        .map((entry) => `${entry.type} ${entry.detail}`)
+
+    const complete = () =>
+      act(() => (ttsMock.getLatestOptions()?.onComplete as () => void)())
+
+    const closingCall = () =>
+      ttsMock.calls.find(
+        ({ options }) => (options.units as string[] | undefined)?.[0] === CLOSING_LINE
+      )
+
+    /** Play the first section out so the reader sits on the last one, playing. */
+    const renderOnLastSection = async (options: ContinuousReaderOptions) => {
+      const rendered = renderHook(
+        ({ items: current, options: currentOptions }: {
+          items: SpeechSection[]
+          options: ContinuousReaderOptions
+        }) => useContinuousReader(current, currentOptions),
+        { initialProps: { items, options } }
+      )
+      act(() => rendered.result.current.play())
+      await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+      complete()
+      await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledTimes(2))
+      expect(rendered.result.current.currentIndex).toBe(1)
+
+      ttsMock.playback.play.mockClear()
+      ttsMock.playback.stop.mockClear()
+      ttsMock.calls.length = 0
+      unitsAtPlay = []
+      vi.mocked(options.onItemChange ?? vi.fn()).mockClear()
+      clearReaderLog()
+      return rendered
+    }
+
+    /** The last section ends with nothing more to come: the closing line starts. */
+    const renderClosing = async (extra: ContinuousReaderOptions = {}) => {
+      const options = { moreMayCome: false, closingLine: CLOSING_LINE, ...extra }
+      const rendered = await renderOnLastSection(options)
+      complete()
+      await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+      expect(unitsAtPlay).toEqual([[CLOSING_LINE]])
+      ttsMock.playback.play.mockClear()
+      ttsMock.playback.stop.mockClear()
+      unitsAtPlay = []
+      return { ...rendered, options }
+    }
+
+    it('speaks the closing line when nothing more exists', async () => {
+      const onItemChange = vi.fn()
+      const options = { moreMayCome: false, closingLine: CLOSING_LINE, onItemChange }
+      const { result } = await renderOnLastSection(options)
+
+      complete()
+      await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+
+      // Exactly the closing line, in the reader's voice, continuing the
+      // timeline the last section played on: the element is kept running and
+      // the line is appended behind it, as at a section handoff.
+      expect(unitsAtPlay).toEqual([[CLOSING_LINE]])
+      expect(closingCall()?.options.continueTimeline).toBe(true)
+      expect(closingCall()?.options.voice).toBe('pl-PL-ZofiaNeural')
+      expect(ttsMock.playback.stop).toHaveBeenCalledOnce()
+      expect(ttsMock.playback.stop).toHaveBeenCalledWith({ keepElementRunning: true })
+      expect(ttsMock.playback.stop.mock.invocationCallOrder[0]).toBeLessThan(
+        ttsMock.playback.play.mock.invocationCallOrder[0]
+      )
+      expect(onItemChange).not.toHaveBeenCalled()
+      expect(queueLog()).toEqual([])
+
+      // The line is said: a clean stop, the claim on the timeline dropped first,
+      // and the end of the queue logged once.
+      complete()
+      expect(queueLog()).toEqual(['queue-end no-more'])
+      expect(ttsMock.playback.stop).toHaveBeenCalledTimes(2)
+      expect(ttsMock.playback.stop).toHaveBeenLastCalledWith()
+      expect(ttsMock.getLatestOptions()?.continueTimeline).toBe(false)
+      expect(ttsMock.getLatestOptions()?.units).toEqual(lastSectionUnits)
+      expect(result.current.isPlaying).toBe(false)
+      expect(latestMediaSession().playbackState).toBe('paused')
+      expect(ttsMock.playback.play).toHaveBeenCalledOnce()
+      expect(onItemChange).not.toHaveBeenCalled()
+    })
+
+    it('speaks the closing line when the hold learns nothing more exists', async () => {
+      const requestMore = vi.fn(() => new Promise<'appended' | 'exhausted' | 'failed'>(() => {}))
+      const options = { moreMayCome: true, requestMore, closingLine: CLOSING_LINE }
+      const { result, rerender } = await renderOnLastSection(options)
+
+      complete()
+      expect(queueLog()).toEqual(['queue-hold start'])
+      expect(ttsMock.playback.play).not.toHaveBeenCalled()
+
+      // The page finds out there is nothing more without a section arriving.
+      rerender({ items, options: { ...options, moreMayCome: false } })
+      await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+      expect(unitsAtPlay).toEqual([[CLOSING_LINE]])
+      expect(closingCall()?.options.continueTimeline).toBe(true)
+      expect(ttsMock.playback.stop).toHaveBeenCalledWith({ keepElementRunning: true })
+      expect(result.current.isPlaying).toBe(true)
+      expect(result.current.isBuffering).toBe(false)
+
+      complete()
+      expect(queueLog()).toEqual(['queue-hold start', 'queue-end no-more'])
+      expect(result.current.isPlaying).toBe(false)
+    })
+
+    it('closing line does not change the section list or current section', async () => {
+      const onItemChange = vi.fn()
+      const options = { moreMayCome: false, closingLine: CLOSING_LINE, onItemChange }
+      const { result } = await renderOnLastSection(options)
+      const before = {
+        currentIndex: result.current.currentIndex,
+        currentItem: result.current.currentItem,
+        currentSlug: result.current.currentSlug,
+        position: result.current.position,
+        canNext: result.current.canNext,
+        metadata: latestMediaSession().metadata,
+      }
+
+      complete()
+      await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+
+      // `currentItem` is what the floating bar's vote strip targets, so it has
+      // to stay on the section that was just read.
+      expect({
+        currentIndex: result.current.currentIndex,
+        currentItem: result.current.currentItem,
+        currentSlug: result.current.currentSlug,
+        position: result.current.position,
+        canNext: result.current.canNext,
+        metadata: latestMediaSession().metadata,
+      }).toEqual(before)
+      expect(result.current.currentItem).toBe(items[1])
+      expect(ttsMock.getLatestOptions()).toBeDefined()
+      expect(ttsMock.calls.at(-1)?.content).toBe(items[1].speechText)
+      expect(onItemChange).not.toHaveBeenCalled()
+      // The closing line is playback: Pause on screen and on the OS controls.
+      expect(result.current.isPlaying).toBe(true)
+      expect(latestMediaSession().playbackState).toBe('playing')
+    })
+
+    it('play after the closing line replays the section', async () => {
+      const { result } = await renderClosing()
+      complete()
+      expect(result.current.isPlaying).toBe(false)
+
+      act(() => result.current.play())
+
+      expect(ttsMock.playback.play).toHaveBeenCalledOnce()
+      expect(unitsAtPlay).toEqual([lastSectionUnits])
+      expect(result.current.currentIndex).toBe(1)
+    })
+
+    it('ends the queue with a plain stop when no closing line is configured', async () => {
+      const options = { moreMayCome: false }
+      const { result } = await renderOnLastSection(options)
+
+      complete()
+      await act(async () => {
+        await Promise.resolve()
+      })
+
+      expect(ttsMock.playback.play).not.toHaveBeenCalled()
+      expect(ttsMock.playback.stop).not.toHaveBeenCalled()
+      expect(ttsMock.getLatestOptions()?.units).toEqual(lastSectionUnits)
+      expect(queueLog()).toEqual([])
+      expect(result.current.isPlaying).toBe(false)
+    })
+
+    it('pause, stop and an error end the closing line with a clean stop', async () => {
+      for (const [cause, leave] of [
+        ['pause', (reader: { current: ReturnType<typeof useContinuousReader> }) =>
+          reader.current.pause()],
+        ['stop', (reader: { current: ReturnType<typeof useContinuousReader> }) =>
+          reader.current.stop()],
+        ['error', () =>
+          (ttsMock.getLatestOptions()?.onError as (error: Error) => void)(new Error('boom'))],
+      ] as const) {
+        clearReaderLog()
+        const { result, unmount } = await renderClosing()
+
+        act(() => leave(result))
+
+        expect(queueLog()).toEqual([`queue-hold aborted:${cause}`])
+        expect(ttsMock.playback.stop).toHaveBeenLastCalledWith()
+        expect(ttsMock.playback.pause).not.toHaveBeenCalled()
+        expect(ttsMock.getLatestOptions()?.continueTimeline).toBe(false)
+        expect(ttsMock.getLatestOptions()?.units).toEqual(lastSectionUnits)
+        expect(result.current.isPlaying).toBe(false)
+        expect(latestMediaSession().playbackState).toBe('paused')
+
+        act(() => result.current.play())
+        expect(unitsAtPlay).toEqual([lastSectionUnits])
+        unmount()
+        ttsMock.reset()
+      }
+    })
+
+    it('play-from-here and previous during the closing line play the section', async () => {
+      // Play-from-here on the section the closing line follows.
+      {
+        const { result, unmount } = await renderClosing()
+        act(() => result.current.playFrom(1))
+        await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+        expect(unitsAtPlay).toEqual([lastSectionUnits])
+        expect(queueLog()).toEqual(['queue-hold aborted:play-from-here'])
+        expect(result.current.currentIndex).toBe(1)
+        unmount()
+        ttsMock.reset()
+      }
+
+      // Previous past the restart threshold restarts the same section.
+      {
+        clearReaderLog()
+        const { result, unmount } = await renderClosing()
+        ttsMock.playback.currentTime = 20
+        act(() => result.current.previous())
+        await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+        expect(unitsAtPlay).toEqual([lastSectionUnits])
+        expect(queueLog()).toEqual(['queue-hold aborted:previous'])
+        expect(result.current.currentIndex).toBe(1)
+        unmount()
+      }
+    })
+
+    it('a re-seat and an unmount end the closing line', async () => {
+      {
+        const { result, rerender, options, unmount } = await renderClosing()
+        rerender({ items: [items[0]], options })
+        await waitFor(() => expect(result.current.currentIndex).toBe(0))
+        await act(async () => {
+          await Promise.resolve()
+        })
+        expect(queueLog()).toEqual(['queue-hold aborted:reseat'])
+        // Past the end of the queue nothing was reading, so nothing resumes.
+        expect(ttsMock.playback.play).not.toHaveBeenCalled()
+        expect(result.current.isPlaying).toBe(false)
+        unmount()
+        ttsMock.reset()
+      }
+
+      {
+        clearReaderLog()
+        const { unmount } = await renderClosing()
+        unmount()
+        expect(queueLog()).toEqual(['queue-hold aborted:unmount'])
+      }
+    })
+  })
+
+  describe('the hold at the end of the queue: aborts, deadline and stale answers', () => {
+    type Answer = 'appended' | 'exhausted' | 'failed'
+    const items = [makeItem(0), makeItem(1)]
+
+    beforeEach(() => {
+      localStorage.setItem(READER_LOG_FLAG, '1')
+      clearReaderLog()
+    })
+
+    const queueLog = () =>
+      readReaderLog()
+        .filter((entry) => entry.type === 'queue-hold' || entry.type === 'queue-end')
+        .map((entry) => `${entry.type} ${entry.detail}`)
+
+    const complete = () =>
+      act(() => (ttsMock.getLatestOptions()?.onComplete as () => void)())
+
+    /** A `requestMore` whose every call hands back the next deferred answer. */
+    const scriptedRequestMore = () => {
+      const answers: Array<ReturnType<typeof deferred<Answer>>> = []
+      const requestMore = vi.fn(() => {
+        const answer = deferred<Answer>()
+        answers.push(answer)
+        return answer.promise
+      })
+      return { requestMore, answers }
+    }
+
+    /** Play section 0 out, then section 1 out: the hold begins. */
+    const renderHolding = async (options: ContinuousReaderOptions) => {
+      const rendered = renderHook(
+        ({ items: current, options: currentOptions }: {
+          items: SpeechSection[]
+          options: ContinuousReaderOptions
+        }) => useContinuousReader(current, currentOptions),
+        { initialProps: { items, options } }
+      )
+      act(() => rendered.result.current.play())
+      await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledOnce())
+      complete()
+      await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalledTimes(2))
+      complete()
+      expect(queueLog()).toEqual(['queue-hold start'])
+      ttsMock.playback.play.mockClear()
+      ttsMock.playback.stop.mockClear()
+      return rendered
+    }
+
+    it('an error during the hold aborts it, and a later answer does not advance', async () => {
+      const { requestMore, answers } = scriptedRequestMore()
+      const options = { moreMayCome: true, requestMore }
+      const { result, rerender } = await renderHolding(options)
+
+      act(() =>
+        (ttsMock.getLatestOptions()?.onError as (error: Error) => void)(new Error('boom'))
+      )
+      expect(queueLog()).toEqual(['queue-hold start', 'queue-hold aborted:error'])
+      expect(result.current.isPlaying).toBe(false)
+
+      rerender({ items: [...items, makeItem(2)], options })
+      await act(async () => {
+        answers[0].resolve('appended')
+        await Promise.resolve()
+      })
+      expect(result.current.currentIndex).toBe(1)
+      expect(ttsMock.playback.play).not.toHaveBeenCalled()
+      expect(queueLog()).toEqual(['queue-hold start', 'queue-hold aborted:error'])
+    })
+
+    it('a queue commit past the deadline ends the hold even when its timer never fired', async () => {
+      /**
+       * A hidden page throttles timers, and the hold happens on a hidden page.
+       * The 30 s timer below never fires in this test — only the wall clock
+       * moves — so the queue commit is the only thing that can notice.
+       */
+      const { requestMore } = scriptedRequestMore()
+      const options = { moreMayCome: true, requestMore }
+      const { result, rerender } = await renderHolding(options)
+
+      vi.spyOn(Date, 'now').mockReturnValue(Date.now() + QUEUE_HOLD_TIMEOUT_MS + 1)
+      // A commit with nothing new after the read section: not an arrival.
+      rerender({ items: [...items], options })
+
+      expect(queueLog()).toEqual(['queue-hold start', 'queue-end timeout'])
+      expect(ttsMock.playback.stop).toHaveBeenLastCalledWith()
+      expect(result.current.isPlaying).toBe(false)
+
+      // Nor does a section that lands afterwards wake the reader.
+      rerender({ items: [...items, makeItem(2)], options })
+      await act(async () => {
+        await Promise.resolve()
+      })
+      expect(result.current.currentIndex).toBe(1)
+      expect(ttsMock.playback.play).not.toHaveBeenCalled()
+    })
+
+    it('a section that commits past the deadline does not outlive the hold', async () => {
+      /**
+       * The same throttled timer, but this time the commit that wakes the judge
+       * carries a section. The hold's 30 s are already up, so the arrival is
+       * too late: the reader stops as on timeout instead of playing on.
+       */
+      const { requestMore } = scriptedRequestMore()
+      const options = { moreMayCome: true, requestMore }
+      const { result, rerender } = await renderHolding(options)
+
+      vi.spyOn(Date, 'now').mockReturnValue(Date.now() + QUEUE_HOLD_TIMEOUT_MS + 1)
+      rerender({ items: [...items, makeItem(2)], options })
+      await act(async () => {
+        await Promise.resolve()
+      })
+
+      expect(queueLog()).toEqual(['queue-hold start', 'queue-end timeout'])
+      expect(result.current.currentIndex).toBe(1)
+      expect(ttsMock.playback.play).not.toHaveBeenCalled()
+      expect(result.current.isPlaying).toBe(false)
+    })
+
+    it('a section that commits just before the deadline still continues the reader', async () => {
+      const { requestMore } = scriptedRequestMore()
+      const options = { moreMayCome: true, requestMore }
+      // Read before the hold starts, so this is never later than its start and
+      // one millisecond short of 30 s is always inside the deadline.
+      const beforeHold = Date.now()
+      const { result, rerender } = await renderHolding(options)
+
+      vi.spyOn(Date, 'now').mockReturnValue(beforeHold + QUEUE_HOLD_TIMEOUT_MS - 1)
+      rerender({ items: [...items, makeItem(2)], options })
+
+      await waitFor(() => expect(result.current.currentIndex).toBe(2))
+      expect(queueLog()).toEqual(['queue-hold start', 'queue-hold arrived'])
+      expect(ttsMock.playback.play).toHaveBeenCalledOnce()
+    })
+
+    it('a late failure after an abort does not ask again', async () => {
+      const { requestMore, answers } = scriptedRequestMore()
+      const options = { moreMayCome: true, requestMore }
+      const { result } = await renderHolding(options)
+
+      act(() => result.current.pause())
+      await act(async () => {
+        answers[0].resolve('failed')
+        await Promise.resolve()
+        await Promise.resolve()
+      })
+
+      expect(requestMore).toHaveBeenCalledTimes(1)
+      expect(queueLog()).toEqual(['queue-hold start', 'queue-hold aborted:pause'])
+    })
+
+    it('an answer meant for an earlier hold does not end the current one', async () => {
+      const { requestMore, answers } = scriptedRequestMore()
+      const options = { moreMayCome: true, requestMore }
+      const { result } = await renderHolding(options)
+
+      // Hold A ends; the reader is played again and reaches the end: hold B.
+      act(() => result.current.pause())
+      act(() => result.current.play())
+      complete()
+      expect(requestMore).toHaveBeenCalledTimes(2)
+
+      // Hold A's request finally says "nothing more" — about a hold that is over.
+      await act(async () => {
+        answers[0].resolve('exhausted')
+        await Promise.resolve()
+        await Promise.resolve()
+      })
+
+      expect(queueLog()).toEqual([
+        'queue-hold start', 'queue-hold aborted:pause', 'queue-hold start',
+      ])
+      expect(result.current.isPlaying).toBe(true)
+      expect(result.current.isBuffering).toBe(true)
+    })
+
+    it('ending a hold drops its deadline, so it cannot cut a later hold short', async () => {
+      const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout')
+      const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout')
+      const holdTimers = () =>
+        setTimeoutSpy.mock.calls
+          .map((call, index) => ({ ms: call[1], handle: setTimeoutSpy.mock.results[index]?.value }))
+          .filter(({ ms }) => ms === QUEUE_HOLD_TIMEOUT_MS)
+          .map(({ handle }) => handle)
+
+      const { requestMore } = scriptedRequestMore()
+      const options = { moreMayCome: true, requestMore }
+      const { result, rerender } = await renderHolding(options)
+      const [firstDeadline] = holdTimers()
+      expect(firstDeadline).toBeDefined()
+
+      // Hold A ends on an arrival, seconds in.
+      const longer = [...items, makeItem(2)]
+      rerender({ items: longer, options })
+      await waitFor(() => expect(result.current.currentIndex).toBe(2))
+      // Dropped NOW, not whenever a later hold happens to replace it.
+      expect(clearTimeoutSpy).toHaveBeenCalledWith(firstDeadline)
+
+      // Hold B gets a deadline of its own.
+      await waitFor(() => expect(ttsMock.playback.play).toHaveBeenCalled())
+      complete()
+      expect(holdTimers()).toHaveLength(2)
+      expect(holdTimers()[1]).not.toBe(firstDeadline)
+      expect(result.current.isBuffering).toBe(true)
+      expect(queueLog()).toEqual(['queue-hold start', 'queue-hold arrived', 'queue-hold start'])
+    })
+
+    it('nothing more without a closing line is a plain stop at the end of the queue', async () => {
+      const { requestMore } = scriptedRequestMore()
+      const options = { moreMayCome: true, requestMore }
+      const { result, rerender } = await renderHolding(options)
+
+      rerender({ items, options: { ...options, moreMayCome: false } })
+
+      expect(queueLog()).toEqual(['queue-hold start', 'queue-end no-more'])
+      expect(ttsMock.playback.stop).toHaveBeenLastCalledWith()
+      expect(ttsMock.playback.play).not.toHaveBeenCalled()
+      expect(result.current.isPlaying).toBe(false)
     })
   })
 })

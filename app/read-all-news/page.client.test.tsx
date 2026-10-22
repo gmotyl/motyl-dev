@@ -2,7 +2,7 @@ import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Mock } from 'vitest'
-import ReadAllNewsPage from './page.client'
+import ReadAllNewsPage, { READ_ALL_NEWS_CLOSING_LINE } from './page.client'
 import { ItemType } from '@/lib/content/types'
 
 // The reader no longer calls scrollIntoView; it delegates to this helper.
@@ -14,7 +14,12 @@ vi.mock('@/lib/reader/scroll-heading', () => ({ scrollHeadingIntoView }))
 const mockUseContinuousReader = vi.fn()
 const playbackEvents: string[] = []
 type ReaderItem = { sourceSlug: string; title: string }
-type ReaderOptions = { onItemChange?: (item: ReaderItem, index: number) => void }
+type ReaderOptions = {
+  onItemChange?: (item: ReaderItem, index: number) => void
+  moreMayCome?: boolean
+  requestMore?: () => Promise<'appended' | 'exhausted' | 'failed'>
+  closingLine?: string
+}
 type ReaderAction = Mock<() => void>
 type ReaderHarness = {
   isPlaying: boolean
@@ -44,6 +49,7 @@ let readerIndex = 0
 // Read by the harness: lets a test play the reader and make Next move only the
 // eye (the real reader's non-interrupting Next while playing).
 let readerPlaying = false
+let readerBuffering = false
 let nextMovesEyeOnly = false
 let eyeIndex = 0
 type VoteStripProps = {
@@ -102,7 +108,7 @@ vi.mock('@/hooks/use-continuous-reader', () => ({
     }
     latestReaderHarness = {
       isPlaying: readerPlaying,
-      isBuffering: false,
+      isBuffering: readerBuffering,
       currentIndex: readerIndex,
       currentItem: items[readerIndex],
       currentSlug: items[readerIndex]?.sourceSlug ?? null,
@@ -267,6 +273,7 @@ describe('ReadAllNewsPage continuous reader', () => {
     latestMarkReadDialogProps = undefined
     readerIndex = 0
     readerPlaying = false
+    readerBuffering = false
     nextMovesEyeOnly = false
     eyeIndex = 0
     latestStripProps = undefined
@@ -349,6 +356,7 @@ describe('ReadAllNewsPage continuous reader', () => {
 
   it('appends newly loaded Read All News sections to the reader queue', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
       json: async () => ({ items: items(1, 1), currentPage: 1, totalPages: 1 }),
     })
     vi.stubGlobal('fetch', fetchMock)
@@ -361,6 +369,206 @@ describe('ReadAllNewsPage continuous reader', () => {
       'news-1', 'news-1', 'news-2', 'news-2',
     ]))
     expect(screen.getByText('News 2')).toBeInTheDocument()
+  })
+
+  it('concurrent fetchMore calls share one request', async () => {
+    let resolveFetch: (value: unknown) => void = () => {}
+    const fetchMock = vi.fn().mockReturnValue(new Promise((resolve) => { resolveFetch = resolve }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<ReadAllNewsPage initialItems={items(1)} totalItems={2} />)
+
+    // Two triggers before the first request settles (scroll now, the reader
+    // later) must ride the same request.
+    act(() => {
+      reachLoadMoreSentinel()
+      reachLoadMoreSentinel()
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      resolveFetch({
+        ok: true,
+        json: async () => ({ items: items(1, 1), currentPage: 1, totalPages: 1 }),
+      })
+    })
+
+    await waitFor(() => expect(screen.getByText('News 2')).toBeInTheDocument())
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(screen.getAllByText('News 2')).toHaveLength(1)
+  })
+
+  it('non-OK response resolves failed and keeps hasMore', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: async () => ({ items: items(1, 1), currentPage: 1, totalPages: 1 }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { container } = render(<ReadAllNewsPage initialItems={items(1)} totalItems={2} />)
+
+    await act(async () => { reachLoadMoreSentinel() })
+
+    await waitFor(() => expect(screen.queryByText('Loading more...')).not.toBeInTheDocument())
+    expect(screen.queryByText('News 2')).not.toBeInTheDocument()
+    expect(latestReaderItems.map((item) => item.sourceSlug)).toEqual(['news-1', 'news-1'])
+    // hasMore survives the failure: the sentinel stays and a later trigger retries.
+    expect(container.querySelector('.h-10')).toBeInTheDocument()
+    await act(async () => { reachLoadMoreSentinel() })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('empty response resolves exhausted', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ items: [], currentPage: 1, totalPages: 1 }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { container } = render(<ReadAllNewsPage initialItems={items(1)} totalItems={2} />)
+
+    await act(async () => { reachLoadMoreSentinel() })
+
+    // hasMore turns false: the sentinel goes away and nothing fetches again.
+    await waitFor(() => expect(container.querySelector('.h-10')).not.toBeInTheDocument())
+    expect(screen.queryByText('Loading more...')).not.toBeInTheDocument()
+    await act(async () => { reachLoadMoreSentinel() })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('prefetches when the reader enters the last loaded article', async () => {
+    const fetchMock = vi.fn().mockReturnValue(new Promise(() => {}))
+    vi.stubGlobal('fetch', fetchMock)
+    readerPlaying = true
+
+    const { rerender } = render(<ReadAllNewsPage initialItems={items(2)} totalItems={4} />)
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    // Section 2A: the reader is now in news-2, the last loaded article.
+    readerIndex = 2
+    rerender(<ReadAllNewsPage initialItems={items(2)} totalItems={4} />)
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/api/content?')
+    // The harness never triggers an IntersectionObserver callback in this
+    // test, so neither the scroll sentinel nor an article marker can have
+    // made this request: it can only have come from the reader prefetch.
+  })
+
+  it('prefetches while the reader is buffering on the last loaded article', async () => {
+    // "Active" is playing OR buffering: a reader waiting for audio — a cold
+    // first unit, or the hold at the end of the queue — still counts.
+    const fetchMock = vi.fn().mockReturnValue(new Promise(() => {}))
+    vi.stubGlobal('fetch', fetchMock)
+    readerPlaying = false
+    readerBuffering = true
+    readerIndex = 2
+
+    render(<ReadAllNewsPage initialItems={items(2)} totalItems={4} />)
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(String(fetchMock.mock.calls[0][0])).toContain('/api/content?')
+  })
+
+  it('prefetches once per last article', async () => {
+    // A failed load leaves items and hasMore as they were, so nothing but the
+    // once-per-article guard stops a second prefetch.
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({}) })
+    vi.stubGlobal('fetch', fetchMock)
+    readerPlaying = true
+    readerIndex = 2
+
+    const { rerender } = render(<ReadAllNewsPage initialItems={items(2)} totalItems={4} />)
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(screen.queryByText('Loading more...')).not.toBeInTheDocument())
+
+    // Section 2B, then a pause and a resume, all inside news-2.
+    readerIndex = 3
+    rerender(<ReadAllNewsPage initialItems={items(2)} totalItems={4} />)
+    readerPlaying = false
+    rerender(<ReadAllNewsPage initialItems={items(2)} totalItems={4} />)
+    readerPlaying = true
+    rerender(<ReadAllNewsPage initialItems={items(2)} totalItems={4} />)
+
+    await act(async () => {})
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not prefetch while idle or before the last article', async () => {
+    const fetchMock = vi.fn().mockReturnValue(new Promise(() => {}))
+    vi.stubGlobal('fetch', fetchMock)
+
+    // Idle on the last article.
+    readerIndex = 2
+    readerPlaying = false
+    const idle = render(<ReadAllNewsPage initialItems={items(2)} totalItems={4} />)
+    await act(async () => {})
+    idle.unmount()
+
+    // Playing, but still in news-1.
+    readerIndex = 1
+    readerPlaying = true
+    const early = render(<ReadAllNewsPage initialItems={items(2)} totalItems={4} />)
+    await act(async () => {})
+    early.unmount()
+
+    // Playing on the last article, but nothing more exists.
+    readerIndex = 2
+    const done = render(<ReadAllNewsPage initialItems={items(2)} totalItems={2} />)
+    await act(async () => {})
+    done.unmount()
+
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('an exhausted load stops the reader from fetching at the last article', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ items: [], currentPage: 1, totalPages: 1 }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    readerPlaying = true
+    readerIndex = 2
+
+    const { container, rerender } = render(<ReadAllNewsPage initialItems={items(3)} totalItems={10} />)
+
+    // Scroll reaches the sentinel while the reader is still in news-2.
+    await act(async () => { reachLoadMoreSentinel() })
+    await waitFor(() => expect(container.querySelector('.h-10')).not.toBeInTheDocument())
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    // The reader then enters news-3, the last article: the server already said
+    // there is nothing further, so no second request goes out.
+    readerIndex = 4
+    rerender(<ReadAllNewsPage initialItems={items(3)} totalItems={10} />)
+    await act(async () => {})
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('re-arms a live sentinel observer after an append', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ items: items(1, 1), currentPage: 1, totalPages: 2 }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    render(<ReadAllNewsPage initialItems={items(1)} totalItems={3} />)
+
+    const sentinelObservers = () => observers.filter((o) => o.elements.some((el) => ownerSlug(el) === null))
+    const [first] = sentinelObservers()
+    expect(first.disconnected).toBe(false)
+
+    await act(async () => { reachLoadMoreSentinel() })
+    await waitFor(() => expect(screen.getByText('News 2')).toBeInTheDocument())
+
+    // hasMore stayed true, yet the observer was replaced: a sentinel still in
+    // view after the append gets a fresh intersection and keeps loading.
+    expect(first.disconnected).toBe(true)
+    const rearmed = sentinelObservers().filter((o) => !o.disconnected)
+    expect(rearmed).toHaveLength(1)
+    expect(rearmed[0]).not.toBe(first)
+    expect(rearmed[0].elements[0].isConnected).toBe(true)
   })
 
   it('Read All News renders a single floating reader bar whose Next calls reader.next', async () => {
@@ -393,6 +601,7 @@ describe('ReadAllNewsPage continuous reader', () => {
 
   it('never evicts the article the reader is currently on', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
       json: async () => ({ items: items(5, 12), currentPage: 1, totalPages: 2 }),
     })
     vi.stubGlobal('fetch', fetchMock)
@@ -486,5 +695,215 @@ describe('ReadAllNewsPage continuous reader', () => {
     expect(eyeIndex).toBe(2)
     expect(latestStripProps?.heading).toBe('Section 1A')
     expect(latestStripProps?.link).toEqual({ url: 'https://example.com/1a', title: 'Link 1A' })
+  })
+
+  it('passes load-more and the closing line to the reader', async () => {
+    let resolveFetch: (value: unknown) => void = () => {}
+    const fetchMock = vi.fn().mockReturnValue(new Promise((resolve) => { resolveFetch = resolve }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { rerender } = render(<ReadAllNewsPage initialItems={items(1)} totalItems={3} />)
+
+    expect(READ_ALL_NEWS_CLOSING_LINE).toBe('To już wszystkie nowe artykuły.')
+    expect(latestReaderOptions?.closingLine).toBe(READ_ALL_NEWS_CLOSING_LINE)
+    expect(latestReaderOptions?.moreMayCome).toBe(true)
+    const requestMore = latestReaderOptions?.requestMore
+    expect(requestMore).toBeTypeOf('function')
+    // Stable across renders: the reader keeps one callback.
+    rerender(<ReadAllNewsPage initialItems={items(1)} totalItems={3} />)
+    expect(latestReaderOptions?.requestMore).toBe(requestMore)
+
+    // It is fetchMore itself: the reader's request and a scroll trigger share one fetch.
+    let pending!: Promise<'appended' | 'exhausted' | 'failed'>
+    act(() => { pending = requestMore!() })
+    act(() => reachLoadMoreSentinel())
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      resolveFetch({ ok: true, json: async () => ({ items: items(1, 1), currentPage: 1, totalPages: 1 }) })
+    })
+    await expect(pending).resolves.toBe('appended')
+
+    // moreMayCome follows hasMore once the server says there is nothing further.
+    await waitFor(() => expect(latestReaderOptions?.moreMayCome).toBe(false))
+  })
+
+  describe('mark-read list', () => {
+    const listed = () => latestMarkReadDialogProps?.items.map((item) => item.slug)
+    let rerenderPage = () => {}
+    const mount = (initial: ReturnType<typeof items>, total: number) => {
+      const view = render(<ReadAllNewsPage initialItems={initial} totalItems={total} />)
+      rerenderPage = () => view.rerender(<ReadAllNewsPage initialItems={initial} totalItems={total} />)
+    }
+    // Moves the reader onto a Section. The harness only picks the index up on
+    // the next render, and has no re-seat of its own, so a test sets the
+    // post-removal index the real reader would land on.
+    const readSection = (index: number) => {
+      act(() => latestReaderHarness.playFromHere(index))
+      rerenderPage()
+    }
+    const confirm = (slugs: string[]) => act(() => latestMarkReadDialogProps?.onConfirm(slugs))
+
+    beforeEach(() => {
+      vi.stubGlobal('scrollTo', vi.fn())
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ items: [] }) }))
+    })
+
+    it('lists exactly the articles scrolled past, in page order', () => {
+      mount(items(5), 5)
+
+      act(() => scrollPast('news-2'))
+      act(() => scrollPast('news-1'))
+      readSection(4) // news-3
+
+      expect(listed()).toEqual(['news-1', 'news-2'])
+      expect(latestMarkReadDialogProps?.currentlyReadingSlug).toBe('news-3')
+    })
+
+    it('lists the reading article too, flagged so the dialog leaves it unchecked', () => {
+      mount(items(5), 5)
+
+      act(() => scrollPast('news-1'))
+      act(() => scrollPast('news-2'))
+      readSection(2) // news-2
+
+      expect(listed()).toEqual(['news-1', 'news-2'])
+      expect(latestMarkReadDialogProps?.currentlyReadingSlug).toBe('news-2')
+    })
+
+    it('empties the list on confirm and keeps the reader keyed by slug', () => {
+      mount(items(5), 5)
+      act(() => scrollPast('news-1'))
+      act(() => scrollPast('news-2'))
+      readSection(4) // news-3
+
+      // news-3's first Section is index 0 once news-1 and news-2 are gone.
+      readerIndex = 0
+      confirm(['news-1', 'news-2'])
+
+      expect(screen.queryByText('News 1')).not.toBeInTheDocument()
+      expect(screen.queryByText('News 2')).not.toBeInTheDocument()
+      expect(listed()).toEqual([])
+      expect(latestMarkReadDialogProps?.currentlyReadingSlug).toBe('news-3')
+      expect(screen.getByRole('button', { name: 'Mark read' })).toBeDisabled()
+    })
+
+    it('lists the next article read after a mid-session mark read', () => {
+      mount(items(5), 5)
+      act(() => scrollPast('news-1'))
+      act(() => scrollPast('news-2'))
+      readSection(4) // news-3
+      readerIndex = 0
+      confirm(['news-1', 'news-2'])
+
+      act(() => scrollPast('news-3'))
+      readSection(2) // news-4
+
+      expect(listed()).toEqual(['news-3'])
+      expect(latestMarkReadDialogProps?.currentlyReadingSlug).toBe('news-4')
+    })
+
+    // The reported bug: the article being read at mark-read time has usually
+    // scrolled past already, so the dialog shows it unchecked and it survives
+    // at the top. Its bottom sentinel reported once and is done, so it must
+    // stay on the list rather than wait to be seen again.
+    it('keeps the article that was being read at mark-read time on the list', () => {
+      mount(items(5), 5)
+      act(() => scrollPast('news-1'))
+      act(() => scrollPast('news-2'))
+      act(() => scrollPast('news-3'))
+      readSection(4) // news-3
+      expect(listed()).toEqual(['news-1', 'news-2', 'news-3'])
+
+      readerIndex = 0
+      confirm(['news-1', 'news-2'])
+      expect(screen.getByText('News 3')).toBeInTheDocument()
+      // Still being read, so the dialog shows it unchecked.
+      expect(listed()).toEqual(['news-3'])
+      expect(latestMarkReadDialogProps?.currentlyReadingSlug).toBe('news-3')
+
+      readSection(2) // news-4
+
+      // The reader moved on, so the dialog pre-checks it.
+      expect(listed()).toEqual(['news-3'])
+      expect(latestMarkReadDialogProps?.currentlyReadingSlug).toBe('news-4')
+    })
+
+    it('keeps a skipped (unchecked) article on the list', () => {
+      mount(items(5), 5)
+      act(() => scrollPast('news-1'))
+      act(() => scrollPast('news-2'))
+      readSection(4) // news-3
+
+      confirm(['news-1'])
+
+      expect(listed()).toEqual(['news-2'])
+    })
+
+    // With prefers-reduced-motion the jump to the top and the reader's heading
+    // scroll are instant, so a survivor's bottom sentinel can end up above the
+    // viewport without ever being drawn inside it. Nothing may depend on it
+    // intersecting again.
+    it('lists a survivor whose sentinel never intersects again after mark read', () => {
+      mount(items(5), 5)
+      act(() => scrollPast('news-1'))
+      act(() => scrollPast('news-2'))
+      act(() => scrollPast('news-3'))
+      readSection(4) // news-3
+      readerIndex = 0
+      confirm(['news-1', 'news-2'])
+
+      // Anything still watching news-3 only ever sees it off screen.
+      for (const entry of live().filter((o) => o.elements.some((el) => ownerSlug(el) === 'news-3'))) {
+        act(() => entry.callback([{ isIntersecting: false }]))
+      }
+      readSection(2) // news-4
+
+      expect(listed()).toEqual(['news-3'])
+      expect(latestMarkReadDialogProps?.currentlyReadingSlug).toBe('news-4')
+    })
+
+    it('tracks articles appended by a load-more after mark read', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ items: items(2, 3), currentPage: 1, totalPages: 1 }),
+      }))
+      mount(items(3), 5)
+      act(() => scrollPast('news-1'))
+      confirm(['news-1'])
+
+      await act(async () => { reachLoadMoreSentinel() })
+      await waitFor(() => expect(screen.getByText('News 5')).toBeInTheDocument())
+
+      act(() => scrollPast('news-2'))
+      act(() => scrollPast('news-4'))
+
+      expect(listed()).toEqual(['news-2', 'news-4'])
+    })
+
+    it('evicts a survivor still listed after mark read, but never the reading article', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ items: items(5, 13), currentPage: 1, totalPages: 2 }),
+      }))
+      mount(items(13), 20)
+      act(() => scrollPast('news-1'))
+      act(() => scrollPast('news-2'))
+      readSection(2) // news-2
+      readerIndex = 0 // news-2 after news-1 goes
+      confirm(['news-1'])
+
+      // news-2 (reading, so unchecked) survives on the list; news-3 is passed.
+      act(() => scrollPast('news-3'))
+      readSection(2) // news-3 sits at index 2 now
+      await act(async () => { reachLoadMoreSentinel() })
+      await waitFor(() => expect(screen.getByText('News 18')).toBeInTheDocument())
+
+      // 12 + 5 = 17 > 12: news-2 is evictable, news-3 is being read.
+      expect(screen.queryByText('News 2')).not.toBeInTheDocument()
+      expect(screen.getByText('News 3')).toBeInTheDocument()
+      expect(JSON.parse(localStorage.getItem('visitedArticles') ?? '[]')).toContain('news-2')
+      expect(listed()).toEqual(['news-3'])
+    })
   })
 })

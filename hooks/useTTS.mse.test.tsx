@@ -1267,6 +1267,51 @@ describe('useTTS completing an article when the element starves', () => {
   })
 })
 
+describe('useTTS swapping units on a continued timeline', () => {
+  it('swapped units under continueTimeline extend the timeline', async () => {
+    /**
+     * The reader's closing line, at this hook's level. Unlike a section
+     * handoff the CONTENT does not change — the reader is still on its last
+     * section — only the `units` it hands over do, and the swap is followed by
+     * the same `stop({ keepElementRunning })` + `play()` a handoff makes. The
+     * line has to land on the same buffer behind the section (index 3, not a
+     * restart at 0) with the element never paused.
+     */
+    const CLOSING = ['z'.repeat(10)]
+    const { result } = renderHook(() => {
+      const [closing, setClosing] = useState(false)
+      return useTTS('irrelevant content', {
+        units: closing ? CLOSING : UNITS,
+        continueTimeline: closing,
+        onComplete: useCallback(() => {
+          if (!closing) setClosing(true)
+        }, [closing]),
+      })
+    })
+    await startAllThree(result)
+    const pausesAtStart = audioPause.mock.calls.length
+
+    await emitTimeUpdate(12)
+    await emitTimeUpdate(22)
+    await emitTimeUpdate(29.95)
+    await settle()
+    // The completion's release was dropped: the claim landed in its batch.
+    expect(mse.created).toBe(1)
+
+    await act(async () => {
+      result.current.stop({ keepElementRunning: true })
+      await result.current.play()
+    })
+
+    await waitFor(() => expect(mse.appended).toEqual([0, 1, 2, 3]))
+    expect(mse.created).toBe(1)
+    expect(srcAssignments).toHaveLength(1)
+    expect(audioPause.mock.calls).toHaveLength(pausesAtStart)
+    expect(result.current.totalChunks).toBe(1)
+    expect(vi.mocked(synthesizeSpeech).mock.calls.map(([text]) => text)).toContain(CLOSING[0])
+  })
+})
+
 describe('useTTS advancing units on the MSE carrier', () => {
   it('counts every unit a single tick flew over', async () => {
     /**

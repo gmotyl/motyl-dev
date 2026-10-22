@@ -195,4 +195,13 @@ describe('ArticleWrapper', () => {
     expect(latestStripProps?.category).toBe(latestMarkdownProps?.category)
     expect(latestStripProps?.patternName).toBe(latestMarkdownProps?.patternName)
   })
+
+  it('article page reader has no queue-end options', () => {
+    render(<ArticleWrapper article={article(ItemType.News)} translatePrompt="prompt" />)
+
+    expect(latestReaderOptions).toBeDefined()
+    expect(latestReaderOptions.moreMayCome).toBeUndefined()
+    expect(latestReaderOptions.requestMore).toBeUndefined()
+    expect(latestReaderOptions.closingLine).toBeUndefined()
+  })
 })
