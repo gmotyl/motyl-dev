@@ -363,23 +363,25 @@ Treść drugiego tematu.`,
 })
 
 describe('normalizeVersionNumbers', () => {
-  it('normalizeVersionNumbers reads 3.6.3 as space-separated numbers', () => {
-    expect(normalizeVersionNumbers('3.6.3')).toBe('3 6 3')
-    expect(normalizeVersionNumbers('10.6.3')).toBe('10 6 3')
+  it('normalizeVersionNumbers separates three-group runs with commas', () => {
+    expect(normalizeVersionNumbers('15.5.26')).toBe('15, 5, 26')
+    expect(normalizeVersionNumbers('16.3.6')).toBe('16, 3, 6')
+    expect(normalizeVersionNumbers('3.6.3')).toBe('3, 6, 3')
+    expect(normalizeVersionNumbers('10.6.3')).toBe('10, 6, 3')
   })
 
   it('normalizeVersionNumbers handles four-part versions', () => {
-    expect(normalizeVersionNumbers('1.2.3.4')).toBe('1 2 3 4')
+    expect(normalizeVersionNumbers('1.2.3.4')).toBe('1, 2, 3, 4')
   })
 
-  it('normalizeVersionNumbers now normalizes two-part version numbers', () => {
-    expect(normalizeVersionNumbers('5.6')).toBe('5 6')
-    expect(normalizeVersionNumbers('16.3')).toBe('16 3')
-    expect(normalizeVersionNumbers('Next.js 16.3')).toBe('Next.js 16 3')
+  it('normalizeVersionNumbers separates two-group runs with commas', () => {
+    expect(normalizeVersionNumbers('5.6')).toBe('5, 6')
+    expect(normalizeVersionNumbers('16.3')).toBe('16, 3')
+    expect(normalizeVersionNumbers('Next.js 16.3')).toBe('Next.js 16, 3')
   })
 
   it('normalizeVersionNumbers allows groups up to five digits', () => {
-    expect(normalizeVersionNumbers('12345.6')).toBe('12345 6')
+    expect(normalizeVersionNumbers('12345.6')).toBe('12345, 6')
   })
 
   it('normalizeVersionNumbers leaves numbers with a 6+ digit group unchanged', () => {
@@ -390,6 +392,14 @@ describe('normalizeVersionNumbers', () => {
     expect(normalizeVersionNumbers('42')).toBe('42')
     expect(normalizeVersionNumbers('3,14')).toBe('3,14')
     expect(normalizeVersionNumbers('Wersja 3,14 liczby')).toBe('Wersja 3,14 liczby')
+  })
+
+  it('normalizeVersionNumbers rewrites the reported date-misread input as separate numbers', () => {
+    // Pinned from a bug report: with a bare space separator the voice read
+    // `15 5 26` as a date. The comma separator makes it read separate numbers.
+    expect(
+      normalizeVersionNumbers('16.3.6 (Active LTS) lub 15.5.26 (Maintenance LTS)')
+    ).toBe('16, 3, 6 (Active LTS) lub 15, 5, 26 (Maintenance LTS)')
   })
 })
 
@@ -416,12 +426,12 @@ describe('prepareSpeechText', () => {
     expect(prepareSpeechText('Why do I careful')).toBe('Why do I careful')
   })
 
-  it('prepareSpeechText normalizes semver version numbers', () => {
-    expect(prepareSpeechText('Wersja 3.6.3 wychodzi')).toContain('3 6 3')
+  it('prepareSpeechText separates semver version numbers with commas', () => {
+    expect(prepareSpeechText('Wersja 3.6.3 wychodzi')).toContain('Wersja 3, 6, 3 wychodzi')
   })
 
-  it('prepareSpeechText normalizes two-part version numbers in prose', () => {
-    expect(prepareSpeechText('GPT 5.6 jest')).toContain('5 6')
+  it('prepareSpeechText separates two-part version numbers in prose', () => {
+    expect(prepareSpeechText('GPT 5.6 jest')).toContain('5, 6 jest')
   })
 
 
@@ -467,9 +477,9 @@ hashtags: "#pl #ai"
     // Acronyms are NOT letter-spelled — spelling was removed; specific acronyms
     // live in the anytts pl preset instead. Only the preset applies: AI -> 'ej aj',
     // GPT -> 'dżi pi ti', React -> reakt, Microsoft -> mikrosoft; version
-    // 5.6 -> '5 6'. 'Xyzzy' (no map stem) is left untouched.
+    // 5.6 -> '5, 6'. 'Xyzzy' (no map stem) is left untouched.
     expect(prepareSpeechText(source)).toBe(
-      'ej aj i dżi pi ti 5 6 działają z reakt oraz mikrosoft. Unknown Xyzzy.'
+      'ej aj i dżi pi ti 5, 6 działają z reakt oraz mikrosoft. Unknown Xyzzy.'
     )
     expect(source).toBe('AI i GPT 5.6 działają z React oraz Microsoft. Unknown Xyzzy.')
   })

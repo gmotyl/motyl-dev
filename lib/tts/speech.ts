@@ -32,7 +32,7 @@ export interface SpeechSection extends ReviewedSection {
 }
 
 export const normalizeVersionNumbers = (text: string): string =>
-  text.replace(/(?<!\d)\d{1,5}(?:\.\d{1,5})+(?!\d)/g, (token) => token.replace(/\./g, ' '))
+  text.replace(/(?<!\d)\d{1,5}(?:\.\d{1,5})+(?!\d)/g, (token) => token.replace(/\./g, ', '))
 
 const stripFrontmatter = (text: string): string =>
   text.replace(/^---\s*\r?\n[\s\S]*?\r?\n---\s*(?:\r?\n|$)/, '')
