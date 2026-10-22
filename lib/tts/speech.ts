@@ -31,8 +31,8 @@ export interface SpeechSection extends ReviewedSection {
   key: string
 }
 
-export const normalizeVersionNumbers = (text: string): string =>
-  text.replace(/(?<!\d)\d{1,5}(?:\.\d{1,5})+(?!\d)/g, (token) => token.replace(/\./g, ' '))
+export const separateDottedNumberGroups = (text: string): string =>
+  text.replace(/(?<!\d)\d{1,5}(?:\.\d{1,5})+(?!\d)/g, (token) => token.replace(/\./g, ', '))
 
 const stripFrontmatter = (text: string): string =>
   text.replace(/^---\s*\r?\n[\s\S]*?\r?\n---\s*(?:\r?\n|$)/, '')
@@ -108,7 +108,7 @@ export function prepareSpeechText(markdown: string): string {
   // naturally on its own than a hyphenated spell-out. Only the anytts `pl`
   // pronunciation preset (for terms the voice genuinely mangles) plus motyl's
   // own phrases are applied.
-  return applyPronunciation(normalizeVersionNumbers(stripMarkdown(markdown)), 'pl', MOTYL_PRONUNCIATION)
+  return applyPronunciation(separateDottedNumberGroups(stripMarkdown(markdown)), 'pl', MOTYL_PRONUNCIATION)
 }
 
 export function splitReviewedSections(sources: readonly SpeechSource[]): ReviewedSection[] {
