@@ -824,6 +824,15 @@ export function useContinuousReader(
   useEffect(() => {
     if (holdPhaseRef.current !== 'holding') return
 
+    // The deadline is judged FIRST. The timer may not have fired on a hidden
+    // page — throttled — but the commit still happens, and a section that lands
+    // after the 30 s are up must not be taken as an arrival: the hold would
+    // then outlive its own limit. Late is late, whatever the commit carries.
+    if (Date.now() >= holdDeadlineRef.current) {
+      stopAtQueueEnd('timeout')
+      return
+    }
+
     // Arrived: a section now follows the one the hold sits on. Measured by
     // index, so an answer whose articles are all hidden — nothing new in
     // `items` — does not count.
@@ -836,12 +845,6 @@ export function useContinuousReader(
       // running at the end of its buffer all along, and the timeline is
       // continued exactly as if the section had been there on time.
       selectAndStart(nextIndex, 0, true, undefined, true)
-      return
-    }
-
-    // The timer may not have fired on a hidden page; the commit still happens.
-    if (Date.now() >= holdDeadlineRef.current) {
-      stopAtQueueEnd('timeout')
       return
     }
 

@@ -2225,6 +2225,44 @@ describe('useContinuousReader', () => {
       expect(ttsMock.playback.play).not.toHaveBeenCalled()
     })
 
+    it('a section that commits past the deadline does not outlive the hold', async () => {
+      /**
+       * The same throttled timer, but this time the commit that wakes the judge
+       * carries a section. The hold's 30 s are already up, so the arrival is
+       * too late: the reader stops as on timeout instead of playing on.
+       */
+      const { requestMore } = scriptedRequestMore()
+      const options = { moreMayCome: true, requestMore }
+      const { result, rerender } = await renderHolding(options)
+
+      vi.spyOn(Date, 'now').mockReturnValue(Date.now() + QUEUE_HOLD_TIMEOUT_MS + 1)
+      rerender({ items: [...items, makeItem(2)], options })
+      await act(async () => {
+        await Promise.resolve()
+      })
+
+      expect(queueLog()).toEqual(['queue-hold start', 'queue-end timeout'])
+      expect(result.current.currentIndex).toBe(1)
+      expect(ttsMock.playback.play).not.toHaveBeenCalled()
+      expect(result.current.isPlaying).toBe(false)
+    })
+
+    it('a section that commits just before the deadline still continues the reader', async () => {
+      const { requestMore } = scriptedRequestMore()
+      const options = { moreMayCome: true, requestMore }
+      // Read before the hold starts, so this is never later than its start and
+      // one millisecond short of 30 s is always inside the deadline.
+      const beforeHold = Date.now()
+      const { result, rerender } = await renderHolding(options)
+
+      vi.spyOn(Date, 'now').mockReturnValue(beforeHold + QUEUE_HOLD_TIMEOUT_MS - 1)
+      rerender({ items: [...items, makeItem(2)], options })
+
+      await waitFor(() => expect(result.current.currentIndex).toBe(2))
+      expect(queueLog()).toEqual(['queue-hold start', 'queue-hold arrived'])
+      expect(ttsMock.playback.play).toHaveBeenCalledOnce()
+    })
+
     it('a late failure after an abort does not ask again', async () => {
       const { requestMore, answers } = scriptedRequestMore()
       const options = { moreMayCome: true, requestMore }
