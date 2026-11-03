@@ -84,7 +84,13 @@ export function ContinuousReaderControls({
             <span
               data-reader-engine-marker
               aria-hidden="true"
-              className="text-[10px] font-semibold text-amber-600 dark:text-amber-400"
+              className={cn(
+                'text-[10px] font-semibold',
+                // Shade per variant so the 10px marker keeps >= 4.5:1 on every
+                // background, hover included: playing sits on bg-primary
+                // (near-black light / near-white dark), paused on bg-background.
+                isPlaying ? 'text-amber-300 dark:text-amber-800' : 'text-amber-700 dark:text-amber-400'
+              )}
             >
               Edge
             </span>

@@ -51,17 +51,26 @@ vi.mock('@/components/tts-player', () => ({
 
 // Mock the inner controls only; the real ReaderControlBar wraps them in the
 // floating panel (data-reader-floating), so its presence proves the bar mounts.
-vi.mock('@/components/continuous-reader-controls', () => ({
-  ContinuousReaderControls: ({ onPlayPause, onNext, onMarkRead, canNext = true, canPlay = true }: any) => (
-    <div role="group" aria-label="Continuous reader controls">
-      <button onClick={onMarkRead} disabled={!onMarkRead}>
-        Mark read
-      </button>
-      <button onClick={onPlayPause} disabled={!canPlay}>Play</button>
-      <button onClick={onNext} disabled={!canNext}>Next</button>
-    </div>
-  ),
-}))
+// An engine-fallback render delegates to the real controls, so the host's
+// wiring of `engineFallback` is observed through the real accessible name.
+vi.mock('@/components/continuous-reader-controls', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/continuous-reader-controls')>()
+  return {
+    ContinuousReaderControls: (props: any) => {
+      if (props.engineFallback) return <actual.ContinuousReaderControls {...props} />
+      const { onPlayPause, onNext, onMarkRead, canNext = true, canPlay = true } = props
+      return (
+        <div role="group" aria-label="Continuous reader controls">
+          <button onClick={onMarkRead} disabled={!onMarkRead}>
+            Mark read
+          </button>
+          <button onClick={onPlayPause} disabled={!canPlay}>Play</button>
+          <button onClick={onNext} disabled={!canNext}>Next</button>
+        </div>
+      )
+    },
+  }
+})
 
 vi.mock('@/components/markdown-content', () => ({
   MarkdownContent: (props: { content: string; category?: string; patternName?: string }) => {
@@ -203,5 +212,15 @@ describe('ArticleWrapper', () => {
     expect(latestReaderOptions.moreMayCome).toBeUndefined()
     expect(latestReaderOptions.requestMore).toBeUndefined()
     expect(latestReaderOptions.closingLine).toBeUndefined()
+  })
+
+  it('names Play/Pause with the Edge reason when the reader fell back', () => {
+    mockUseContinuousReader.mockReturnValue({ ...makeReaderState(), engineFallback: true })
+
+    render(<ArticleWrapper article={article(ItemType.News)} translatePrompt="prompt" />)
+
+    expect(
+      screen.getByRole('button', { name: 'Play, reading with Edge: SPOCK did not answer' })
+    ).toBeInTheDocument()
   })
 })

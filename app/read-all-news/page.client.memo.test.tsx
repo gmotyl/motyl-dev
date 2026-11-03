@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import ReadAllNewsPage from './page.client'
 import { ItemType } from '@/lib/content/types'
@@ -45,6 +45,7 @@ function makeReader(overrides: Partial<{
   progress: number
   currentTime: number
   currentIndex: number
+  engineFallback: boolean
   playFromHere: (index: number) => void
   playFromLine: (sourceSlug: string, line: number) => void
 }> = {}) {
@@ -208,5 +209,22 @@ describe('ReadAllNewsPage markdown re-render churn', () => {
     rerender(page())
 
     expect(h.renders.length).toBe(rendersAfterMount + newsItems.length)
+  })
+})
+
+// The controls are real in this file, so the page's wiring of the reader's
+// engine-fallback flag shows up in the Play/Pause accessible name.
+describe('ReadAllNewsPage engine fallback', () => {
+  beforeEach(() => {
+    vi.stubGlobal('IntersectionObserver', NoopIntersectionObserver)
+  })
+
+  it('names Play/Pause with the Edge reason when the reader fell back', () => {
+    readerReturn = makeReader({ isPlaying: true, engineFallback: true })
+    render(page())
+
+    expect(
+      screen.getByRole('button', { name: 'Pause, reading with Edge: SPOCK did not answer' })
+    ).toBeInTheDocument()
   })
 })

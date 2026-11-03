@@ -102,7 +102,9 @@ describe('ContinuousReaderControls', () => {
       expect(pause).toHaveAttribute('title', `Pause, ${REASON}`)
       const marker = within(pause).getByText('Edge')
       expect(marker).toHaveAttribute('data-reader-engine-marker')
-      expect(marker.className).toMatch(/amber/)
+      // Playing = bg-primary (near-black light / near-white dark).
+      expect(marker).toHaveClass('text-amber-300', 'dark:text-amber-800')
+      expect(marker).not.toHaveClass('text-amber-700', 'dark:text-amber-400')
       // Under the label: the label and the marker share a column wrapper.
       expect(marker.parentElement).toHaveClass('flex-col')
       expect(marker.previousSibling?.textContent).toBe('Pause')
@@ -117,7 +119,10 @@ describe('ContinuousReaderControls', () => {
       )
       const play = screen.getByRole('button', { name: `Play, ${REASON}` })
       expect(play).toHaveAttribute('title', `Play, ${REASON}`)
-      expect(within(play).getByText('Edge')).toBeInTheDocument()
+      const pausedMarker = within(play).getByText('Edge')
+      // Paused = outline on bg-background (white light / near-black dark).
+      expect(pausedMarker).toHaveClass('text-amber-700', 'dark:text-amber-400')
+      expect(pausedMarker).not.toHaveClass('text-amber-300', 'dark:text-amber-800')
     })
 
     it('renders no marker and the plain name otherwise', () => {
