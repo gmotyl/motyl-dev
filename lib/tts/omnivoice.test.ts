@@ -167,4 +167,23 @@ describe('OmniVoice relay calls', () => {
     fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'))
     await expect(fetchRelayVoices('https://spock.tail1234.ts.net')).rejects.toThrow()
   })
+
+  it('the catalog request carries the caller signal and rejects on its abort', async () => {
+    const fetchMock = vi.fn((_url: string, init?: RequestInit) => {
+      const signal = init?.signal
+      return new Promise<Response>((_resolve, reject) => {
+        signal?.addEventListener('abort', () => {
+          reject(new DOMException('The operation was aborted.', 'AbortError'))
+        })
+      })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const controller = new AbortController()
+
+    const result = fetchRelayVoices('https://spock.tail1234.ts.net', controller.signal)
+    expect(fetchMock.mock.calls[0][1]?.signal).toBe(controller.signal)
+    controller.abort()
+
+    await expect(result).rejects.toMatchObject({ name: 'AbortError' })
+  })
 })

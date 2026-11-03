@@ -12,6 +12,7 @@ import {
 import {
   fetchRelayVoices,
   isOmniVoiceConfigured,
+  OMNIVOICE_PROBE_MS,
   probeRelay,
   readOmniVoiceSettings,
 } from '@/lib/tts/omnivoice'
@@ -223,16 +224,27 @@ const PLAIN_EDGE: ActiveEngine = { session: EDGE_SESSION, voice: null }
  * instance (and its cache) where a stale copy here would force rebuilds.
  */
 async function probeOmniVoiceRelay(relayUrl: string): Promise<VoiceInfo[] | null> {
-  const [healthy, catalog] = await Promise.all([
-    probeRelay(relayUrl),
-    fetchRelayVoices(relayUrl).catch(() => null),
-  ])
-  return healthy && catalog && catalog.length > 0 ? catalog : null
+  // `probeRelay` bounds `/health` itself; `/voices` is cut at the same budget,
+  // so a catalog request never outlives the probe that asked for it.
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), OMNIVOICE_PROBE_MS)
+  try {
+    const [healthy, catalog] = await Promise.all([
+      probeRelay(relayUrl),
+      fetchRelayVoices(relayUrl, controller.signal).catch(() => null),
+    ])
+    return healthy && catalog && catalog.length > 0 ? catalog : null
+  } finally {
+    clearTimeout(timer)
+  }
 }
 
-/** The stored OmniVoice voice when the relay still has it, else its first voice. */
-function omniVoiceFor(stored: string | null, catalog: readonly VoiceInfo[]): string {
-  return catalog.find((entry) => entry.id === stored)?.id ?? catalog[0].id
+/**
+ * The stored OmniVoice voice when the relay still has it, else its first
+ * voice; null for an empty catalog, which leaves nothing to speak with.
+ */
+function omniVoiceFor(stored: string | null, catalog: readonly VoiceInfo[]): string | null {
+  return catalog.find((entry) => entry.id === stored)?.id ?? catalog[0]?.id ?? null
 }
 
 /** What a failed synthesis says about itself in one word, for the log. */
@@ -1172,8 +1184,12 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
           // Only an OmniVoice failure of the session still running moves the
           // engine; an abort, or a session already over, leaves it alone.
           if (engine !== 'openai' || signal.aborted || isAbortError(error)) throw error
-          if (activeEngineRef.current === active) {
-            switchEngine({ session: afterFailure(active.session, error), voice: null })
+          // Only a real move of the engine is a switch: `afterFailure` hands
+          // back the session itself when it has nothing to move to (an abort,
+          // already on Edge), and that must never drop the OmniVoice voice.
+          const next = afterFailure(active.session, error)
+          if (activeEngineRef.current === active && next !== active.session) {
+            switchEngine({ session: next, voice: null })
             logReaderEvent('engine-fallback', detailFor(index, failureKind(error)))
           }
           // Another unit's failure may have switched the session already; either
@@ -2285,12 +2301,12 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
           if (!isPlayingRef.current) setState((prev) => ({ ...prev, isBuffering: false }))
           return
         }
-        if (session.engine === 'openai' && relay.catalog && settings.relayUrl) {
+        const omniVoice = relay.catalog ? omniVoiceFor(settings.voice, relay.catalog) : null
+        if (session.engine === 'openai' && relay.catalog && settings.relayUrl && omniVoice) {
           // The relay client is (re)configured here, between sessions, with the
           // catalog this probe just fetched: no request of this session has
           // been made yet, and an equal URL + catalog keeps the instance.
           configureOmniVoice({ relayUrl: settings.relayUrl, catalog: relay.catalog })
-          const omniVoice = omniVoiceFor(settings.voice, relay.catalog)
           switchEngine({ session, voice: omniVoice })
           logReaderEvent('session-engine', `openai ${omniVoice}`)
         } else {

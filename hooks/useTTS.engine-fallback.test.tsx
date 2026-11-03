@@ -6,6 +6,7 @@ import { useTTS } from './useTTS'
 import { useContinuousReader } from './use-continuous-reader'
 import { configureOmniVoice, synthesizeSpeech } from '@/lib/tts/client'
 import {
+  OMNIVOICE_PROBE_MS,
   fetchRelayVoices,
   probeRelay,
   writeOmniVoiceSettings,
@@ -318,6 +319,238 @@ describe('session engine in useTTS', () => {
   })
 })
 
+/** A promise settled from the test, to hold a relay call or a synthesis open. */
+const deferred = <T,>() => {
+  let resolve!: (value: T) => void
+  let reject!: (error: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+  return { promise, resolve, reject }
+}
+
+const fallbackLog = () => readReaderLog().filter((entry) => entry.type === 'engine-fallback')
+const sessionEngineLog = () =>
+  readReaderLog()
+    .filter((entry) => entry.type === 'session-engine')
+    .map((entry) => entry.detail)
+
+describe('session engine edges in useTTS', () => {
+  it('a pause during an OmniVoice synthesis that then aborts keeps the engine', async () => {
+    configureRelay()
+    const held = deferred<ArrayBuffer>()
+    vi.mocked(synthesizeSpeech).mockImplementation(async (text, options) => {
+      if (options?.engine === 'openai' && text === UNITS[0] && held) {
+        return held.promise
+      }
+      return new ArrayBuffer(8)
+    })
+
+    const { result } = renderHook(() =>
+      useTTS(UNITS.join(' '), { voice: EDGE_VOICE, units: UNITS })
+    )
+    act(() => {
+      void result.current.play()
+    })
+    await waitFor(() => expect(requests()[0]).toEqual([UNITS[0], 'openai', 'krystyna1', 'play']))
+
+    // Paused while unit 0 is on the relay; the synthesis then rejects with the abort.
+    act(() => result.current.pause())
+    await act(async () => {
+      held.reject(new DOMException('Aborted', 'AbortError'))
+      for (let i = 0; i < 10; i += 1) await Promise.resolve()
+    })
+
+    // The abort said nothing about the relay: no switch, nothing logged.
+    expect(result.current.engine).toBe('openai')
+    expect(result.current.engineVoice).toBe('krystyna1')
+    expect(result.current.engineFallback).toBe(false)
+    expect(fallbackLog()).toEqual([])
+    expect(requests().some(([, engine]) => engine === 'edge')).toBe(false)
+
+    // Resumed, the units are still asked of OmniVoice with its voice.
+    vi.mocked(synthesizeSpeech).mockClear()
+    vi.mocked(synthesizeSpeech).mockImplementation(async () => new ArrayBuffer(8))
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(mse.appended.length).toBeGreaterThan(0))
+    await settle()
+    expect(requests().length).toBeGreaterThan(0)
+    expect(requests().every(([, engine, voice]) => engine === 'openai' && voice === 'krystyna1'))
+      .toBe(true)
+    expect(fallbackLog()).toEqual([])
+  })
+
+  it('OmniVoice disabled after an openai or fallback session: plain edge, no probe', async () => {
+    configureRelay()
+    const { result } = renderHook(() =>
+      useTTS(UNITS.join(' '), { voice: EDGE_VOICE, units: UNITS })
+    )
+
+    // Session 1 on OmniVoice.
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(result.current.engine).toBe('openai'))
+    act(() => result.current.stop())
+
+    // Session 2 falls back: the relay does not answer.
+    vi.mocked(probeRelay).mockImplementation(async () => false)
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(result.current.engineFallback).toBe(true))
+    act(() => result.current.stop())
+    expect(probeRelay).toHaveBeenCalledTimes(2)
+
+    // OmniVoice switched off in the settings: Play is plain Edge, unmarked, unprobed.
+    writeOmniVoiceSettings({ enabled: false })
+    vi.mocked(synthesizeSpeech).mockClear()
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(requests().length).toBeGreaterThan(0))
+    expect(probeRelay).toHaveBeenCalledTimes(2)
+    expect(fetchRelayVoices).toHaveBeenCalledTimes(2)
+    expect(result.current.engine).toBe('edge')
+    expect(result.current.engineVoice).toBeNull()
+    expect(result.current.engineFallback).toBe(false)
+    expect(requests().every(([, engine, voice]) => engine === 'edge' && voice === EDGE_VOICE))
+      .toBe(true)
+  })
+
+  it('a probe that answers after Pause configures and plays nothing', async () => {
+    configureRelay()
+    const health = deferred<boolean>()
+    vi.mocked(probeRelay).mockImplementation(() => health.promise)
+
+    const { result } = renderHook(() =>
+      useTTS(UNITS.join(' '), { voice: EDGE_VOICE, units: UNITS })
+    )
+    act(() => {
+      void result.current.play()
+    })
+    await waitFor(() => expect(probeRelay).toHaveBeenCalledTimes(1))
+    expect(result.current.isBuffering).toBe(true)
+
+    act(() => result.current.pause())
+    await act(async () => {
+      health.resolve(true)
+      for (let i = 0; i < 10; i += 1) await Promise.resolve()
+    })
+    await settle()
+
+    expect(configureOmniVoice).not.toHaveBeenCalled()
+    expect(synthesizeSpeech).not.toHaveBeenCalled()
+    expect(sessionEngineLog()).toEqual([])
+    expect(result.current.engine).toBe('edge')
+    expect(result.current.isPlaying).toBe(false)
+    expect(result.current.isBuffering).toBe(false)
+  })
+
+  it('a stale probe that answers after a new Play leaves the new session alone', async () => {
+    configureRelay()
+    const stale = deferred<boolean>()
+    vi.mocked(probeRelay).mockImplementationOnce(() => stale.promise)
+
+    const { result } = renderHook(() =>
+      useTTS(UNITS.join(' '), { voice: EDGE_VOICE, units: UNITS })
+    )
+    act(() => {
+      void result.current.play()
+    })
+    await waitFor(() => expect(probeRelay).toHaveBeenCalledTimes(1))
+    act(() => result.current.pause())
+
+    // A new Play probes afresh and gets OmniVoice.
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(result.current.engine).toBe('openai'))
+    expect(configureOmniVoice).toHaveBeenCalledTimes(1)
+
+    // The first probe now answers "unhealthy": it belongs to a session that is over.
+    await act(async () => {
+      stale.resolve(false)
+      for (let i = 0; i < 10; i += 1) await Promise.resolve()
+    })
+    await settle()
+
+    expect(sessionEngineLog()).toEqual(['openai krystyna1'])
+    expect(configureOmniVoice).toHaveBeenCalledTimes(1)
+    expect(result.current.engine).toBe('openai')
+    expect(result.current.engineFallback).toBe(false)
+    expect(result.current.isPlaying).toBe(true)
+    expect(requests().every(([, engine]) => engine === 'openai')).toBe(true)
+  })
+
+  it('an empty relay catalog falls back to edge', async () => {
+    configureRelay()
+    vi.mocked(fetchRelayVoices).mockImplementation(async () => [])
+
+    const { result } = renderHook(() =>
+      useTTS(UNITS.join(' '), { voice: EDGE_VOICE, units: UNITS })
+    )
+    await act(async () => {
+      await result.current.play()
+    })
+    await waitFor(() => expect(requests().length).toBeGreaterThan(0))
+
+    expect(configureOmniVoice).not.toHaveBeenCalled()
+    expect(sessionEngineLog()).toEqual(['edge (fallback)'])
+    expect(result.current.engine).toBe('edge')
+    expect(result.current.engineFallback).toBe(true)
+    expect(requests().every(([, engine, voice]) => engine === 'edge' && voice === EDGE_VOICE))
+      .toBe(true)
+  })
+
+  it('the /voices fetch is aborted at the probe budget', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      configureRelay()
+      let voicesSignal: AbortSignal | undefined
+      vi.mocked(fetchRelayVoices).mockImplementation((_url, signal) => {
+        voicesSignal = signal
+        return new Promise((_resolve, reject) => {
+          signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')))
+        })
+      })
+
+      const { result } = renderHook(() =>
+        useTTS(UNITS.join(' '), { voice: EDGE_VOICE, units: UNITS })
+      )
+      act(() => {
+        void result.current.play()
+      })
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0)
+      })
+      expect(fetchRelayVoices).toHaveBeenCalledWith(relay.url, expect.any(AbortSignal))
+      expect(voicesSignal?.aborted).toBe(false)
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(OMNIVOICE_PROBE_MS - 1)
+      })
+      expect(voicesSignal?.aborted).toBe(false)
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1)
+      })
+      expect(voicesSignal?.aborted).toBe(true)
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0)
+      })
+      expect(result.current.engine).toBe('edge')
+      expect(result.current.engineFallback).toBe(true)
+      expect(sessionEngineLog()).toEqual(['edge (fallback)'])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
+
 /** Two speech units per section (title, one punctuation-free paragraph). */
 const makeItem = (index: number): SpeechSection => ({
   sourceSlug: `news-${index}`,
@@ -333,6 +566,24 @@ const makeItem = (index: number): SpeechSection => ({
 const unitTexts = (item: SpeechSection) => splitIntoSpeechUnits(item).map((unit) => unit.text)
 
 describe('session engine in the continuous reader', () => {
+  it('warm-ahead of an openai session speaks with the OmniVoice voice', async () => {
+    configureRelay()
+    const items = [makeItem(0), makeItem(1)]
+    const section1 = unitTexts(items[1])
+
+    const { result } = renderHook(() => useContinuousReader(items))
+    act(() => result.current.play())
+    await waitFor(() => expect(mse.appended).toEqual([0, 1]))
+    await settle()
+    expect(result.current.engineFallback).toBe(false)
+
+    const warms = () => requests().filter(([, , , priority]) => priority === 'warm')
+    await waitFor(() => expect(warms().map(([text]) => text)).toEqual(section1))
+    expect(warms().every(([, engine, voice]) => engine === 'openai' && voice === 'krystyna1'))
+      .toBe(true)
+    expect(warms().some(([, , voice]) => voice === DEFAULT_TTS_VOICE)).toBe(false)
+  })
+
   it('warm-ahead follows the session engine after a switch', async () => {
     configureRelay()
     const items = [makeItem(0), makeItem(1)]

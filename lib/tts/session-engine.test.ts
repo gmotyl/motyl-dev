@@ -2,7 +2,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { TtsError } from 'anytts'
 
 import { OMNIVOICE_PROBE_MS, type OmniVoiceSettings } from './omnivoice'
-import { afterFailure, chooseSessionEngine, type SessionEngine } from './session-engine'
+import {
+  afterFailure,
+  chooseSessionEngine,
+  EDGE_FALLBACK_SESSION,
+  isAbortError,
+  type SessionEngine,
+} from './session-engine'
 
 const configured: OmniVoiceSettings = {
   enabled: true,
@@ -84,5 +90,30 @@ describe('afterFailure', () => {
     expect(afterFailure(openai, new Error('boom'))).toEqual({ engine: 'edge', fallback: true })
     // Already on Edge: nothing to move to.
     expect(afterFailure(edge, new TtsError('network', 'edge gone'))).toBe(edge)
+  })
+
+  it('hands back the session itself whenever there is nothing to move to', () => {
+    // The hook switches only on a different session, so identity is the contract.
+    const openai: SessionEngine = { engine: 'openai', fallback: false }
+    const abortLike = { name: 'AbortError', message: 'aborted by the client' }
+
+    expect(afterFailure(openai, abortLike)).toBe(openai)
+    expect(afterFailure(EDGE_FALLBACK_SESSION, new Error('boom'))).toBe(EDGE_FALLBACK_SESSION)
+    expect(afterFailure(EDGE_FALLBACK_SESSION, new DOMException('Aborted', 'AbortError')))
+      .toBe(EDGE_FALLBACK_SESSION)
+    expect(afterFailure(openai, new Error('boom'))).not.toBe(openai)
+  })
+})
+
+describe('isAbortError', () => {
+  it('is true only for something named AbortError', () => {
+    expect(isAbortError(new DOMException('Aborted', 'AbortError'))).toBe(true)
+    expect(isAbortError({ name: 'AbortError' })).toBe(true)
+
+    expect(isAbortError(null)).toBe(false)
+    expect(isAbortError(undefined)).toBe(false)
+    expect(isAbortError('AbortError')).toBe(false)
+    expect(isAbortError(new DOMException('Timed out', 'TimeoutError'))).toBe(false)
+    expect(isAbortError(new TtsError('network', 'relay gone'))).toBe(false)
   })
 })

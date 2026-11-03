@@ -124,9 +124,15 @@ export async function probeRelay(
   }
 }
 
-/** The relay's voice catalog from `GET <relay>/voices`; rejects on a network error or non-2xx answer. */
-export async function fetchRelayVoices(relayUrl: string): Promise<VoiceInfo[]> {
-  const response = await fetch(relayEndpoint(relayUrl, 'voices'))
+/**
+ * The relay's voice catalog from `GET <relay>/voices`; rejects on a network
+ * error, a non-2xx answer, a body that is not a list, or an abort of `signal`.
+ */
+export async function fetchRelayVoices(
+  relayUrl: string,
+  signal?: AbortSignal
+): Promise<VoiceInfo[]> {
+  const response = await fetch(relayEndpoint(relayUrl, 'voices'), { signal })
   if (!response.ok) {
     throw new Error(`OmniVoice relay /voices answered ${response.status}`)
   }
