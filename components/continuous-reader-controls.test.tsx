@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ContinuousReaderControls } from './continuous-reader-controls'
@@ -86,5 +86,88 @@ describe('ContinuousReaderControls', () => {
 
     await user.click(markRead)
     expect(onMarkRead).toHaveBeenCalledOnce()
+  })
+
+  describe('engine fallback marker', () => {
+    const REASON = 'reading with Edge: SPOCK did not answer'
+    const playPause = () => document.querySelector('[data-reader-action="play-pause"]') as HTMLElement
+
+    it('shows the Edge marker and reason while in engine fallback', () => {
+      const { rerender } = render(
+        <ContinuousReaderControls isPlaying engineFallback onPlayPause={vi.fn()} onNext={vi.fn()} />
+      )
+
+      const pause = screen.getByRole('button', { name: `Pause, ${REASON}` })
+      expect(pause).toBe(playPause())
+      expect(pause).toHaveAttribute('title', `Pause, ${REASON}`)
+      const marker = within(pause).getByText('Edge')
+      expect(marker).toHaveAttribute('data-reader-engine-marker')
+      // Playing = bg-primary (near-black light / near-white dark).
+      expect(marker).toHaveClass('text-amber-300', 'dark:text-amber-800')
+      expect(marker).not.toHaveClass('text-amber-700', 'dark:text-amber-400')
+      // Under the label: the label and the marker share a column wrapper.
+      expect(marker.parentElement).toHaveClass('flex-col')
+      expect(marker.previousSibling?.textContent).toBe('Pause')
+
+      rerender(
+        <ContinuousReaderControls
+          isPlaying={false}
+          engineFallback
+          onPlayPause={vi.fn()}
+          onNext={vi.fn()}
+        />
+      )
+      const play = screen.getByRole('button', { name: `Play, ${REASON}` })
+      expect(play).toHaveAttribute('title', `Play, ${REASON}`)
+      const pausedMarker = within(play).getByText('Edge')
+      // Paused = outline on bg-background (white light / near-black dark).
+      expect(pausedMarker).toHaveClass('text-amber-700', 'dark:text-amber-400')
+      expect(pausedMarker).not.toHaveClass('text-amber-300', 'dark:text-amber-800')
+    })
+
+    it('renders no marker and the plain name otherwise', () => {
+      const { rerender } = render(
+        <ContinuousReaderControls
+          isPlaying
+          engineFallback={false}
+          onPlayPause={vi.fn()}
+          onNext={vi.fn()}
+        />
+      )
+      expect(screen.getByRole('button', { name: 'Pause' })).toBe(playPause())
+      expect(playPause()).not.toHaveAttribute('title')
+      expect(document.querySelector('[data-reader-engine-marker]')).toBeNull()
+      expect(screen.queryByText('Edge')).toBeNull()
+
+      // Omitted behaves like false.
+      rerender(<ContinuousReaderControls isPlaying={false} onPlayPause={vi.fn()} onNext={vi.fn()} />)
+      expect(screen.getByRole('button', { name: 'Play' })).toBe(playPause())
+      expect(document.querySelector('[data-reader-engine-marker]')).toBeNull()
+    })
+
+    it('controls stay Mark read, Play/Pause and Next', () => {
+      render(
+        <ContinuousReaderControls
+          isPlaying
+          engineFallback
+          onPlayPause={vi.fn()}
+          onNext={vi.fn()}
+          onMarkRead={vi.fn()}
+        />
+      )
+
+      const group = screen.getByRole('group', { name: 'Continuous reader controls' })
+      const buttons = within(group).getAllByRole('button')
+      expect(buttons.map((b) => b.getAttribute('data-reader-action'))).toEqual([
+        'mark-read',
+        'play-pause',
+        'next',
+      ])
+      expect(buttons.map((b) => b.getAttribute('aria-label'))).toEqual([
+        'Mark read',
+        `Pause, ${REASON}`,
+        'Next',
+      ])
+    })
   })
 })

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { splitIntoSpeechUnits, type SpeechSection } from '@/lib/tts/speech'
-import { synthesizeSpeech } from '@/lib/tts/client'
+import { synthesizeSpeech, type ReaderEngine } from '@/lib/tts/client'
 import { DEFAULT_TTS_VOICE, getStoredTtsVoice, TTS_VOICE_CHANGE_EVENT } from '@/lib/tts/voices'
 import {
   resolveArticleTitle,
@@ -130,7 +130,7 @@ const PREBUFFER_CONCURRENCY = 1
  */
 async function warmTier(
   texts: readonly string[],
-  voice: string,
+  { voice, engine }: { voice: string; engine: ReaderEngine },
   concurrency: number,
   signal: AbortSignal,
   // Observation only: told how each text settled, in the order given.
@@ -144,7 +144,7 @@ async function warmTier(
       if (!next?.text) continue
       const startedAt = Date.now()
       try {
-        await synthesizeSpeech(next.text, { voice, priority: 'warm' })
+        await synthesizeSpeech(next.text, { voice, engine, priority: 'warm' })
         onSettled?.(next.position, Date.now() - startedAt, false)
       } catch {
         /* best-effort warm; the real request will retry */
@@ -689,7 +689,17 @@ export function useContinuousReader(
     totalChunks,
     stop: playbackStop,
     resume: playbackResume,
+    engine,
+    engineVoice,
+    engineFallback,
   } = playback
+
+  // What every warm speaks with: the session engine `useTTS` chose at Play
+  // (or moved to Edge mid-session), with that engine's voice, so a warmed
+  // entry is the one the next request asks for. Between sessions it is the
+  // last session's engine; the next Play's probe decides anew. Primitives, so
+  // the ladder below re-runs on a switch and warms on Edge from there.
+  const warmVoice = engine === 'openai' && engineVoice ? engineVoice : voice
 
   // The hold's claim on the timeline has done its job once the commit that
   // entered the hold has landed: `useTTS`'s release backstop (an effect of its
@@ -872,7 +882,7 @@ export function useContinuousReader(
   // Prebuffer ladder: warm the synthesis cache ahead of user intent so
   // play-from-here on any section starts from cache. Order: current section's
   // title + TLDR first (secures playback runway = "T1 buffered"), THEN every
-  // loaded section's title, THEN every loaded section's TLDR. Restarts on voice
+  // loaded section's title, THEN every loaded section's TLDR. Restarts on voice or engine
   // change, section-set change, or current-section change; idempotent (warm
   // requests hit the cache and skip). Non-current bodies are not prebuffered
   // here — they load on demand as playback approaches them.
@@ -938,7 +948,7 @@ export function useContinuousReader(
         if (!nextKey) {
           if (!closingText) return
           logReaderEvent('warm-ahead', `start closing, ${Date.now() - scheduledAt}ms after scheduled`)
-          await warmTier([closingText], voice, 1, signal, (position, ms, failed) => {
+          await warmTier([closingText], { voice: warmVoice, engine }, 1, signal, (position, ms, failed) => {
             logReaderEvent('warm-ahead', `unit ${position}: ${failed ? `failed after ${ms}ms` : `${ms}ms`}`)
           })
           if (signal.aborted) logReaderEvent('warm-ahead', 'aborted')
@@ -955,7 +965,7 @@ export function useContinuousReader(
           'warm-ahead',
           `start ${nextKey}: ${texts.length} units, ${Date.now() - scheduledAt}ms after scheduled`
         )
-        await warmTier(texts, voice, 1, signal, (position, ms, failed) => {
+        await warmTier(texts, { voice: warmVoice, engine }, 1, signal, (position, ms, failed) => {
           logReaderEvent('warm-ahead', `unit ${position}: ${failed ? `failed after ${ms}ms` : `${ms}ms`}`)
         })
         if (signal.aborted) logReaderEvent('warm-ahead', 'aborted')
@@ -964,16 +974,16 @@ export function useContinuousReader(
       // T1: current section's title + TLDR.
       const current = all[currentIndexRef.current]
       if (current) {
-        await warmTier(current.slice(0, 2), voice, PREBUFFER_CONCURRENCY, signal)
+        await warmTier(current.slice(0, 2), { voice: warmVoice, engine }, PREBUFFER_CONCURRENCY, signal)
       }
       if (signal.aborted) return
       // T2: every loaded section's title unit.
       const titles = all.map((u) => u[0]).filter((t): t is string => Boolean(t))
-      await warmTier(titles, voice, PREBUFFER_CONCURRENCY, signal)
+      await warmTier(titles, { voice: warmVoice, engine }, PREBUFFER_CONCURRENCY, signal)
       if (signal.aborted) return
       // T3: every loaded section's TLDR (second) unit — only after all titles.
       const tldrs = all.map((u) => u[1]).filter((t): t is string => Boolean(t))
-      await warmTier(tldrs, voice, PREBUFFER_CONCURRENCY, signal)
+      await warmTier(tldrs, { voice: warmVoice, engine }, PREBUFFER_CONCURRENCY, signal)
     }
 
     // Warm-ahead runs on a timer, never an idle callback: the 2026-09-30 19:41
@@ -996,7 +1006,7 @@ export function useContinuousReader(
       }
     }
   }, [
-    unitTextsBySection, voice, currentIndex, isPlaying, isBuffering, isFullyBuffered,
+    unitTextsBySection, warmVoice, engine, currentIndex, isPlaying, isBuffering, isFullyBuffered,
     holdPhase, moreMayCome, closingLine,
   ])
 
@@ -1337,11 +1347,12 @@ export function useContinuousReader(
     playFromHere,
     playFromLine,
     retry,
+    engineFallback,
   }), [
     readerIsPlaying, readerIsBuffering, progress, currentTime, totalEstimatedTime,
     currentChunkIndex, totalChunks, stop, playbackResume, currentIndex,
     currentItem, position, error, play, pause, next, canNext,
-    previous, canPrevious, playFromHere, playFromLine, retry,
+    previous, canPrevious, playFromHere, playFromLine, retry, engineFallback,
   ])
 }
 

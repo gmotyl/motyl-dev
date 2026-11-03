@@ -287,4 +287,34 @@ describe('ReaderControlBar', () => {
       expect(fetchMock).toHaveBeenCalledTimes(1)
     })
   })
+
+  it('the marker lives inside Play/Pause and adds nothing to the bar', () => {
+    const { container, rerender } = render(
+      <ReaderControlBar {...baseProps} isPlaying engineFallback={false} />
+    )
+    const bar = container.querySelector('[data-reader-floating]') as HTMLElement
+    const playPause = () => bar.querySelector('[data-reader-action="play-pause"]') as HTMLElement
+    // Everything in the bar except the Play/Pause button's own subtree.
+    const outsideButton = () =>
+      Array.from(bar.querySelectorAll('*')).filter((el) => !playPause().contains(el)).length
+
+    const before = outsideButton()
+    expect(playPause()).toHaveClass('min-h-[56px]')
+    expect(bar.querySelector('[data-reader-engine-marker]')).toBeNull()
+
+    rerender(<ReaderControlBar {...baseProps} isPlaying engineFallback />)
+    const marker = bar.querySelector('[data-reader-engine-marker]')
+    expect(marker).not.toBeNull()
+    expect(playPause()).toContainElement(marker as HTMLElement)
+    expect(playPause()).toHaveClass('min-h-[56px]')
+    expect(outsideButton()).toBe(before)
+    expect(
+      screen.getByRole('button', { name: 'Pause, reading with Edge: SPOCK did not answer' }),
+    ).toBe(playPause())
+
+    rerender(<ReaderControlBar {...baseProps} isPlaying engineFallback={false} />)
+    expect(bar.querySelector('[data-reader-engine-marker]')).toBeNull()
+    expect(playPause()).toHaveClass('min-h-[56px]')
+    expect(outsideButton()).toBe(before)
+  })
 })

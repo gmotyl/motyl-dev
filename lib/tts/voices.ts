@@ -1,4 +1,4 @@
-import { listEngines, listVoices } from 'anytts'
+import { listEngines, listVoices, type EngineInfo } from 'anytts'
 
 export const TTS_VOICE_STORAGE_KEY = 'tts-voice'
 export const TTS_ENGINE_STORAGE_KEY = 'tts-engine'
@@ -35,8 +35,17 @@ function writeStorage(key: string, value: string): void {
   }
 }
 
+/**
+ * The engines motyl offers. anytts 0.6 registers keyed and relay engines too
+ * (elevenlabs, openai, cascade, ...), but readers only ever pick Edge here; a
+ * stored id for any other engine reads back as the default.
+ */
+export const MOTYL_ENGINES: readonly EngineInfo[] = Object.freeze(
+  listEngines().filter((engine) => engine.id === DEFAULT_TTS_ENGINE)
+)
+
 function isKnownEngine(value: string | null): value is string {
-  return value !== null && listEngines().some((engine) => engine.id === value)
+  return value !== null && MOTYL_ENGINES.some((engine) => engine.id === value)
 }
 
 function isCatalogVoice(engine: string, value: string | null): value is string {

@@ -3,8 +3,28 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { detectLanguageFromContent } from '@/lib/tts/voice-map'
 import { splitIntoChunks } from '@/lib/tts/chunks'
-import { restartStalledSynthesis, synthesizeSpeech } from '@/lib/tts/client'
-import { TtsError } from 'anytts'
+import {
+  configureOmniVoice,
+  restartStalledSynthesis,
+  synthesizeSpeech,
+  type ReaderEngine,
+} from '@/lib/tts/client'
+import {
+  fetchRelayVoices,
+  isOmniVoiceConfigured,
+  OMNIVOICE_PROBE_MS,
+  probeRelay,
+  readOmniVoiceSettings,
+} from '@/lib/tts/omnivoice'
+import {
+  afterFailure,
+  chooseSessionEngine,
+  EDGE_FALLBACK_SESSION,
+  EDGE_SESSION,
+  isAbortError,
+  type SessionEngine,
+} from '@/lib/tts/session-engine'
+import { TtsError, type VoiceInfo } from 'anytts'
 import {
   describeError,
   detailFor,
@@ -177,6 +197,61 @@ export interface TTSPlayback extends TTSState {
    * clear it. The reader gates warm-ahead of the next section on it.
    */
   isFullyBuffered: boolean
+  /** The engine the current (or last) session speaks with. */
+  engine: ReaderEngine
+  /** The OmniVoice voice of an `openai` session; null on Edge, which uses `voice`. */
+  engineVoice: string | null
+  /**
+   * Edge is speaking although OmniVoice was configured: the probe at Play or a
+   * unit mid-session failed. Stays up until the next Play that probes again;
+   * false for a plain Edge session.
+   */
+  engineFallback: boolean
+}
+
+/** A session engine plus the voice it speaks with when that is OmniVoice. */
+type ActiveEngine = { session: SessionEngine; voice: string | null }
+const PLAIN_EDGE: ActiveEngine = { session: EDGE_SESSION, voice: null }
+
+/**
+ * The OmniVoice side of the probe at Play: `/health` and `/voices` in parallel,
+ * so the whole check stays inside the one probe budget. Answers the relay's
+ * catalog when the relay is healthy AND served a non-empty catalog, null
+ * otherwise — a catalog that cannot be fetched leaves nothing to speak with.
+ * The catalog is fetched at every probing Play rather than cached: the relay is
+ * the only authority on which voices it has, and the settings card configures
+ * the client with what it fetched too, so equal catalogs keep the client's
+ * instance (and its cache) where a stale copy here would force rebuilds.
+ */
+async function probeOmniVoiceRelay(relayUrl: string): Promise<VoiceInfo[] | null> {
+  // `probeRelay` bounds `/health` itself; `/voices` is cut at the same budget,
+  // so a catalog request never outlives the probe that asked for it.
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), OMNIVOICE_PROBE_MS)
+  try {
+    const [healthy, catalog] = await Promise.all([
+      probeRelay(relayUrl),
+      fetchRelayVoices(relayUrl, controller.signal).catch(() => null),
+    ])
+    return healthy && catalog && catalog.length > 0 ? catalog : null
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/**
+ * The stored OmniVoice voice when the relay still has it, else its first
+ * voice; null for an empty catalog, which leaves nothing to speak with.
+ */
+function omniVoiceFor(stored: string | null, catalog: readonly VoiceInfo[]): string | null {
+  return catalog.find((entry) => entry.id === stored)?.id ?? catalog[0]?.id ?? null
+}
+
+/** What a failed synthesis says about itself in one word, for the log. */
+function failureKind(error: unknown): string {
+  if (error instanceof TtsError) return error.kind
+  const name = (error as { name?: unknown } | null)?.name
+  return typeof name === 'string' && name !== '' ? name : 'Error'
 }
 
 const detectLanguage = detectLanguageFromContent
@@ -413,6 +488,28 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   const isPlayingRef = useRef(false)
   const currentChunkIndexRef = useRef(0)
   const voiceRef = useRef<string | null>(null)
+  /**
+   * The session engine (see `lib/tts/session-engine`): chosen at Play, moved
+   * OmniVoice -> Edge for the rest of the session when a unit fails. The ref is
+   * what synthesis reads; the state mirrors it for the caller (warm-ahead, the
+   * fallback marker). Replaced, never mutated, so an identity check tells
+   * whether a session's engine changed since a request read it.
+   */
+  const activeEngineRef = useRef<ActiveEngine>(PLAIN_EDGE)
+  const [activeEngine, setActiveEngine] = useState<ActiveEngine>(PLAIN_EDGE)
+  const switchEngine = useCallback((next: ActiveEngine) => {
+    activeEngineRef.current = next
+    setActiveEngine(next)
+  }, [])
+  /**
+   * Whether the next `play()` continues the session that just ended instead
+   * of starting one: set by `stop({ keepElementRunning: true })`, the reader's
+   * section handoff, and cleared by every other end of a session. A
+   * continuation keeps the engine (and its fallback) and sends no probe, so an
+   * auto-advance neither waits for the relay nor walks back onto an OmniVoice
+   * that just failed.
+   */
+  const continuesEngineRef = useRef(false)
   // Last integer percent emitted to setState, so progress-driven re-renders fire
   // at most ~1/percent instead of on every ~60fps rAF tick (hover flicker fix).
   const lastEmittedPctRef = useRef(-1)
@@ -1002,7 +1099,6 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       options?: { retry?: boolean }
     ): Promise<ArrayBuffer> => {
       const text = chunksRef.current[index]
-      const detectedVoice = voiceRef.current || detectLanguage(content)
 
       if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
 
@@ -1013,20 +1109,22 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       // visibility is recorded at both ends because the stall only ever
       // happened with the screen off.
       const unit = toCarrierIndex(index)
-      const startedAt = Date.now()
-      // A self-heal request is marked so a device log can tell the reader
-      // recovering from a starve apart from its ordinary read-ahead.
-      logReaderEvent(
-        'synth-start',
-        detailFor(unit, `${document.visibilityState}${options?.retry ? ' (retry)' : ''}`)
-      )
 
+      // At most two attempts: the session's engine, and — when that was
+      // OmniVoice and it failed — Edge, which the session has switched to by
+      // then. The OmniVoice failure never leaves this function, so no caller
+      // counts it against MAX_CONSECUTIVE_CHUNK_FAILURES, and the caller waiting
+      // for this unit simply gets the Edge audio, in its place in the order.
+      //
       // The client runs one synthesis at a time, so the total splits into
       // waiting for the slot and synthesizing; `onStart` marks the boundary.
       // `onFirstByte` marks the first audio chunk: after a 30 s stall on
       // 2026-09-30 the stall timeout can only be sized from how long a healthy
       // synthesis takes to its first byte. Only what the client reported is
       // claimed — a client that reports neither gets no parentheses at all.
+      // All three are per attempt.
+      let arrayBuffer: ArrayBuffer
+      let startedAt = Date.now()
       let queueStartedAt: number | undefined
       let firstByteAt: number | undefined
       const elapsed = () => {
@@ -1035,31 +1133,69 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
         if (firstByteAt !== undefined) parts.push(`first byte ${firstByteAt - startedAt}ms`)
         return `${Date.now() - startedAt}ms` + (parts.length === 0 ? '' : ` (${parts.join(', ')})`)
       }
+      for (;;) {
+        const active = activeEngineRef.current
+        const engine = active.session.engine
+        const unitVoice =
+          engine === 'openai' && active.voice
+            ? active.voice
+            : voiceRef.current || detectLanguage(content)
 
-      let arrayBuffer: ArrayBuffer
-      try {
-        arrayBuffer = await synthesizeSpeech(text, {
-          voice: detectedVoice,
-          onStart: () => {
-            queueStartedAt = Date.now()
-          },
-          onFirstByte: () => {
-            firstByteAt = Date.now()
-          },
-        })
-      } catch (error) {
-        // The error's name tells a stall from a closed socket; the same day's
-        // log had a retry fail in 1447 ms with nothing to say which it was.
-        const name = (error as { name?: unknown } | null)?.name
-        const baseName = typeof name === 'string' && name !== '' ? name : 'Error'
-        // anytts reports every failure as one TtsError class, so its name no
-        // longer separates a refused handshake from a stall — the kind does.
-        const errorName = error instanceof TtsError ? `${baseName} ${error.kind}` : baseName
+        startedAt = Date.now()
+        queueStartedAt = undefined
+        firstByteAt = undefined
+        // A self-heal request is marked so a device log can tell the reader
+        // recovering from a starve apart from its ordinary read-ahead; an
+        // OmniVoice request is marked so the engine of every line is known.
         logReaderEvent(
-          'synth-end',
-          detailFor(unit, `failed after ${elapsed()}, ${errorName}, ${document.visibilityState}`)
+          'synth-start',
+          detailFor(
+            unit,
+            `${document.visibilityState}${options?.retry ? ' (retry)' : ''}` +
+              (engine === 'openai' ? ', openai' : '')
+          )
         )
-        throw error
+
+        try {
+          arrayBuffer = await synthesizeSpeech(text, {
+            voice: unitVoice,
+            engine,
+            onStart: () => {
+              queueStartedAt = Date.now()
+            },
+            onFirstByte: () => {
+              firstByteAt = Date.now()
+            },
+          })
+          break
+        } catch (error) {
+          // The error's name tells a stall from a closed socket; the same day's
+          // log had a retry fail in 1447 ms with nothing to say which it was.
+          const name = (error as { name?: unknown } | null)?.name
+          const baseName = typeof name === 'string' && name !== '' ? name : 'Error'
+          // anytts reports every failure as one TtsError class, so its name no
+          // longer separates a refused handshake from a stall — the kind does.
+          const errorName = error instanceof TtsError ? `${baseName} ${error.kind}` : baseName
+          logReaderEvent(
+            'synth-end',
+            detailFor(unit, `failed after ${elapsed()}, ${errorName}, ${document.visibilityState}`)
+          )
+
+          // Only an OmniVoice failure of the session still running moves the
+          // engine; an abort, or a session already over, leaves it alone.
+          if (engine !== 'openai' || signal.aborted || isAbortError(error)) throw error
+          // Only a real move of the engine is a switch: `afterFailure` hands
+          // back the session itself when it has nothing to move to (an abort,
+          // already on Edge), and that must never drop the OmniVoice voice.
+          const next = afterFailure(active.session, error)
+          if (activeEngineRef.current === active && next !== active.session) {
+            switchEngine({ session: next, voice: null })
+            logReaderEvent('engine-fallback', detailFor(index, failureKind(error)))
+          }
+          // Another unit's failure may have switched the session already; either
+          // way this unit is asked of Edge now.
+          if (activeEngineRef.current.session.engine !== 'edge') throw error
+        }
       }
 
       if (signal.aborted) {
@@ -1078,7 +1214,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
       // forced a slice(0) dance before every replay.
       return arrayBuffer
     },
-    [content, toCarrierIndex]
+    [content, switchEngine, toCarrierIndex]
   )
 
   /**
@@ -2108,6 +2244,10 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
 
     ensureChunks()
 
+    // Consumed here, by this session alone: whatever ends it decides anew.
+    const continuing = continuesEngineRef.current
+    continuesEngineRef.current = false
+
     voiceRef.current = voice || null
     isPlayingRef.current = true
     lastEmittedPctRef.current = -1
@@ -2134,6 +2274,47 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     starvedRef.current = null
 
     setState((prev) => ({ ...prev, isPlaying: true, isBuffering: true }))
+
+    // The session engine, before anything is synthesized. A continuation (the
+    // reader's section handoff) keeps the engine the session already had; any
+    // other Play starts over: the marker of a previous fallback drops, and with
+    // OmniVoice configured the relay is probed — bounded at OMNIVOICE_PROBE_MS
+    // by `chooseSessionEngine`, so Play never hangs longer than that. Not
+    // configured, no probe is sent and nothing here awaits, so a plain Edge
+    // Play reaches its first synthesis exactly as before.
+    if (!continuing) {
+      switchEngine(PLAIN_EDGE)
+      const settings = readOmniVoiceSettings()
+      // A plain Edge session logs nothing new: its log reads as it always did.
+      if (isOmniVoiceConfigured(settings)) {
+        // Holder object, not a `let`: TypeScript cannot see the assignment made
+        // inside the probe callback and would narrow a `let` to null.
+        const relay: { catalog: VoiceInfo[] | null } = { catalog: null }
+        const session = await chooseSessionEngine(settings, async (url) => {
+          relay.catalog = await probeOmniVoiceRelay(url)
+          return relay.catalog !== null
+        })
+        // Paused, stopped or superseded while the relay was asked: the probe
+        // belongs to a session that is over, and configures nothing. A pause
+        // there leaves no session at all, so its buffering state goes too.
+        if (generation !== requestGenerationRef.current || signal.aborted) {
+          if (!isPlayingRef.current) setState((prev) => ({ ...prev, isBuffering: false }))
+          return
+        }
+        const omniVoice = relay.catalog ? omniVoiceFor(settings.voice, relay.catalog) : null
+        if (session.engine === 'openai' && relay.catalog && settings.relayUrl && omniVoice) {
+          // The relay client is (re)configured here, between sessions, with the
+          // catalog this probe just fetched: no request of this session has
+          // been made yet, and an equal URL + catalog keeps the instance.
+          configureOmniVoice({ relayUrl: settings.relayUrl, catalog: relay.catalog })
+          switchEngine({ session, voice: omniVoice })
+          logReaderEvent('session-engine', `openai ${omniVoice}`)
+        } else {
+          switchEngine({ session: EDGE_FALLBACK_SESSION, voice: null })
+          logReaderEvent('session-engine', 'edge (fallback)')
+        }
+      }
+    }
 
     // Pre-buffer: fetch the first few chunks before starting playback
     const startIdx = currentChunkIndexRef.current
@@ -2222,6 +2403,7 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     prepareUnit,
     refreshFullyBuffered,
     retryWhileStarved,
+    switchEngine,
     unlockElementForGesture,
     voice,
   ])
@@ -2238,6 +2420,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
   const interrupt = useCallback(
     (pauseElement: boolean) => {
       isPlayingRef.current = false
+      // Every interrupt ends the session for good; only `stop()` with the
+      // element kept running re-arms a continuation, after this.
+      continuesEngineRef.current = false
       invalidatePendingRequests()
       sessionRef.current = null
       // A starvation is this session's (as is what it had in flight — see
@@ -2333,6 +2518,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     // inert until the next session seats itself, exactly as it is after a
     // running "play from here" interrupt.
     interrupt(!(options?.keepElementRunning === true && getCarrier().kind === 'mse'))
+    // The caller is continuing this reading (the reader's handoff), on either
+    // carrier: the next `play()` keeps the session's engine and sends no probe.
+    continuesEngineRef.current = options?.keepElementRunning === true
 
     chunksRef.current = []
     charCountsRef.current = []
@@ -2419,6 +2607,9 @@ export function useTTS(content: string, options: UseTTSOptions = {}) {
     resume: play,
     readMediaPosition,
     isFullyBuffered,
+    engine: activeEngine.session.engine,
+    engineVoice: activeEngine.voice,
+    engineFallback: activeEngine.session.fallback,
   }
 
   return playback

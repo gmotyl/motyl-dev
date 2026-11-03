@@ -28,6 +28,14 @@ export type ReaderLogEventType =
   // end detail `index: <ms>ms[, failed | dropped (aborted)], visibility`.
   | 'synth-start'
   | 'synth-end'
+  // The engine a session chose at Play, logged only when OmniVoice is
+  // configured: `openai <voice>`, or `edge (fallback)` when the relay did not
+  // answer. A plain Edge session has no line.
+  | 'session-engine'
+  // An OmniVoice synthesis failed and the session moved to Edge for good; the
+  // same unit is asked of Edge at once. Detail `index: <kind>` (hook-local
+  // index, like `synthesis-failed`; the TtsError kind, or the error's name).
+  | 'engine-fallback'
   // MSE carrier: the element ran out of appended media MID-article, after this
   // session had played — the state the reader self-heals from by re-requesting
   // its read-ahead. Detail is the hook-local unit index (like `unit-start`).
