@@ -485,6 +485,7 @@ export default function ReadAllNewsPage({ initialItems, totalItems }: ReadAllNew
           markReadDisabled={scrolledPastSlugs.size === 0}
           canPlay={speechSections.length > 0}
           canNext={reader.canNext}
+          engineFallback={reader.engineFallback}
           onMarkRead={() => { setPendingNavUrl(null); setDialogOpen(true) }}
           onPlayPause={handlePlayPause}
           onNext={reader.next}

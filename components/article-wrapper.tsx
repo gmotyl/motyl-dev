@@ -146,6 +146,7 @@ export function ArticleWrapper({ article, translatePrompt }: ArticleWrapperProps
           canNext={reader.canNext}
           isPlaying={reader.isPlaying}
           isBuffering={reader.isBuffering}
+          engineFallback={reader.engineFallback}
           onPlayPause={() => (reader.isPlaying ? reader.pause() : reader.play())}
           onNext={reader.next}
           onMarkRead={() => undefined}
