@@ -98,9 +98,17 @@ export function isOmniVoiceConfigured(s: OmniVoiceSettings): boolean {
   return s.enabled && s.relayUrl !== null && isUsableRelayUrl(s.relayUrl)
 }
 
-/** Joins a relay base URL and an endpoint path, tolerating trailing slashes on the base. */
+/**
+ * Resolves an endpoint under the relay base URL: a path prefix is kept with or
+ * without trailing slashes, and so is a query on the base (`/relay?x=1` gives
+ * `/relay/health?x=1`). Throws on a base that is not a URL.
+ */
 function relayEndpoint(relayUrl: string, path: string): string {
-  return `${relayUrl.trim().replace(/\/+$/, '')}/${path}`
+  const base = new URL(relayUrl.trim())
+  base.pathname = `${base.pathname.replace(/\/+$/, '')}/`
+  const endpoint = new URL(path, base)
+  endpoint.search = base.search
+  return endpoint.toString()
 }
 
 /** True only when `GET <relay>/health` answers 200 within `timeoutMs`; the request is aborted otherwise. */

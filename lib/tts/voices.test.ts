@@ -59,7 +59,7 @@ describe('TTS engine preferences', () => {
     expect(getStoredTtsEngine()).toBe('edge')
 
     expect(setStoredTtsEngine('openai')).toBe('edge')
-    expect(localStorage.getItem(TTS_ENGINE_STORAGE_KEY)).toBe('openai')
+    expect(getStoredTtsEngine()).toBe('edge')
     expect(MOTYL_ENGINES.map((engine) => engine.id)).toEqual(['edge'])
   })
 

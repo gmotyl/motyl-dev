@@ -64,6 +64,14 @@ describe('OmniVoice settings', () => {
     expect(localStorage.getItem(OMNIVOICE_VOICE_KEY)).toBeNull()
   })
 
+  it('trims a padded relay URL on write', () => {
+    const written = writeOmniVoiceSettings({ relayUrl: '  https://spock.tail1234.ts.net/  \n' })
+
+    expect(written.relayUrl).toBe('https://spock.tail1234.ts.net/')
+    expect(localStorage.getItem(OMNIVOICE_RELAY_URL_KEY)).toBe('https://spock.tail1234.ts.net/')
+    expect(readOmniVoiceSettings().relayUrl).toBe('https://spock.tail1234.ts.net/')
+  })
+
   it('treats malformed stored values as not configured', () => {
     localStorage.setItem(OMNIVOICE_ENABLED_KEY, 'true')
     localStorage.setItem(OMNIVOICE_RELAY_URL_KEY, '   ')
@@ -185,5 +193,53 @@ describe('OmniVoice relay calls', () => {
     controller.abort()
 
     await expect(result).rejects.toMatchObject({ name: 'AbortError' })
+  })
+
+  it('probe leaves no timer behind and wants exactly 200', async () => {
+    vi.useFakeTimers()
+    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({ ok: true }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(probeRelay('https://spock.tail1234.ts.net')).resolves.toBe(true)
+    expect(vi.getTimerCount()).toBe(0)
+
+    // The relay contract says 200; another 2xx is not a healthy answer.
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }))
+    await expect(probeRelay('https://spock.tail1234.ts.net')).resolves.toBe(false)
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('the catalog needs both a 2xx answer and a list', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    // A list behind an error status is still an error.
+    fetchMock.mockResolvedValueOnce(jsonResponse([], 502))
+    await expect(fetchRelayVoices('https://spock.tail1234.ts.net')).rejects.toThrow(/502/)
+
+    // A 200 that is not a list is not a catalog.
+    fetchMock.mockResolvedValueOnce(jsonResponse({ voices: [] }))
+    await expect(fetchRelayVoices('https://spock.tail1234.ts.net')).rejects.toThrow(/list/)
+  })
+
+  it('joins endpoints onto a relay path prefix and keeps its query', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse([]))
+    vi.stubGlobal('fetch', fetchMock)
+    const voicesUrl = async (relayUrl: string) => {
+      fetchMock.mockClear()
+      await fetchRelayVoices(relayUrl)
+      return (fetchMock.mock.calls[0] as unknown[])[0]
+    }
+
+    expect(await voicesUrl('https://spock.tail1234.ts.net')).toBe('https://spock.tail1234.ts.net/voices')
+    expect(await voicesUrl('https://host.example/relay')).toBe('https://host.example/relay/voices')
+    expect(await voicesUrl('https://host.example/relay/')).toBe('https://host.example/relay/voices')
+    expect(await voicesUrl('https://host.example/relay//')).toBe('https://host.example/relay/voices')
+    expect(await voicesUrl('  https://host.example/relay  ')).toBe('https://host.example/relay/voices')
+    expect(await voicesUrl('https://host.example/relay?x=1')).toBe('https://host.example/relay/voices?x=1')
+
+    fetchMock.mockResolvedValueOnce(jsonResponse({ ok: true }))
+    await expect(probeRelay('https://host.example/relay?x=1')).resolves.toBe(true)
+    expect((fetchMock.mock.calls.at(-1) as unknown[])[0]).toBe('https://host.example/relay/health?x=1')
   })
 })
