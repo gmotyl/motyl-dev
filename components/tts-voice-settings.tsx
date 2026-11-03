@@ -5,6 +5,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 
 import { configureOmniVoice, resolveStoredVoice } from '@/lib/tts/client'
 import {
+  OMNIVOICE_PROBE_MS,
   fetchRelayVoices,
   isOmniVoiceConfigured,
   probeRelay,
@@ -207,22 +208,26 @@ function EngineSettings() {
   }, [])
 
   // Probe and load the catalog on mount and whenever the switch or committed URL
-  // changes. The cleanup drops answers for a URL that is no longer current.
+  // changes. /health and /voices run in parallel, and the catalog is aborted
+  // after OMNIVOICE_PROBE_MS, so a relay that hangs on /voices settles as
+  // unreachable. The cleanup aborts the catalog and drops answers for a URL
+  // that is no longer current.
   useEffect(() => {
     if (!loaded || !usableUrl) return
 
     let current = true
     const url = usableUrl
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), OMNIVOICE_PROBE_MS)
     const load = async (): Promise<VoiceInfo[] | null> => {
-      if (!(await probeRelay(url))) return null
-      try {
-        const voices = await fetchRelayVoices(url)
-        return voices.length > 0 ? voices : null
-      } catch {
-        return null
-      }
+      const [healthy, voices] = await Promise.all([
+        probeRelay(url),
+        fetchRelayVoices(url, controller.signal).catch(() => null),
+      ])
+      return healthy && voices && voices.length > 0 ? voices : null
     }
     void load().then((voices) => {
+      clearTimeout(timer)
       if (!current) return
       setRelayLoad({ url, voices })
       if (configureFor.current === url) {
@@ -233,6 +238,8 @@ function EngineSettings() {
     })
     return () => {
       current = false
+      clearTimeout(timer)
+      controller.abort()
     }
   }, [loaded, usableUrl])
 

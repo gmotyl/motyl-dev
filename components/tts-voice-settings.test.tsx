@@ -7,6 +7,7 @@ import TtsVoiceSettings from './tts-voice-settings'
 import { configureOmniVoice } from '@/lib/tts/client'
 import {
   OMNIVOICE_ENABLED_KEY,
+  OMNIVOICE_PROBE_MS,
   OMNIVOICE_RELAY_URL_KEY,
   OMNIVOICE_VOICE_KEY,
   fetchRelayVoices,
@@ -250,7 +251,7 @@ describe('TtsVoiceSettings', () => {
       const chip = await within(row).findByText('reachable')
       expect(chip.className).toMatch(/emerald/)
       expect(probeRelay).toHaveBeenCalledWith(RELAY_URL)
-      expect(fetchRelayVoices).toHaveBeenCalledWith(RELAY_URL)
+      expect(fetchRelayVoices).toHaveBeenCalledWith(RELAY_URL, expect.any(AbortSignal))
 
       const urlField = within(row).getByRole('textbox', { name: 'Relay URL' }) as HTMLInputElement
       expect(urlField.value).toBe(RELAY_URL)
@@ -306,7 +307,99 @@ describe('TtsVoiceSettings', () => {
       expect(within(engineRow('Edge')).getByText('in use')).toBeInTheDocument()
       // The saved voice is not rewritten while the catalog is unavailable.
       expect(localStorage.getItem(OMNIVOICE_VOICE_KEY)).toBe('krystyna1')
-      expect(fetchRelayVoices).not.toHaveBeenCalled()
+      // The catalog loads alongside /health, but a failed probe discards it.
+      expect(within(engineRow('OmniVoice')).queryByText('reachable')).not.toBeInTheDocument()
+    })
+
+    it('Edge is in use while the switch is off', async () => {
+      localStorage.setItem(OMNIVOICE_RELAY_URL_KEY, RELAY_URL)
+      render(<TtsVoiceSettings isSuperAdmin />)
+
+      expect(await within(engineRow('OmniVoice')).findByText('off')).toBeInTheDocument()
+      expect(within(engineRow('Edge')).getByText('in use')).toBeInTheDocument()
+      expect(probeRelay).not.toHaveBeenCalled()
+    })
+
+    it('Edge is in use while the relay URL is not configured', async () => {
+      localStorage.setItem(OMNIVOICE_ENABLED_KEY, '1')
+      render(<TtsVoiceSettings isSuperAdmin />)
+
+      expect(await within(engineRow('OmniVoice')).findByText('not configured')).toBeInTheDocument()
+      expect(within(engineRow('Edge')).getByText('in use')).toBeInTheDocument()
+      expect(probeRelay).not.toHaveBeenCalled()
+    })
+
+    it('mounting and toggling the switch never reconfigure the client', async () => {
+      enableOmniVoice('krystyna1')
+      const user = userEvent.setup()
+      render(<TtsVoiceSettings isSuperAdmin />)
+
+      const row = engineRow('OmniVoice')
+      await within(row).findByText('reachable')
+      const toggle = screen.getByRole('switch', { name: 'Use OmniVoice' })
+      await user.click(toggle)
+      await within(row).findByText('off')
+      await user.click(toggle)
+      await within(row).findByText('reachable')
+
+      // Only a Relay URL edit reconfigures (covered by the edit test).
+      expect(configureOmniVoice).not.toHaveBeenCalled()
+    })
+
+    describe('catalog timeout', () => {
+      afterEach(() => {
+        vi.useRealTimers()
+      })
+
+      it('loads /health and /voices in parallel and times a hung catalog out as unreachable', async () => {
+        vi.useFakeTimers()
+        const health = deferred<boolean>()
+        vi.mocked(probeRelay).mockReturnValue(health.promise)
+        let catalogSignal: AbortSignal | undefined
+        // A relay that answers /health but never answers /voices; only an abort ends it.
+        vi.mocked(fetchRelayVoices).mockImplementation(
+          (_url, signal) =>
+            new Promise<VoiceInfo[]>((_resolve, reject) => {
+              catalogSignal = signal
+              signal?.addEventListener('abort', () => reject(new Error('aborted')))
+            })
+        )
+        enableOmniVoice('krystyna1')
+        render(<TtsVoiceSettings isSuperAdmin />)
+        await act(async () => {})
+
+        // Both requests are in flight before /health answers.
+        expect(probeRelay).toHaveBeenCalledWith(RELAY_URL)
+        expect(fetchRelayVoices).toHaveBeenCalledWith(RELAY_URL, expect.any(AbortSignal))
+        await act(async () => {
+          health.resolve(true)
+          await health.promise
+        })
+        const row = engineRow('OmniVoice')
+        expect(within(row).getByText('checking…')).toBeInTheDocument()
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(OMNIVOICE_PROBE_MS)
+        })
+        expect(catalogSignal?.aborted).toBe(true)
+        expect(within(row).getByText('unreachable: Edge will read')).toBeInTheDocument()
+        expect(within(engineRow('Edge')).getByText('in use')).toBeInTheDocument()
+      })
+
+      it('aborts the in-flight catalog request on unmount', async () => {
+        let catalogSignal: AbortSignal | undefined
+        vi.mocked(fetchRelayVoices).mockImplementation((_url, signal) => {
+          catalogSignal = signal
+          return new Promise<VoiceInfo[]>(() => {})
+        })
+        enableOmniVoice('krystyna1')
+        const { unmount } = render(<TtsVoiceSettings isSuperAdmin />)
+        await waitFor(() => expect(catalogSignal).toBeDefined())
+
+        expect(catalogSignal?.aborted).toBe(false)
+        unmount()
+        expect(catalogSignal?.aborted).toBe(true)
+      })
     })
 
     it('the fallback hint is rendered under the rows', () => {
@@ -344,7 +437,9 @@ describe('TtsVoiceSettings', () => {
       await user.keyboard('{Enter}')
       expect(localStorage.getItem(OMNIVOICE_RELAY_URL_KEY)).toBe(OTHER_RELAY_URL)
       await waitFor(() => expect(probeRelay).toHaveBeenCalledWith(OTHER_RELAY_URL))
-      await waitFor(() => expect(fetchRelayVoices).toHaveBeenCalledWith(OTHER_RELAY_URL))
+      await waitFor(() =>
+        expect(fetchRelayVoices).toHaveBeenCalledWith(OTHER_RELAY_URL, expect.any(AbortSignal))
+      )
       await within(row).findByText('reachable')
       await waitFor(() =>
         expect(configureOmniVoice).toHaveBeenCalledWith({
