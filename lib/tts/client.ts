@@ -12,11 +12,16 @@
  * Known limit, unchanged: Microsoft refuses (403) any handshake whose
  * User-Agent is not Edge >= 137, and browsers do not let page code set it, so
  * only Edge browsers synthesize directly; elsewhere synthesis rejects with a
- * `TtsError` of kind `rejected`. A relay (anytts `relayUrl`) is the fix for
- * other browsers and is deliberately not configured yet.
+ * `TtsError` of kind `rejected`. Edge itself still runs direct.
+ *
+ * OmniVoice (`openai` in anytts) is the second engine on the same instance, as
+ * a relay client: `configureOmniVoice` adds it with the relay URL and the voice
+ * catalog the relay last served, and every call picks its engine (`engine`,
+ * default Edge). No call passes `lang`: `prepareSpeechText` already applied the
+ * pronunciation map, and a `lang` would make anytts respell the text again.
  */
 
-import { createTts, resolveVoice, type Tts } from 'anytts'
+import { createTts, resolveVoice, TtsError, type Tts, type VoiceInfo } from 'anytts'
 import { DEFAULT_TTS_VOICE } from './voices'
 
 /**
@@ -26,8 +31,13 @@ import { DEFAULT_TTS_VOICE } from './voices'
  */
 export type SynthesisPriority = 'play' | 'warm'
 
+/** The engines a reader session can speak with: Edge direct, OmniVoice through its relay. */
+export type ReaderEngine = 'edge' | 'openai'
+
 interface TTSOptions {
   voice?: string
+  /** Engine this call speaks with. Default `'edge'`. `'openai'` needs `configureOmniVoice` first. */
+  engine?: ReaderEngine
   /** Scheduler tier for a synthesis this call has to start. Default `'play'`. */
   priority?: SynthesisPriority
   /**
@@ -46,6 +56,15 @@ interface TTSOptions {
 }
 
 const ENGINE = 'edge'
+const OMNIVOICE_ENGINE = 'openai'
+
+export interface OmniVoiceConfig {
+  relayUrl: string
+  catalog: VoiceInfo[]
+}
+
+// The relay client the next instance is built with; null means Edge only.
+let omniVoice: OmniVoiceConfig | null = null
 
 // Created on first use, not at import: the module is imported by client
 // components only, but laziness keeps an SSR import free of side effects.
@@ -71,6 +90,11 @@ function tts(): Tts {
         retries: 1,
         // No relayUrl: direct mode.
       },
+      // anytts defaults for the relay client (20 s header wait, since the relay
+      // answers once the whole clip is ready; per-engine pronunciation off).
+      ...(omniVoice
+        ? { [OMNIVOICE_ENGINE]: { relayUrl: omniVoice.relayUrl, catalog: omniVoice.catalog } }
+        : {}),
     },
     defaultEngine: ENGINE,
     // One synthesis at a time: stalls cluster on bursts of 2-3 concurrent
@@ -84,13 +108,49 @@ function tts(): Tts {
   return instance
 }
 
+function sameCatalog(a: VoiceInfo[], b: VoiceInfo[]): boolean {
+  return JSON.stringify(a) === JSON.stringify(b)
+}
+
+/**
+ * (Re)builds the shared instance with `openai` as a relay client; null removes it.
+ * The same URL and an equal catalog keep the instance (and its cache); anything
+ * else drops it, and the next call creates a fresh one lazily.
+ *
+ * A rebuild does not cancel anything: requests already handed to the old
+ * instance keep running on it and settle normally for their callers, but its
+ * cache is gone for new calls, `restartStalledSynthesis` reaches only the new
+ * instance, and for a moment the old and new schedulers may each run one
+ * synthesis. Callers should reconfigure between reader sessions, not mid-read.
+ */
+export function configureOmniVoice(config: OmniVoiceConfig | null): void {
+  const unchanged =
+    config === null
+      ? omniVoice === null
+      : omniVoice !== null &&
+        omniVoice.relayUrl === config.relayUrl &&
+        sameCatalog(omniVoice.catalog, config.catalog)
+  if (unchanged) return
+  omniVoice = config && { relayUrl: config.relayUrl, catalog: [...config.catalog] }
+  instance = null
+}
+
+/** The anytts engine id for a call; OmniVoice without configuration never falls back to Edge. */
+function engineFor(engine: ReaderEngine | undefined): string {
+  if (engine !== OMNIVOICE_ENGINE) return ENGINE
+  if (!omniVoice) {
+    throw new TtsError('rejected', 'OmniVoice is not configured (call configureOmniVoice first)')
+  }
+  return OMNIVOICE_ENGINE
+}
+
 /**
  * Synthesize speech from text. Results are cached by engine + voice + text;
  * repeat and concurrent calls share one synthesis. A synthesis that is not
  * cached waits in the anytts scheduler (one at a time, `play` before `warm`).
  * Failures reject with the anytts `TtsError` as is, so callers can log its kind.
  * @param text - The text to synthesize
- * @param options - TTS options (voice, priority, onStart, onFirstByte)
+ * @param options - TTS options (voice, engine, priority, onStart, onFirstByte)
  * @returns ArrayBuffer containing the audio data (MP3 format)
  */
 export async function synthesizeSpeech(
@@ -106,7 +166,7 @@ export async function synthesizeSpeech(
   const { bytes } = await tts().synthesize({
     text,
     voice: options.voice,
-    engine: ENGINE,
+    engine: engineFor(options.engine),
     tier: options.priority ?? 'play',
     onStart: options.onStart,
     onFirstByte: options.onFirstByte,
@@ -119,12 +179,20 @@ export async function synthesizeSpeech(
 
 /**
  * Fire-and-forget warm of the synthesis cache on the `warm` tier, so it never
- * holds up a unit the reader needs now. No-op on empty/whitespace text;
- * anytts swallows failures (the eventual `synthesizeSpeech` call will retry).
+ * holds up a unit the reader needs now. No-op on empty/whitespace text, and for
+ * `engine: 'openai'` without configuration; anytts swallows failures (the
+ * eventual `synthesizeSpeech` call will retry). Pass the session's `engine` so
+ * the warmed entry is the one the reader will ask for.
  */
 export function prefetchSpeech(text: string, options: TTSOptions = {}): void {
   if (!text || !text.trim()) return
-  tts().prefetch({ text, voice: options.voice, engine: ENGINE, tier: 'warm' })
+  if (options.engine === OMNIVOICE_ENGINE && !omniVoice) return
+  tts().prefetch({
+    text,
+    voice: options.voice,
+    engine: engineFor(options.engine),
+    tier: 'warm',
+  })
 }
 
 /**
