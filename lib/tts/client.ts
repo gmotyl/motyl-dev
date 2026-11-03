@@ -90,10 +90,20 @@ function tts(): Tts {
         retries: 1,
         // No relayUrl: direct mode.
       },
-      // anytts defaults for the relay client (20 s header wait, since the relay
-      // answers once the whole clip is ready; per-engine pronunciation off).
+      // The relay answers once the whole clip is ready and itself waits up to
+      // 60 s on OmniVoice, so the header wait is 65 s: longer than the relay's,
+      // so its own error kind arrives instead of a client-side timeout. One try
+      // (retries 0): a retry would double the GPU work, and the reader falls
+      // back to Edge instead. Per-engine pronunciation stays off (anytts default).
       ...(omniVoice
-        ? { [OMNIVOICE_ENGINE]: { relayUrl: omniVoice.relayUrl, catalog: omniVoice.catalog } }
+        ? {
+            [OMNIVOICE_ENGINE]: {
+              relayUrl: omniVoice.relayUrl,
+              catalog: omniVoice.catalog,
+              firstByteMs: 65_000,
+              retries: 0,
+            },
+          }
         : {}),
     },
     defaultEngine: ENGINE,
@@ -114,8 +124,10 @@ function sameCatalog(a: VoiceInfo[], b: VoiceInfo[]): boolean {
 
 /**
  * (Re)builds the shared instance with `openai` as a relay client; null removes it.
- * The same URL and an equal catalog keep the instance (and its cache); anything
- * else drops it, and the next call creates a fresh one lazily.
+ * A blank relay URL or an empty catalog counts as null: anytts would throw
+ * building the engine, and that would take Edge down with it. The same URL and
+ * an equal catalog keep the instance (and its cache); anything else drops it,
+ * and the next call creates a fresh one lazily.
  *
  * A rebuild does not cancel anything: requests already handed to the old
  * instance keep running on it and settle normally for their callers, but its
@@ -123,7 +135,9 @@ function sameCatalog(a: VoiceInfo[], b: VoiceInfo[]): boolean {
  * instance, and for a moment the old and new schedulers may each run one
  * synthesis. Callers should reconfigure between reader sessions, not mid-read.
  */
-export function configureOmniVoice(config: OmniVoiceConfig | null): void {
+export function configureOmniVoice(input: OmniVoiceConfig | null): void {
+  const config =
+    input && input.relayUrl.trim() !== '' && input.catalog.length > 0 ? input : null
   const unchanged =
     config === null
       ? omniVoice === null
@@ -180,19 +194,25 @@ export async function synthesizeSpeech(
 /**
  * Fire-and-forget warm of the synthesis cache on the `warm` tier, so it never
  * holds up a unit the reader needs now. No-op on empty/whitespace text, and for
- * `engine: 'openai'` without configuration; anytts swallows failures (the
- * eventual `synthesizeSpeech` call will retry). Pass the session's `engine` so
+ * `engine: 'openai'` without configuration; never throws — anytts swallows
+ * failures and a synchronous one is dropped here (the eventual
+ * `synthesizeSpeech` call will retry). Pass the session's `engine` so
  * the warmed entry is the one the reader will ask for.
  */
 export function prefetchSpeech(text: string, options: TTSOptions = {}): void {
   if (!text || !text.trim()) return
   if (options.engine === OMNIVOICE_ENGINE && !omniVoice) return
-  tts().prefetch({
-    text,
-    voice: options.voice,
-    engine: engineFor(options.engine),
-    tier: 'warm',
-  })
+  try {
+    tts().prefetch({
+      text,
+      voice: options.voice,
+      engine: engineFor(options.engine),
+      tier: 'warm',
+    })
+  } catch {
+    // Fire-and-forget: a warm that cannot start (e.g. the instance failed to
+    // build) is skipped; the synthesizeSpeech call that needs it surfaces the error.
+  }
 }
 
 /**

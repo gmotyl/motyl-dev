@@ -125,6 +125,14 @@ describe('engine per call', () => {
     stallMs: 15000,
     retries: 1,
   }
+  // One long try: the relay waits 60 s on OmniVoice, so 65 s lets its own error
+  // kind arrive; no retry, since a retry would double the GPU work.
+  const openaiConfig = (relayUrl: string, voices: import('anytts').VoiceInfo[]) => ({
+    relayUrl,
+    catalog: voices,
+    firstByteMs: 65_000,
+    retries: 0,
+  })
 
   function lastConfig(): import('anytts').TtsConfig {
     const calls = anyttsMock.createTts.mock.calls as unknown as [import('anytts').TtsConfig][]
@@ -137,7 +145,7 @@ describe('engine per call', () => {
 
     expect(anyttsMock.createTts).toHaveBeenCalledTimes(1)
     const config = lastConfig()
-    expect(config.engines.openai).toEqual({ relayUrl: RELAY, catalog })
+    expect(config.engines.openai).toEqual(openaiConfig(RELAY, catalog))
     // Edge keeps its own options untouched next to the relay client.
     expect(config.engines.edge).toEqual(edgeConfig)
     expect(config.defaultEngine).toBe('edge')
@@ -195,7 +203,7 @@ describe('engine per call', () => {
     configureOmniVoice({ relayUrl: other, catalog })
     await synthesizeSpeech('Three', { engine: 'openai', voice: 'krystyna' })
     expect(anyttsMock.createTts).toHaveBeenCalledTimes(2)
-    expect(lastConfig().engines.openai).toEqual({ relayUrl: other, catalog })
+    expect(lastConfig().engines.openai).toEqual(openaiConfig(other, catalog))
 
     // A changed catalog rebuilds it too.
     configureOmniVoice({ relayUrl: other, catalog: catalog.slice(0, 1) })
@@ -209,10 +217,18 @@ describe('engine per call', () => {
     expect(lastConfig().engines).toEqual({ edge: edgeConfig })
   })
 
-  it('openai without configuration rejects', async () => {
-    await expect(synthesizeSpeech('Hello', { engine: 'openai', voice: 'krystyna' })).rejects.toThrow(
-      /OmniVoice is not configured/
+  async function expectOpenaiRejected(): Promise<void> {
+    const error = await synthesizeSpeech('Hello', { engine: 'openai', voice: 'krystyna' }).then(
+      () => null,
+      (e: unknown) => e
     )
+    expect(error).toBeInstanceOf(TtsError)
+    expect((error as TtsError).kind).toBe('rejected')
+    expect((error as TtsError).message).toMatch(/OmniVoice is not configured/)
+  }
+
+  it('openai without configuration rejects', async () => {
+    await expectOpenaiRejected()
     expect(anyttsMock.tts.synthesize).not.toHaveBeenCalled()
 
     // Removing the configuration brings the rejection back.
@@ -222,5 +238,47 @@ describe('engine per call', () => {
       /OmniVoice is not configured/
     )
     expect(anyttsMock.tts.synthesize).not.toHaveBeenCalled()
+  })
+
+  it('prefetch of openai without configuration neither throws nor calls anytts', () => {
+    expect(() => prefetchSpeech('Hello', { engine: 'openai', voice: 'krystyna' })).not.toThrow()
+    expect(anyttsMock.tts.prefetch).not.toHaveBeenCalled()
+    expect(anyttsMock.createTts).not.toHaveBeenCalled()
+  })
+
+  async function expectEdgeOnlyAfter(config: import('@/lib/tts/client').OmniVoiceConfig) {
+    // A valid relay first, so the bad one has to drop it, not just keep nothing.
+    configureOmniVoice({ relayUrl: RELAY, catalog })
+    await synthesizeSpeech('One', { engine: 'openai', voice: 'krystyna' })
+
+    configureOmniVoice(config)
+    await expect(synthesizeSpeech('Hello', { voice: 'pl-PL-MarekNeural' })).resolves.toBeInstanceOf(
+      ArrayBuffer
+    )
+    // anytts would throw RangeError building an openai engine from this config,
+    // so the instance must be Edge only.
+    expect(lastConfig().engines).toEqual({ edge: edgeConfig })
+    expect(() => prefetchSpeech('Next', { voice: 'pl-PL-MarekNeural' })).not.toThrow()
+    expect(anyttsMock.tts.prefetch).toHaveBeenLastCalledWith(
+      expect.objectContaining({ engine: 'edge' })
+    )
+    await expectOpenaiRejected()
+  }
+
+  it('an empty catalog leaves edge working', async () => {
+    await expectEdgeOnlyAfter({ relayUrl: RELAY, catalog: [] })
+  })
+
+  it('an empty relay url leaves edge working', async () => {
+    await expectEdgeOnlyAfter({ relayUrl: '', catalog })
+    configureOmniVoice({ relayUrl: RELAY, catalog })
+    await expectEdgeOnlyAfter({ relayUrl: '   ', catalog })
+  })
+
+  it('prefetchSpeech never throws synchronously', () => {
+    anyttsMock.createTts.mockImplementationOnce(() => {
+      throw new RangeError('openai: catalog must be non-empty')
+    })
+    expect(() => prefetchSpeech('Hello', { voice: 'pl-PL-MarekNeural' })).not.toThrow()
   })
 })
