@@ -1,12 +1,13 @@
 'use client'
 
-import { listEngines, listVoices, type VoiceInfo } from 'anytts'
+import { listVoices, type VoiceInfo } from 'anytts'
 import { useEffect, useMemo, useState } from 'react'
 
 import { resolveStoredVoice } from '@/lib/tts/client'
 import {
   DEFAULT_TTS_ENGINE,
   DEFAULT_TTS_VOICE,
+  MOTYL_ENGINES,
   getStoredTtsEngine,
   readStoredTtsVoice,
   setStoredTtsEngine,
@@ -45,7 +46,6 @@ function groupByLanguage(voices: VoiceInfo[]): VoiceGroup[] {
 }
 
 export function TtsVoiceSettings() {
-  const engines = useMemo(() => listEngines(), [])
   const [engine, setEngine] = useState(DEFAULT_TTS_ENGINE)
   const [voice, setVoice] = useState(DEFAULT_TTS_VOICE)
   const voiceGroups = useMemo(() => groupByLanguage(listVoices(engine)), [engine])
@@ -84,7 +84,7 @@ export function TtsVoiceSettings() {
         onChange={handleEngineChange}
         className={SELECT_CLASS_NAME}
       >
-        {engines.map((option) => (
+        {MOTYL_ENGINES.map((option) => (
           <option key={option.id} value={option.id}>
             {option.label}
           </option>

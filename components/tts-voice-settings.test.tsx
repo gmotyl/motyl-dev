@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { listEngines, listVoices } from 'anytts'
+import { listVoices } from 'anytts'
 import { vi } from 'vitest'
 
 import TtsVoiceSettings from './tts-voice-settings'
@@ -46,13 +46,20 @@ describe('TtsVoiceSettings', () => {
     vi.restoreAllMocks()
   })
 
+  it('the engine select offers edge only', () => {
+    localStorage.setItem(TTS_ENGINE_STORAGE_KEY, 'openai')
+    render(<TtsVoiceSettings />)
+
+    const engineOptions = within(engineSelect()).getAllByRole('option') as HTMLOptionElement[]
+    expect(engineOptions.map((option) => option.value)).toEqual(['edge'])
+    expect(engineSelect().value).toBe('edge')
+  })
+
   it('renders an engine select and voices grouped per language', () => {
     const { container } = render(<TtsVoiceSettings />)
 
     const engineOptions = within(engineSelect()).getAllByRole('option') as HTMLOptionElement[]
-    expect(engineOptions.map((option) => option.value)).toEqual(
-      listEngines().map((engine) => engine.id)
-    )
+    expect(engineOptions.map((option) => option.value)).toEqual(['edge'])
 
     // Label and description are unchanged.
     expect(

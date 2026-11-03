@@ -1,5 +1,6 @@
 import {
   DEFAULT_TTS_VOICE,
+  MOTYL_ENGINES,
   TTS_ENGINE_STORAGE_KEY,
   TTS_VOICE_STORAGE_KEY,
   getStoredTtsEngine,
@@ -50,6 +51,16 @@ describe('TTS engine preferences', () => {
   it('stores a known engine', () => {
     expect(setStoredTtsEngine('edge')).toBe('edge')
     expect(localStorage.getItem(TTS_ENGINE_STORAGE_KEY)).toBe('edge')
+  })
+
+  it('a stored non-edge engine reads back as edge', () => {
+    // `openai` is a real anytts engine, but motyl offers Edge only.
+    localStorage.setItem(TTS_ENGINE_STORAGE_KEY, 'openai')
+    expect(getStoredTtsEngine()).toBe('edge')
+
+    expect(setStoredTtsEngine('openai')).toBe('edge')
+    expect(localStorage.getItem(TTS_ENGINE_STORAGE_KEY)).toBe('openai')
+    expect(MOTYL_ENGINES.map((engine) => engine.id)).toEqual(['edge'])
   })
 
   it('ignores an unknown engine, stored or chosen', () => {
