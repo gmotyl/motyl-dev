@@ -5,7 +5,7 @@
 // every motyl-* cache from older versions, so stale HTML/assets cached by
 // a previous SW cannot outlive a deploy of this file.
 
-const CACHE_VERSION = 'motyl-v2.1.1';
+const CACHE_VERSION = 'motyl-v2.1.2';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const ARTICLE_CACHE = `${CACHE_VERSION}-articles`;
@@ -100,6 +100,18 @@ self.addEventListener('fetch', (event) => {
   // subdomains (e.g. api.localhost), the loopback/any-bind IPs, and private-LAN
   // addresses (so testing on a phone over the LAN also gets fresh JS).
   if (isDevHost(url.hostname)) {
+    return;
+  }
+
+  // Cross-origin requests: bypass the SW (except images, see below). A fetch()
+  // issued from inside a service worker is subject to Chromium's Local Network
+  // Access check with no way to show the permission prompt, so private-network
+  // targets such as the OmniVoice relay on the tailnet (100.x) fail with
+  // net::ERR_FAILED even though the page itself may reach them. Cross-origin
+  // API/relay calls must also never be proxied or cached by this SW. Images
+  // stay cache-first because article images are served cross-origin from
+  // Cloudflare R2 (see docs/adr/0006 and 0007).
+  if (url.origin !== self.location.origin && request.destination !== 'image') {
     return;
   }
 
