@@ -17,8 +17,10 @@
  * OmniVoice (`openai` in anytts) is the second engine on the same instance, as
  * a relay client: `configureOmniVoice` adds it with the relay URL and the voice
  * catalog the relay last served, and every call picks its engine (`engine`,
- * default Edge). No call passes `lang`: `prepareSpeechText` already applied the
- * pronunciation map, and a `lang` would make anytts respell the text again.
+ * default Edge). Only Edge calls omit `lang`: `prepareSpeechText` already
+ * applied the Pronunciation map, and a `lang` would make anytts respell the
+ * text a second time. OmniVoice calls send `lang: 'pl'`, so its voices read
+ * numbers in Polish instead of in their own language.
  */
 
 import { createTts, resolveVoice, TtsError, type Tts, type VoiceInfo } from 'anytts'
@@ -158,6 +160,19 @@ function engineFor(engine: ReaderEngine | undefined): string {
   return OMNIVOICE_ENGINE
 }
 
+// Every reader text is Polish; OmniVoice otherwise reads numbers in the voice's language.
+const OMNIVOICE_LANG = 'pl'
+
+/**
+ * The `lang` part of a request for the engine id `engineFor` resolved. Edge
+ * gets no key at all: its text is already respelled, and anytts would apply
+ * the Pronunciation map again for any `lang`. Spread into both synthesize and
+ * prefetch so warm and play requests share one cache key.
+ */
+function langFor(engineId: string): { lang?: string } {
+  return engineId === OMNIVOICE_ENGINE ? { lang: OMNIVOICE_LANG } : {}
+}
+
 /**
  * Synthesize speech from text. Results are cached by engine + voice + text;
  * repeat and concurrent calls share one synthesis. A synthesis that is not
@@ -177,10 +192,12 @@ export async function synthesizeSpeech(
     throw new Error('synthesizeSpeech: empty text')
   }
 
+  const engine = engineFor(options.engine)
   const { bytes } = await tts().synthesize({
     text,
     voice: options.voice,
-    engine: engineFor(options.engine),
+    engine,
+    ...langFor(engine),
     tier: options.priority ?? 'play',
     onStart: options.onStart,
     onFirstByte: options.onFirstByte,
@@ -203,10 +220,12 @@ export function prefetchSpeech(text: string, options: TTSOptions = {}): void {
   if (!text || !text.trim()) return
   if (options.engine === OMNIVOICE_ENGINE && !omniVoice) return
   try {
+    const engine = engineFor(options.engine)
     tts().prefetch({
       text,
       voice: options.voice,
-      engine: engineFor(options.engine),
+      engine,
+      ...langFor(engine),
       tier: 'warm',
     })
   } catch {
