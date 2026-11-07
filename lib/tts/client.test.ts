@@ -159,13 +159,52 @@ describe('engine per call', () => {
       import('anytts').SynthesisRequest,
     ]
     expect(request).toMatchObject({ text: 'Cześć', engine: 'openai', voice: 'krystyna' })
-    // motyl respells in prepareSpeechText: no `lang`, so anytts never respells again.
-    expect(request).not.toHaveProperty('lang')
 
     prefetchSpeech('Dalej', { engine: 'openai', voice: 'krystyna' })
     expect(anyttsMock.tts.prefetch).toHaveBeenCalledWith(
       expect.objectContaining({ engine: 'openai', voice: 'krystyna', tier: 'warm' })
     )
+  })
+
+  it('synthesizeSpeech sends lang pl to the OmniVoice engine', async () => {
+    configureOmniVoice({ relayUrl: RELAY, catalog })
+    await synthesizeSpeech('Mam 21 lat', { engine: 'openai', voice: 'krystyna' })
+
+    const [request] = anyttsMock.tts.synthesize.mock.calls[0] as unknown as [
+      import('anytts').SynthesisRequest,
+    ]
+    expect(request).toMatchObject({ engine: 'openai', lang: 'pl' })
+  })
+
+  it('prefetchSpeech sends lang pl to the OmniVoice engine', () => {
+    configureOmniVoice({ relayUrl: RELAY, catalog })
+    prefetchSpeech('Mam 21 lat', { engine: 'openai', voice: 'krystyna' })
+
+    const [request] = anyttsMock.tts.prefetch.mock.calls[0] as unknown as [
+      import('anytts').SynthesisRequest,
+    ]
+    expect(request).toMatchObject({ engine: 'openai', lang: 'pl', tier: 'warm' })
+  })
+
+  it('Edge synthesize and prefetch requests carry no lang', async () => {
+    // OmniVoice configured, so Edge is chosen per call, not by default only.
+    configureOmniVoice({ relayUrl: RELAY, catalog })
+    await synthesizeSpeech('Hello', { voice: 'pl-PL-MarekNeural' })
+    await synthesizeSpeech('Hello', { engine: 'edge', voice: 'pl-PL-MarekNeural' })
+    prefetchSpeech('Next', { voice: 'pl-PL-MarekNeural' })
+    prefetchSpeech('Next', { engine: 'edge', voice: 'pl-PL-MarekNeural' })
+
+    // Edge text is already respelled by prepareSpeechText; a `lang` key (even
+    // undefined) would make anytts apply the Pronunciation map a second time.
+    const requests = [
+      ...anyttsMock.tts.synthesize.mock.calls,
+      ...anyttsMock.tts.prefetch.mock.calls,
+    ].map(([req]) => req as Record<string, unknown>)
+    expect(requests).toHaveLength(4)
+    for (const req of requests) {
+      expect(req.engine).toBe('edge')
+      expect('lang' in req).toBe(false)
+    }
   })
 
   it('omitting engine keeps edge with its options', async () => {
