@@ -9,7 +9,7 @@ image: 'https://img.motyl.dev/blog/giving-my-ai-agents-a-voice-local-tts.webp'
 
 So much has happened lately. I've made so many changes to my blog that instead of trying to catch up, I'll simply start from the end. The latest thing I added, both to my blog and to [Pavilio](https://github.com/gmotyl/pavilio), my UI for AI agents, is TTS: text-to-speech.
 
-On the blog, TTS isn't available to everyone. It lives in an admin section where my agents leave summaries after researching the best articles of the week for me. The summaries let me skip reading everything that might not be interesting before I get to the actual articles. And I don't even have to read the summaries anymore, because I can just listen to the agent say them.
+On the blog, every reader gets a read-aloud button with Microsoft's Edge voices, though for now it only works in the Edge browser. The better, cloned voices I describe below are for admin only (that's me), since it's my own hardware that generates them. In the admin section I can also listen to the summaries my agents leave after researching the best articles of the week for me. The summaries let me skip everything that might not be interesting before I get to the actual articles, and I can go through them without even looking at the screen.
 
 In Pavilio, [Claude Code](https://www.anthropic.com/claude-code) or [Codex](https://github.com/openai/codex) talks to you all the time: an answer, a finished task, and so on. That's where I use TTS too, so the agent's reply is read out loud to me. It makes it easier to stay focused, and it puts less strain on my eyes, which, as we all know, need to be looked after.
 
