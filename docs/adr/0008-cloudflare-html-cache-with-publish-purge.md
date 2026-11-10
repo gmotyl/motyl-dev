@@ -26,3 +26,9 @@ Decision:
 - Requires `CLOUDFLARE_ZONE_ID` and a purge-scoped `CLOUDFLARE_API_TOKEN` as GitHub Actions secrets.
 
 Supersedes the Cloudflare layer and the implicit-invalidation claim of [ADR 0007](./0007-multi-layer-caching-strategy.md); its Vercel, browser and app-level layers stand unchanged.
+
+## Amendment (2026-11-10): purge after every production deploy
+
+Decision 3's "leave the cache warm on News and code-only deploys" broke client-side navigation. Cached HTML is bound to the build that rendered it: after a News push redeployed production, Cloudflare kept serving HTML from the old build while `?_rsc=` payloads came from the new one. Next.js detected the `buildId` mismatch, discarded the soft navigation and fell back to a full document reload, so clicking a Newsletter Issue on the homepage appeared to do nothing. `/news` was unaffected only because it is `no-store`.
+
+The purge now triggers on `deployment_status` (Vercel `Production`, state `success`) for every deployment, plus `workflow_dispatch` for a manual purge. The paths filter and the Deployments API polling are gone, since the event itself means "this deployment is live". Cost: one or two purges a day instead of one per publish; each refill is a few hundred requests, so the bot-traffic protection from decisions 1–2 stands. Current state: [docs/caching.md](../caching.md).
