@@ -59,10 +59,10 @@ Private, never cached (`Cache-Control: private, no-store` + `CDN-Cache-Control: 
 
 Cloudflare knows nothing about Vercel deploys, so invalidation is explicit: `.github/workflows/purge-cloudflare.yml`.
 
-- **Trigger:** push to `main` touching `articles/**` or `content/trends/**` — i.e. a new Blog Article or Newsletter Issue.
-- **Sequence:** poll the GitHub Deployments API until the Vercel *production* deployment for that SHA reports `success`, then `purge_everything` on the zone. A failed or timed-out deploy exits without purging, so the edge never refills from the old build.
-- **Not triggered by:** daily News pushes (News is private and uncached) and code-only deploys — those intentionally leave the cache warm.
-- Purge-everything over purge-by-URL: publishes are rare, a refill costs a few hundred requests, and a URL list rots silently.
+- **Trigger:** `deployment_status` — every Vercel deployment to the `Production` environment that reports `success`, whatever the push touched (Blog Article, Newsletter Issue, daily News, code). Plus `workflow_dispatch` for a manual purge (Actions → *Purge Cloudflare cache after production deploy* → Run workflow).
+- **Why every deploy:** cached HTML is bound to the build that rendered it. After any deploy, a client-side navigation from a stale page fetches RSC payloads from the new build; Next.js sees the `buildId` mismatch, discards the soft navigation and does a full document reload — clicking a link "does nothing" for a while. Daily News pushes redeploy production, so they invalidate the edge just like a publish does.
+- **Sequence:** the event fires only once the production deployment succeeded, so the edge never refills from the old build. A failed deploy emits no `success` and purges nothing.
+- Purge-everything over purge-by-URL: every page is build-bound, a refill costs a few hundred requests (one or two deploys a day), and a URL list rots silently.
 
 Secrets required: `CLOUDFLARE_ZONE_ID`, purge-scoped `CLOUDFLARE_API_TOKEN`.
 
@@ -71,7 +71,7 @@ Secrets required: `CLOUDFLARE_ZONE_ID`, purge-scoped `CLOUDFLARE_API_TOKEN`.
 **Public page:**
 1. Add a `vercel.json` entry: `Cache-Control: public, max-age=300…` (lists) or `1800` (detail), `CDN-Cache-Control: max-age=2592000, stale-while-revalidate=60`.
 2. Add the path to the `public-html-allowlist` Cache Rule in the Cloudflare dashboard — otherwise it is simply never cached.
-3. If publishing it should invalidate the site, make sure its content directory is in the workflow's `paths` filter.
+3. Nothing to do for invalidation — every production deploy purges the zone.
 
 **Private / auth-gated page:**
 1. `vercel.json` entry with `private, no-store` + `CDN-Cache-Control: no-store`.
