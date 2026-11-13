@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
-import { verifySubscribeToken } from '@/lib/newsletter/subscribe-token'
+import { SUBSCRIBE_TOKEN_TTL_MS, verifySubscribeToken } from '@/lib/newsletter/subscribe-token'
 import { sendAdminNotification, sendWelcomeEmail } from '@/lib/newsletter/signup-emails'
+import { safeHit } from '@/lib/rate-limit-safe'
 
 async function addContact(email: string): Promise<void> {
   const apiKey = process.env.RESEND_API_KEY
@@ -38,6 +39,13 @@ export async function POST(request: Request) {
   }
 
   const { email, articleSlug } = payload
+
+  // The token is stateless, so block replays: one confirmation per email per token lifetime.
+  const replay = await safeHit(`subscribe:confirm:${email}`, 1, SUBSCRIBE_TOKEN_TTL_MS)
+  if (!replay.allowed) {
+    return NextResponse.json({ success: true, alreadyConfirmed: true }, { status: 200 })
+  }
+
   await step('contact', () => addContact(email))
   await step('welcome', () => sendWelcomeEmail(email))
   await step('admin', () => sendAdminNotification(email, articleSlug))

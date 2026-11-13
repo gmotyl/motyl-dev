@@ -43,6 +43,20 @@ export async function hit(
   return { allowed: false, retryAfterSec }
 }
 
+// Gives back one hit in the current window, e.g. when the action it guarded failed.
+// Best effort: errors are logged and swallowed.
+export async function release(key: string, windowMs: number, now: number = Date.now()): Promise<void> {
+  const windowStart = new Date(Math.floor(now / windowMs) * windowMs)
+  try {
+    await prisma.rateLimit.updateMany({
+      where: { key, windowStart, count: { gt: 0 } },
+      data: { count: { decrement: 1 } },
+    })
+  } catch (error) {
+    console.error(`Rate limit release failed for ${key}:`, error)
+  }
+}
+
 // First hop of x-forwarded-for (the original client as seen by the edge), else "unknown".
 export function clientIp(request: Request): string {
   const first = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()

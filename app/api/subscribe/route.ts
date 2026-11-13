@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { hit, clientIp, type RateLimitResult } from '@/lib/rate-limit'
+import { clientIp, release } from '@/lib/rate-limit'
+import { safeHit } from '@/lib/rate-limit-safe'
 import { createSubscribeToken } from '@/lib/newsletter/subscribe-token'
 import { sendConfirmationEmail } from '@/lib/newsletter/signup-emails'
 
@@ -14,16 +15,6 @@ const bodySchema = z.object({
     .regex(/^[a-z0-9-]{1,120}$/)
     .optional(),
 })
-
-// Fail open: a broken rate-limit store must not take signups down with it.
-async function safeHit(key: string, limit: number, windowMs: number): Promise<RateLimitResult> {
-  try {
-    return await hit(key, limit, windowMs)
-  } catch (error) {
-    console.error(`Rate limiter failed for ${key}, allowing request:`, error)
-    return { allowed: true, retryAfterSec: 0 }
-  }
-}
 
 function tooManyRequests(retryAfterSec: number) {
   return NextResponse.json(
@@ -55,7 +46,9 @@ export async function POST(request: Request) {
   const ipLimit = await safeHit(`subscribe:ip:${clientIp(request)}`, 5, HOUR_MS)
   if (!ipLimit.allowed) return tooManyRequests(ipLimit.retryAfterSec)
 
-  const emailLimit = await safeHit(`subscribe:email:${email}`, 1, TEN_MIN_MS)
+  // Counted before the send so concurrent requests cannot both send; released if the send fails.
+  const emailKey = `subscribe:email:${email}`
+  const emailLimit = await safeHit(emailKey, 1, TEN_MIN_MS)
   if (!emailLimit.allowed) return tooManyRequests(emailLimit.retryAfterSec)
 
   try {
@@ -63,6 +56,8 @@ export async function POST(request: Request) {
     await sendConfirmationEmail(email, token)
   } catch (error) {
     console.error('Failed to send confirmation email:', error)
+    // A failed send must not lock the address out for the rest of the window.
+    await release(emailKey, TEN_MIN_MS)
     return NextResponse.json({ error: 'Could not send the confirmation email' }, { status: 502 })
   }
 

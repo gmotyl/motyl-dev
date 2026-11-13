@@ -6,15 +6,17 @@ vi.mock('@/lib/db/prisma', () => ({
     rateLimit: {
       upsert: vi.fn(),
       deleteMany: vi.fn(),
+      updateMany: vi.fn(),
     },
   },
 }))
 
 import { prisma } from '@/lib/db/prisma'
-import { hit, clientIp, rateLimitDeps } from './rate-limit'
+import { hit, release, clientIp, rateLimitDeps } from './rate-limit'
 
 const upsert = vi.mocked(prisma.rateLimit.upsert)
 const deleteMany = vi.mocked(prisma.rateLimit.deleteMany)
+const updateMany = vi.mocked(prisma.rateLimit.updateMany)
 
 const HOUR = 60 * 60 * 1000
 // 2026-11-13T10:00:00.000Z plus 15 minutes and 30 seconds into the window.
@@ -91,6 +93,33 @@ describe('hit', () => {
     expect(deleteMany).toHaveBeenCalledWith({
       where: { windowStart: { lt: new Date(NOW - 24 * HOUR) } },
     })
+    consoleError.mockRestore()
+  })
+})
+
+describe('release', () => {
+  beforeEach(() => {
+    updateMany.mockReset()
+  })
+
+  it('a failed confirmation send releases the email limit', async () => {
+    updateMany.mockResolvedValueOnce({ count: 1 })
+    await release('subscribe:email:a@b.c', HOUR, NOW)
+    expect(updateMany).toHaveBeenCalledWith({
+      where: {
+        key: 'subscribe:email:a@b.c',
+        windowStart: new Date(WINDOW_START),
+        count: { gt: 0 },
+      },
+      data: { count: { decrement: 1 } },
+    })
+  })
+
+  it('swallows and logs store errors', async () => {
+    updateMany.mockRejectedValueOnce(new Error('db down'))
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    await expect(release('subscribe:email:a@b.c', HOUR, NOW)).resolves.toBeUndefined()
+    expect(consoleError).toHaveBeenCalled()
     consoleError.mockRestore()
   })
 })

@@ -1,10 +1,11 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-const { send, create, hit } = vi.hoisted(() => ({
+const { send, create, hit, release } = vi.hoisted(() => ({
   send: vi.fn(),
   create: vi.fn(),
   hit: vi.fn(),
+  release: vi.fn(),
 }))
 
 vi.mock('resend', () => ({
@@ -16,7 +17,7 @@ vi.mock('resend', () => ({
 
 vi.mock('@/lib/rate-limit', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/rate-limit')>()
-  return { ...actual, hit }
+  return { ...actual, hit, release }
 })
 
 import { POST } from './route'
@@ -35,6 +36,7 @@ describe('POST /api/subscribe', () => {
     send.mockReset().mockResolvedValue({ data: { id: 'x' }, error: null })
     create.mockReset()
     hit.mockReset().mockResolvedValue({ allowed: true, retryAfterSec: 0 })
+    release.mockReset().mockResolvedValue(undefined)
     vi.stubEnv('RESEND_API_KEY', 're_test')
     vi.stubEnv('NEWSLETTER_TOKEN_SECRET', 'test-secret')
     vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -69,6 +71,8 @@ describe('POST /api/subscribe', () => {
     expect(res.status).toBe(429)
     expect(res.headers.get('Retry-After')).toBe('120')
     expect(hit).toHaveBeenCalledWith('subscribe:ip:1.2.3.4', 5, 60 * 60 * 1000)
+    expect(hit).not.toHaveBeenCalledWith(expect.stringMatching(/^subscribe:email:/), expect.anything(), expect.anything())
+    expect(hit).toHaveBeenCalledTimes(1)
     expect(send).not.toHaveBeenCalled()
   })
 
@@ -122,6 +126,20 @@ describe('POST /api/subscribe', () => {
     send.mockResolvedValueOnce({ data: null, error: { message: 'boom' } })
     const res = await POST(post({ email: 'a@b.com' }))
     expect(res.status).toBe(502)
+  })
+
+  it('a failed confirmation send releases the email limit', async () => {
+    send.mockResolvedValueOnce({ data: null, error: { message: 'boom' } })
+    const res = await POST(post({ email: 'A@b.com' }))
+    expect(res.status).toBe(502)
+    expect(release).toHaveBeenCalledTimes(1)
+    expect(release).toHaveBeenCalledWith('subscribe:email:a@b.com', 10 * 60 * 1000)
+  })
+
+  it('does not release the email limit after a successful send', async () => {
+    const res = await POST(post({ email: 'a@b.com' }))
+    expect(res.status).toBe(200)
+    expect(release).not.toHaveBeenCalled()
   })
 
   it('allows the request when the rate limiter errors', async () => {
