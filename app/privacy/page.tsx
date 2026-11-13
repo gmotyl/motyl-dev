@@ -29,8 +29,8 @@ export default function PrivacyPage() {
           <p>
             When you subscribe to the newsletter, we collect your <strong>email address</strong>.
             This is stored in Resend (our email service provider) and used solely to send you
-            the weekly motyl.dev newsletter. You can unsubscribe at any time via the link in
-            every email or by visiting <a href="/unsubscribe">/unsubscribe</a>.
+            the weekly motyl.dev newsletter. You can unsubscribe at any time via the Unsubscribe link
+            at the bottom of every issue.
           </p>
 
           <h3>Authentication</h3>
