@@ -43,13 +43,24 @@ export default function NewsletterForm({ articleSlug }: NewsletterFormProps = {}
         body: JSON.stringify({ email, articleSlug }),
       })
 
+      // The server answered, so this is never an offline case: handle 429
+      // before the catch block can route it to the offline queue.
+      if (response.status === 429) {
+        toast({
+          title: "Too many attempts — try again later",
+          description: "Please wait a while before subscribing again.",
+          variant: "destructive",
+        })
+        return
+      }
+
       const data = await response.json()
 
       if (response.ok) {
         setIsSubscribed(true)
         toast({
-          title: "Welcome aboard! 🎉",
-          description: "You've been subscribed to Grzegorz Motyl's newsletter. Check your email for confirmation!",
+          title: "Check your inbox",
+          description: "We've sent you an email — click the confirmation link in it to complete your subscription.",
         })
         setEmail("")
 
@@ -84,7 +95,7 @@ export default function NewsletterForm({ articleSlug }: NewsletterFormProps = {}
     return (
       <div className="flex w-full max-w-sm items-center justify-center space-x-2 p-4 rounded-lg border border-primary/30 bg-gradient-purple-soft">
         <CheckCircle className="h-5 w-5 text-primary" />
-        <span className="text-sm font-medium text-primary">Successfully subscribed!</span>
+        <span className="text-sm font-medium text-primary">Check your inbox to confirm!</span>
       </div>
     )
   }
