@@ -154,6 +154,8 @@ describe('POST /api/subscribe', () => {
   })
 
   it('does not release the email limit after a successful send', async () => {
+    // Return a real window so a release behind the `windowStart` guard would be caught.
+    hit.mockResolvedValue({ allowed: true, retryAfterSec: 0, windowStart: new Date(Date.UTC(2026, 10, 14, 12, 10)) })
     const res = await POST(post({ email: 'a@b.com' }))
     expect(res.status).toBe(200)
     expect(release).not.toHaveBeenCalled()
