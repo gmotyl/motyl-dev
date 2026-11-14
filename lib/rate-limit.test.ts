@@ -46,6 +46,7 @@ describe('hit', () => {
     await expect(hit('subscribe:ip:1.2.3.4', 5, HOUR, NOW)).resolves.toEqual({
       allowed: true,
       retryAfterSec: 0,
+      windowStart: new Date(WINDOW_START),
     })
     countIs(5)
     await expect(hit('subscribe:ip:1.2.3.4', 5, HOUR, NOW)).resolves.toMatchObject({
@@ -65,7 +66,7 @@ describe('hit', () => {
     // Never below one second, even at the very end of a window.
     countIs(2)
     const edge = await hit('subscribe:email:a@b.c', 1, HOUR, WINDOW_START + HOUR - 1)
-    expect(edge).toEqual({ allowed: false, retryAfterSec: 1 })
+    expect(edge).toMatchObject({ allowed: false, retryAfterSec: 1 })
   })
 
   it('uses the floored window start as the key', async () => {
@@ -79,6 +80,20 @@ describe('hit', () => {
       create: { key: 'subscribe:ip:1.2.3.4', windowStart: new Date(WINDOW_START), count: 1 },
       update: { count: { increment: 1 } },
     })
+  })
+
+  it('hit returns the window start it counted against', async () => {
+    countIs(1)
+    const result = await hit('subscribe:ip:1.2.3.4', 5, HOUR, NOW)
+    expect(result.allowed).toBe(true)
+    expect(result.windowStart).toEqual(new Date(Math.floor(NOW / HOUR) * HOUR))
+  })
+
+  it('a blocked hit still returns its window start', async () => {
+    countIs(6)
+    const result = await hit('subscribe:ip:1.2.3.4', 5, HOUR, NOW)
+    expect(result.allowed).toBe(false)
+    expect(result.windowStart).toEqual(new Date(WINDOW_START))
   })
 
   it('runs cleanup without failing the hit', async () => {
@@ -102,9 +117,10 @@ describe('release', () => {
     updateMany.mockReset()
   })
 
-  it('a failed confirmation send releases the email limit', async () => {
+  it('release decrements exactly the given window', async () => {
     updateMany.mockResolvedValueOnce({ count: 1 })
-    await release('subscribe:email:a@b.c', HOUR, NOW)
+    await release('subscribe:email:a@b.c', new Date(WINDOW_START))
+    expect(updateMany).toHaveBeenCalledTimes(1)
     expect(updateMany).toHaveBeenCalledWith({
       where: {
         key: 'subscribe:email:a@b.c',
@@ -115,10 +131,38 @@ describe('release', () => {
     })
   })
 
+  it('a release after the boundary still targets the hit\'s window', async () => {
+    const TEN_MIN = 10 * 60 * 1000
+    const boundary = Date.UTC(2026, 10, 13, 12, 10, 0)
+    upsert.mockReset()
+    upsert.mockResolvedValueOnce({ key: 'k', windowStart: new Date(boundary - TEN_MIN), count: 1 } as never)
+    updateMany.mockResolvedValueOnce({ count: 1 })
+    const originalRandom = rateLimitDeps.random
+    rateLimitDeps.random = () => 0.5
+
+    // Counted at 12:09:59.900, released at 12:10:00.100 (after the boundary).
+    const counted = await hit('subscribe:email:a@b.c', 1, TEN_MIN, boundary - 100)
+    rateLimitDeps.random = originalRandom
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(boundary + 100)
+    await release('subscribe:email:a@b.c', counted.windowStart!)
+    vi.useRealTimers()
+
+    expect(counted.windowStart).toEqual(new Date(boundary - TEN_MIN))
+    expect(updateMany).toHaveBeenCalledWith({
+      where: {
+        key: 'subscribe:email:a@b.c',
+        windowStart: new Date(boundary - TEN_MIN),
+        count: { gt: 0 },
+      },
+      data: { count: { decrement: 1 } },
+    })
+  })
+
   it('swallows and logs store errors', async () => {
     updateMany.mockRejectedValueOnce(new Error('db down'))
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
-    await expect(release('subscribe:email:a@b.c', HOUR, NOW)).resolves.toBeUndefined()
+    await expect(release('subscribe:email:a@b.c', new Date(WINDOW_START))).resolves.toBeUndefined()
     expect(consoleError).toHaveBeenCalled()
     consoleError.mockRestore()
   })

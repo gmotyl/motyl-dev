@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db/prisma'
 
-export type RateLimitResult = { allowed: boolean; retryAfterSec: number }
+// windowStart is the window the hit was counted in; pass it to release() to undo that hit.
+export type RateLimitResult = { allowed: boolean; retryAfterSec: number; windowStart?: Date }
 
 const CLEANUP_PROBABILITY = 0.01
 const CLEANUP_MAX_AGE_MS = 24 * 60 * 60 * 1000
@@ -37,16 +38,17 @@ export async function hit(
     }
   }
 
-  if (row.count <= limit) return { allowed: true, retryAfterSec: 0 }
+  if (row.count <= limit) return { allowed: true, retryAfterSec: 0, windowStart }
 
   const retryAfterSec = Math.max(1, Math.ceil((windowStartMs + windowMs - now) / 1000))
-  return { allowed: false, retryAfterSec }
+  return { allowed: false, retryAfterSec, windowStart }
 }
 
-// Gives back one hit in the current window, e.g. when the action it guarded failed.
+// Gives back one hit in the window hit() counted it in, e.g. when the action it guarded failed.
+// The window is passed in rather than recomputed, so a release after a window boundary
+// never decrements a window the hit was not counted in.
 // Best effort: errors are logged and swallowed.
-export async function release(key: string, windowMs: number, now: number = Date.now()): Promise<void> {
-  const windowStart = new Date(Math.floor(now / windowMs) * windowMs)
+export async function release(key: string, windowStart: Date): Promise<void> {
   try {
     await prisma.rateLimit.updateMany({
       where: { key, windowStart, count: { gt: 0 } },
