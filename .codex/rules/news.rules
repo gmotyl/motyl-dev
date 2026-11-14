@@ -1,0 +1,27 @@
+# Generated-news publishing: stage, commit and push run outside the sandbox
+# (.git is read-only in workspace-write) without approval review.
+prefix_rule(
+    pattern = ["git", "add", ["news/", "news"]],
+    decision = "allow",
+    justification = "Stage generated news articles",
+    match = ["git add news/", "git add news"],
+    not_match = ["git add .", "git add AGENTS.md"],
+)
+prefix_rule(
+    pattern = ["git", "commit", "-m"],
+    decision = "allow",
+    justification = "Commit generated news articles",
+    match = ["git commit -m 'content: generate news articles'"],
+)
+prefix_rule(
+    pattern = ["git", "push"],
+    decision = "allow",
+    justification = "Publish generated news to origin",
+    match = ["git push", "git push origin main"],
+)
+prefix_rule(
+    pattern = ["git", "push", ["--force", "-f", "--force-with-lease"]],
+    decision = "forbidden",
+    justification = "Never force-push from the news flow",
+    match = ["git push --force", "git push -f"],
+)

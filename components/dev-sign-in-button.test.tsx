@@ -26,7 +26,7 @@ describe('DevSignInButton', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('renders nothing outside development even when the bypass flag is set', () => {
+  it('renders nothing outside development even when the bypass is enabled', () => {
     vi.stubEnv('NODE_ENV', 'production')
     vi.stubEnv('NEXT_PUBLIC_DEV_AUTH_BYPASS', 'true')
     const { container } = render(<DevSignInButton />)
