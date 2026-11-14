@@ -143,3 +143,12 @@ model PatternStats {
   @@index([date])
   @@map("pattern_stats")
 }
+
+// Fixed-window rate limit counters (one row per key per window)
+model RateLimit {
+  key         String
+  windowStart DateTime
+  count       Int      @default(0)
+
+  @@id([key, windowStart])
+}
