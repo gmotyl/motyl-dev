@@ -10,3 +10,9 @@
 
 - Unsubscribes are Resend's responsibility; `app/unsubscribe/` only forwards to it.
 - There is no foreign-key link between **Subscriber** and **User**; the same person opening the site authenticated and receiving a Newsletter Issue is two disjoint records.
+
+## Amendment 2026-11-13
+
+- Signup is double opt-in via a stateless HMAC token (`NEWSLETTER_TOKEN_SECRET`, valid 48 h): `/api/subscribe` only emails a confirmation link, and the Resend contact is created only when `/api/subscribe/confirm` verifies the token.
+- `/api/unsubscribe` was removed and `/unsubscribe` is an explainer page: unsubscribing happens only through Resend's per-recipient `{{{RESEND_UNSUBSCRIBE_URL}}}` link in issues.
+- Signup is rate-limited via the `RateLimit` Postgres table (fixed-window counters).

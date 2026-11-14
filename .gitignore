@@ -34,6 +34,8 @@ next-env.d.ts
 # MCP ouput
 /processed-uids.json
 .env*
+# The example env file is documentation and is tracked.
+!.env.example
 
 # Generated content cache (built at build time)
 /data/content-cache.json
