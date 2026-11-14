@@ -113,18 +113,28 @@ describe('hit', () => {
 })
 
 describe('release', () => {
+  const originalRandom = rateLimitDeps.random
+
   beforeEach(() => {
     updateMany.mockReset()
   })
 
+  afterEach(() => {
+    vi.useRealTimers()
+    rateLimitDeps.random = originalRandom
+  })
+
   it('release decrements exactly the given window', async () => {
+    // Decades old, so recomputing a window from Date.now() (e.g. treating the Date as a
+    // window length) can never land on it by coincidence.
+    const windowStart = new Date(Date.UTC(1990, 0, 1))
     updateMany.mockResolvedValueOnce({ count: 1 })
-    await release('subscribe:email:a@b.c', new Date(WINDOW_START))
+    await release('subscribe:email:a@b.c', windowStart)
     expect(updateMany).toHaveBeenCalledTimes(1)
     expect(updateMany).toHaveBeenCalledWith({
       where: {
         key: 'subscribe:email:a@b.c',
-        windowStart: new Date(WINDOW_START),
+        windowStart,
         count: { gt: 0 },
       },
       data: { count: { decrement: 1 } },
@@ -133,20 +143,19 @@ describe('release', () => {
 
   it('a release after the boundary still targets the hit\'s window', async () => {
     const TEN_MIN = 10 * 60 * 1000
-    const boundary = Date.UTC(2026, 10, 13, 12, 10, 0)
+    // Not hour-aligned: a release that recomputed with a 1-hour window would hit 12:00,
+    // and one that recomputed with the 10-minute window at release time would hit 12:20.
+    const boundary = Date.UTC(2026, 10, 13, 12, 20, 0)
     upsert.mockReset()
     upsert.mockResolvedValueOnce({ key: 'k', windowStart: new Date(boundary - TEN_MIN), count: 1 } as never)
     updateMany.mockResolvedValueOnce({ count: 1 })
-    const originalRandom = rateLimitDeps.random
     rateLimitDeps.random = () => 0.5
 
-    // Counted at 12:09:59.900, released at 12:10:00.100 (after the boundary).
+    // Counted at 12:19:59.900, released at 12:20:00.100 (after the boundary).
     const counted = await hit('subscribe:email:a@b.c', 1, TEN_MIN, boundary - 100)
-    rateLimitDeps.random = originalRandom
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(boundary + 100)
     await release('subscribe:email:a@b.c', counted.windowStart!)
-    vi.useRealTimers()
 
     expect(counted.windowStart).toEqual(new Date(boundary - TEN_MIN))
     expect(updateMany).toHaveBeenCalledWith({
