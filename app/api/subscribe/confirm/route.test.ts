@@ -1,19 +1,14 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-const { send, create, hit } = vi.hoisted(() => ({ send: vi.fn(), create: vi.fn(), hit: vi.fn() }))
+const { send, create, get } = vi.hoisted(() => ({ send: vi.fn(), create: vi.fn(), get: vi.fn() }))
 
 vi.mock('resend', () => ({
   Resend: class {
     emails = { send }
-    contacts = { create }
+    contacts = { create, get }
   },
 }))
-
-vi.mock('@/lib/rate-limit', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/rate-limit')>()
-  return { ...actual, hit }
-})
 
 import { POST } from './route'
 import { createSubscribeToken, SUBSCRIBE_TOKEN_TTL_MS } from '@/lib/newsletter/subscribe-token'
@@ -30,7 +25,7 @@ describe('POST /api/subscribe/confirm', () => {
   beforeEach(() => {
     send.mockReset().mockResolvedValue({ data: { id: 'x' }, error: null })
     create.mockReset().mockResolvedValue({ data: { id: 'c' }, error: null })
-    hit.mockReset().mockResolvedValue({ allowed: true, retryAfterSec: 0 })
+    get.mockReset().mockResolvedValue({ data: null, error: { name: 'not_found', statusCode: 404, message: 'nf' } })
     vi.stubEnv('RESEND_API_KEY', 're_test')
     vi.stubEnv('RESEND_AUDIENCE_ID', 'aud_1')
     vi.stubEnv('NEWSLETTER_TOKEN_SECRET', 'test-secret')
@@ -56,12 +51,40 @@ describe('POST /api/subscribe/confirm', () => {
     expect(send).toHaveBeenCalledTimes(2)
   })
 
-  it('confirm still returns 200 when one step fails', async () => {
-    create.mockRejectedValueOnce(new Error('contacts down'))
+  it('confirm returns 502 and sends nothing when the contact cannot be created', async () => {
+    create.mockResolvedValueOnce({ data: null, error: { name: 'x', statusCode: 500, message: 'down' } })
     const token = createSubscribeToken('a@b.com', undefined)
     const res = await POST(post({ token }))
 
-    expect(res.status).toBe(200)
+    expect(res.status).toBe(502)
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('confirm returns 502 when RESEND_AUDIENCE_ID is missing', async () => {
+    vi.stubEnv('RESEND_AUDIENCE_ID', '')
+    const token = createSubscribeToken('a@b.com', undefined)
+    const res = await POST(post({ token }))
+
+    expect(res.status).toBe(502)
+    expect(create).not.toHaveBeenCalled()
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('confirm returns 502 on a lookup error other than not found', async () => {
+    get.mockResolvedValueOnce({ data: null, error: { name: 'x', statusCode: 500, message: 'down' } })
+    const token = createSubscribeToken('a@b.com', undefined)
+    const res = await POST(post({ token }))
+
+    expect(res.status).toBe(502)
+    expect(create).not.toHaveBeenCalled()
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('confirm is retryable after a failed contact step', async () => {
+    create.mockResolvedValueOnce({ data: null, error: { name: 'x', statusCode: 500, message: 'down' } })
+    const token = createSubscribeToken('a@b.com', undefined)
+    expect((await POST(post({ token }))).status).toBe(502)
+    expect((await POST(post({ token }))).status).toBe(200)
     expect(send).toHaveBeenCalledTimes(2)
   })
 
@@ -78,27 +101,16 @@ describe('POST /api/subscribe/confirm', () => {
     expect(send.mock.calls.some((c) => c[0].to === 'admin@example.com')).toBe(true)
   })
 
-  it('confirm replay within 48h sends nothing and returns 200', async () => {
-    hit.mockResolvedValueOnce({ allowed: false, retryAfterSec: 3600 })
+  it('confirm of an existing contact sends nothing and returns 200', async () => {
+    get.mockResolvedValueOnce({ data: { id: 'c' }, error: null })
     const token = createSubscribeToken('a@b.com', undefined)
     const res = await POST(post({ token }))
 
     expect(res.status).toBe(200)
     await expect(res.json()).resolves.toEqual({ success: true, alreadyConfirmed: true })
-    expect(hit).toHaveBeenCalledWith('subscribe:confirm:a@b.com', 1, 48 * 60 * 60 * 1000)
+    expect(get).toHaveBeenCalledWith({ audienceId: 'aud_1', email: 'a@b.com' })
     expect(create).not.toHaveBeenCalled()
     expect(send).not.toHaveBeenCalled()
-  })
-
-  it('confirm proceeds when the limiter errors', async () => {
-    hit.mockRejectedValueOnce(new Error('db down'))
-    const token = createSubscribeToken('a@b.com', undefined)
-    const res = await POST(post({ token }))
-
-    expect(res.status).toBe(200)
-    await expect(res.json()).resolves.toEqual({ success: true })
-    expect(create).toHaveBeenCalledTimes(1)
-    expect(send).toHaveBeenCalledTimes(2)
   })
 
   it('confirm returns 400 for an expired token', async () => {
@@ -108,7 +120,6 @@ describe('POST /api/subscribe/confirm', () => {
     expect(res.status).toBe(400)
     expect(create).not.toHaveBeenCalled()
     expect(send).not.toHaveBeenCalled()
-    expect(hit).not.toHaveBeenCalled()
   })
 
   it('confirm returns 400 for a tampered token', async () => {

@@ -1,18 +1,28 @@
 import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
-import { SUBSCRIBE_TOKEN_TTL_MS, verifySubscribeToken } from '@/lib/newsletter/subscribe-token'
+import { verifySubscribeToken } from '@/lib/newsletter/subscribe-token'
 import { sendAdminNotification, sendWelcomeEmail } from '@/lib/newsletter/signup-emails'
-import { safeHit } from '@/lib/rate-limit-safe'
 
-async function addContact(email: string): Promise<void> {
+type ContactOutcome = 'created' | 'exists'
+
+// The Resend audience is the replay marker: a token whose contact already exists was confirmed
+// before, so nothing is created or mailed again. Failures throw so the caller can answer 502 and
+// the user can retry; nothing is consumed before the contact exists.
+async function addContact(email: string): Promise<ContactOutcome> {
   const apiKey = process.env.RESEND_API_KEY
   const audienceId = process.env.RESEND_AUDIENCE_ID
-  if (!apiKey || !audienceId) {
-    console.error('RESEND_API_KEY or RESEND_AUDIENCE_ID missing, contact not created')
-    return
+  if (!apiKey || !audienceId) throw new Error('RESEND_API_KEY or RESEND_AUDIENCE_ID missing')
+
+  const resend = new Resend(apiKey)
+  const existing = await resend.contacts.get({ audienceId, email })
+  if (!existing.error) return 'exists'
+  if (existing.error.statusCode !== 404 && existing.error.name !== 'not_found') {
+    throw new Error(`Contact lookup error: ${existing.error.message}`)
   }
-  const { error } = await new Resend(apiKey).contacts.create({ audienceId, email })
+
+  const { error } = await resend.contacts.create({ audienceId, email })
   if (error) throw new Error(`Contact create error: ${error.message}`)
+  return 'created'
 }
 
 // Runs one best-effort step; a failure is logged and never stops the others.
@@ -40,13 +50,17 @@ export async function POST(request: Request) {
 
   const { email, articleSlug } = payload
 
-  // The token is stateless, so block replays: one confirmation per email per token lifetime.
-  const replay = await safeHit(`subscribe:confirm:${email}`, 1, SUBSCRIBE_TOKEN_TTL_MS)
-  if (!replay.allowed) {
+  let outcome: ContactOutcome
+  try {
+    outcome = await addContact(email)
+  } catch (error) {
+    console.error('Subscribe confirm: contact step failed:', error)
+    return NextResponse.json({ error: 'Could not complete your subscription, please try again' }, { status: 502 })
+  }
+  if (outcome === 'exists') {
     return NextResponse.json({ success: true, alreadyConfirmed: true }, { status: 200 })
   }
 
-  await step('contact', () => addContact(email))
   await step('welcome', () => sendWelcomeEmail(email))
   await step('admin', () => sendAdminNotification(email, articleSlug))
 
