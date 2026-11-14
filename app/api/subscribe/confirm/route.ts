@@ -15,7 +15,13 @@ async function addContact(email: string): Promise<ContactOutcome> {
 
   const resend = new Resend(apiKey)
   const existing = await resend.contacts.get({ audienceId, email })
-  if (!existing.error) return 'exists'
+  if (!existing.error) {
+    if (!existing.data?.unsubscribed) return 'exists'
+    // Resend keeps unsubscribed contacts in the audience; a fresh confirmation reactivates them.
+    const { error } = await resend.contacts.update({ audienceId, email, unsubscribed: false })
+    if (error) throw new Error(`Contact resubscribe error: ${error.message}`)
+    return 'created'
+  }
   if (existing.error.statusCode !== 404 && existing.error.name !== 'not_found') {
     throw new Error(`Contact lookup error: ${existing.error.message}`)
   }

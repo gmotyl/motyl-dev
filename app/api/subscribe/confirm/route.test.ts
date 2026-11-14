@@ -1,12 +1,17 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-const { send, create, get } = vi.hoisted(() => ({ send: vi.fn(), create: vi.fn(), get: vi.fn() }))
+const { send, create, get, update } = vi.hoisted(() => ({
+  send: vi.fn(),
+  create: vi.fn(),
+  get: vi.fn(),
+  update: vi.fn(),
+}))
 
 vi.mock('resend', () => ({
   Resend: class {
     emails = { send }
-    contacts = { create, get }
+    contacts = { create, get, update }
   },
 }))
 
@@ -26,6 +31,7 @@ describe('POST /api/subscribe/confirm', () => {
     send.mockReset().mockResolvedValue({ data: { id: 'x' }, error: null })
     create.mockReset().mockResolvedValue({ data: { id: 'c' }, error: null })
     get.mockReset().mockResolvedValue({ data: null, error: { name: 'not_found', statusCode: 404, message: 'nf' } })
+    update.mockReset().mockResolvedValue({ data: { id: 'c' }, error: null })
     vi.stubEnv('RESEND_API_KEY', 're_test')
     vi.stubEnv('RESEND_AUDIENCE_ID', 'aud_1')
     vi.stubEnv('NEWSLETTER_TOKEN_SECRET', 'test-secret')
@@ -110,6 +116,28 @@ describe('POST /api/subscribe/confirm', () => {
     await expect(res.json()).resolves.toEqual({ success: true, alreadyConfirmed: true })
     expect(get).toHaveBeenCalledWith({ audienceId: 'aud_1', email: 'a@b.com' })
     expect(create).not.toHaveBeenCalled()
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('confirm resubscribes an unsubscribed contact and sends welcome + admin mail', async () => {
+    get.mockResolvedValueOnce({ data: { id: 'c', unsubscribed: true }, error: null })
+    const token = createSubscribeToken('a@b.com', undefined)
+    const res = await POST(post({ token }))
+
+    expect(res.status).toBe(200)
+    await expect(res.json()).resolves.toEqual({ success: true })
+    expect(update).toHaveBeenCalledWith({ audienceId: 'aud_1', email: 'a@b.com', unsubscribed: false })
+    expect(create).not.toHaveBeenCalled()
+    expect(send).toHaveBeenCalledTimes(2)
+  })
+
+  it('confirm returns 502 and sends nothing when resubscribing fails', async () => {
+    get.mockResolvedValueOnce({ data: { id: 'c', unsubscribed: true }, error: null })
+    update.mockResolvedValueOnce({ data: null, error: { name: 'x', statusCode: 500, message: 'down' } })
+    const token = createSubscribeToken('a@b.com', undefined)
+    const res = await POST(post({ token }))
+
+    expect(res.status).toBe(502)
     expect(send).not.toHaveBeenCalled()
   })
 
