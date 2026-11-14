@@ -129,11 +129,28 @@ describe('POST /api/subscribe', () => {
   })
 
   it('a failed confirmation send releases the email limit', async () => {
+    const windowStart = new Date(Date.UTC(2026, 10, 14, 12, 10))
+    hit.mockImplementation(async (key: string) =>
+      key.startsWith('subscribe:email:')
+        ? { allowed: true, retryAfterSec: 0, windowStart }
+        : { allowed: true, retryAfterSec: 0, windowStart: new Date(Date.UTC(2026, 10, 14, 12)) },
+    )
     send.mockResolvedValueOnce({ data: null, error: { message: 'boom' } })
     const res = await POST(post({ email: 'A@b.com' }))
     expect(res.status).toBe(502)
     expect(release).toHaveBeenCalledTimes(1)
-    expect(release).toHaveBeenCalledWith('subscribe:email:a@b.com', 10 * 60 * 1000)
+    expect(release).toHaveBeenCalledWith('subscribe:email:a@b.com', windowStart)
+  })
+
+  it('a failed send after a fail-open releases nothing', async () => {
+    hit.mockImplementation(async (key: string) => {
+      if (key.startsWith('subscribe:email:')) throw new Error('db down')
+      return { allowed: true, retryAfterSec: 0, windowStart: new Date() }
+    })
+    send.mockResolvedValueOnce({ data: null, error: { message: 'boom' } })
+    const res = await POST(post({ email: 'a@b.com' }))
+    expect(res.status).toBe(502)
+    expect(release).not.toHaveBeenCalled()
   })
 
   it('does not release the email limit after a successful send', async () => {
