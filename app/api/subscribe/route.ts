@@ -56,8 +56,9 @@ export async function POST(request: Request) {
     await sendConfirmationEmail(email, token)
   } catch (error) {
     console.error('Failed to send confirmation email:', error)
-    // A failed send must not lock the address out for the rest of the window.
-    await release(emailKey, TEN_MIN_MS)
+    // A failed send must not lock the address out for the rest of the window. Release the
+    // exact window that was counted; a fail-open result counted nothing, so release nothing.
+    if (emailLimit.windowStart) await release(emailKey, emailLimit.windowStart)
     return NextResponse.json({ error: 'Could not send the confirmation email' }, { status: 502 })
   }
 
