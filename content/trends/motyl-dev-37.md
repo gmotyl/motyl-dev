@@ -30,7 +30,7 @@ Paolo Ricciuti says Percy and Chromatic come too late in an agent's loop. You fi
 **[Dreamforce 2026: Skills Teams Need to Work With AI Agents](https://techtiff.substack.com/p/dreamforce-2026-ai-agents-work)**
 TechTiff's Dreamforce recap covers the work that appears once an agent has a real job. In one session, an email outreach agent did badly because nobody had defined its context, data and idea of success up front. Sales, marketing, product and engineering then started reviewing subject lines together, against one shared dashboard. In HR, people moved from answering employee questions to maintaining the policies, content and permissions behind the agent's answers. It's a Salesforce view of the world, but it lands where the Stanford episode does. Someone still has to know what good output looks like.
 
-**[Opsville: A Free Pixel-Art DevOps Town in Your Browser](https://daily.dev/posts/7JebZpMUr)**
+**[Opsville: A Free Pixel-Art DevOps Town in Your Browser](https://devops-daily.com/posts/opsville-free-devops-town-game?via=dailydev)**
 A free browser game where you repair eight broken districts, each one a DevOps topic: Linux, Docker, Git, CI/CD, Kubernetes, observability, security and data. There are 34 tasks, each a simulator challenge followed by a three-question quiz. It's built with Phaser 3, TypeScript and Vite on Cloudflare Pages, and the server validates XP with a daily cap of 24 tasks. That's more anti-cheat thinking than most hobby projects get. I'd hand it to a junior before another video course. It fits the week, too. Someone has to understand the systems the agent is changing.
 
 ---
