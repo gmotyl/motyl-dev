@@ -74,8 +74,6 @@ const PREVIOUSLY_OFFERED_VOICES = [
   'en-US-EmmaMultilingualNeural',
   'en-US-AvaMultilingualNeural',
   'en-US-BrianMultilingualNeural',
-  'de-DE-SeraphinaMultilingualNeural',
-  'de-DE-FlorianMultilingualNeural',
   'fr-FR-VivienneMultilingualNeural',
   'fr-FR-RemyMultilingualNeural',
   'it-IT-GiuseppeMultilingualNeural',
